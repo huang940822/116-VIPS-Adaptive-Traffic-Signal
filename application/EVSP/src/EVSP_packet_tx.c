@@ -1,0 +1,37 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
+#include "log.h"
+#include "EVSP.h"
+// #include "TSP_matrix.h"
+#include "error_status.h"
+#include "EVSP_packet_tx.h"
+#include "byte_processing.h"
+#include "com_packet_processing.h"
+#include "traffic_signal_status_updating.h"
+
+void EVSP_send_ack()
+{
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    write_buf.content = (unsigned char *)malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
+    if (write_buf.content == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("TSP_send_ack: malloc");
+        perror("TSP_send_ack: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
+    }
+
+    //cmd
+    write_uint8_t(0, &write_buf);
+    write_uint8_t(0, &write_buf);
+
+    cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
+    free(write_buf.content);
+    return;
+}

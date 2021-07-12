@@ -1,0 +1,269 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+
+#include "log.h"
+#include "timer_event.h"
+#include "error_status.h"
+#include "application_registration.h"
+
+uint8_t app_num;
+app_obj_t app_list;
+event_callback_t callback_list[EVENT_TYPE_NUMBER];
+
+/*****************************************************************************
+** Function:    event_callback_new
+** Description: Create a new event callback node.
+** Parameter:   app: application for registration
+**              callback: callback function
+** Return:      event_callback: address of new event callback node
+******************************************************************************/
+event_callback_t *event_callback_new(app_obj_t *app, int (*callback)(void *))
+{
+    event_callback_t *event_callback = (event_callback_t *)malloc(sizeof(event_callback_t));
+    if (event_callback == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("event_callback_new: malloc");
+        perror("event_callback_new: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        strncpy(event_callback->name, app->name, APP_NAME_MAX_LEN);
+        event_callback->app_id = app->id;
+        event_callback->priority = app->priority;
+        event_callback->callback = callback;
+        event_callback->next = NULL;
+        return event_callback;
+    }
+}
+
+/*****************************************************************************
+** Function:    event_callback_insert
+** Description: Insert callback function in callback list.
+** Parameter:   head: list head of callback list
+**              app: application for registration
+**              callback: callback function
+** Return:      none
+******************************************************************************/
+void event_callback_insert(event_callback_t *head, app_obj_t *app, int (*callback)(void *))
+{
+    event_callback_t *previous = head;
+    event_callback_t *current = head->next;
+    event_callback_t *event_callback = NULL;
+
+    /* empty list */
+    if (current == NULL) {
+        // printf("callback list empty\n");
+        head->next = event_callback_new(app, callback);
+        return;
+    }
+
+    /* traverse callback list */
+    while (current != NULL) {
+        /* callback with same app id already exist */
+        if (current->app_id == app->id) {
+            // printf("callback with same app_id exist\n");
+            return;
+        }
+        /* last node */
+        if (current->next == NULL) {
+            current->next = event_callback_new(app, callback);
+            if (current->priority > app->priority ) {
+                previous->next = current->next;
+                previous->next->next = current;
+                current->next = NULL;
+            }
+            // printf("insert callback at tail\n");
+            return;
+        }
+        /* priority higher than next node, insert callback here */
+        if (current->next->priority > app->priority) {
+            event_callback = event_callback_new(app, callback);
+            event_callback->next = current->next;
+            current->next = event_callback;
+            // printf("insert callback\n");
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+}
+
+/*****************************************************************************
+** Function:    app_obj_insert
+** Description: Insert app obj in app list. 
+**              Check if app with same name or id already exist.
+** Parameter:   app: application for registration
+** Return:      num: num of app
+**               <0: insert failed
+******************************************************************************/
+int app_obj_insert(app_obj_t *app)
+{
+    app_obj_t *current = app_list.next;
+    uint8_t num = 0;
+
+    /* empty list */ 
+    if (current == NULL) {
+        app_list.next = app;
+        return num;
+    }
+
+    /* traverse to last node */
+    while (current->next != NULL) {
+        if (strncmp(current->name, app->name, APP_NAME_MAX_LEN) == 0) {
+            return APP_REGISTER_DUPLICATE_APP_NAME;
+        }
+        if (current->id == app->id) {
+            return APP_REGISTER_DUPLICATE_APP_ID;
+        }
+        num++;
+        current = current->next;
+    }
+
+    /* last node */
+    if (strncmp(current->name, app->name, APP_NAME_MAX_LEN) == 0) {
+        return APP_REGISTER_DUPLICATE_APP_NAME;
+    }
+    if (current->id == app->id) {
+        return APP_REGISTER_DUPLICATE_APP_ID;
+    }
+
+    num++;
+    current->next = app;
+    return num;
+}
+
+/*****************************************************************************
+** Function:    app_register
+** Description: Application registration.
+**              Check value of stucture field valid.
+** Parameter:   app: application for registration
+** Return:        0: registration successfully
+**               <0: registration failed
+******************************************************************************/
+int app_register(app_obj_t *app)
+{
+    // check app name
+    if (strlen(app->name) == 0) {
+        return APP_REGISTER_INVALID_APP_NAME;
+    }
+    // check app id
+    if (app->id <= 0) {
+        return APP_REGISTER_INVALID_APP_ID;
+    }
+    // check app priority
+    if (app->priority <= 0) {
+        return APP_REGISTER_INVALID_APP_PRIORITY;
+    }
+
+    // insert app in app list
+    int ret = app_obj_insert(app);
+    if (ret < 0) {
+        // printf("error inserting app in list: %d\n", ret);
+        return ret;
+    } else {
+        app_num = ret + 1;
+        if (app->on_OBU_packet_rx) {
+            event_callback_insert(&callback_list[EVENT_OBU_PACKET_RX], app, app->on_OBU_packet_rx);
+        }
+        if (app->on_OBU_packet_tx) {
+            event_callback_insert(&callback_list[EVENT_OBU_PACKET_TX], app, app->on_OBU_packet_tx);
+        }
+        if (app->on_RSU_packet_rx) {
+            event_callback_insert(&callback_list[EVENT_RSU_PACKET_RX], app, app->on_RSU_packet_rx);
+        }
+        if (app->on_RSU_packet_tx) {
+            event_callback_insert(&callback_list[EVENT_RSU_PACKET_TX], app, app->on_RSU_packet_tx);
+        }
+        if (app->on_cloud_packet_rx) {
+            event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_RX], app, app->on_cloud_packet_rx);
+        }
+        if (app->on_cloud_packet_tx) {
+            event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_TX], app, app->on_cloud_packet_tx);
+        }
+        if (app->on_traffic_signal_command_tx) {
+            event_callback_insert(&callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX], app, app->on_traffic_signal_command_tx);
+        }
+        if (app->on_registration) {
+            event_callback_insert(&callback_list[EVENT_REGISTRATION], app, app->on_registration);
+        }
+
+        event_callback_t *current = &callback_list[EVENT_REGISTRATION];
+        while (current->next != NULL) {
+            if (app->id == current->next->app_id) {
+                current->next->callback(NULL);
+            }
+            current = current->next;
+        }
+
+        return APP_REGISTER_ACCEPT;
+    }
+}
+
+void event_callback_print()
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%-50s%s", 
+        "callback_list[EVENT_TYPE_NAME]:", "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
+
+    event_callback_t *current;
+    for (int i = 0; i < EVENT_TYPE_NUMBER; i++) {
+        current = &callback_list[i];
+        switch (i)
+        {
+        case EVENT_OBU_PACKET_RX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_OBU_PACKET_RX]:");
+            break;
+        case EVENT_OBU_PACKET_TX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_OBU_PACKET_TX]:");
+            break;
+        case EVENT_RSU_PACKET_RX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_RSU_PACKET_RX]:");
+            break;
+        case EVENT_RSU_PACKET_TX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_RSU_PACKET_TX]:");
+            break;
+        case EVENT_CLOUD_PACKET_RX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_CLOUD_PACKET_RX]:");
+            break;
+        case EVENT_CLOUD_PACKET_TX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_CLOUD_PACKET_TX]:");
+            break;
+        case EVENT_TRAFFIC_SIGNAL_COMMAND_TX:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX]:");
+            break;
+        case EVENT_REGISTRATION:
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_REGISTRATION]:");
+            break;
+        default:
+            break;
+        }
+        // snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%-50s", log_content);
+        while (current->next != NULL) {
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s", current->next->name);
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "(%d)", current->next->priority);          
+            current = current->next;
+            if (current->next != NULL) {
+                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s", "-> ");
+            }
+        }
+    }
+    log_file_write(log_content);
+}
+
+void app_list_print()
+{
+    app_obj_t *current = app_list.next;
+
+    if (current == NULL) {
+        return;
+    }
+
+    while (current != NULL) {
+        printf("%s\n", current->name);
+        current = current->next;
+    }
+    return;
+}

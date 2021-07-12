@@ -1,0 +1,13 @@
+*.log
+log_*
+build/
+network_test/
+test/
+application/EVSP/config/touching_area/*.txt
+application/TSP/config/RSU_supermatrix/*.csv
+application/TSP/config/OBU_supermatrix/*.csv
+application/EVSP/config/*.txt
+*.py
+.vscode/
+*.txt
+.VSCodeCounter/

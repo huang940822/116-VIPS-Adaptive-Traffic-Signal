@@ -1,0 +1,467 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+
+#include "log.h"
+#include "config.h"
+#include "timer_event.h"
+#include "application_registration.h"
+#include "traffic_signal_packet_rx.h"
+#include "traffic_signal_packet_tx.h"
+#include "traffic_signal_command_buffer.h"
+#include "traffic_signal_status_updating.h"
+#include "TSP.h"
+#include "EVSP.h"
+//todo: both above should be removed!
+
+#define gettid() syscall(__NR_gettid)
+
+tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM];
+pthread_mutex_t mutex_command_buf = PTHREAD_MUTEX_INITIALIZER;
+
+uint8_t cycle_index = 0;
+uint8_t prior_SubPhaseID = 0;
+uint8_t prior_StepID = 0;
+uint16_t prior_StepSec = 0;
+
+timer_t traffic_signal_command_buf_polling_timer_id;
+uint8_t traffic_signal_command_buf_polling_num = TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING;
+
+
+
+
+void command_buf_init()
+{
+    sem_init(&sem_signal_status, 0, 1);
+
+    tsc_pretime();
+
+    /* command buffer polling timer event */
+    create_timer(&traffic_signal_command_buf_polling_timer_id, &traffic_signal_command_buf_polling_num, timer_event_handler);
+    set_timer(traffic_signal_command_buf_polling_timer_id, 0, 500000000, 1, 0); //0.5 msec start and interval is 1sec
+}
+
+void command_buf_clear()
+{
+    pthread_mutex_lock(&mutex_command_buf);
+    memset(command_buf, 0, sizeof(command_buf));
+    pthread_mutex_unlock(&mutex_command_buf);
+    log_file_write("command buff is cleared\r\n");
+}
+
+//要送command到tc箱 被polling呼叫
+void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhaseID)
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    if (config.log_command_buffer) {
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "command_buf_send: ");
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\neffect time: %d", command_obj->effect_time);
+        log_file_write(log_content);
+    }
+    
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+    //????等待某些東西？
+    sem_timedwait_millsecs(&sem_signal_status, SEM_SIGNAL_STATUS_TIMEOUT);  //有timeout的號誌等待 但是 對應的post在那？
+
+    uint16_t pretime = signal_status.plan[current_SubPhaseID - 1].PreGreen;
+    int difference = 0;
+    int time = 0;
+
+    switch (config.signal_controller_manufacturer)
+    {
+        case CHENG_LONG:
+            if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+                if(TSP.dontSend2TC == 1){
+                    log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+
+            }else if(command_obj->app_id == EVSP.id){
+                if(EVSP.dontSend2TC == 1){
+                    log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+            }else{
+                log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+            }
+            //command_obj->adjusted_time代表這個step現在的時間
+            difference = command_obj->effect_time - command_obj->adjusted_time;
+            time = pretime + difference;    //difference才是真正會延長的時間
+            // printf("diff: %d, time: %d, pretime: %d\n", difference, time, pretime);
+            if (time > 255) {
+                time = 255;
+            }
+            
+            while (time < 0) 
+            {
+                tsc_dynamic();
+                //不能下0 否則step會立刻結束
+                tsc_extend(current_SubPhaseID, 1, 1);//每次就是pretime-4去扣
+                // time += pretime;
+                time += (pretime - 4);  //要想一下 -4是因為機器限制的關係
+            }
+            
+            tsc_dynamic();
+            tsc_extend(current_SubPhaseID, 1, time);
+            break;
+
+        case SHAN_ZHU:
+            if(command_obj->app_id == TSP.id){
+                if(TSP.dontSend2TC == 1){
+                    log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+
+            }else if(command_obj->app_id == EVSP.id){
+                if(EVSP.dontSend2TC == 1){
+                    log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+            }else{
+                log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+            }
+            time = command_obj->effect_time;
+            tsc_dynamic();
+            tsc_extend(current_SubPhaseID, 1, time);
+            break;
+        
+        default:
+            break;
+    }
+    //return值為5fcc 
+    tsc_5F4C(); //query的輸出會在上面log evsp/tsp enable/disable的上方
+    
+    /* traffic signal command tx event */
+    traffic_signal_command_arg_t command;   //this variable is for callback of signal packet tx
+    command.control_status = command_obj->app_id;
+    command.phase = current_SubPhaseID;
+    command.step = 1;
+    command.effect_time = command_obj->effect_time;
+    memcpy(command.host_OBU_id, command_obj->host_OBU_id, OBU_ID_MAX_LEN+1);
+    
+    //執行callback 完全不管app_id了 event signal packet tx
+    event_callback_t *current = &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
+    while (current->next != NULL) {
+        current->next->callback((void *)&command);
+        current = current->next;
+    }
+}
+
+void command_buf_polling()
+{   
+
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    traffic_signal_status_t signal_status;
+    
+    //get the status of when??? now?
+    get_traffic_signal_status(&signal_status);
+    // for some error situation happens in CHENG_LONG
+    if (signal_status.SubPhaseID == 0) {
+        command_buf_print();
+        return;
+    }
+
+    uint8_t current_SubPhaseID = signal_status.SubPhaseID;
+    uint8_t current_StepID = signal_status.StepID;
+    uint16_t current_StepSec = signal_status.StepSec;
+
+    if (config.log_command_buffer) {
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "command_buf_polling: ");
+        
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)", 
+            "prior signal status:", prior_SubPhaseID, prior_StepID, prior_StepSec); //here all are global variables
+
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)", 
+            "current signal status:", current_SubPhaseID, current_StepID, current_StepSec);
+        
+        log_file_write(log_content);
+    }
+    
+    //何時phase會是0 人為設定的？？
+    if (prior_SubPhaseID == 0 || current_SubPhaseID == 0) {
+        prior_SubPhaseID = current_SubPhaseID;
+        prior_StepID = current_StepID;
+        prior_StepSec = current_StepSec;
+        command_buf_print();
+        return;
+    }
+    
+    pthread_mutex_lock(&mutex_command_buf);
+    /* cross to next phase */
+
+    /* clear last command buf */
+    if (prior_SubPhaseID != current_SubPhaseID) {
+        memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0, sizeof(tsc_command_object_t));
+        //設定為0代表不控制？
+        set_control_status(0);
+    }
+    /* cross to next cycle */
+    if (prior_SubPhaseID > current_SubPhaseID) {
+        memset(&command_buf[cycle_index][0], 0, sizeof(tsc_command_object_t) * SUBPHASEID_NUM);
+        cycle_index = (cycle_index + 1) % CYCLE_NUM;
+    }
+
+
+    if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0 && prior_SubPhaseID != current_SubPhaseID) {
+        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;   //不懂
+    }
+
+    /* command ready to send in current phase */
+    if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == false && 
+        command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 && 
+        current_StepID == 1 && current_StepSec > 1 &&
+        prior_SubPhaseID == current_SubPhaseID) {
+
+        command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
+        set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);    //判斷是evsp還是tsp
+        command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;
+        //更新步階一要倒數的時間
+        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = command_buf[cycle_index][current_SubPhaseID - 1].effect_time;  
+    }
+
+    prior_SubPhaseID = current_SubPhaseID;
+    prior_StepID = current_StepID;
+    prior_StepSec = current_StepSec;
+    command_buf_print();
+    pthread_mutex_unlock(&mutex_command_buf);
+
+    memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), 
+    "tsp and evsp status now:\r\n1.dont send to TSP:%d\n\r2.dont send to EVSP:%d",
+    TSP.dontSend2TC,EVSP.dontSend2TC);
+    log_file_write(log_content);
+
+    return;
+}
+
+//被command_buf_insert_adjustment和evsp呼叫
+int command_buf_insert_effect_time(tsc_command_t *command)
+{
+    /* command value valid */
+    if (command->app_id == 0) {
+        return INVALID_APP_ID;
+    }
+    if (command->app_priority == 0) {
+        return INVALID_APP_PRIORITY;
+    }
+    if (command->target_phase == 0 || command->target_phase > SUBPHASEID_NUM) {
+        return INVALID_TARGET_PHASE;
+    }
+    if (command->cycle >= CYCLE_NUM) {
+        return INVALID_CYCLE;
+    }
+    if (command->phase == 0 || command->phase > SUBPHASEID_NUM) {
+        return INVALID_PHASE;
+    }
+    if (command->effect_time <= 0) {
+        return INVALID_EFFECT_TIME;
+    }
+    if (strlen(command->host_OBU_id) == 0) {
+        return INVALID_HOST_OBU_ID;
+    }
+
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+
+    uint16_t pretime = signal_status.plan[command->phase - 1].PreGreen;
+    uint16_t min_green = signal_status.plan[command->phase - 1].MinGreen;
+    uint16_t max_green = signal_status.plan[command->phase - 1].MaxGreen;
+
+    if (command->effect_time < min_green) {
+        command->effect_time = min_green;
+    }
+    
+    if (command->effect_time > max_green) {
+        command->effect_time = max_green;
+    }
+
+    pthread_mutex_lock(&mutex_command_buf);
+    tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
+    
+    // command object first insert
+    if (target_command_obj->app_id == 0) {
+        target_command_obj->app_id = command->app_id;
+        target_command_obj->app_priority = command->app_priority;
+        target_command_obj->effect_time = command->effect_time;
+        if (target_command_obj->adjusted_time == 0) {
+            target_command_obj->adjusted_time = pretime;    //因為此步階預設倒數時間為pretime
+        }
+        target_command_obj->target_phase = command->target_phase;
+        target_command_obj->send_flag = false;
+        strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN);
+        command_buf_print();
+        pthread_mutex_unlock(&mutex_command_buf);
+        return INSERT_ACCEPT;
+    }
+    
+    //resume是為了強制回到pretime 怎麼作到？
+    //evsp裡面會使用obu resumeid
+    // replace resume command
+    if (strncmp(target_command_obj->host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN) == 0) {
+        target_command_obj->app_id = command->app_id;
+        target_command_obj->app_priority = command->app_priority;
+        target_command_obj->effect_time = command->effect_time;
+        target_command_obj->target_phase = command->target_phase;
+        target_command_obj->send_flag = false;
+        strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN);
+        command_buf_print();
+        pthread_mutex_unlock(&mutex_command_buf);
+        return INSERT_ACCEPT;
+    }
+
+    // resume command
+    if (strncmp(command->host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN) == 0) {
+        if (target_command_obj->app_id == command->app_id) {
+            target_command_obj->effect_time = command->effect_time;
+            target_command_obj->target_phase = command->target_phase;
+            target_command_obj->send_flag = false;
+            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN);
+            command_buf_print();
+            pthread_mutex_unlock(&mutex_command_buf);
+            return INSERT_ACCEPT;
+        } else {
+            return IMPROPER_PRIORITY;
+        }
+    }
+
+    // same OBU ID      appid的check看起來像是多餘的
+    if (strncmp(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN) == 0 && target_command_obj->app_id == command->app_id) {
+        target_command_obj->target_phase = command->target_phase;
+        target_command_obj->effect_time = command->effect_time;
+        target_command_obj->send_flag = false;
+        command_buf_print();
+        pthread_mutex_unlock(&mutex_command_buf);
+        return INSERT_ACCEPT;
+    }
+    // same target phase
+    if (target_command_obj->target_phase == command->target_phase) {
+        // time difference between effect time & pretime increase
+        if (abs(target_command_obj->effect_time - pretime) <= abs(command->effect_time - pretime)) {
+            target_command_obj->app_id = command->app_id;
+            target_command_obj->app_priority = command->app_priority;
+            target_command_obj->effect_time = command->effect_time;
+            target_command_obj->send_flag = false;
+            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN);
+            command_buf_print();
+            pthread_mutex_unlock(&mutex_command_buf);
+            return INSERT_ACCEPT;
+        } else {
+            command_buf_print();
+            pthread_mutex_unlock(&mutex_command_buf);
+            return IMPROPER_EFFECT_TIME;
+        }
+    } else { // different target phase
+        // priority higher than original command 數值越小priority越高
+        if (target_command_obj->app_priority > command->app_priority) {
+            target_command_obj->app_id = command->app_id;
+            target_command_obj->app_priority = command->app_priority;
+            target_command_obj->effect_time = command->effect_time;
+            target_command_obj->target_phase = command->target_phase;
+            target_command_obj->send_flag = false;
+            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN);
+            command_buf_print();
+            pthread_mutex_unlock(&mutex_command_buf);
+            return INSERT_ACCEPT;
+        } else {
+            command_buf_print();
+            pthread_mutex_unlock(&mutex_command_buf);
+            return IMPROPER_PRIORITY;
+        }
+    }
+}
+
+//調整要送到command_buf_insert_effect_time的command結構的值 
+int command_buf_insert_adjustment(tsc_command_t *command)
+{
+    /* command value valid */
+    if (command->adjustment == 0) {
+        return INVALID_ADJUSTMENT;
+    }
+
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+
+    uint16_t pretime = signal_status.plan[command->phase - 1].PreGreen;
+    uint16_t min_green = signal_status.plan[command->phase - 1].MinGreen;
+    uint16_t max_green = signal_status.plan[command->phase - 1].MaxGreen;
+
+    if (config.signal_adjust_lower_bound_active) {
+        int16_t lower = pretime - pretime * config.signal_adjust_lower_bound_percentage * 0.01;
+        min_green = (lower > min_green) ? lower : min_green;
+    }
+
+    if (config.signal_adjust_upper_bound_active) {
+        int16_t upper = pretime + pretime * config.signal_adjust_upper_bound_percentage * 0.01;
+        max_green = (upper < max_green) ? upper : max_green;
+    }
+
+    pthread_mutex_lock(&mutex_command_buf);
+    tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
+    
+    //這一段看不懂
+    if (target_command_obj->adjusted_time == 0) {
+        command->effect_time = pretime + command->adjustment;
+    } else {
+        command->effect_time = target_command_obj->adjusted_time + command->adjustment;
+    }
+    pthread_mutex_unlock(&mutex_command_buf);
+
+    if (command->effect_time < min_green) {
+        command->effect_time = min_green;
+    }
+    
+    if (command->effect_time > max_green) {
+        command->effect_time = max_green;
+    }
+
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    if (config.log_command_buffer) {
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "command_buf_insert_adjustment: ");
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s", command->host_OBU_id);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nadjustment:  %d", command->adjustment);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\neffect time: %d", command->effect_time);
+        log_file_write(log_content);
+    }
+
+    int ret = 0;
+    ret = command_buf_insert_effect_time(command);
+    return ret;
+}
+
+void command_buf_print()
+{   //就要不要log command buffer的開關
+    if (config.log_command_buffer == 0) {
+        return;
+    }
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "command buffer: current cycle index (%d)", cycle_index);
+    for (int i = 0; i < CYCLE_NUM; i++) {
+        for (int j = 0; j < signal_status.SubPhaseCount; j++) {
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-10s, TP:%1d, AppID:%2d, AppPri:%2d, ET:%3d, SF:%1d", 
+                i, j + 1, 
+                command_buf[i][j].adjusted_time, 
+                signal_status.plan[j].PreGreen, 
+                command_buf[i][j].host_OBU_id, 
+                command_buf[i][j].target_phase, 
+                command_buf[i][j].app_id, 
+                command_buf[i][j].app_priority, 
+                command_buf[i][j].effect_time, 
+                command_buf[i][j].send_flag);
+        }
+    }
+    log_file_write(log_content);
+    return;
+}
