@@ -38,11 +38,11 @@ int udp_type_check(uint8_t type)
 //這裡把要送的資料copy到client物件
 void ae_prepare_for_sending(client_t *client, unsigned char *buf, size_t send_len)
 {
-	// pthread_mutex_lock(&mutex_client_write);
+	pthread_mutex_lock(&mutex_client_write);
 	memset(client->write_buffer->buff, 0, HANDLE_MSG_LEN);
 	memcpy(client->write_buffer->buff, buf, send_len);
 	increase_buffer_size(client->write_buffer, send_len);
-	// pthread_mutex_unlock(&mutex_client_write);
+	pthread_mutex_unlock(&mutex_client_write);
 }
 void ae_prepare_for_enqueue_early(client_t *client, unsigned char *buf)
 {
