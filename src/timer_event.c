@@ -16,6 +16,9 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 
+extern pthread_mutex_t mutex_rs232_write;
+
+
 void timer_event_handler(__sigval_t value)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -36,10 +39,12 @@ void timer_event_handler(__sigval_t value)
         }
         
         command_buf_polling();
+        pthread_mutex_lock(&mutex_rs232_write);
         tsc_5F4C();
         tsc_5F48();
         tsc_5F45();
         tsc_5F44();
+        pthread_mutex_unlock(&mutex_rs232_write);
     }
     else if (*(uint8_t *)value.sival_ptr == TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION) {
         if (config.log_middleware_timer_event) {

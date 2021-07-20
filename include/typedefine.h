@@ -35,7 +35,8 @@ typedef enum vehicle_type {
 
 typedef enum traffic_signal_controller_manufacturer {
     CHENG_LONG = 0,
-    SHAN_ZHU = 1
+    SHAN_ZHU = 1,
+    SHAN_ZHU_M = 2,
 } traffic_signal_controller_manufacturer_t;
 
 typedef enum event_type {

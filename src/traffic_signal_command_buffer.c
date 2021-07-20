@@ -29,7 +29,7 @@ uint16_t prior_StepSec = 0;
 
 timer_t traffic_signal_command_buf_polling_timer_id;
 uint8_t traffic_signal_command_buf_polling_num = TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING;
-
+extern pthread_mutex_t mutex_rs232_write;
 
 
 
@@ -129,13 +129,34 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             tsc_dynamic();
             tsc_extend(current_SubPhaseID, 1, time);
             break;
-        
+
+        case SHAN_ZHU_M:
+            if(command_obj->app_id == TSP.id){
+                if(TSP.dontSend2TC == 1){
+                    log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+
+            }else if(command_obj->app_id == EVSP.id){
+                if(EVSP.dontSend2TC == 1){
+                    log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+            }else{
+                log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+            }
+            time = command_obj->effect_time;
+            tsc_dynamic();
+            tsc_extend(current_SubPhaseID, 1, time);
+            break;
         default:
             break;
     }
     //return值為5fcc 
+    pthread_mutex_lock(&mutex_rs232_write);
     tsc_5F4C(); //query的輸出會在上面log evsp/tsp enable/disable的上方
-    
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     /* traffic signal command tx event */
     traffic_signal_command_arg_t command;   //this variable is for callback of signal packet tx
     command.control_status = command_obj->app_id;

@@ -6,6 +6,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
+
+
+
+pthread_mutex_t mutex_client_write = PTHREAD_MUTEX_INITIALIZER;
+
+
 uint32_t ae_retrieve_packet_len(unsigned char *packet)
 {
 	len_converter conv;
@@ -31,9 +38,11 @@ int udp_type_check(uint8_t type)
 //這裡把要送的資料copy到client物件
 void ae_prepare_for_sending(client_t *client, unsigned char *buf, size_t send_len)
 {
+	// pthread_mutex_lock(&mutex_client_write);
 	memset(client->write_buffer->buff, 0, HANDLE_MSG_LEN);
 	memcpy(client->write_buffer->buff, buf, send_len);
 	increase_buffer_size(client->write_buffer, send_len);
+	// pthread_mutex_unlock(&mutex_client_write);
 }
 void ae_prepare_for_enqueue_early(client_t *client, unsigned char *buf)
 {
@@ -108,7 +117,9 @@ size_t tcp_send(client_t *client)
 		return HANDLE_ERR;
 	if (tcp_check_for_sending(tcp_handle) == HANDLE_ERR)
 		return HANDLE_ERR;
+	
 	size_t written = net_TCP_write(client->fd, client->write_buffer->buff, client->write_buffer->size);
+
 	if (written != client->write_buffer->size) {
 		printf("ERR:written %ld v.s expected written %ld\n", written, client->write_buffer->size);
 	}

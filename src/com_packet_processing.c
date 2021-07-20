@@ -139,7 +139,7 @@ void cloud_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_f
         log_file_write_fatal_error("cloud_packet_tx: com_send");
     }
 
-    usleep(50000);   //直接註解com layer會錯
+    // usleep(50000);   //直接註解com layer會錯
 
     if (write_buf.content != NULL) {
         free(write_buf.content);

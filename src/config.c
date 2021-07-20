@@ -155,6 +155,11 @@ int config_init()
                     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "config: signal_controller_manufacturer = %d", config.signal_controller_manufacturer);
                     log_file_write(log_content);
                     continue;
+                }else if(strcmp(string_val, "shan_zhu_m") == 0){
+                    config.signal_controller_manufacturer = 2;
+                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "config: signal_controller_manufacturer = %d", config.signal_controller_manufacturer);
+                    log_file_write(log_content);
+
                 } 
                 else {
                     return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;

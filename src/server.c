@@ -14,6 +14,9 @@ typedef struct Server comm_server_t;
 typedef struct Broker comm_broker_t;
 comm_server_t RSU_server;
 pthread_t com_layer_thread;
+extern pthread_mutex_t mutex_client_write;
+
+
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)
 {
@@ -333,7 +336,9 @@ void conn_read_from_client_TCP(struct ae_event_loop *event_loop, int fd, void *c
 void conn_write_to_client_TCP(struct ae_event_loop *event_loop, int fd, void *clientData, int mask)
 {
 	client_t *client = (client_t *)clientData;
+	// pthread_mutex_lock(&mutex_client_write);
 	buffer_t *wbuffer = client->write_buffer;
+	// pthread_mutex_unlock(&mutex_client_write);
 	int data_size = (int)get_buffer_size(wbuffer);
 	if (data_size == 0) {
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
