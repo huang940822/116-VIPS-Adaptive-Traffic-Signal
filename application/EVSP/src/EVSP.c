@@ -262,6 +262,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     
     uint16_t last_record_distance = 0;
 
+    //有舊資料
     if (static_space.last_lon != 0 && static_space.last_lat != 0) {
         last_record_distance = (uint16_t)get_distance(static_space.last_lat, static_space.last_lon, 
                                 app_section->OBU_object->record_ring.record[last_record_index].position_lat, 
@@ -273,12 +274,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
             last_record_distance, 
             static_space.last_direction);
         
-        if (last_record_distance > EVSP_config.valid_record_distance) {
+        if (last_record_distance > EVSP_config.valid_record_distance) { //位移有超過閥值 才會紀錄下來？
             static_space.last_lon = app_section->OBU_object->record_ring.record[last_record_index].position_lon;
             static_space.last_lat = app_section->OBU_object->record_ring.record[last_record_index].position_lat;
             static_space.last_direction = app_section->OBU_object->record_ring.record[last_record_index].direction;
         }
-    } else {
+    } else {    //第一筆資料
         static_space.last_lon = app_section->OBU_object->record_ring.record[last_record_index].position_lon;
         static_space.last_lat = app_section->OBU_object->record_ring.record[last_record_index].position_lat;
         static_space.last_direction = app_section->OBU_object->record_ring.record[last_record_index].direction;
@@ -298,7 +299,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             free(read_buf.content);
         }
         return 0;
-    }
+    }//tc箱出巷錯誤 直接不做
 
     memset(log_content, 0, sizeof(log_content));
     /* already in host OBU list */
@@ -327,14 +328,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
                 uint8_t current_phase = signal_status.SubPhaseID;
-                if (command.target_phase >= current_phase) {
+                if (command.target_phase >= current_phase) {    
                     command.cycle = 0;
                     command.phase = command.target_phase;
                     command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
                     ret = command_buf_insert_effect_time(&command);
                     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                         command.cycle, command.phase, command.effect_time, ret);
-                } else {
+                } else {    //target phase已過 到下一個cycle執行
                     command.cycle = 1;
                     command.phase = command.target_phase;
                     command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
@@ -366,7 +367,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                                             &target_phase, plan);
         // enter activate area
         if (target_phase >= 0 && target_phase < EVSP_PHASE_MAX) {
-            target_phase += 1;
+            target_phase += 1;  //why +1  ??因為phase的值會在0~7但實際上會是1~8
 
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "EVSP OBU packet rx: ACTIVATE");
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s", app_section->OBU_object->OBU_id);

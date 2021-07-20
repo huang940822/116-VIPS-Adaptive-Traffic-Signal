@@ -383,6 +383,8 @@ int process_time_events(ae_event_loop *event_loop)
 
 	return processed;
 }
+
+//沒用到
 void ae_set_before_sleep_process(ae_event_loop *event_loop, ae_before_sleep_prcess *beforesleep)
 {
 	event_loop->before_sleep_fn = beforesleep;

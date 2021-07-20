@@ -128,7 +128,7 @@ void TSP_report_command(uint8_t control_status, uint8_t sub_phase_id, uint8_t st
     free(write_buf.content);
     return;
 }
-//用來把收到的obu資訊廣播出去嗎？
+//用來把收到的obu資訊廣播出去嗎？ 目前沒用到
 void TSP_OBU_boardcast(TSP_host_OBU_obj_t *host_OBU)
 {
     char log_content[LOG_CONTENT_LEN + 1];

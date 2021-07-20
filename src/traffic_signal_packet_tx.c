@@ -18,6 +18,8 @@
 
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
+
 
 uint8_t get_seq_num()
 {
@@ -86,8 +88,10 @@ void tsc_dynamic()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, DYNAMIC_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != DYNAMIC_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_dynamic: write");
     }
@@ -157,8 +161,10 @@ void tsc_pretime()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, PRETIME_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != PRETIME_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_pretime: write");
     }
@@ -229,8 +235,10 @@ void tsc_switch()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, SWITCH_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != SWITCH_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_switch: write");
     }
@@ -306,8 +314,10 @@ void tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, EXTEND_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != EXTEND_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_extend: write");
     }
@@ -523,8 +533,10 @@ void tsc_5F4C()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, QUERY_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != QUERY_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F4C: write");
     }
@@ -592,8 +604,9 @@ void tsc_5F48()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, QUERY_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
     if (ret == -1 || ret != QUERY_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F48: write");
     }
@@ -662,8 +675,10 @@ void tsc_5F44()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F44: write");
     }
@@ -732,8 +747,10 @@ void tsc_5F45()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
+    pthread_mutex_lock(&mutex_rs232_write);
+
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F45: write");
     }
@@ -814,8 +831,10 @@ void tsc_countdown_on(uint8_t machine_type)
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, EVSP_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != EVSP_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_countdown_on: write");
     }
@@ -896,8 +915,10 @@ void tsc_countdown_off(uint8_t machine_type)
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, EVSP_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
     if (ret == -1 || ret != EVSP_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_countdown_off: write");
     }
@@ -978,8 +999,10 @@ void tsc_query_firmware_version()
         }
         log_file_write(log_content);
     }
-
+    pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, EVSP_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+    
     if (ret == -1 || ret != EVSP_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_version_query: write");
     }

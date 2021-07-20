@@ -325,7 +325,7 @@ void conn_read_from_client_TCP(struct ae_event_loop *event_loop, int fd, void *c
 		printf("client disconnect, close it.\n");
 		comm_dict_delete(serv->broker->client_dict, client->com_id);
 		conn_free_client(client);
-		if (ae_create_time_event(serv->el, 500000, on_cloud_disconnected, &serv->cloud_expired_id, NULL) == AE_ERR) {
+		if (ae_create_time_event(serv->el, 5000, on_cloud_disconnected, &serv->cloud_expired_id, NULL) == AE_ERR) {
 			fprintf(stderr, "Fail to create timing event \n");
 		}
 	}

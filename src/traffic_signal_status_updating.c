@@ -49,9 +49,9 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     signal_status.StepSec = (packet->INFO[5] << 8) | packet->INFO[6];
 
 
-    //execute pretime instruction to force tc go back to pretime
-    //to prevent the tc not go back to pretime after 全動態
-    //pretime_sent_count is for let pretime sent one time only in step 4
+    // execute pretime instruction to force tc go back to pretime
+    // to prevent the tc not go back to pretime after 全動態
+    // pretime_sent_count is for let pretime sent one time only in step 4
     if(signal_status.StepID == 4){    //4 閃黃燈
         if(pretime_sent_count == 0){
             log_file_write("5FCC: execute go back to pretime at step 4\r\n");
@@ -80,9 +80,6 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     if (sem_value == 0) {
         sem_post(&sem_signal_status);
     }
-
-
-    
 
     return;
 }

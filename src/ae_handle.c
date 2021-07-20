@@ -27,6 +27,8 @@ int udp_type_check(uint8_t type)
 {
 	return type == UDP_HANDLE ? HANDLE_OK : HANDLE_ERR;
 }
+
+//這裡把要送的資料copy到client物件
 void ae_prepare_for_sending(client_t *client, unsigned char *buf, size_t send_len)
 {
 	memset(client->write_buffer->buff, 0, HANDLE_MSG_LEN);
