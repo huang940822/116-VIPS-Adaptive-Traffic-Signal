@@ -24,6 +24,10 @@
 #include "traffic_signal_status_updating.h"
 #include "traffic_signal_packet_tx.h"
 
+// extern uint8_t flag_pretime;
+extern uint8_t flag_countdown_on;
+extern uint8_t flag_countdown_off;
+
 app_obj_t TSP = {
     .name = "TSP",
     .id = 2,
@@ -220,14 +224,17 @@ int TSP_on_cloud_packet_rx(void *arg)
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", read_buf.content[i]);
         }
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n");
+        log_file_write(log_content);
     }
 
     char host_OBU_id[OBU_ID_MAX_LEN + 1];
     memset(host_OBU_id, 0, sizeof(host_OBU_id));
     uint8_t target_phase;
     uint16_t frequency;
-
+    memset(log_content, 0, sizeof(log_content));
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "TSP cloud packet rx: CMD(%d)", cmd);
+    
+    
     switch (cmd)
     {
     case 0:
@@ -270,8 +277,11 @@ int TSP_on_cloud_packet_rx(void *arg)
                 command.adjustment = adjustment;
                 strncpy(command.host_OBU_id, host_OBU_id, OBU_ID_MAX_LEN);
                 ret = command_buf_insert_adjustment(&command);
+                
+                
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, adjustment: %d (%d)", 
                     cycle, phase, adjustment, ret);
+                
             }
         }
         break;
@@ -303,15 +313,15 @@ int TSP_on_cloud_packet_rx(void *arg)
             read_int8_t(&type, &read_buf);
             if(enableOrdisable == 1 && TSP.dontSend2TC == 0){  //enable/clear command buffer
                 TSP.dontSend2TC= 1;
-                log_file_write("tsp disable\r\n");
+                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"\ntsp disable");
                 printf("tsp disable\r\n");
             }else if(enableOrdisable == 2 && TSP.dontSend2TC == 1){   //disable command buffer/then stop the command in command buffer sent to tc machine
                 TSP.dontSend2TC= 0;
                 command_buf_clear();
-                log_file_write("tsp enable and clear command buffer\r\n");    
+                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"\ntsp enable and clear command buffer");    
                 printf("tsp enable\r\n");
             }else{
-                log_file_write("invalid cloud packet disable/enable tsp packet to tc machine\r\n");
+                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"\ninvalid cloud packet disable/enable tsp packet to tc machine");
             }
         }
         break;
@@ -325,9 +335,11 @@ int TSP_on_cloud_packet_rx(void *arg)
             //enable
             if(enableOrdisable==2){
                 //todo: write a api to let app get the config in middleware but let the variable all exposed to app?
-                tsc_countdown_on(config.signal_controller_manufacturer);    
+                //tsc_countdown_on(config.signal_controller_manufacturer);    
+                flag_countdown_on=true;
             }else if(enableOrdisable==1){   //disable
-                tsc_countdown_off(config.signal_controller_manufacturer);
+                //tsc_countdown_off(config.signal_controller_manufacturer);
+                flag_countdown_off=true;
             }else{
                 printf("Illegal command of tsc_countdown\r\n");
             }
@@ -342,7 +354,8 @@ int TSP_on_cloud_packet_rx(void *arg)
             printf("the token recv is %s\r\n", token_packet);
             
             if(strncmp(token_packet, token, TOKEN_LEN) == 0 ){
-                printf("get into kill self\r\n");
+                log_file_write("daemon get into kill self\r\n");
+                printf("daemon get into kill self\r\n");
                 kill(getpid(),SIGINT);
             }
             
@@ -351,7 +364,9 @@ int TSP_on_cloud_packet_rx(void *arg)
     default:
         break;
     }
+
     log_file_write(log_content);
+
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }

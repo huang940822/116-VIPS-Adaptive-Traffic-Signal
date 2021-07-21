@@ -19,6 +19,7 @@ traffic_signal_status_t signal_status;
 pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_signal_status;
 static uint8_t pretime_sent_count=0;
+extern uint8_t flag_pretime;
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
@@ -56,7 +57,8 @@ void packet_5FCC(traffic_signal_packet_t *packet)
         if(pretime_sent_count == 0){
             log_file_write("5FCC: execute go back to pretime at step 4\r\n");
             printf("5FCC updating: set pretime!\r\n");
-            tsc_pretime();
+            //tsc_pretime();
+            flag_pretime=true;
         }
         pretime_sent_count++;
     }else{

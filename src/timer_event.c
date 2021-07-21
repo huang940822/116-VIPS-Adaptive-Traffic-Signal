@@ -17,7 +17,9 @@
 #include "traffic_signal_status_updating.h"
 
 extern pthread_mutex_t mutex_rs232_write;
-
+extern uint8_t flag_pretime;
+extern uint8_t flag_countdown_on;
+extern uint8_t flag_countdown_off;
 
 void timer_event_handler(__sigval_t value)
 {
@@ -39,12 +41,24 @@ void timer_event_handler(__sigval_t value)
         }
         
         command_buf_polling();
-        pthread_mutex_lock(&mutex_rs232_write);
+        // pthread_mutex_lock(&mutex_rs232_write);
         tsc_5F4C();
         tsc_5F48();
         tsc_5F45();
         tsc_5F44();
-        pthread_mutex_unlock(&mutex_rs232_write);
+        if(flag_pretime==true){
+            tsc_pretime();
+            flag_pretime=false;
+        }
+        if(flag_countdown_on==true){
+            tsc_countdown_on(config.signal_controller_manufacturer);
+            flag_countdown_on=false;
+        }
+        if(flag_countdown_off==true){
+            tsc_countdown_off(config.signal_controller_manufacturer);
+            flag_countdown_off=false;
+        }
+        // pthread_mutex_unlock(&mutex_rs232_write);
     }
     else if (*(uint8_t *)value.sival_ptr == TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION) {
         if (config.log_middleware_timer_event) {

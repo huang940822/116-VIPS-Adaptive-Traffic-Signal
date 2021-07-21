@@ -19,7 +19,9 @@
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
-
+uint8_t flag_pretime=0;
+uint8_t flag_countdown_on=0;
+uint8_t flag_countdown_off=0;
 
 uint8_t get_seq_num()
 {
@@ -533,9 +535,11 @@ void tsc_5F4C()
         }
         log_file_write(log_content);
     }
-    // pthread_mutex_lock(&mutex_rs232_write);
+    pthread_mutex_lock(&mutex_rs232_write);
+    // printf("get in 5f4c lock\r\n");
     int ret = write(serial_port_fd, output_byte, QUERY_LEN1_VAL);
-    // pthread_mutex_unlock(&mutex_rs232_write);
+    pthread_mutex_unlock(&mutex_rs232_write);
+    // printf("release 5f4c lock\r\n");
 
     if (ret == -1 || ret != QUERY_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F4C: write");
@@ -604,9 +608,12 @@ void tsc_5F48()
         }
         log_file_write(log_content);
     }
-    // pthread_mutex_lock(&mutex_rs232_write);
+    pthread_mutex_lock(&mutex_rs232_write);
+    // printf("get in 5f48 lock\r\n");
     int ret = write(serial_port_fd, output_byte, QUERY_LEN1_VAL);
-    // pthread_mutex_unlock(&mutex_rs232_write);
+    pthread_mutex_unlock(&mutex_rs232_write);
+    // printf("release 5f48 lock\r\n");
+
     if (ret == -1 || ret != QUERY_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F48: write");
     }
@@ -675,10 +682,11 @@ void tsc_5F44()
         }
         log_file_write(log_content);
     }
-    // pthread_mutex_lock(&mutex_rs232_write);
+    pthread_mutex_lock(&mutex_rs232_write);
+    // printf("get in 5f44 lock\r\n");
     int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
-    // pthread_mutex_unlock(&mutex_rs232_write);
-
+    pthread_mutex_unlock(&mutex_rs232_write);
+    // printf("release 5f44 lock\r\n");
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F44: write");
     }
@@ -747,9 +755,11 @@ void tsc_5F45()
         }
         log_file_write(log_content);
     }
-    // pthread_mutex_lock(&mutex_rs232_write);
+    pthread_mutex_lock(&mutex_rs232_write);
+    // printf("get in 5f45 lock\r\n");
     int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
-    // pthread_mutex_lock(&mutex_rs232_write);
+    pthread_mutex_unlock(&mutex_rs232_write);
+    // printf("release 5f45 lock\r\n");
 
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_5F45: write");
