@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "config.h"
@@ -20,6 +21,7 @@ extern pthread_mutex_t mutex_rs232_write;
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
+extern int16_t ack_seq;
 
 void timer_event_handler(__sigval_t value)
 {
@@ -42,20 +44,30 @@ void timer_event_handler(__sigval_t value)
         
         command_buf_polling();
         // pthread_mutex_lock(&mutex_rs232_write);
-        tsc_5F4C();
-        tsc_5F48();
-        tsc_5F45();
-        tsc_5F44();
+        uint8_t temp_ack_seq;
+        temp_ack_seq=tsc_5F4C();
+        while(temp_ack_seq!=ack_seq);
+        temp_ack_seq=tsc_5F48();
+        while(temp_ack_seq!=ack_seq);
+        temp_ack_seq=tsc_5F45();
+        while(temp_ack_seq!=ack_seq);
+        temp_ack_seq=tsc_5F44();
+        while(temp_ack_seq!=ack_seq);
         if(flag_pretime==true){
-            tsc_pretime();
+            temp_ack_seq=tsc_pretime();
+            while(temp_ack_seq!=ack_seq);
             flag_pretime=false;
         }
+        
         if(flag_countdown_on==true){
-            tsc_countdown_on(config.signal_controller_manufacturer);
+            temp_ack_seq=tsc_countdown_on(config.signal_controller_manufacturer);
+            while(temp_ack_seq!=ack_seq);
             flag_countdown_on=false;
         }
+        
         if(flag_countdown_off==true){
-            tsc_countdown_off(config.signal_controller_manufacturer);
+            temp_ack_seq=tsc_countdown_off(config.signal_controller_manufacturer);
+            while(temp_ack_seq!=ack_seq);
             flag_countdown_off=false;
         }
         // pthread_mutex_unlock(&mutex_rs232_write);

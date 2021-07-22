@@ -19,6 +19,8 @@
 
 int serial_port_fd; //serial port
 
+int16_t ack_seq=0;
+
 void traffic_signal_packet_init(traffic_signal_packet_t *packet) 
 {
     packet->DLE_1 = DLE_VAL;
@@ -300,10 +302,22 @@ void recv_info(int fd, traffic_signal_packet_t *packet)
 		// printf("tc status report\r\n");
 		packet_0F04(packet);
 	}
+	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x80) {
+		// printf("tc status report\r\n");
+		// packet_0F04(packet);
+		printf("correct packet sent\r\n");
+		printf("%02X  %02X\r\n", packet->INFO[2], packet->INFO[3]);
+	}
+	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x81) {
+		// printf("tc status report\r\n");
+		// packet_0F04(packet);
+		log_file_write("error packet sent\r\n");
+		printf("%02X  %02X\r\n", packet->INFO[2], packet->INFO[3]);
+	}
 	return;
 }
 
-void recv_ack(int fd, traffic_signal_packet_t *packet) 
+int16_t recv_ack(int fd, traffic_signal_packet_t *packet) 
 {
 	// printf("recv_ACK\n");
 	read_header(fd, packet);
@@ -317,10 +331,10 @@ void recv_ack(int fd, traffic_signal_packet_t *packet)
 	print_packet(packet);
 	CKS = check_sum(packet, ACK_INFO_LEN);
 	if (error_cks(packet, CKS) == 1) {
-		return;
+		return -1;
 	}
-	
-	return;
+	// printf("recv ack\r\n");
+	return packet->SEQ;
 }
 
 void recv_nak(int fd, traffic_signal_packet_t *packet) 
@@ -343,6 +357,7 @@ void recv_nak(int fd, traffic_signal_packet_t *packet)
 	if (error_cks(packet, CKS) == 1) {
 		return;
 	}
+	printf("recv nack\r\n");
 	return;
 }
 
@@ -458,7 +473,8 @@ void* traffic_signal_packet_rx_handler()
 			/* 0xAA 0xDD */
 			else if ( read_buffer[0] == ACK_VAL ) {
 				packet->TYPE = ACK_VAL;
-				recv_ack(serial_port_fd, packet);
+				ack_seq=recv_ack(serial_port_fd, packet);
+				// printf("ack seq is %d\r\n",ack_seq);
 			}
 			/* 0xAA 0xEE */
 			else if ( read_buffer[0] == NAK_VAL ) {

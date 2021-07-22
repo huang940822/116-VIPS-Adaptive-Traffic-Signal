@@ -19,20 +19,20 @@
 #define EVSP_LEN0_VAL 0x00
 #define EVSP_LEN1_VAL 0x11
 
-void tsc_dynamic();
-void tsc_pretime();
+uint8_t tsc_dynamic();
+uint8_t tsc_pretime();
 
-void tsc_switch();
-void tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time);
+// void tsc_switch();
+uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time);
 
-void tsc_EVSP_on(uint8_t);
-void tsc_EVSP_off();
+// void tsc_EVSP_on(uint8_t);
+// void tsc_EVSP_off();
 
-void tsc_5F4C();
-void tsc_5F48();
-void tsc_5F44();
-void tsc_5F45();
+uint8_t tsc_5F4C();
+uint8_t tsc_5F48();
+uint8_t tsc_5F44();
+uint8_t tsc_5F45();
 
-void tsc_countdown_on(uint8_t);
-void tsc_countdown_off(uint8_t);
+uint8_t tsc_countdown_on(uint8_t);
+uint8_t tsc_countdown_off(uint8_t);
 #endif

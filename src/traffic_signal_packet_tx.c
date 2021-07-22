@@ -31,7 +31,7 @@ uint8_t get_seq_num()
     return value;
 }
 //要求要動態
-void tsc_dynamic()
+uint8_t tsc_dynamic()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -101,10 +101,10 @@ void tsc_dynamic()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 
-void tsc_pretime()
+uint8_t tsc_pretime()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -174,7 +174,7 @@ void tsc_pretime()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 
 //強制到下一個step?沒用到
@@ -252,7 +252,7 @@ void tsc_pretime()
 // }
 
 //注意成龍的部份 這裡是改變每個step的時間
-void tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
+uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -327,7 +327,7 @@ void tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 
 
@@ -478,7 +478,7 @@ void tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 //     return;
 // }
 // query SubPhaseID StepID
-void tsc_5F4C()
+uint8_t tsc_5F4C()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -548,10 +548,10 @@ void tsc_5F4C()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 // query PlanID
-void tsc_5F48()
+uint8_t tsc_5F48()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -621,10 +621,10 @@ void tsc_5F48()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 // query Plan Info
-void tsc_5F44()
+uint8_t tsc_5F44()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -694,10 +694,10 @@ void tsc_5F44()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 // query Plan Info (Green) 
-void tsc_5F45()
+uint8_t tsc_5F45()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -768,11 +768,11 @@ void tsc_5F45()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 
 // countdown on
-void tsc_countdown_on(uint8_t machine_type)
+uint8_t tsc_countdown_on(uint8_t machine_type)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -852,11 +852,11 @@ void tsc_countdown_on(uint8_t machine_type)
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 
 // countdown off
-void tsc_countdown_off(uint8_t machine_type)
+uint8_t tsc_countdown_off(uint8_t machine_type)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -936,7 +936,7 @@ void tsc_countdown_off(uint8_t machine_type)
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }
 
 //query version of tsc
@@ -982,38 +982,38 @@ void tsc_query_firmware_version()
     // }
     
 
-    uint8_t output_byte[EVSP_LEN1_VAL];
+    uint8_t output_byte[QUERY_PLAN_LEN1_VAL];
     uint8_t header_byte[HEADER_LEN - 1];
-    uint8_t info_byte[EVSP_LEN1_VAL - HEADER_LEN];
+    uint8_t info_byte[QUERY_PLAN_LEN1_VAL - HEADER_LEN];
     uint8_t CKS = 0;
 
-    CKS = check_sum(packet, EVSP_LEN1_VAL - HEADER_LEN);
+    CKS = check_sum(packet, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
-    memcpy(info_byte, &packet->INFO, EVSP_LEN1_VAL - HEADER_LEN);
+    memcpy(info_byte, &packet->INFO, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
     
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
-    for (int i = 0; i < EVSP_LEN1_VAL - HEADER_LEN; i++) {
+    for (int i = 0; i < QUERY_PLAN_LEN1_VAL - HEADER_LEN; i++) {
         output_byte[i + 7] = info_byte[i];
     }
     for (int i = 0; i < 2; i++) {
-        output_byte[EVSP_LEN1_VAL - 3 + i] = header_byte[i + 7];
+        output_byte[QUERY_PLAN_LEN1_VAL - 3 + i] = header_byte[i + 7];
     }
-    output_byte[EVSP_LEN1_VAL - 1] = CKS;
+    output_byte[QUERY_PLAN_LEN1_VAL - 1] = CKS;
 
     if (config.log_signal_packet_tx) {
-        for (int i = 0; i < EVSP_LEN1_VAL; i++) {
+        for (int i = 0; i < QUERY_PLAN_LEN1_VAL; i++) {
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
         }
         log_file_write(log_content);
     }
     pthread_mutex_lock(&mutex_rs232_write);
-    int ret = write(serial_port_fd, output_byte, EVSP_LEN1_VAL);
+    int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
     pthread_mutex_unlock(&mutex_rs232_write);
     
-    if (ret == -1 || ret != EVSP_LEN1_VAL) {
+    if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
 		log_file_write_fatal_error("tsc_version_query: write");
     }
     // tcdrain(serial_port_fd);

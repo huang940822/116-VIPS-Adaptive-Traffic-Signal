@@ -24,6 +24,10 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 #include "error_status.h"
+extern uint8_t flag_pretime;
+extern uint8_t flag_countdown_on;
+extern uint8_t flag_countdown_off;
+extern int16_t ack_seq;
 
 int main()
 {   
@@ -120,37 +124,46 @@ int main()
     
 	com_layer_init(NULL);
 
-    // int input;
-    // while(1){
-    //     printf("input function number:\r\n0:countdownoff\r\n1:countdownon\r\n2:effecttime 200\r\n3:pretime\r\n");
-    //     scanf("%d",&input);
+    int input, temp_ack_seq;
+    while(1){
+        printf("input function number:\r\n0:countdownoff\r\n1:countdownon\r\n2:effecttime 200\r\n3:pretime\r\n");
+        scanf("%d",&input);
 
-    //     switch (input)
-    //     {
-    //     case 0:
-    //         log_file_write("countdown off\r\n");
-    //         printf("count down off for chenlong\r\n");
-    //         tsc_countdown_off(0);
-    //         break;
-    //     case 1:
-    //         log_file_write("countdown on\r\n");
-    //         printf("count down on for chenlong");
-    //         tsc_countdown_on(0);
-    //         break;
-    //     case 2:
-    //         log_file_write("effect time 200\r\n");
-    //         printf("set effect time 200\r\n");
-    //         tsc_dynamic();
-    //         tsc_extend(1,1,200);
-    //         break;
-    //     case 3:
-    //         log_file_write("go to pretime");
-    //         printf("go to pretime\r\n");
-    //         tsc_pretime();
-    //     default:
-    //         break;
-    //     }
-    // }
+        switch (input)
+        {
+        case 0:
+            log_file_write("countdown off\r\n");
+            printf("count down off\r\n");
+            flag_countdown_off=1;
+            break;
+        case 1:
+            log_file_write("countdown on\r\n");
+            printf("count down on");
+            flag_countdown_on=1;
+            break;
+        case 2:
+            log_file_write("effect time 200\r\n");
+            printf("set effect time 200\r\n");
+            temp_ack_seq=tsc_dynamic();
+            while(temp_ack_seq!=ack_seq);
+            temp_ack_seq=tsc_extend(1,1,200);
+            while(temp_ack_seq!=ack_seq);
+            break;
+        case 3:
+            log_file_write("go to pretime");
+            printf("go to pretime\r\n");
+            flag_pretime=1;
+            break;
+        case 4:
+            printf("send 5f4c\r\n");
+            temp_ack_seq=tsc_5F4C();
+            while(temp_ack_seq!=ack_seq);
+            break;
+
+        default:
+            break;
+        }
+    }
 
     pthread_exit(0);
     
