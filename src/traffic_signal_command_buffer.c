@@ -29,8 +29,8 @@ uint16_t prior_StepSec = 0;
 
 timer_t traffic_signal_command_buf_polling_timer_id;
 uint8_t traffic_signal_command_buf_polling_num = TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING;
-extern pthread_mutex_t mutex_rs232_write;
-extern int16_t ack_seq;
+// extern pthread_mutex_t mutex_rs232_write;
+// extern int16_t ack_seq;
 
 
 void command_buf_init()
@@ -38,7 +38,7 @@ void command_buf_init()
     sem_init(&sem_signal_status, 0, 1);
 
     temp_ack_seq=tsc_pretime();
-    while(temp_ack_seq!=ack_seq);
+    WAIT_ACK_LOOP
 
     /* command buffer polling timer event */
     create_timer(&traffic_signal_command_buf_polling_timer_id, &traffic_signal_command_buf_polling_num, timer_event_handler);
@@ -101,18 +101,18 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             while (time < 0) 
             {
                 temp_ack_seq=tsc_dynamic();
-                while(temp_ack_seq!=ack_seq);
+                WAIT_ACK_LOOP
                 //不能下0 否則step會立刻結束
                 temp_ack_seq=tsc_extend(current_SubPhaseID, 1, 1);//每次就是pretime-4去扣
-                while(temp_ack_seq!=ack_seq);
+                WAIT_ACK_LOOP
                 // time += pretime;
                 time += (pretime - 4);  //要想一下 -4是因為機器限制的關係
             }
             
             temp_ack_seq=tsc_dynamic();
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             temp_ack_seq=tsc_extend(current_SubPhaseID, 1, time);
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             break;
 
         case SHAN_ZHU:
@@ -132,9 +132,9 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }
             time = command_obj->effect_time;
             temp_ack_seq=tsc_dynamic();
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             temp_ack_seq=tsc_extend(current_SubPhaseID, 1, time);
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             break;
 
         case SHAN_ZHU_M:
@@ -154,9 +154,9 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }
             time = command_obj->effect_time;
             temp_ack_seq=tsc_dynamic();
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             temp_ack_seq=tsc_extend(current_SubPhaseID, 1, time);
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             break;
         default:
             break;
@@ -164,7 +164,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     //return值為5fcc 
     // pthread_mutex_lock(&mutex_rs232_write);
     temp_ack_seq=tsc_5F4C(); //query的輸出會在上面log evsp/tsp enable/disable的上方
-    while(temp_ack_seq!=ack_seq);
+    WAIT_ACK_LOOP
     // pthread_mutex_unlock(&mutex_rs232_write);
 
     /* traffic signal command tx event */

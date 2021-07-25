@@ -18,6 +18,10 @@
 #define QUERY_PLAN_LEN1_VAL 0x0D
 #define EVSP_LEN0_VAL 0x00
 #define EVSP_LEN1_VAL 0x11
+#define FIRMQ_LEN0 0x00
+#define FIRMQ_LEN1 0x0C
+
+pthread_mutex_t mutex_rs232_write;
 
 uint8_t tsc_dynamic();
 uint8_t tsc_pretime();
@@ -35,4 +39,5 @@ uint8_t tsc_5F45();
 
 uint8_t tsc_countdown_on(uint8_t);
 uint8_t tsc_countdown_off(uint8_t);
+uint8_t tsc_query_firmware_version(void);
 #endif

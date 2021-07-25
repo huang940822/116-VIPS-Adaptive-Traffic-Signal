@@ -22,6 +22,7 @@ pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
 uint8_t flag_pretime=0;
 uint8_t flag_countdown_on=0;
 uint8_t flag_countdown_off=0;
+uint8_t flag_query_firm_ver=0;
 
 uint8_t get_seq_num()
 {
@@ -940,7 +941,7 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
 }
 
 //query version of tsc
-void tsc_query_firmware_version()
+uint8_t tsc_query_firmware_version(void)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -949,8 +950,8 @@ void tsc_query_firmware_version()
     traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_countdown_off: malloc");
-        perror("tsc_countdown_off: malloc");
+		log_file_write_fatal_error("query firmware version: malloc");
+        perror("query firmware version: malloc");
         exit(errno);
     } else {
         clear_memory_error();
@@ -964,8 +965,8 @@ void tsc_query_firmware_version()
     packet->ETX = ETX_VAL;
 
     packet->SEQ = get_seq_num();
-    packet->LEN[0] = EVSP_LEN0_VAL;
-    packet->LEN[1] = EVSP_LEN1_VAL;
+    packet->LEN[0] = FIRMQ_LEN0;
+    packet->LEN[1] = FIRMQ_LEN1;
     packet->INFO[0] = 0x0F;
     packet->INFO[1] = 0x43;
     // packet->INFO[2] = 0x00;
@@ -982,15 +983,15 @@ void tsc_query_firmware_version()
     // }
     
 
-    uint8_t output_byte[QUERY_PLAN_LEN1_VAL];
+    uint8_t output_byte[FIRMQ_LEN1];
     uint8_t header_byte[HEADER_LEN - 1];
-    uint8_t info_byte[QUERY_PLAN_LEN1_VAL - HEADER_LEN];
+    uint8_t info_byte[FIRMQ_LEN1 - HEADER_LEN];
     uint8_t CKS = 0;
 
-    CKS = check_sum(packet, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
+    CKS = check_sum(packet, FIRMQ_LEN1 - HEADER_LEN);
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
-    memcpy(info_byte, &packet->INFO, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
+    memcpy(info_byte, &packet->INFO, FIRMQ_LEN1 - HEADER_LEN);
     
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
@@ -999,9 +1000,9 @@ void tsc_query_firmware_version()
         output_byte[i + 7] = info_byte[i];
     }
     for (int i = 0; i < 2; i++) {
-        output_byte[QUERY_PLAN_LEN1_VAL - 3 + i] = header_byte[i + 7];
+        output_byte[FIRMQ_LEN1 - 3 + i] = header_byte[i + 7];
     }
-    output_byte[QUERY_PLAN_LEN1_VAL - 1] = CKS;
+    output_byte[FIRMQ_LEN1 - 1] = CKS;
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < QUERY_PLAN_LEN1_VAL; i++) {
@@ -1020,5 +1021,5 @@ void tsc_query_firmware_version()
     if (packet != NULL) {
         free(packet);
     }
-    return;
+    return packet->SEQ;
 }

@@ -44,8 +44,19 @@
 #define NAK_INFO_LEN 1
 
 #define VMIN_LEN 20
+#define WAIT_ACK_LOOP   \
+do {                        \
+    int _temp_wait_count=0;  \
+    while(temp_ack_seq!=ack_seq){   \
+        _temp_wait_count++;  \
+        if(_temp_wait_count>1000)   \
+            break;  \
+    }   \
+}while(0);
+
 
 extern int serial_port_fd;
+extern int16_t ack_seq;
 
 void traffic_signal_port_init();
 void* traffic_signal_packet_rx_handler();

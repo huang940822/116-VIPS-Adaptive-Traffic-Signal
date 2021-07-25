@@ -17,11 +17,12 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 
-extern pthread_mutex_t mutex_rs232_write;
+// extern pthread_mutex_t mutex_rs232_write;
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
-extern int16_t ack_seq;
+extern uint8_t flag_query_firm_ver;
+// extern int16_t ack_seq;
 
 void timer_event_handler(__sigval_t value)
 {
@@ -46,30 +47,37 @@ void timer_event_handler(__sigval_t value)
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
         temp_ack_seq=tsc_5F4C();
-        while(temp_ack_seq!=ack_seq);
+        WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F48();
-        while(temp_ack_seq!=ack_seq);
+        WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F45();
-        while(temp_ack_seq!=ack_seq);
+        WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F44();
-        while(temp_ack_seq!=ack_seq);
+        WAIT_ACK_LOOP
         if(flag_pretime==true){
             temp_ack_seq=tsc_pretime();
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             flag_pretime=false;
         }
         
         if(flag_countdown_on==true){
             temp_ack_seq=tsc_countdown_on(config.signal_controller_manufacturer);
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             flag_countdown_on=false;
         }
         
         if(flag_countdown_off==true){
             temp_ack_seq=tsc_countdown_off(config.signal_controller_manufacturer);
-            while(temp_ack_seq!=ack_seq);
+            WAIT_ACK_LOOP
             flag_countdown_off=false;
         }
+        if(flag_query_firm_ver==true){
+            temp_ack_seq=tsc_query_firmware_version();
+            WAIT_ACK_LOOP
+            flag_query_firm_ver=false;
+
+        }
+
         // pthread_mutex_unlock(&mutex_rs232_write);
     }
     else if (*(uint8_t *)value.sival_ptr == TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION) {
