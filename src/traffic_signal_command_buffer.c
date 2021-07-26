@@ -241,7 +241,7 @@ void command_buf_polling()
 
 
     if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0 && prior_SubPhaseID != current_SubPhaseID) {
-        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;   //不懂
+        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;   //換相了 更新adjusted time讓他變成現在的倒數秒數
     }
 
     /* command ready to send in current phase */
@@ -314,6 +314,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     }
 
     pthread_mutex_lock(&mutex_command_buf);
+    //抓出要處理的cmd buff object
     tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
     
     // command object first insert
@@ -335,6 +336,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     //resume是為了強制回到pretime 怎麼作到？
     //evsp裡面會使用obu resumeid
     // replace resume command
+    //抓出來的目標cmd buff object其host obu id為resume id則優先取代？
     if (strncmp(target_command_obj->host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN) == 0) {
         target_command_obj->app_id = command->app_id;
         target_command_obj->app_priority = command->app_priority;
@@ -362,7 +364,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         }
     }
 
-    // same OBU ID      appid的check看起來像是多餘的
+    // same OBU ID      appid的check看起來像是多餘的 除非是一個obu有多個application
     if (strncmp(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN) == 0 && target_command_obj->app_id == command->app_id) {
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->effect_time = command->effect_time;
@@ -374,7 +376,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // same target phase
     if (target_command_obj->target_phase == command->target_phase) {
         // time difference between effect time & pretime increase
-        if (abs(target_command_obj->effect_time - pretime) <= abs(command->effect_time - pretime)) {
+        if (abs(target_command_obj->effect_time - pretime) <= abs(command->effect_time - pretime)) {    //變化差異要小於上一次？
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
@@ -390,7 +392,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         }
     } else { // different target phase
         // priority higher than original command 數值越小priority越高
-        if (target_command_obj->app_priority > command->app_priority) {
+        if (target_command_obj->app_priority > command->app_priority) { //優先權較小 tsp被evsp取代
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
@@ -434,10 +436,11 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     }
 
     pthread_mutex_lock(&mutex_command_buf);
+    //抓出target phase的原始資料
     tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
     
     //這一段看不懂
-    if (target_command_obj->adjusted_time == 0) {
+    if (target_command_obj->adjusted_time == 0) {   //第一次被調整？
         command->effect_time = pretime + command->adjustment;
     } else {
         command->effect_time = target_command_obj->adjusted_time + command->adjustment;

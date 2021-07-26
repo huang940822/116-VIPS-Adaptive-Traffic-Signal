@@ -319,14 +319,15 @@ void recv_info(int fd, traffic_signal_packet_t *packet)
 		// packet_0F04(packet);
 		// log_file_write("error packet sent\r\n");
 		if(packet->INFO[2]>=0x6E){	//0x6e is 110年度
-			printf("new version of shan_zhu and should assign version as shan_zhu_m\r\n");
 			if(config.signal_controller_manufacturer==1){	//若為山竚且年份大於110年度則改為修改過的山竚型號行為(for 行人倒數秒數指令)
 				config.signal_controller_manufacturer=2;
+				printf("new version of shan_zhu and should assign version as shan_zhu_m\r\n");
+				log_file_write("manufacturer is changed from shan_zhu to shan_zhu_m\r\n");
 			}
 			
 		}
 		printf("tsc firmware version\r\n");
-		printf("%02X %02X %02X %02X %02X %02X %02X \r\n", packet->INFO[2], packet->INFO[3], packet->INFO[3], packet->INFO[3], packet->INFO[3], packet->INFO[3], packet->INFO[3] );
+		printf("%02X %02X %02X %02X %02X %02X\r\n", packet->INFO[2], packet->INFO[3], packet->INFO[4], packet->INFO[5], packet->INFO[6], packet->INFO[7]);
 	}
 	return;
 }

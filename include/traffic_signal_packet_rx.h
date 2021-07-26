@@ -49,7 +49,7 @@ do {                        \
     int _temp_wait_count=0;  \
     while(temp_ack_seq!=ack_seq){   \
         _temp_wait_count++;  \
-        if(_temp_wait_count>1000)   \
+        if(_temp_wait_count>10000)   \
             break;  \
     }   \
 }while(0);

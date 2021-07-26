@@ -158,9 +158,10 @@ int main()
     //         flag_pretime=1;
     //         break;
     //     case 4:
-    //         printf("send 5f4c\r\n");
-    //         temp_ack_seq=tsc_5F4C();
-    //         WAIT_ACK_LOOP
+    //         printf("do nothing\r\n");
+    //         // printf("send 5f4c\r\n");
+    //         // temp_ack_seq=tsc_5F4C();
+    //         // WAIT_ACK_LOOP
     //         break;
     //     case 5:
     //         printf("query tc firmware version\r\n");
