@@ -2,24 +2,10 @@
 #define TRAFFIC_SIGNAL_PACKET_RX_H
 
 #include "typedefine.h"
-
-// RSU 1
-// #define RSU_ID "S428901   "
-// #define RSU_LAT 22.996714
-// #define RSU_LON 120.237009
-// #define TRAFFIC_SIGNAL_CONTROLLER_MANUFACTURER CHENG_LONG
-
-// // RSU 2
-// #define RSU_ID "S429001   "
-// #define RSU_LAT 22.995601
-// #define RSU_LON 120.236992
-// #define TRAFFIC_SIGNAL_CONTROLLER_MANUFACTURER SHAN_ZHU
+#include "time.h"
 
 #define BAUDRATE B9600
 #define SERIAL_PORT "/dev/ttyS0"
-
-//#define SERIAL_PORT "/dev/ttyUSB0"
-
 #define DLE_VAL 0xAA
 #define STX_VAL 0xBB
 #define ETX_VAL 0xCC
@@ -42,15 +28,16 @@
 #define MAX_PAYLOAD_LEN (MAX_PACKET_LEN - HEADER_LEN)
 #define ACK_INFO_LEN 0
 #define NAK_INFO_LEN 1
-
 #define VMIN_LEN 20
+#define ACK_TIMEOUTSEC 0.5
 #define WAIT_ACK_LOOP   \
 do {                        \
-    int _temp_wait_count=0;  \
+    clock_t _startTime=clock();  \
+    clock_t _endTime=clock();  \
     while(temp_ack_seq!=ack_seq){   \
-        _temp_wait_count++;  \
-        if(_temp_wait_count>10000)   \
+        if(((double)_endTime-_startTime)/CLOCKS_PER_SEC>ACK_TIMEOUTSEC)   \
             break;  \
+        _endTime=clock();   \
     }   \
 }while(0);
 
