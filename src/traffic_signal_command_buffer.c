@@ -376,7 +376,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // same target phase
     if (target_command_obj->target_phase == command->target_phase) {
         // time difference between effect time & pretime increase
-        if (abs(target_command_obj->effect_time - pretime) <= abs(command->effect_time - pretime)) {    //變化差異要小於上一次？
+        if (abs(target_command_obj->effect_time - pretime) <= abs(command->effect_time - pretime)) {    //變化差異要大於上一次的改變？不能縮短
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;

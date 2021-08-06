@@ -29,8 +29,28 @@ extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
 
+pthread_mutex_t mutex_uart_comple_protect = PTHREAD_MUTEX_INITIALIZER;
+
+
+void sigintHandler(int sig_num)
+{
+    /* Reset handler to catch SIGINT next time.
+       Refer http://en.cppreference.com/w/c/program/signal */
+    signal(SIGINT, sigintHandler);
+    
+    
+    pthread_mutex_lock(&mutex_uart_comple_protect);
+    printf("get in mutex in signal handler\r\n");
+    printf("\nuart write actions has all be completed before exit from process\n");
+    fflush(stdout);
+    exit(0);
+    pthread_mutex_unlock(&mutex_uart_comple_protect);
+}
+
+
 int main()
 {   
+    signal(SIGINT, sigintHandler);
     //below is for tsc_countdown_on/off test
     // tsc_countdown_off(0);
     // sleep(10);
@@ -127,50 +147,50 @@ int main()
     
 	com_layer_init(NULL);
 
-    int input, temp_ack_seq;
-    while(1){
-        printf("input function number:\r\n0:countdownoff\r\n1:countdownon\r\n2:effecttime 200\r\n3:pretime\r\n4:send 5f4c\r\n5:query tc firmware version\r\n");
-        scanf("%d",&input);
+    // int input, temp_ack_seq;
+    // while(1){
+    //     printf("input function number:\r\n0:countdownoff\r\n1:countdownon\r\n2:effecttime 200\r\n3:pretime\r\n4:send 5f4c\r\n5:query tc firmware version\r\n");
+    //     scanf("%d",&input);
 
-        switch (input)
-        {
-        case 0:
-            log_file_write("countdown off\r\n");
-            printf("count down off\r\n");
-            flag_countdown_off=1;
-            break;
-        case 1:
-            log_file_write("countdown on\r\n");
-            printf("count down on");
-            flag_countdown_on=1;
-            break;
-        case 2:
-            log_file_write("effect time 200\r\n");
-            printf("set effect time 200\r\n");
-            temp_ack_seq=tsc_dynamic();
-            WAIT_ACK_LOOP
-            temp_ack_seq=tsc_extend(1,1,200);
-            WAIT_ACK_LOOP
-            break;
-        case 3:
-            log_file_write("go to pretime");
-            printf("go to pretime\r\n");
-            flag_pretime=1;
-            break;
-        case 4:
-            printf("do nothing\r\n");
-            // printf("send 5f4c\r\n");
-            // temp_ack_seq=tsc_5F4C();
-            // WAIT_ACK_LOOP
-            break;
-        case 5:
-            printf("query tc firmware version\r\n");
-            flag_query_firm_ver=true;
-            break;
-        default:
-            break;
-        }
-    }
+    //     switch (input)
+    //     {
+    //     case 0:
+    //         log_file_write("countdown off\r\n");
+    //         printf("count down off\r\n");
+    //         flag_countdown_off=1;
+    //         break;
+    //     case 1:
+    //         log_file_write("countdown on\r\n");
+    //         printf("count down on");
+    //         flag_countdown_on=1;
+    //         break;
+    //     case 2:
+    //         log_file_write("effect time 200\r\n");
+    //         printf("set effect time 200\r\n");
+    //         temp_ack_seq=tsc_dynamic();
+    //         WAIT_ACK_LOOP
+    //         temp_ack_seq=tsc_extend(1,1,200);
+    //         WAIT_ACK_LOOP
+    //         break;
+    //     case 3:
+    //         log_file_write("go to pretime");
+    //         printf("go to pretime\r\n");
+    //         flag_pretime=1;
+    //         break;
+    //     case 4:
+    //         printf("do nothing\r\n");
+    //         // printf("send 5f4c\r\n");
+    //         // temp_ack_seq=tsc_5F4C();
+    //         // WAIT_ACK_LOOP
+    //         break;
+    //     case 5:
+    //         printf("query tc firmware version\r\n");
+    //         flag_query_firm_ver=true;
+    //         break;
+    //     default:
+    //         break;
+    //     }
+    // }
 
     pthread_exit(0);
     

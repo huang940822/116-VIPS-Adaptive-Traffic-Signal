@@ -117,9 +117,9 @@ size_t tcp_send(client_t *client)
 		return HANDLE_ERR;
 	if (tcp_check_for_sending(tcp_handle) == HANDLE_ERR)
 		return HANDLE_ERR;
-	
+	pthread_mutex_lock(&mutex_client_write);
 	size_t written = net_TCP_write(client->fd, client->write_buffer->buff, client->write_buffer->size);
-
+	pthread_mutex_unlock(&mutex_client_write);
 	if (written != client->write_buffer->size) {
 		printf("ERR:written %ld v.s expected written %ld\n", written, client->write_buffer->size);
 	}

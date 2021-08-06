@@ -24,7 +24,11 @@ void* dispatcher_handler()
 		log_file_write(log_content);
 		if (msg->device_id == FROM_CLOUD) {
 			// printf("cloud_rx_event\n");
+			
 			cloud_com_id = msg->handle_id;
+			memset(log_content, 0, sizeof(log_content));
+			snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "cloud_com_id in dispatcher is %d", cloud_com_id);
+			log_file_write(log_content);
 			ret = cloud_packet_rx_event_handler(msg);
 			if (ret < 0) {
 				log_file_write_fatal_error("invalid packet from cloud: %d\n", ret);

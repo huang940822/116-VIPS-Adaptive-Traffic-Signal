@@ -22,7 +22,7 @@ extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
-// extern int16_t ack_seq;
+extern pthread_mutex_t mutex_uart_comple_protect;
 
 void timer_event_handler(__sigval_t value)
 {
@@ -43,6 +43,8 @@ void timer_event_handler(__sigval_t value)
             log_file_write(log_content);
         }
         
+        pthread_mutex_lock(&mutex_uart_comple_protect);
+        printf("get in uart mutex\r\n");
         command_buf_polling();
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
@@ -77,6 +79,8 @@ void timer_event_handler(__sigval_t value)
             flag_query_firm_ver=false;
 
         }
+        pthread_mutex_unlock(&mutex_uart_comple_protect);
+        printf("leave uart write mutex\r\n");
 
         // pthread_mutex_unlock(&mutex_rs232_write);
     }

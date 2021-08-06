@@ -368,7 +368,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         // enter activate area
         if (target_phase >= 0 && target_phase < EVSP_PHASE_MAX) {
             target_phase += 1;  //why +1  ??因為phase的值會在0~7但實際上會是1~8
-
+            // printf("max green is %d\r\n", EVSP_config.max_green);
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "EVSP OBU packet rx: ACTIVATE");
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s", app_section->OBU_object->OBU_id);
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ntarget phase: %d", target_phase);

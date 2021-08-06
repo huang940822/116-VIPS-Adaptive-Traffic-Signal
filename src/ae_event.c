@@ -8,6 +8,8 @@ extern void ae_epoll_free(ae_event_loop *event_loop);
 extern int ae_epoll_add_event(ae_event_loop *event_loop, int fd, int mask);
 extern void ae_epoll_del_event(ae_event_loop *event_loop, int fd, int delmask);
 extern int ae_epoll_poll(ae_event_loop *event_loop, struct timeval *tvp);
+
+
 ae_event_loop *ae_create_event_loop(int setsize)
 {
 	ae_event_loop *event_loop;
@@ -42,6 +44,7 @@ err:
 	}
 	return NULL;
 }
+
 void ae_delete_event_loop(ae_event_loop *event_loop)
 {
 	ae_epoll_free(event_loop);
@@ -49,6 +52,8 @@ void ae_delete_event_loop(ae_event_loop *event_loop)
 	free(event_loop->fired);
 	free(event_loop);
 }
+
+
 void ae_stop(ae_event_loop *event_loop)
 {
 	event_loop->stop = 1;
@@ -77,6 +82,7 @@ int ae_create_comm_event(ae_event_loop *event_loop, int fd, int mask, ae_comm_pr
 
 	return AE_OK;
 }
+
 void ae_delete_comm_event(ae_event_loop *event_loop, int fd, int mask)
 {
 	if (fd >= event_loop->setsize) return;
@@ -94,6 +100,7 @@ void ae_delete_comm_event(ae_event_loop *event_loop, int fd, int mask)
 		event_loop->maxfd = j;
 	}
 }
+
 int ae_get_comm_events(ae_event_loop *event_loop, int fd)
 {
 	if (fd >= event_loop->setsize)
@@ -199,6 +206,8 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
 	}
 	return processed;
 }
+
+
 void ae_main(ae_event_loop *event_loop)
 {
 	event_loop->stop = 0;
@@ -206,6 +215,8 @@ void ae_main(ae_event_loop *event_loop)
 		ae_process_events(event_loop, AE_ALL_EVENTS);
 	}
 }
+
+
 long long ae_create_time_event(ae_event_loop *event_loop,
                                long long milliseconds,
                                ae_time_process *proc,

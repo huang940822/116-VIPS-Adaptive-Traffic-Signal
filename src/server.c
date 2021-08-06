@@ -1,5 +1,4 @@
 #include "server.h"
-
 #include "ae_timer_event.h"
 #include "msg_queue.h"
 #include "network.h"
@@ -22,6 +21,7 @@ static uint64_t callback_hash(const void *key)
 {
 	return dictGenHashFunction((unsigned char *)key, strlen((char *)key));
 }
+
 static int callback_key_compare(void *private_data, const void *key1, const void *key2)
 {
 	/*string compare*/
@@ -32,11 +32,13 @@ static int callback_key_compare(void *private_data, const void *key1, const void
 		return 0;
 	return memcmp(key1, key2, l1) == 0;
 }
+
 static void callback_key_destructor(void *private_data, void *key)
 {
 	DICT_NOTUSED(private_data);
 	free(key);
 }
+
 static dict_type client_callback_dict = {
     callback_hash,
     NULL,
@@ -55,6 +57,8 @@ int com_layer_init(char *config_file_path)
 		return SERVER_ERR_INIT;
 	pthread_create(&com_layer_thread, NULL, (void *)start_server, (void *)(&RSU_server));
 }
+
+
 int init_server(comm_server_t *server)
 {
 	server->broker = malloc(sizeof(*(server->broker)));
@@ -338,9 +342,9 @@ void conn_write_to_client_TCP(struct ae_event_loop *event_loop, int fd, void *cl
 {
 	client_t *client = (client_t *)clientData;
 	
-	pthread_mutex_lock(&mutex_client_write);
+	// pthread_mutex_lock(&mutex_client_write);
 	buffer_t *wbuffer = client->write_buffer;
-	pthread_mutex_unlock(&mutex_client_write);
+	// pthread_mutex_unlock(&mutex_client_write);
 
 	int data_size = (int)get_buffer_size(wbuffer);
 	if (data_size == 0) {
