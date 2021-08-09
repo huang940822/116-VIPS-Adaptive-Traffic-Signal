@@ -6,8 +6,11 @@
 #include "timer_event.h"
 #include "log.h"
 
-uint8_t error_status;
+uint8_t error_status=0;
+uint8_t error_tc_5fcc=0;
 timer_t dsrc_heartbeat_timer_id;
+timer_t tc_5fcc_timer_id;
+
 pthread_mutex_t mutex_error_status = PTHREAD_MUTEX_INITIALIZER;
 
 uint8_t get_error_status()
@@ -98,5 +101,26 @@ void dsrc_error_detect_init(void){
 //在tsp_paket_tx中 已經有定期回報的封包 裡面包含error status
 //當發現有err bit被拉起來時 送錯誤封包到雲端
 
+void tc_5fcc_error_detect_init(void){
+    create_timer(&tc_5fcc_timer_id, NULL, set_tsc_5fcc_error);
+    set_timer(tc_5fcc_timer_id, 0, 0, 10, 0);
+}
 
+void set_tsc_5fcc_error(__sigval_t value)
+{
+    pthread_mutex_lock(&mutex_error_status);
+    error_status |= TCFAIL_BIT_POSITION;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}
+
+void clear_tsc_5fcc_error(void)
+{
+    pthread_mutex_lock(&mutex_error_status);
+    error_status &= ~TCFAIL_BIT_POSITION;
+    pthread_mutex_unlock(&mutex_error_status);
+    //postpone the function of set_tsc_5fcc_error
+    set_timer(tc_5fcc_timer_id, 0, 0, 10, 0);
+    return;
+}
 

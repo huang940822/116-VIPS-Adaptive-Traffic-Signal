@@ -83,6 +83,7 @@ void packet_5FCC(traffic_signal_packet_t *packet)
         sem_post(&sem_signal_status);
     }
 
+    clear_tsc_5fcc_error();
     return;
 }
 

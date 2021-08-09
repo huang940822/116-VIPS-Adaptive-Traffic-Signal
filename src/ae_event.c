@@ -341,7 +341,7 @@ int process_time_events(ae_event_loop *event_loop)
 	while (te) {
 		long now_sec, now_ms;
 		long long id;
-
+		//先處理預計要殺掉的time event在處理time event剩下time event要做的事情
 		/* Remove events scheduled for deletion. */
 		if (te->id == AE_DELETED_EVENT_ID) {
 			ae_time_event *next = te->next;
