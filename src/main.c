@@ -12,6 +12,7 @@
 #include "server.h"
 #include "config.h"
 #include "EVSP_config.h"
+#include "TSP_config.h"
 #include "msg_queue.h"
 #include "dispatcher.h"
 #include "typedefine.h"
@@ -34,11 +35,7 @@ pthread_mutex_t mutex_uart_comple_protect = PTHREAD_MUTEX_INITIALIZER;
 
 void sigintHandler(int sig_num)
 {
-    /* Reset handler to catch SIGINT next time.
-       Refer http://en.cppreference.com/w/c/program/signal */
     signal(SIGINT, sigintHandler);
-    
-    
     pthread_mutex_lock(&mutex_uart_comple_protect);
     printf("get in mutex in signal handler\r\n");
     printf("\nuart write actions has all be completed before exit from process\n");
@@ -51,11 +48,6 @@ void sigintHandler(int sig_num)
 int main()
 {   
     signal(SIGINT, sigintHandler);
-    //below is for tsc_countdown_on/off test
-    // tsc_countdown_off(0);
-    // sleep(10);
-    // tsc_countdown_on(0);
-    // return 0;
 
     /* Start server */
     int ret = 0;
@@ -66,6 +58,8 @@ int main()
 
     //init dsrc error detect
     dsrc_error_detect_init();
+    //init tc fail detect
+    tc_5fcc_error_detect_init();
 
     /* read config file*/
     ret = config_init();
@@ -78,6 +72,12 @@ int main()
     if (ret != 0 ) {
         log_file_write_fatal_error("error evsp reading config file: %d", ret);
     }
+
+    ret = TSP_config_init();
+    if (ret != 0 ) {
+        log_file_write_fatal_error("error tsp reading config file: %d", ret);
+    }
+
 
     printf("query tc firmware version\r\n");
     flag_query_firm_ver=true;

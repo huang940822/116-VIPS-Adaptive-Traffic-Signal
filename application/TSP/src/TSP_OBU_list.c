@@ -12,6 +12,7 @@
 #include "TSP_timer_event.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "TSP_config.h"
 
 TSP_host_OBU_obj_t TSP_host_OBU_list;
 pthread_mutex_t TSP_host_OBU_list_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -31,7 +32,7 @@ TSP_host_OBU_obj_t *TSP_host_OBU_obj_new(char *OBU_id, uint8_t target_phase)
     memcpy(host_OBU->OBU_id, OBU_id, OBU_ID_MAX_LEN);
     host_OBU->target_phase = target_phase;
     create_timer(&host_OBU->host_OBU_list_timer, host_OBU, TSP_host_OBU_list_timeout_timer_handler);
-    set_timer(host_OBU->host_OBU_list_timer, 0, 0, TSP_HOST_OBU_LIST_TIMEOUT, 0);
+    set_timer(host_OBU->host_OBU_list_timer, 0, 0, TSP_config.tsp_host_obu_list_timeout, 0);
     return host_OBU;
 }
 
@@ -51,7 +52,7 @@ TSP_host_OBU_obj_t *TSP_host_OBU_obj_insert(char *OBU_id, uint8_t target_phase)
     while (current != NULL) {
         /* host OBU already exist */
         if (strncmp(current->OBU_id, OBU_id, OBU_ID_MAX_LEN) == 0) {
-            set_timer(current->host_OBU_list_timer, 0, 0, TSP_HOST_OBU_LIST_TIMEOUT, 0);
+            set_timer(current->host_OBU_list_timer, 0, 0, TSP_config.tsp_host_obu_list_timeout, 0);
             pthread_mutex_unlock(&TSP_host_OBU_list_mutex);
             return current;
         }
@@ -176,6 +177,7 @@ void TSP_host_OBU_obj_first_insert(char *OBU_id, uint8_t target_phase)
     uint8_t current_step = signal_status.StepID;
     int ret = 0;
 
+    //注意這邊 都會調整一秒鐘
     /* target_phase == current_phase */
     if (target_phase == current_phase && current_step == 1) {
         command.cycle = 0;

@@ -10,6 +10,7 @@
 
 #include "log.h"
 #include "TSP.h"
+#include "TSP_config.h"
 #include "config.h"
 #include "TSP_matrix.h"
 #include "timer_event.h"
@@ -170,7 +171,8 @@ int TSP_on_OBU_packet_rx(void *arg)
     }
     
     
-    if (host_OBU != NULL && OBU_distance < TSP_REMAINING_DISTANCE_MAX) {
+    // if (host_OBU != NULL && OBU_distance < TSP_REMAINING_DISTANCE_MAX) {
+    if (host_OBU != NULL && OBU_distance < TSP_config.tsp_remaining_distance_max) {
         printf("tsp supermatrix lookup\r\n");
         host_OBU->distance = OBU_distance;
         TSP_supermatrix_lookup(host_OBU);
@@ -362,6 +364,8 @@ int TSP_on_cloud_packet_rx(void *arg)
         }
         break;
     default:
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"\nuseless tsp cmd");
+
         break;
     }
 

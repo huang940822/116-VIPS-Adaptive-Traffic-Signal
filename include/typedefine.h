@@ -93,6 +93,12 @@ typedef struct EVSP_config_object {
     uint8_t valid_record_distance;
 } EVSP_config_object_t;
 
+typedef struct TSP_config_object {
+    uint8_t tsp_host_obu_list_timeout;
+    uint16_t tsp_remaining_distance_max;
+} TSP_config_object_t;
+
+
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
     uint8_t dontSend2TC;

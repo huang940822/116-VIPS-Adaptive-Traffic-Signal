@@ -1,5 +1,5 @@
 #include "msg_queue.h"
-
+#include "log.h"
 #include <stdio.h>
 #include <string.h>
 typedef struct msg_queue msg_queue_t;
@@ -21,6 +21,8 @@ void msg_queue_enqueue(msg_obj_t *new_msg_obj)
 {
 	// Wait until there's at least one space
 	sem_wait(&(msg_queue.full));
+	printf("msg queue is not full and then put msg into it\r\n");
+	log_file_write("msg queue is not full and then put msg into it\r\n");
 	pthread_mutex_lock(&msg_queue.mutex);  // CRITICAL SECTION
 	queue_insert_tail(&msg_queue.msg_queue_head, &new_msg_obj->queue);
 	pthread_mutex_unlock(&msg_queue.mutex);
