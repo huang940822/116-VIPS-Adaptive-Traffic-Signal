@@ -165,12 +165,23 @@ int main()
     //         flag_countdown_on=1;
     //         break;
     //     case 2:
-    //         log_file_write("effect time 200\r\n");
-    //         printf("set effect time 200\r\n");
+    //         // log_file_write("effect time 200\r\n");
+    //         {
+            
+    //         int a,b;
+    //         printf("input target phase\r\n");
+    //         scanf(" %i",&b);
+    //         printf("input time want to minus\r\n");
+    //         scanf(" %i",&a);
     //         temp_ack_seq=tsc_dynamic();
     //         WAIT_ACK_LOOP
-    //         temp_ack_seq=tsc_extend(1,1,200);
+    //         // traffic_signal_status_t signal_status;
+    //         // get_traffic_signal_status(&signal_status);
+    //         int aa=47-a;
+    //         printf("aa is %d\r\n", aa);
+    //         temp_ack_seq=tsc_extend(b,1,aa);
     //         WAIT_ACK_LOOP
+    //         }
     //         break;
     //     case 3:
     //         log_file_write("go to pretime");

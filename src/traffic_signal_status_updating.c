@@ -188,7 +188,8 @@ void packet_0F04(traffic_signal_packet_t *packet)
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"original_tc_health_status is %04X\n\r",original_tc_hstatus);
     log_file_write(log_content);
     //dont show bit 14, 8, 9 for they seprately means controller ready, cabinated opened, communication connect
-    original_tc_hstatus=original_tc_hstatus&0xbcff; 
+    // original_tc_hstatus=original_tc_hstatus&0xbcff;
+    original_tc_hstatus=original_tc_hstatus&0xfd5f; //介庸學長建議mask掉5,7,9bit
     printf("tc status\n\r");
     printf("%04X\n\r", original_tc_hstatus);
     if(original_tc_hstatus != 0){

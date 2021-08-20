@@ -1,4 +1,6 @@
 #include "ae_timer_event.h"
+
+
 /*This is just a test function that display current time*/
 int time_print_cur_time(ae_event_loop *event_loop, long long id, void *clientData)
 {
@@ -14,6 +16,8 @@ int time_print_cur_time(ae_event_loop *event_loop, long long id, void *clientDat
 	/*ctime() returns a pointer to a static buffer, and must not be free()*/
 	return SEC_TO_MSEC(5);
 }
+
+
 int on_cloud_disconnected(ae_event_loop *event_loop, long long id, void *clientData)
 {
 	printf("on_cloud_disconnected\n");

@@ -44,7 +44,7 @@ void timer_event_handler(__sigval_t value)
         }
         
         pthread_mutex_lock(&mutex_uart_comple_protect);
-        printf("get in uart mutex\r\n");
+        // printf("get in uart mutex\r\n");
         command_buf_polling();
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
@@ -80,7 +80,7 @@ void timer_event_handler(__sigval_t value)
 
         }
         pthread_mutex_unlock(&mutex_uart_comple_protect);
-        printf("leave uart write mutex\r\n");
+        // printf("leave uart write mutex\r\n");
 
         // pthread_mutex_unlock(&mutex_rs232_write);
     }

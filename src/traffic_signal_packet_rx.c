@@ -489,7 +489,7 @@ void* traffic_signal_packet_rx_handler()
 			else if ( read_buffer[0] == ACK_VAL ) {
 				packet->TYPE = ACK_VAL;
 				ack_seq=recv_ack(serial_port_fd, packet);
-				printf("ack seq is %d\r\n",ack_seq);
+				// printf("ack seq is %d\r\n",ack_seq);
 			}
 			/* 0xAA 0xEE */
 			else if ( read_buffer[0] == NAK_VAL ) {

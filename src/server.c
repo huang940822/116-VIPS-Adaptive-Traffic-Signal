@@ -351,8 +351,10 @@ void conn_write_to_client_TCP(struct ae_event_loop *event_loop, int fd, void *cl
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 		return;
 	}
+	//送資料出去
 	int written = client->handle->send_fn(client);
 
+	//都送出去了 所以可以清掉這個com event?
 	if (get_buffer_size(wbuffer) == 0)
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 }
@@ -376,7 +378,10 @@ void conn_write_to_client_UDP(struct ae_event_loop *event_loop, int fd, void *cl
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 		return;
 	}
+	
 	ssize_t send_n = client->handle->send_fn(client);
+
+
 	if (get_buffer_size(wbuffer) == 0) {
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 	}

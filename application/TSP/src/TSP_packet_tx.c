@@ -15,6 +15,7 @@
 void TSP_send_ack()
 {   
     printf("tsp send ack\r\n");
+    log_file_write("tsp send ack\r\n");
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *)malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
