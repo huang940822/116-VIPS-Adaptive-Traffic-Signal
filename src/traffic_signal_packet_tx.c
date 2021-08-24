@@ -23,6 +23,7 @@ uint8_t flag_pretime=0;
 uint8_t flag_countdown_on=0;
 uint8_t flag_countdown_off=0;
 uint8_t flag_query_firm_ver=0;
+uint8_t flag_switch2nextStep=0;
 
 uint8_t get_seq_num()
 {
@@ -179,78 +180,78 @@ uint8_t tsc_pretime()
 }
 
 //強制到下一個step?沒用到
-// void tsc_switch()
-// {
-//     char log_content[LOG_CONTENT_LEN + 1];
-//     memset(log_content, 0, sizeof(log_content));
-//     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: SWITCH\n");
+uint8_t tsc_switch()
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: SWITCH\n");
 
-//     traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
-//     if (packet == NULL) {
-//         set_memory_error();
-// 		log_file_write_fatal_error("tsc_switch: malloc");
-//         perror("tsc_switch: malloc");
-//         exit(errno);
-//     } else {
-//         clear_memory_error();
-//         memset(packet, 0, MAX_PACKET_LEN);
-//     }
-//     packet->DLE_1 = DLE_VAL;
-//     packet->TYPE = STX_VAL;
-//     packet->ADDR[0] = ADDR0_VAL;
-//     packet->ADDR[1] = ADDR1_VAL;
-//     packet->DLE_2 = DLE_VAL;
-//     packet->ETX = ETX_VAL;
+    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    if (packet == NULL) {
+        set_memory_error();
+		log_file_write_fatal_error("tsc_switch: malloc");
+        perror("tsc_switch: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(packet, 0, MAX_PACKET_LEN);
+    }
+    packet->DLE_1 = DLE_VAL;
+    packet->TYPE = STX_VAL;
+    packet->ADDR[0] = ADDR0_VAL;
+    packet->ADDR[1] = ADDR1_VAL;
+    packet->DLE_2 = DLE_VAL;
+    packet->ETX = ETX_VAL;
 
-//     packet->SEQ = get_seq_num();
-//     packet->LEN[0] = SWITCH_LEN0_VAL;
-//     packet->LEN[1] = SWITCH_LEN1_VAL;
-//     packet->INFO[0] = 0x5F;
-//     packet->INFO[1] = 0x1C;
-//     packet->INFO[2] = 0x00;
-//     packet->INFO[3] = 0x00;
-//     packet->INFO[4] = 0x00;
+    packet->SEQ = get_seq_num();
+    packet->LEN[0] = SWITCH_LEN0_VAL;
+    packet->LEN[1] = SWITCH_LEN1_VAL;
+    packet->INFO[0] = 0x5F;
+    packet->INFO[1] = 0x1C;
+    packet->INFO[2] = 0x00;
+    packet->INFO[3] = 0x00;
+    packet->INFO[4] = 0x00;
 
-//     uint8_t output_byte[SWITCH_LEN1_VAL];
-//     uint8_t header_byte[HEADER_LEN - 1];
-//     uint8_t info_byte[SWITCH_LEN1_VAL - HEADER_LEN];
-//     uint8_t CKS = 0;
+    uint8_t output_byte[SWITCH_LEN1_VAL];
+    uint8_t header_byte[HEADER_LEN - 1];
+    uint8_t info_byte[SWITCH_LEN1_VAL - HEADER_LEN];
+    uint8_t CKS = 0;
 
-//     CKS = check_sum(packet, SWITCH_LEN1_VAL - HEADER_LEN);
+    CKS = check_sum(packet, SWITCH_LEN1_VAL - HEADER_LEN);
 
-//     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
-//     memcpy(info_byte, &packet->INFO, SWITCH_LEN1_VAL - HEADER_LEN);
+    memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
+    memcpy(info_byte, &packet->INFO, SWITCH_LEN1_VAL - HEADER_LEN);
     
-//     for (int i = 0; i < 7; i++) {
-//         output_byte[i] = header_byte[i];
-//     }
-//     for (int i = 0; i < SWITCH_LEN1_VAL - HEADER_LEN; i++) {
-//         output_byte[i + 7] = info_byte[i];
-//     }
-//     for (int i = 0; i < 2; i++) {
-//         output_byte[SWITCH_LEN1_VAL - 3 + i] = header_byte[i + 7];
-//     }
-//     output_byte[SWITCH_LEN1_VAL - 1] = CKS;
+    for (int i = 0; i < 7; i++) {
+        output_byte[i] = header_byte[i];
+    }
+    for (int i = 0; i < SWITCH_LEN1_VAL - HEADER_LEN; i++) {
+        output_byte[i + 7] = info_byte[i];
+    }
+    for (int i = 0; i < 2; i++) {
+        output_byte[SWITCH_LEN1_VAL - 3 + i] = header_byte[i + 7];
+    }
+    output_byte[SWITCH_LEN1_VAL - 1] = CKS;
 
-//     if (config.log_signal_packet_tx) {
-//         for (int i = 0; i < SWITCH_LEN1_VAL; i++) {
-//             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
-//         }
-//         log_file_write(log_content);
-//     }
-//     pthread_mutex_lock(&mutex_rs232_write);
-//     int ret = write(serial_port_fd, output_byte, SWITCH_LEN1_VAL);
-//     pthread_mutex_unlock(&mutex_rs232_write);
+    if (config.log_signal_packet_tx) {
+        for (int i = 0; i < SWITCH_LEN1_VAL; i++) {
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+        }
+        log_file_write(log_content);
+    }
+    pthread_mutex_lock(&mutex_rs232_write);
+    int ret = write(serial_port_fd, output_byte, SWITCH_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
 
-//     if (ret == -1 || ret != SWITCH_LEN1_VAL) {
-// 		log_file_write_fatal_error("tsc_switch: write");
-//     }
-//     // tcdrain(serial_port_fd);
-//     if (packet != NULL) {
-//         free(packet);
-//     }
-//     return;
-// }
+    if (ret == -1 || ret != SWITCH_LEN1_VAL) {
+		log_file_write_fatal_error("tsc_switch: write");
+    }
+    // tcdrain(serial_port_fd);
+    if (packet != NULL) {
+        free(packet);
+    }
+    return packet->SEQ;;
+}
 
 //注意成龍的部份 這裡是改變每個step的時間
 uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)

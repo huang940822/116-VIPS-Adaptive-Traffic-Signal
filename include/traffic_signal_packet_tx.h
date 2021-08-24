@@ -26,7 +26,7 @@ pthread_mutex_t mutex_rs232_write;
 uint8_t tsc_dynamic();
 uint8_t tsc_pretime();
 
-// void tsc_switch();
+uint8_t tsc_switch();
 uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time);
 
 // void tsc_EVSP_on(uint8_t);

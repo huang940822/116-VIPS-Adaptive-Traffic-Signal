@@ -22,6 +22,7 @@ extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
+extern uint8_t flag_switch2nextStep;
 extern pthread_mutex_t mutex_uart_comple_protect;
 
 void timer_event_handler(__sigval_t value)
@@ -79,6 +80,20 @@ void timer_event_handler(__sigval_t value)
             flag_query_firm_ver=false;
 
         }
+        //當發生655xx秒數時 強制切到下一個step
+        if(flag_switch2nextStep==true){
+
+            // traffic_signal_status_t signal_status;
+            // get_traffic_signal_status(&signal_status);
+            temp_ack_seq=tsc_dynamic();
+            WAIT_ACK_LOOP
+            //下0 讓step1立刻結束
+            temp_ack_seq=tsc_switch();
+            WAIT_ACK_LOOP
+            flag_switch2nextStep=false;
+
+        }
+
         pthread_mutex_unlock(&mutex_uart_comple_protect);
         // printf("leave uart write mutex\r\n");
 

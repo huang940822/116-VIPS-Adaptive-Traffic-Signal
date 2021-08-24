@@ -18,8 +18,10 @@
 traffic_signal_status_t signal_status;
 pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_signal_status;
-static uint8_t pretime_sent_count=0;
+static uint16_t pretime_sent_count=0;
 extern uint8_t flag_pretime;
+extern uint8_t flag_switch2nextStep;
+
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
@@ -48,7 +50,10 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     }
     signal_status.StepID = packet->INFO[4];
     signal_status.StepSec = (packet->INFO[5] << 8) | packet->INFO[6];
-
+    
+    if(signal_status.StepSec>255){
+        flag_switch2nextStep=true;
+    }
 
     // execute pretime instruction to force tc go back to pretime
     // to prevent the tc not go back to pretime after 全動態
