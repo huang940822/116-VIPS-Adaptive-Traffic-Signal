@@ -194,7 +194,7 @@ void packet_0F04(traffic_signal_packet_t *packet)
     log_file_write(log_content);
     //dont show bit 14, 8, 9 for they seprately means controller ready, cabinated opened, communication connect
     // original_tc_hstatus=original_tc_hstatus&0xbcff;
-    original_tc_hstatus=original_tc_hstatus&0xbd5f; //介庸學長建議mask掉5,7,9bit
+    original_tc_hstatus=original_tc_hstatus&0x9d5f; //介庸學長建議mask掉5,7,9bit 另外mask掉 13,14
     printf("tc status\n\r");
     printf("%04X\n\r", original_tc_hstatus);
     
