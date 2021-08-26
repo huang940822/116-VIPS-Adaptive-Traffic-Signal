@@ -51,8 +51,12 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     signal_status.StepID = packet->INFO[4];
     signal_status.StepSec = (packet->INFO[5] << 8) | packet->INFO[6];
     
-    if(signal_status.StepSec>255){
+    if(signal_status.StepSec>255 &&signal_status.StepID==1){
         flag_switch2nextStep=true;
+        set_655xx_error();
+    }
+    if(signal_status.StepSec<=255 &&signal_status.StepID==1){
+        clear_655xx_error();
     }
 
     // execute pretime instruction to force tc go back to pretime
@@ -194,7 +198,8 @@ void packet_0F04(traffic_signal_packet_t *packet)
     log_file_write(log_content);
     //dont show bit 14, 8, 9 for they seprately means controller ready, cabinated opened, communication connect
     // original_tc_hstatus=original_tc_hstatus&0xbcff;
-    original_tc_hstatus=original_tc_hstatus&0x9d5f; //介庸學長建議mask掉5,7,9bit 另外mask掉 13,14
+    original_tc_hstatus=original_tc_hstatus&0x9d13; //介庸學長建議如下
+                                                    //Bit0、1、4、8、10、11、12、15要通報處理，因為控制不是無法控制就是故障不亮或跳閃光模式  
     printf("tc status\n\r");
     printf("%04X\n\r", original_tc_hstatus);
     

@@ -91,6 +91,8 @@ void timer_event_handler(__sigval_t value)
             temp_ack_seq=tsc_switch();
             WAIT_ACK_LOOP
             flag_switch2nextStep=false;
+            log_file_write("step sec higher than 255 happens and switch to next step forcelly!!\r\n");
+
 
         }
 

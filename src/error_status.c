@@ -108,7 +108,7 @@ void dsrc_error_detect_init(void){
 
 void tc_5fcc_error_detect_init(void){
     create_timer(&tc_5fcc_timer_id, NULL, set_tsc_5fcc_error);
-    set_timer(tc_5fcc_timer_id, 0, 0, 10, 0);
+    set_timer(tc_5fcc_timer_id, 0, 0, 60, 0);
 }
 
 void set_tsc_5fcc_error(__sigval_t value)
@@ -131,8 +131,27 @@ void clear_tsc_5fcc_error(void)
     error_status &= ~TCFAIL_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     //postpone the function of set_tsc_5fcc_error
-    set_timer(tc_5fcc_timer_id, 0, 0, 10, 0);
+    set_timer(tc_5fcc_timer_id, 0, 0, 60, 0);
     // err_count_5fcc=0;
+    return;
+}
+
+
+void set_655xx_error()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    // printf("don't get dsrc heartbeat packet and set dsrc err bit\r\n");
+    error_status |= TC_655XX_ERR;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}
+
+void clear_655xx_error()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    // log_file_write("get dsrc heartbeat packet and clear dsrc err bit\r\n");
+    error_status &= ~TC_655XX_ERR;
+    pthread_mutex_unlock(&mutex_error_status);
     return;
 }
 

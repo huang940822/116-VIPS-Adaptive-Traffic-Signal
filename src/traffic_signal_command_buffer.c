@@ -16,7 +16,7 @@
 #include "TSP.h"
 #include "EVSP.h"
 //todo: both above should be removed!
-
+#define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
 
 tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM];
@@ -73,6 +73,8 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     int difference = 0;
     int time = 0;
     int temp_ack_seq;
+    
+
     switch (config.signal_controller_manufacturer)
     {
         case CHENG_LONG:
@@ -90,8 +92,42 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }else{
                 log_file_write("not TSP either EVSP is sent to TC machine\r\n");
             }
-            //command_obj->adjusted_time代表這個step現在的時間
+            // command_obj->adjusted_time代表這個step現在的時間
+            
+            
             difference = command_obj->effect_time - command_obj->adjusted_time;
+            // printf("cmd obj's effect time is %d and adjusted time is %d\r\n", command_obj->effect_time, command_obj->adjusted_time);
+            
+            
+            //below to prevent cheng_long 655xx error
+            int16_t original_difference=0;
+            uint16_t current_sec_residual=get_current_second();
+            original_difference=difference;
+            char log_content[LOG_CONTENT_LEN + 1];
+            memset(log_content, 0, sizeof(log_content));
+            
+
+            if(((int)current_sec_residual+difference)<TIME_DEFENSE && current_sec_residual>=TIME_DEFENSE){
+                difference=TIME_DEFENSE-current_sec_residual;  //能夠忍受的砍的值
+                printf("difference has been changed from %d to %d(cheng_long)\r\n", original_difference, difference);
+                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference has been changed from %d to %d(cheng_long)",
+                original_difference, difference);
+                log_file_write(log_content);
+            }
+            if(current_sec_residual<TIME_DEFENSE && difference<=0){
+                difference=0;
+                printf("difference has been changed from %d to 0(cheng_long)\r\n", original_difference);
+                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference has been changed from %d to 0(cheng_long)",
+                original_difference);
+                log_file_write(log_content);
+            }
+            // if(current_sec_residual<TIME_DEFENSE && difference>0){
+            
+            // }
+
+            //above to prevent cheng_long 655xx error
+
+
             time = pretime + difference;    //difference才是真正會延長的時間
             // printf("diff: %d, time: %d, pretime: %d\n", difference, time, pretime);
             if (time > 255) {

@@ -8,7 +8,7 @@
 #define DISK_BIT_POSITION 4
 #define MEMORY_BIT_POSITION 8
 #define TCFAIL_BIT_POSITION 16
-
+#define TC_655XX_ERR 32
 
 uint8_t get_error_status();
 
@@ -34,5 +34,7 @@ void tc_5fcc_error_detect_init(void);
 void clear_tsc_5fcc_error(void);
 void set_tsc_5fcc_error(__sigval_t value);
 
+void set_655xx_error(void);
+void clear_655xx_error(void);
 
 #endif
