@@ -1,0 +1,15 @@
+[Unit]
+Description=restart ipc daemon
+after=network.target
+
+[Service]
+User=root
+ExecStart=/home/oslab/RSU_Controller_v3-master/ping_test.sh
+WorkingDirectory=/home/oslab/RSU_Controller_v3-master
+Restart=always
+RestartSec=10s
+TimeoutSec=infinity
+
+[Install]
+WantedBy=multi-user.target
+
