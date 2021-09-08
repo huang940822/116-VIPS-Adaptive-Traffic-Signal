@@ -10,7 +10,6 @@
 #include "log.h"
 
 uint8_t error_status=0;
-uint8_t error_tc_5fcc=0;
 timer_t dsrc_heartbeat_timer_id;
 timer_t tc_5fcc_timer_id;
 
