@@ -171,6 +171,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     read_buf.index = C2R_COMMON_FIELD_LEN;
 
     if (config.log_cloud_packet_rx) {
+        printf("common filed.service_id:%d\r\n",common_field.service_id);
         memset(log_content, 0, sizeof(log_content));
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "cloud packet rx: COMMON FIELD\n");
         for (int i = 0; i < read_buf.index; i++) {
@@ -284,7 +285,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     read_buf.index = 0;
 
     // packet_len 
-    read_uint32_t(&common_field.packet_len, &read_buf);
+    read_uint32_t(&common_field.packet_len, &read_buf);//49
     // device type
     read_uint8_t(&common_field.device_type, &read_buf);
     // OBU id
@@ -352,10 +353,10 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         memset(record, 0, sizeof(OBU_record_t));
     }
 
+
     // convert common field to OBU record
     V2R_packet2OBU_record(&common_field, record);
 
-    
 
     //record和obu object都有obu id這樣才知道要把packet裡面節錄出來的record資料
     //放到obu list裡面的哪個obu object    
@@ -394,7 +395,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         clear_memory_error();
         memcpy(app_section.payload, &msg->msg[read_buf.index], app_section.payload_len);
         app_section.com_id = msg->handle_id;
-    }  
+    }
 
     app_section.OBU_object = (OBU_object_t *)malloc(sizeof(OBU_object_t));
     if (app_section.OBU_object == NULL) {

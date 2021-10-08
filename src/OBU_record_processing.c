@@ -286,6 +286,7 @@ void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
     record->vehicle_type = packet->vehicle_type;
 }
 
+
 void OBU_object_garbage_collection()
 {
     time_t current_time;

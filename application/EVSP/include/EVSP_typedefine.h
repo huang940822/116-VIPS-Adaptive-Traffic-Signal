@@ -12,6 +12,7 @@ typedef struct EVSP_static_space
 {
     uint8_t on_duty_flag;
     uint8_t weight;
+    uint8_t error_code;
     uint8_t last_direction;
     float last_lon;
     float last_lat;
