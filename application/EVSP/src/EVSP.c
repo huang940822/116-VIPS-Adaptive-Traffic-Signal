@@ -193,11 +193,16 @@ int EVSP_on_OBU_packet_rx(void *arg)
     //     float last_lon;
     //     float last_lat;
     // } EVSP_static_space_t;
+
     EVSP_static_space_t static_space;
     memcpy(&static_space, app_section->OBU_object->private_space[EVSP.id].static_space, sizeof(EVSP_static_space_t));
     read_uint8_t(&static_space.on_duty_flag, &read_buf);
     read_uint8_t(&static_space.weight, &read_buf);
+    read_uint8_t(&static_space.error_code, &read_buf);
 
+    // printf("static_space.weight:%x\r\n",static_space.on_duty_flag);
+    // printf("static_space.weight:%x\r\n",static_space.weight);
+    // printf("static_space.weight:%x\r\n",static_space.error_code);
 
 
     uint8_t last_record_index = app_section->OBU_object->record_ring.last_record_pointer;   //back of queue; 最新推入的資料？
@@ -222,24 +227,26 @@ int EVSP_on_OBU_packet_rx(void *arg)
             memset(write_buf.content, 0, 42);
         }
         write_uint8_t(0, &write_buf); //write cmd
-        write_char(app_section->OBU_object->record_ring.record[last_record_index].OBU_id, &write_buf, OBU_ID_MAX_LEN, OBU_ID_MAX_LEN);
-        write_uint8_t(app_section->OBU_object->record_ring.record[last_record_index].vehicle_type, &write_buf);
+        write_char(app_section->OBU_object->record_ring.record[last_record_index].OBU_id, &write_buf, OBU_ID_MAX_LEN, OBU_ID_MAX_LEN);//write OBU_id
+        write_uint8_t(app_section->OBU_object->record_ring.record[last_record_index].vehicle_type, &write_buf);//write vehicle_type
         
         char timestamp_t[20];
         int length= strftime (timestamp_t,20,"%Y-%m-%d %H:%M:%S\n",(struct tm *)&(app_section->OBU_object->record_ring.record[last_record_index].time_stamp));
         // printf("obu object timestamp string is %s\n\r",timestamp_t);
-        write_char(timestamp_t, &write_buf, TIMESTAMP_LEN, TIMESTAMP_LEN);
-        write_float(app_section->OBU_object->record_ring.record[last_record_index].position_lon, &write_buf);
-        write_float(app_section->OBU_object->record_ring.record[last_record_index].position_lat, &write_buf);
+        write_char(timestamp_t, &write_buf, TIMESTAMP_LEN, TIMESTAMP_LEN);//write timestamp
+        write_float(app_section->OBU_object->record_ring.record[last_record_index].position_lon, &write_buf);//write lon
+        write_float(app_section->OBU_object->record_ring.record[last_record_index].position_lat, &write_buf);//write lat
 
-        //printf("gps data %f %f\r\n",app_section->OBU_object->record_ring.record[last_record_index].position_lon, 
-        //app_section->OBU_object->record_ring.record[last_record_index].position_lat);
+        //printf("gps data %f %f\r\n",app_section->OBU_object->record_ring.record[last_record_index].position_lon, app_section->OBU_object->record_ring.record[last_record_index].position_lat);
 
-        write_uint8_t(app_section->OBU_object->record_ring.record[last_record_index].speed, &write_buf);
-        write_uint8_t(app_section->OBU_object->record_ring.record[last_record_index].direction, &write_buf);
+        write_uint8_t(app_section->OBU_object->record_ring.record[last_record_index].speed, &write_buf);//write speed
+        write_uint8_t(app_section->OBU_object->record_ring.record[last_record_index].direction, &write_buf);//write direction
+        //printf("direction:%d\n\r",app_section->OBU_object->record_ring.record[last_record_index].direction);
         
         //write dummy duty
-        write_uint8_t(1, &write_buf);
+        //write_uint8_t(1, &write_buf);
+        write_uint8_t(static_space.on_duty_flag, &write_buf);//write on_duty_flag
+        // printf("on_duty_flag : %d\r\n",static_space.on_duty_flag);
         printf("route evsp to cloud\r\n");
         cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
         free(write_buf.content);
