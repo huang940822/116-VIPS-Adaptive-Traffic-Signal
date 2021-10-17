@@ -376,7 +376,7 @@ int TSP_on_cloud_packet_rx(void *arg)
     }
     return 0;
 }
-//沒用到
+
 int TSP_on_traffic_signal_command_tx(void *arg)
 {
     // printf("TSP_on_traffic_signal_command_tx\n");

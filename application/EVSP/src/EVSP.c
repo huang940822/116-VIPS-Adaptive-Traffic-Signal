@@ -299,7 +299,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             free(read_buf.content);
         }
         return 0;
-    }//tc箱出巷錯誤 直接不做
+    }//tc箱出現錯誤 直接不做
 
     memset(log_content, 0, sizeof(log_content));
     /* already in host OBU list */
@@ -331,14 +331,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 if (command.target_phase >= current_phase) {    
                     command.cycle = 0;
                     command.phase = command.target_phase;
-                    command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
+                    command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
                     ret = command_buf_insert_effect_time(&command);
                     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                         command.cycle, command.phase, command.effect_time, ret);
                 } else {    //target phase已過 到下一個cycle執行
                     command.cycle = 1;
                     command.phase = command.target_phase;
-                    command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
+                    command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
                     ret = command_buf_insert_effect_time(&command);
                     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                         command.cycle, command.phase, command.effect_time, ret);

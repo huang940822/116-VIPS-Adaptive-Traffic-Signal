@@ -149,20 +149,23 @@ int main()
 
 
     // int input, temp_ack_seq;
-    // int c,d;
-    // traffic_signal_status_t signal_status;
+    int c,d,a,b;
+    int a1,b1,c1,d1;
+    traffic_signal_status_t signal_status;
 
-    // usleep(3000000);
-    // get_traffic_signal_status(&signal_status);
+    // // usleep(10000000);
+    // // get_traffic_signal_status(&signal_status);
     
+    // // printf("pretime for phase 2 is %d phase 4 is %d\r\n", c,d);
     // tsc_command_t test_a, test_b;
     // uint8_t flag=true;
     // // uint8_t flag_2=false;
     // uint8_t current_phase=signal_status.SubPhaseID;
-    // flag_countdown_off=true;
-    // printf("input the sec want to adjust for phase 1:\r\n");
+    // // flag_countdown_off=true;
+    // printf("input the sec want to adjust for phase:\r\n");
     // scanf("%d",&input);
-    // while(1){
+    while(1){
+        
     //     // printf("count down off\r\n");
     //     // flag_countdown_off=1;
 
@@ -173,28 +176,48 @@ int main()
     //     // WAIT_ACK_LOOP
 
     //     // break;
+    //     // printf("input the sec want to adjust for phase 1:\r\n");
+    //     // scanf("%d",&input);
 
-
-    //     get_traffic_signal_status(&signal_status);
+        get_traffic_signal_status(&signal_status);
     //     current_phase=signal_status.SubPhaseID;
-    //     printf("current phase is %d\r\n", current_phase);
-    //     c=signal_status.plan[0].PreGreen;
-    //     d=signal_status.plan[1].PreGreen;
-    //     printf("pretime for phase 1 is %d phase 2 is %d\r\n", c,d);
-        
+    //     // printf("current phase is %d\r\n", current_phase);
+        a=signal_status.plan[0].PreTimeCompensated;
+        b=signal_status.plan[1].PreTimeCompensated;
+        c=signal_status.plan[2].PreTimeCompensated;
+        d=signal_status.plan[3].PreTimeCompensated;
+        a1=signal_status.plan[0].PreGreen;
+        b1=signal_status.plan[1].PreGreen;
+        c1=signal_status.plan[2].PreGreen;
+        d1=signal_status.plan[3].PreGreen;
+
+        char log_content[LOG_CONTENT_LEN + 1];
+        // memset(log_content, 0, sizeof(log_content));
+        // if (config.log_command_buffer) {
+        // snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "command_buf_send: ");
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "pretime_compensated for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n",
+        a,b,c,d);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "pretime             for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n",
+        a1,b1,c1,d1);
+        log_file_write(log_content);
+        // }
+
+        // printf("pretime_compensated for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n", a, b, c,d);
+        // printf("pretime             for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n", a1, b1, c1,d1);
     //     // printf("flag_1 is %d\r\n", flag_1);
-    //     if(current_phase==1){
+    //     if(current_phase==2){
     //         if(flag==true){
     //             test_a.adjustment=input;
     //             // flag=false;
-    //             printf("adjust %d\r\n", test_b.adjustment);
-    //         }else{
-    //         // test_a.adjustment=-(c-4);
-    //             test_a.adjustment=-4;
-    //             printf("adjust %d\r\n", test_b.adjustment);
-    //             // test_a.adjustment=5;
-    //             flag=true;
+    //             // printf("adjust %d\r\n", test_b.adjustment);
     //         }
+    //         // else{
+    //         // // test_a.adjustment=-(c-4);
+    //         //     test_a.adjustment=-4;
+    //         //     printf("adjust %d\r\n", test_b.adjustment);
+    //         //     // test_a.adjustment=5;
+    //         //     flag=true;
+    //         // }
     //         // flag_1=false;
     //         // flag_2=true;
             
@@ -203,45 +226,46 @@ int main()
     //         test_a.cycle=0;
     //         memcpy(test_a.host_OBU_id,"bus_168",7);
     //         // printf("host id is %s\r\n", test_a.host_OBU_id);
-    //         test_a.phase=1;
+    //         test_a.phase=2;
     //         test_a.target_phase=1;
     //         test_a.effect_time=1;
             
-    //         int ret=command_buf_insert_adjustment(&test_a);
-    //         printf("test_a return result is %d\r\n", ret);
+    //         // int ret=command_buf_insert_adjustment(&test_a);
+    //         // printf("test_a return result is %d\r\n", ret);
 
     //     }
-    //     // printf("flag_2 is %d\r\n", flag_2);
-    //     // if(current_phase==3){
-    //     //     if(flag==true){
-    //     //         test_b.adjustment=3;
-    //     //         printf("adjust %d\r\n", test_b.adjustment);
-    //     //         flag=false;
-    //     //     }else{
-    //     //     // test_b.adjustment=-(d-4);
-    //     //     // test_b.adjustment=-2;
-    //     //         test_b.adjustment=-4;
-    //     //         printf("adjust %d\r\n", test_b.adjustment);
-    //     //         flag=true;
-    //     //     }
-    //     //     // flag_2=false;
-    //     //     // flag_1=true;
+    // //     // printf("flag_2 is %d\r\n", flag_2);
+    //     if(current_phase==4){
+    //         if(flag==true){
+    //             test_b.adjustment=input;
+    //             // printf("adjust %d\r\n", test_b.adjustment);
+    //             // flag=false;
+    //         }
+    //         // else{
+    //         // // test_b.adjustment=-(d-4);
+    //         // // test_b.adjustment=-2;
+    //         //     test_b.adjustment=-4;
+    //         //     printf("adjust %d\r\n", test_b.adjustment);
+    //         //     flag=true;
+    //         // }
+    //         // flag_2=false;
+    //         // flag_1=true;
             
-    //     //     test_b.app_id=TSP.id;
-    //     //     test_b.app_priority=TSP.priority;
-    //     //     test_b.cycle=0;
-    //     //     memcpy(test_b.host_OBU_id,"bus_168",7);
-    //     //     // printf("host id is %s\r\n", test_b.host_OBU_id);
-    //     //     test_b.phase=3;
-    //     //     test_b.target_phase=1;
-    //     //     test_b.effect_time=1;
+    //         test_b.app_id=TSP.id;
+    //         test_b.app_priority=TSP.priority;
+    //         test_b.cycle=0;
+    //         memcpy(test_b.host_OBU_id,"bus_168",7);
+    //         // printf("host id is %s\r\n", test_b.host_OBU_id);
+    //         test_b.phase=4;
+    //         test_b.target_phase=1;
+    //         test_b.effect_time=1;
             
-    //     //     int ret=command_buf_insert_adjustment(&test_b);
-    //     //     printf("test_a return result is %d\r\n", ret);
+    //         // int ret=command_buf_insert_adjustment(&test_b);
+    //         // printf("test_a return result is %d\r\n", ret);
 
-    //     // }
-    //     sleep(1);
-    // }
+    //     }
+        sleep(1);
+    }
     // int input, temp_ack_seq;
     // while(1){
     //     printf("input function number:\r\n0:countdownoff\r\n1:countdownon\r\n2:effecttime 200\r\n3:pretime\r\n4:send 5f4c\r\n5:query tc firmware version\r\n");

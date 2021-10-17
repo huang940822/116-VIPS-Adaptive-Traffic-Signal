@@ -21,11 +21,16 @@ sem_t sem_signal_status;
 static uint16_t pretime_sent_count=0;
 extern uint8_t flag_pretime;
 extern uint8_t flag_switch2nextStep;
-
+uint8_t phase_change_flag=false;
+uint8_t real_pretime=0;
+static uint8_t FirstSwitchFlag=true;
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
-{
+{   
+    static uint8_t previous_phase=0;    
+    //static uint8_t init_get_phase_flag=false;
+
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
@@ -44,13 +49,34 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     }
     
     
+
+
     // for some error situation happens in CHENG_LONG
     if (packet->INFO[3] != 0 && packet->INFO[4] != 5) {
         signal_status.SubPhaseID = packet->INFO[3];
     }
     signal_status.StepID = packet->INFO[4];
     signal_status.StepSec = (packet->INFO[5] << 8) | packet->INFO[6];
+
+    //phase change happen!!
     
+    // printf("previous phase is %d and current phase is %d\r\n", previous_phase, signal_status.SubPhaseID);
+    if(previous_phase!=signal_status.SubPhaseID){
+        
+        if(FirstSwitchFlag==true){  //第一次換相不取值
+            FirstSwitchFlag=false;    
+        }else{
+            signal_status.plan[signal_status.SubPhaseID-1].PreTimeCompensated=signal_status.StepSec; 
+            printf("phase changed and pretime for phase %d is %d\r\n", signal_status.SubPhaseID, signal_status.StepSec);
+        }
+        
+    }
+    
+
+    previous_phase=signal_status.SubPhaseID;
+
+
+
     if(signal_status.StepSec>255 &&signal_status.StepID==1){
         flag_switch2nextStep=true;
         set_655xx_error();
@@ -148,6 +174,8 @@ void packet_5FC5(traffic_signal_packet_t *packet)
     return;
 }
 
+static uint8_t initialize_flag=true;
+static uint8_t count_initialize=0;
 /* 5F C4 回報時制計畫基本參數 */
 void packet_5FC4(traffic_signal_packet_t *packet)
 {
@@ -165,8 +193,25 @@ void packet_5FC4(traffic_signal_packet_t *packet)
         signal_status.plan[i].PedRed = packet->INFO[10 + i * 7];
 
         signal_status.plan[i].PreGreen = signal_status.plan[i].Green - signal_status.plan[i].PedGreenFlash;
+        
+        //為了初始化被補償的pretime
+        if(initialize_flag==true){
+            count_initialize++;
+            // printf("get inside\r\n");
+            if(count_initialize>signal_status.SubPhaseCount*2){ //2是為了第一次讀出來的值常常是錯誤的 所以等到第二次讀取才取值
+                
+                signal_status.plan[i].PreTimeCompensated=signal_status.plan[i].PreGreen;    
+                // printf("phase %d is %d\r\n", i+1, signal_status.plan[i].PreTimeCompensated);
+            }
+        }
+        
+    }
+    if(initialize_flag==true && count_initialize>signal_status.SubPhaseCount*2){
+        initialize_flag=false;
+        count_initialize=0;
     }
     
+
     if (config.log_signal_packet_info) {
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet info: 5FC4");
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d", signal_status.SubPhaseCount);

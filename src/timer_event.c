@@ -36,7 +36,7 @@ void timer_event_handler(__sigval_t value)
             log_file_write(log_content);
         }
         
-        report_plan();
+        report_plan();  //對obu 廣播 plan
     }
     else if (*(uint8_t *)value.sival_ptr == TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING) {
         if (config.log_middleware_timer_event) {

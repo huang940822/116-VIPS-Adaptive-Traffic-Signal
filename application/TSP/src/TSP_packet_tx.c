@@ -94,7 +94,7 @@ void TSP_report_plan()
     write_uint8_t(signal_status.ControlStrategy, &write_buf);
     // error status
     write_uint8_t(error_status, &write_buf);
-
+    // printf("test\r\n");
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
     return;

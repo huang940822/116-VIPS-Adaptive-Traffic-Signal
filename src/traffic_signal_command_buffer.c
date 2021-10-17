@@ -69,7 +69,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     //????等待某些東西？
     sem_timedwait_millsecs(&sem_signal_status, SEM_SIGNAL_STATUS_TIMEOUT);  //有timeout的號誌等待 但是 對應的post在那？
 
-    uint16_t pretime = signal_status.plan[current_SubPhaseID - 1].PreGreen;
+    uint16_t pretime = signal_status.plan[current_SubPhaseID - 1].PreTimeCompensated;
     int difference = 0;
     int time = 0;
     int temp_ack_seq;
@@ -121,13 +121,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
                 original_difference);
                 log_file_write(log_content);
             }
-            // if(current_sec_residual<TIME_DEFENSE && difference>0){
             
-            // }
-
-            //above to prevent cheng_long 655xx error
-
-
             time = pretime + difference;    //difference才是真正會延長的時間
             // printf("diff: %d, time: %d, pretime: %d\n", difference, time, pretime);
             if (time > 255) {
@@ -337,7 +331,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
 
-    uint16_t pretime = signal_status.plan[command->phase - 1].PreGreen;
+    uint16_t pretime = signal_status.plan[command->phase - 1].PreTimeCompensated;
     uint16_t min_green = signal_status.plan[command->phase - 1].MinGreen;
     uint16_t max_green = signal_status.plan[command->phase - 1].MaxGreen;
 
@@ -457,7 +451,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
 
-    uint16_t pretime = signal_status.plan[command->phase - 1].PreGreen;
+    uint16_t pretime = signal_status.plan[command->phase - 1].PreTimeCompensated;
     uint16_t min_green = signal_status.plan[command->phase - 1].MinGreen;
     uint16_t max_green = signal_status.plan[command->phase - 1].MaxGreen;
 
@@ -475,7 +469,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     //抓出target phase的原始資料
     tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
     
-    //這一段看不懂
+    
     if (target_command_obj->adjusted_time == 0) {   //第一次被調整？
         command->effect_time = pretime + command->adjustment;
     } else {

@@ -183,6 +183,7 @@ typedef struct static_plan {
 
     // Green - PedGreenFlash
     uint16_t PreGreen;  //原始步階1
+    uint16_t PreTimeCompensated;
 } static_plan_t;
 
 typedef struct traffic_signal_status {
