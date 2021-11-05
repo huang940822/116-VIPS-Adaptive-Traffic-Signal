@@ -74,13 +74,22 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     int time = 0;
     int temp_ack_seq;
     
+    uint8_t conpensation_flag = false;
+    conpensation_flag = is_in_conpensation();
+    // 公車來臨若TC正在補償則不做控制
 
     switch (config.signal_controller_manufacturer)
     {
         case CHENG_LONG:
             if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
                 if(TSP.dontSend2TC == 1){
+                    printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                     log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+                if(conpensation_flag){
+                    printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                    log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                     break;
                 }
 
@@ -148,7 +157,13 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         case SHAN_ZHU:
             if(command_obj->app_id == TSP.id){
                 if(TSP.dontSend2TC == 1){
+                    printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                     log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+                if(conpensation_flag){
+                    printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                    log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                     break;
                 }
 
@@ -170,7 +185,13 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         case SHAN_ZHU_M:
             if(command_obj->app_id == TSP.id){
                 if(TSP.dontSend2TC == 1){
+                    printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                     log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                    break;
+                }
+                if(conpensation_flag){
+                    printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                    log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                     break;
                 }
 
@@ -528,4 +549,38 @@ void command_buf_print()
     }
     log_file_write(log_content);
     return;
+}
+
+uint8_t is_in_conpensation()
+{
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+    uint8_t current_phase = get_current_phase();
+    
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    printf("ControlStrategy:%d\r\n",signal_status.ControlStrategy);
+    printf("signal_status.plan[%d].PreGreen:%d\r\n",current_phase-1,signal_status.plan[current_phase-1].PreGreen);
+    printf("signal_status.plan[%d].PreTimeCompensated:%d\r\n",current_phase-1,signal_status.plan[current_phase-1].PreTimeCompensated);
+    // 只能那個step 的起始秒數去跟plan pretime 比較
+    // 如果不一樣就是在補償
+    // 因為補償是下個周期去對齊起始點不一樣就補償
+    // 準備要補償時，換相那瞬間的秒數會被更新到PreTimeCompensated
+    // 所以當PreTimeCompensated ！= pregreen就是代表正在補償
+    if(signal_status.plan[current_phase-1].PreTimeCompensated>0){
+        if(signal_status.plan[current_phase-1].PreGreen != signal_status.plan[current_phase-1].PreTimeCompensated){
+            printf("do compensation\r\n");
+            log_file_write("do compensation\r\n");
+            return true; // 正在補償
+        }
+        else{
+            printf("No compensation\r\n");
+            log_file_write("No compensation\r\n");
+            return false;
+        }
+    }
+    else
+        return false;
+    
 }

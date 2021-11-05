@@ -392,12 +392,28 @@ int EVSP_on_OBU_packet_rx(void *arg)
             uint8_t current_phase = signal_status.SubPhaseID;
             uint8_t current_step = signal_status.StepID;
             int ret = 0;
+            int16_t EVSP_adjust_time = 0;
+
+            // Ｇmx＝ΣＰnb＋Ｔbf
+            // Ｇmx：延長最長綠燈秒數
+            // ΣＰnb：非公車各分相最短綠及清道時間總和
+            // Ｔbf：緩衝誤差值，約為１０-２０秒，視觸動之距離而調整
+            // 路口號誌為三時相，週期Ｃ為１２０秒，第一時相為公車方向６４秒綠燈、４秒黃燈、２秒全紅；
+            // 第二時相１０秒綠燈、３秒黃燈、２秒全紅；第三時相２９秒綠燈、３秒黃燈、３秒全紅；而第二時相最短綠為５秒、第三時相最短綠為１５秒
+            // Ｇmx＝【（５＋３＋２）＋（１５＋３＋３）】
+
+            for(int i=1;i<8;i++){
+                if(i!=target_phase)
+                    EVSP_adjust_time += signal_status.plan[i-1].MinGreen+signal_status.plan[i-1].Yellow+signal_status.plan[i-1].AllRed;  
+            }
+            EVSP_adjust_time += 20;// Gmx += 20 ，緩衝誤差值調最大
+            printf("new EVSP_adjust_time:%d\n",EVSP_adjust_time);
 
             /* target_phase == current_phase */
             if (target_phase == current_phase && current_step == 1) {
                 command.cycle = 0;
                 command.phase = current_phase;
-                command.effect_time = EVSP_config.max_green;
+                command.effect_time = EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -421,7 +437,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 1;
                 command.phase = target_phase;
-                command.effect_time = EVSP_config.max_green;
+                command.effect_time = EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -439,7 +455,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 0;
                 command.phase = target_phase;
-                command.effect_time = EVSP_config.max_green;
+                command.effect_time = EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -455,7 +471,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 0;
                 command.phase = target_phase;
-                command.effect_time = EVSP_config.max_green;
+                command.effect_time = EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -481,7 +497,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 1;
                 command.phase = target_phase;
-                command.effect_time = EVSP_config.max_green;
+                command.effect_time = EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -505,7 +521,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 1;
                 command.phase = target_phase;
-                command.effect_time = EVSP_config.max_green;
+                command.effect_time = EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);

@@ -236,7 +236,6 @@ int TSP_on_cloud_packet_rx(void *arg)
     memset(log_content, 0, sizeof(log_content));
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "TSP cloud packet rx: CMD(%d)", cmd);
     
-    
     switch (cmd)
     {
     case 0:
