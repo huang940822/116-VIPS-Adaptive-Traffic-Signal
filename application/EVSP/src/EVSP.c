@@ -391,6 +391,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
             uint8_t current_phase = signal_status.SubPhaseID;
             uint8_t current_step = signal_status.StepID;
+            uint16_t current_second = signal_status.StepSec;
+
+            uint16_t pretime = signal_status.plan[target_phase - 1].PreTimeCompensated;
             int ret = 0;
             int16_t EVSP_adjust_time = 0;
 
@@ -413,7 +416,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (target_phase == current_phase && current_step == 1) {
                 command.cycle = 0;
                 command.phase = current_phase;
-                command.effect_time = EVSP_adjust_time;
+                command.effect_time = EVSP_adjust_time+current_second;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -437,7 +440,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 1;
                 command.phase = target_phase;
-                command.effect_time = EVSP_adjust_time;
+                command.effect_time = pretime+EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -455,7 +458,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 0;
                 command.phase = target_phase;
-                command.effect_time = EVSP_adjust_time;
+                command.effect_time = pretime+EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -471,7 +474,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 0;
                 command.phase = target_phase;
-                command.effect_time = EVSP_adjust_time;
+                command.effect_time = pretime+EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -497,7 +500,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 1;
                 command.phase = target_phase;
-                command.effect_time = EVSP_adjust_time;
+                command.effect_time = pretime+EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);
@@ -521,7 +524,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 command.cycle = 1;
                 command.phase = target_phase;
-                command.effect_time = EVSP_adjust_time;
+                command.effect_time = pretime+EVSP_adjust_time;
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
                     command.cycle, command.phase, command.effect_time, ret);

@@ -257,19 +257,21 @@ typedef struct tsc_command {
     uint8_t app_id;
     uint8_t app_priority;
     uint8_t target_phase;
+    // cycle and phase are used to "indicate the index of the target_command buffer object".
     uint8_t cycle;
     uint8_t phase;
-    int16_t effect_time;
-    int8_t adjustment;
+    int16_t effect_time;// is the length of time that the application requests to be adjusted to.
+    int8_t adjustment;// the adjustment of time that the application requests to be adjusted.
     char host_OBU_id[OBU_ID_MAX_LEN + 1];
 } tsc_command_t;
 
+// Each element of the command buffer is a command buffer object.
 typedef struct tsc_command_object { 
     uint8_t app_id;
     uint8_t app_priority;
     uint8_t target_phase;
-    uint8_t effect_time;
-    uint8_t adjusted_time;
+    uint8_t effect_time;// is the length of time that the application requests to be adjusted to. 
+    uint8_t adjusted_time;// is the length of time that the traffic signal controller is adjusted to.
     char host_OBU_id[OBU_ID_MAX_LEN + 1];
     bool send_flag;
 } tsc_command_object_t;

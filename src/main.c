@@ -180,6 +180,7 @@ int main()
     //     // scanf("%d",&input);
 
         get_traffic_signal_status(&signal_status);
+        
     //     current_phase=signal_status.SubPhaseID;
     //     // printf("current phase is %d\r\n", current_phase);
         a=signal_status.plan[0].PreTimeCompensated;

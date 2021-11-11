@@ -130,7 +130,10 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
                 original_difference);
                 log_file_write(log_content);
             }
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference is :%d\r\n",difference);
+            log_file_write(log_content);
             
+            // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
             time = pretime + difference;    //difference才是真正會延長的時間
             // printf("diff: %d, time: %d, pretime: %d\n", difference, time, pretime);
             if (time > 255) {
@@ -175,6 +178,9 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }else{
                 log_file_write("not TSP either EVSP is sent to TC machine\r\n");
             }
+            difference = command_obj->effect_time - command_obj->adjusted_time;
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference is :%d\r\n",difference);
+            log_file_write(log_content);
             time = command_obj->effect_time;
             temp_ack_seq=tsc_dynamic();
             WAIT_ACK_LOOP
@@ -203,6 +209,9 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }else{
                 log_file_write("not TSP either EVSP is sent to TC machine\r\n");
             }
+            difference = command_obj->effect_time - command_obj->adjusted_time;
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference is :%d\r\n",difference);
+            log_file_write(log_content);
             time = command_obj->effect_time;
             temp_ack_seq=tsc_dynamic();
             WAIT_ACK_LOOP
@@ -233,7 +242,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         current = current->next;
     }
 }
-
+// In order to enable the commands in the commmand buffer to be sent to the traffic signal controller at an appropriate time.
 void command_buf_polling()
 {   
 
@@ -279,15 +288,19 @@ void command_buf_polling()
     /* cross to next phase */
 
     /* clear last command buf */
+    // This means that traffic signal has crossed to the next subphase.
+    // Thus,the command buffer object of the previous subphase is cleared.
     if (prior_SubPhaseID != current_SubPhaseID) {
         memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0, sizeof(tsc_command_object_t));
         //設定為0代表不控制？
         set_control_status(0);
     }
     /* cross to next cycle */
+    // 代表已經到下一個cycle.
+    // 所以要把previous cycle 中的command buffer object 清除
     if (prior_SubPhaseID > current_SubPhaseID) {
         memset(&command_buf[cycle_index][0], 0, sizeof(tsc_command_object_t) * SUBPHASEID_NUM);
-        cycle_index = (cycle_index + 1) % CYCLE_NUM;
+        cycle_index = (cycle_index + 1) % CYCLE_NUM;// 更新cycle
     }
 
 
@@ -300,10 +313,11 @@ void command_buf_polling()
         command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 && 
         current_StepID == 1 && current_StepSec > 1 &&
         prior_SubPhaseID == current_SubPhaseID) {
-
+        
+        // 將目前phase的 command buffer object 送到TC箱
         command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
         set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);    //判斷是evsp還是tsp
-        command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;
+        command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;// 已送出TC箱
         //更新步階一要倒數的時間
         command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = command_buf[cycle_index][current_SubPhaseID - 1].effect_time;  
     }
@@ -366,6 +380,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
 
     pthread_mutex_lock(&mutex_command_buf);
     //抓出要處理的cmd buff object
+    // comman->cycle and phase are used to "indicate the index of the target_command buffer object".
     tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
     
     // command object first insert
@@ -373,6 +388,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         target_command_obj->app_id = command->app_id;
         target_command_obj->app_priority = command->app_priority;
         target_command_obj->effect_time = command->effect_time;
+        // adjusted_time is the length of time that the "traffic signal controller" is adjusted to.
         if (target_command_obj->adjusted_time == 0) {
             target_command_obj->adjusted_time = pretime;    //因為此步階預設倒數時間為pretime
         }
@@ -416,6 +432,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     }
 
     // same OBU ID      appid的check看起來像是多餘的 除非是一個obu有多個application
+    // This means that the application has made a "new command for the serviced OBU".
+    // Replace the original command
     if (strncmp(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN) == 0 && target_command_obj->app_id == command->app_id) {
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->effect_time = command->effect_time;
@@ -425,6 +443,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         return INSERT_ACCEPT;
     }
     // same target phase
+    // Consider the effect_time of two commands and attempt to determine which command can "serve two OBUs at the same time".
     if (target_command_obj->target_phase == command->target_phase) {
         // time difference between effect time & pretime increase
         if (abs(target_command_obj->effect_time - pretime) <= abs(command->effect_time - pretime)) {    //變化差異要大於上一次的改變？不能縮短
@@ -441,7 +460,13 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             pthread_mutex_unlock(&mutex_command_buf);
             return IMPROPER_EFFECT_TIME;
         }
-    } else { // different target phase
+    } else {
+        // 為甚麼會有不一樣target_phase問題？？？
+        // TSP的target_phase不一定是目前的phase
+        // 但EVSP的target_phase是目前的phase
+        // 所以要判斷優先權大小來取代
+
+        // different target phase
         // priority higher than original command 數值越小priority越高
         if (target_command_obj->app_priority > command->app_priority) { //優先權較小 tsp被evsp取代
             target_command_obj->app_id = command->app_id;
