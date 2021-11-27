@@ -253,11 +253,13 @@ void packet_0F04(traffic_signal_packet_t *packet)
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"tc_health_status after mask is %04X\n\r",original_tc_hstatus);
     log_file_write(log_content);
 
+    
     if(original_tc_hstatus != 0){
         set_tsc_error();
     }else{
         clear_tsc_error();
     }
+    
 
 }
 

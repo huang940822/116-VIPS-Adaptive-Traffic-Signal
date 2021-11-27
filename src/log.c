@@ -114,7 +114,7 @@ void log_file_write(char *content) {
     char buffer[20];
     memset(buffer, 0, sizeof(buffer));
     time(&rawtime);
-    info = localtime( &rawtime );
+    info = localtime( &rawtime );// 轉換成本地時間表示的分解時間
     strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
 
     pthread_mutex_lock(&mutex_log_file_ptr);

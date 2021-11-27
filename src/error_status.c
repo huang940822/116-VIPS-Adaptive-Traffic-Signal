@@ -43,6 +43,7 @@ void clear_dsrc_error()
     return;
 }
 
+//在traffic_signal_status_updating.c
 void set_tsc_error()
 {
     pthread_mutex_lock(&mutex_error_status);

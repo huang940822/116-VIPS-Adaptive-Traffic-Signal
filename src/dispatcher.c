@@ -9,6 +9,7 @@
 uint8_t cloud_com_id;
 uint8_t OBU_com_id;
 
+// which will continuously dequeue message objects form the message queue
 void* dispatcher_handler()
 {
 	msg_queue_init();

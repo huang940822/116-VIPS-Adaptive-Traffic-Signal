@@ -1,6 +1,10 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 #include <stddef.h>
+
+// https://zhuanlan.zhihu.com/p/82738202
+// 可以存放任何類型的void *
+// 0: next ; 1:prev
 typedef void *QUEUE[2];
 /* Private macros. */
 #define queue_next(q) (*(QUEUE **)&((*(q))[0]))

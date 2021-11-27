@@ -515,7 +515,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     //抓出target phase的原始資料
     tsc_command_object_t *target_command_obj = &command_buf[(cycle_index + command->cycle) % CYCLE_NUM][command->phase - 1];
     
-    
+    // This means that this subphase has never been adjusted
     if (target_command_obj->adjusted_time == 0) {   //第一次被調整？
         command->effect_time = pretime + command->adjustment;
     } else {
@@ -595,6 +595,11 @@ uint8_t is_in_conpensation()
     // 所以當PreTimeCompensated ！= pregreen就是代表正在補償
     if(signal_status.plan[current_phase-1].PreTimeCompensated>0){
         if(signal_status.plan[current_phase-1].PreGreen != signal_status.plan[current_phase-1].PreTimeCompensated){
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal_status.plan[%d].PreTimeCompensated:%d\r\n",current_phase-1,
+            signal_status.plan[current_phase-1].PreTimeCompensated);
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal_status.plan[%d].PreGreen:%d\r\n",current_phase-1,
+            signal_status.plan[current_phase-1].PreGreen);
+            log_file_write(log_content);
             printf("do compensation\r\n");
             log_file_write("do compensation\r\n");
             return true; // 正在補償
