@@ -326,9 +326,6 @@ void recv_info(int fd, traffic_signal_packet_t *packet)
 			}
 			
 		}
-		printf("tsc firmware version\r\n");
-		printf("%02X %02X %02X %02X %02X %02X\r\n", packet->INFO[2], packet->INFO[3], packet->INFO[4], packet->INFO[5], packet->INFO[6], packet->INFO[7]);
-		printf("%d %d %d %d %d %d \r\n", packet->INFO[2], packet->INFO[3], packet->INFO[4], packet->INFO[5], packet->INFO[6], packet->INFO[7]);
 	}
 	return;
 }

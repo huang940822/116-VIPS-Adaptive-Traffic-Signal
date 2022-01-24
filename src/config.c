@@ -16,6 +16,8 @@ config_object_t config = {
     .signal_adjust_lower_bound_active = 1,
     .signal_adjust_upper_bound_percentage = 60,
     .signal_adjust_lower_bound_percentage = 60,
+    .traffic_compensation_method = 1,
+    .phase_weight = 0,0,0,0,0,0,0,0,
     .log_middleware_timer_event = 1,
     .log_application_register_event = 1,
     .log_command_buffer = 1,
@@ -41,7 +43,16 @@ static bool read_uint8_t_from_config_line(char* config_line, uint8_t *val) {
 static bool read_float_from_config_line(char* config_line, float *val) {    
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     *val = 0;
-    if (sscanf(config_line, "%s %f\n", prm_name, val) == 2) {
+    if (sscanf(config_line, "%s %f \n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
+static bool read_float_array_from_config_line(char* config_line, float *val) {    
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    memset(val,0,sizeof(uint8_t)*8);
+    if (sscanf(config_line, "%s %f %f %f %f %f %f %f %f \n", prm_name, &val[0],&val[1],&val[2],&val[3],&val[4],&val[5],&val[6],&val[7]) == 9) {
         return true;
     } else {
         return false;
@@ -85,6 +96,7 @@ int config_init()
 
     uint8_t uint8_t_val;
     float float_val;
+    float float_val_array[PHASE_COUNT_MAX_NUM];
     char string_val[MAX_CONFIG_VARIABLE_LEN];
 
     while (!feof(fp)) {
@@ -262,6 +274,36 @@ int config_init()
                 }
             } else {
                 return CONFIG_INVALID_SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE;
+            }
+        }
+        // traffic compensation method
+        if (strstr(buf, "TRAFFIC_COMPENSATION_METHOD ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    config.traffic_compensation_method = uint8_t_val;
+                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "config: traffic_compensation_method = %d", config.traffic_compensation_method);
+                    log_file_write(log_content);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
+                }
+            } else {
+                return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
+            }
+        }
+        // phase weight
+        if(strstr(buf,"PHASE_WEIGHT ")){
+            if(read_float_array_from_config_line(buf,float_val_array)){
+                for(int i=0;i<PHASE_COUNT_MAX_NUM;i++){
+                    if(float_val_array[i] >= 0){
+                        config.phase_weight[i] = float_val_array[i];
+                    } else {
+                        return CONFIG_INVALID_PHASE_WEIGHT;
+                    }
+                }
+                continue;
+            } else{
+                return CONFIG_INVALID_PHASE_WEIGHT;
             }
         }
         // log middleware timer event

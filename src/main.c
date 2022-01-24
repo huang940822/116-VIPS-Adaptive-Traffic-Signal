@@ -24,6 +24,7 @@
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "traffic_compensation.h"
 #include "error_status.h"
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -146,8 +147,7 @@ int main()
 	}
     
 	com_layer_init(NULL);
-
-
+    
     // int input, temp_ack_seq;
     int c,d,a,b;
     int a1,b1,c1,d1;
@@ -180,7 +180,7 @@ int main()
     //     // scanf("%d",&input);
 
         get_traffic_signal_status(&signal_status);
-        
+       
     //     current_phase=signal_status.SubPhaseID;
     //     // printf("current phase is %d\r\n", current_phase);
         a=signal_status.plan[0].PreTimeCompensated;
@@ -201,7 +201,14 @@ int main()
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "pretime             for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n",
         a1,b1,c1,d1);
         log_file_write(log_content);
+
+        // if(flag){
+        //     printf("flag:%d\r\n",flag);
+        //     get_compensation_buffer(compensation_time);
+        //     flag = false;
         // }
+        
+    // }
 
         // printf("pretime_compensated for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n", a, b, c,d);
         // printf("pretime             for phase 1 is %d phase 2 is %d phase 3 is %d phase 4 is %d\r\n", a1, b1, c1,d1);

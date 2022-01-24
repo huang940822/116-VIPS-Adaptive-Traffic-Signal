@@ -11,12 +11,16 @@
 #include "error_status.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
+#include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 #include "traffic_signal_packet_tx.h"
 
 traffic_signal_status_t signal_status;
+traffic_signal_status_t current_signal_status;
 pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_current_signal_status = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_compensation = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_signal_status;
 static uint16_t pretime_sent_count=0;
 extern uint8_t flag_pretime;
@@ -24,6 +28,8 @@ extern uint8_t flag_switch2nextStep;
 uint8_t phase_change_flag=false;
 uint8_t real_pretime=0;
 static uint8_t FirstSwitchFlag=true;
+// static bool flag = true;
+// extern int16_t compensation_buffer[SUBPHASEID_NUM];
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
@@ -49,8 +55,6 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     }
     
     
-
-
     // for some error situation happens in CHENG_LONG
     if (packet->INFO[3] != 0 && packet->INFO[4] != 5) {
         signal_status.SubPhaseID = packet->INFO[3];
@@ -88,8 +92,11 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     // execute pretime instruction to force tc go back to pretime
     // to prevent the tc not go back to pretime after 全動態
     // pretime_sent_count is for let pretime sent one time only in step 4
+    // now, have to check command buffer whether or not is empty
+    // if it is empty and return pretime control status.
     if(signal_status.StepID == 4){    //4 閃黃燈
-        if(pretime_sent_count == 0){
+        // printf("command_buf_empty:%d\r\n",check_command_buf_empty());
+        if(pretime_sent_count == 0 && check_command_buf_empty()){
             log_file_write("5FCC: execute go back to pretime at step 4\r\n");
             printf("5FCC updating: set pretime!\r\n");
             //tsc_pretime();
@@ -122,21 +129,41 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     return;
 }
 
-/* 5F C8 回報當前時制計畫編號 */
+/* 5F C8 查詢目前時制計劃內容（非控制器內時制資料庫內容） */
 void packet_5FC8(traffic_signal_packet_t *packet)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     
-    pthread_mutex_lock(&mutex_signal_status);
-    signal_status.PlanID = packet->INFO[2];
-    
+    pthread_mutex_lock(&mutex_current_signal_status);
+
+    current_signal_status.PlanID = packet->INFO[2];
+
+    current_signal_status.PhaseOrder = packet->INFO[4];
+    current_signal_status.SubPhaseCount = packet->INFO[5];
+    for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
+        current_signal_status.plan[i].Green = (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
+    }
+    current_signal_status.CycleTime = packet->INFO[6 + current_signal_status.SubPhaseCount * 2] << 8 | packet->INFO[7 + current_signal_status.SubPhaseCount * 2];
+    current_signal_status.Offset = packet->INFO[8 + current_signal_status.SubPhaseCount * 2] << 8 | packet->INFO[9 + current_signal_status.SubPhaseCount * 2];
+    // if(flag == true){
+    //     get_compensation_buffer(compensation_buffer);
+    //     flag = false;
+    // }
     if (config.log_signal_packet_info) {
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet info: 5FC8");
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nPlanID: %d", signal_status.PlanID);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nPlanID: %d", current_signal_status.PlanID);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nPhaseOrder: %d", current_signal_status.PhaseOrder);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d", current_signal_status.SubPhaseCount);
+        for (int i = 0; i < signal_status.SubPhaseCount; i++) {
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d", current_signal_status.plan[i].Green);
+        }
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nCycleTime: %d", current_signal_status.CycleTime);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\nOffset: %d", current_signal_status.Offset);
         log_file_write(log_content);
     }
-    pthread_mutex_unlock(&mutex_signal_status);
+
+    pthread_mutex_unlock(&mutex_current_signal_status);
     return;
 }
 
@@ -191,7 +218,7 @@ void packet_5FC4(traffic_signal_packet_t *packet)
         signal_status.plan[i].AllRed = packet->INFO[8 + i * 7];
         signal_status.plan[i].PedGreenFlash = packet->INFO[9 + i * 7];
         signal_status.plan[i].PedRed = packet->INFO[10 + i * 7];
-
+        
         signal_status.plan[i].PreGreen = signal_status.plan[i].Green - signal_status.plan[i].PedGreenFlash;
         
         //為了初始化被補償的pretime
@@ -259,8 +286,6 @@ void packet_0F04(traffic_signal_packet_t *packet)
     }else{
         clear_tsc_error();
     }
-    
-
 }
 
 //裡面有些部份看不太懂 為何要用號誌加上mutex保護
@@ -280,6 +305,14 @@ void get_traffic_signal_status(traffic_signal_status_t *traffic_signal_status)
         sem_post(&sem_signal_status);
     }
 
+    return;
+}
+
+void get_current_traffic_signal_status(traffic_signal_status_t *traffic_signal_status)
+{
+    pthread_mutex_lock(&mutex_current_signal_status);
+    memcpy(traffic_signal_status,&current_signal_status,sizeof(traffic_signal_status_t));
+    pthread_mutex_unlock(&mutex_current_signal_status);
     return;
 }
 
@@ -310,7 +343,7 @@ uint16_t get_current_second()
 uint8_t get_plan_id()
 {
     pthread_mutex_lock(&mutex_signal_status);
-    uint8_t plan_id = signal_status.PlanID;
+    uint8_t plan_id = current_signal_status.PlanID;
     pthread_mutex_unlock(&mutex_signal_status);
     return plan_id;
 }
@@ -370,6 +403,27 @@ uint8_t get_next_SubPhaseID()
     } else {
         return phase + 1;
     } 
+}
+
+int16_t get_total_compensation_second()
+{
+    pthread_mutex_lock(&mutex_compensation);
+    int16_t total_compensation_second = 0;
+    for(int i=0;i<SUBPHASEID_NUM;i++){
+        total_compensation_second += compensation_buffer[i];
+    }
+    pthread_mutex_unlock(&mutex_compensation);
+    return total_compensation_second;
+}
+
+void get_compensation_buffer(int16_t *compensation_buffer)
+{
+    pthread_mutex_lock(&mutex_compensation);
+    for(int i = 0;i < SUBPHASEID_NUM;i++){
+        compensation_buffer[i] = current_signal_status.plan[i].Green - signal_status.plan[i].Green;
+    }
+    pthread_mutex_unlock(&mutex_compensation);
+    return ;
 }
 
 void set_control_status(uint8_t control_status)

@@ -18,6 +18,7 @@ void packet_5F0C(traffic_signal_packet_t *packet);
 void packet_0F04(traffic_signal_packet_t *packet);
 
 void get_traffic_signal_status(traffic_signal_status_t *);
+void get_current_traffic_signal_status(traffic_signal_status_t *);
 
 uint8_t get_current_phase();
 uint8_t get_current_step();
@@ -26,6 +27,9 @@ uint16_t get_current_second();
 uint8_t get_plan_id();
 uint8_t get_control_status();
 uint16_t get_remaining_time(uint8_t phase, uint8_t step, uint16_t second);
+
+int16_t get_total_compensation_second();
+void get_compensation_buffer(int16_t *);
 
 void set_control_status(uint8_t control_status);
 

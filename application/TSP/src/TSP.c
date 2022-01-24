@@ -24,6 +24,7 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 #include "traffic_signal_packet_tx.h"
+#include "traffic_compensation.h"
 
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -304,6 +305,21 @@ int TSP_on_cloud_packet_rx(void *arg)
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndelete host OBU (%s)", host_OBU_id);
         TSP_host_OBU_obj_delete(host_OBU_id);
         TSP_host_OBU_obj_print();
+        // 進行補償
+        switch (config.traffic_compensation_method)
+        {
+            case 1:
+                traffic_compensation_method1();
+                break;
+            case 2:
+                traffic_compensation_method2();
+                break;
+            case 3:
+                traffic_compensation_method3();
+                break;
+            default:
+                break;
+        }
         break;
     case 6: //disable tsp's command to tc machine
         {   

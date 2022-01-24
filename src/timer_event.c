@@ -16,6 +16,7 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "traffic_compensation.h"
 
 // extern pthread_mutex_t mutex_rs232_write;
 extern uint8_t flag_pretime;
@@ -49,13 +50,13 @@ void timer_event_handler(__sigval_t value)
         command_buf_polling();
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
-        temp_ack_seq=tsc_5F4C();
+        temp_ack_seq=tsc_5F4C();//查詢號控器目前時相及步階
         WAIT_ACK_LOOP
-        temp_ack_seq=tsc_5F48();
-        WAIT_ACK_LOOP
-        temp_ack_seq=tsc_5F45();
+        temp_ack_seq=tsc_5F45();//查詢時制計劃之設定內容
         WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F44();
+        WAIT_ACK_LOOP
+        temp_ack_seq=tsc_5F48();//查詢目前時制計劃內容
         WAIT_ACK_LOOP
         if(flag_pretime==true){
             temp_ack_seq=tsc_pretime();
@@ -92,9 +93,34 @@ void timer_event_handler(__sigval_t value)
             WAIT_ACK_LOOP
             flag_switch2nextStep=false;
             log_file_write("step sec higher than 255 happens and switch to next step forcelly!!\r\n");
-
-
         }
+        // if(compensation_flag == true){
+        //     // get_compensation_buffer(compensation_buffer);
+        //     for(int i =0;i<SUBPHASEID_NUM;i++){
+        //         printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
+        //     }
+        //     compensation_flag = false;
+        // }
+        // for(int i = 0;i<SUBPHASEID_NUM;i++){
+        //     compensation_buffer[i] = 0;
+        // }
+        // traffic_signal_status_t signal_status;
+        // get_traffic_signal_status(&signal_status);
+        // if(signal_status.plan[0].PreGreen != 0){
+        //     // compensation_buffer[0] = 18;
+        //     compensation_buffer[1] = 30;
+        //     // compensation_buffer[2] = 0;
+        //     if(flag == true){
+        //         if(config.traffic_compensation_method == 3){
+        //             traffic_compensation_method3();
+        //         }else if (config.traffic_compensation_method == 2){
+        //             traffic_compensation_method2();
+        //         }else{
+        //             traffic_compensation_method1();
+        //         }
+        //         flag = false;
+        //     }
+        // }
 
         pthread_mutex_unlock(&mutex_uart_comple_protect);
         // printf("leave uart write mutex\r\n");

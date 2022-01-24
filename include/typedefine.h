@@ -8,6 +8,8 @@
 
 #define OBU_ID_MAX_LEN 10
 #define RSU_ID_MAX_LEN 10
+#define COMPENSATION_MAX_LEN 15
+#define ID_MAX_LEN 15
 #define APP_NAME_MAX_LEN 10
 #define TIMESTAMP_LEN 19
 #define OBU_RECORD_RING_CAPACITY 5 /* should be 3 ~ 256 */
@@ -71,6 +73,8 @@ typedef struct config_object {
     bool signal_adjust_lower_bound_active;
     float signal_adjust_upper_bound_percentage;
     float signal_adjust_lower_bound_percentage;
+    uint8_t traffic_compensation_method;
+    float phase_weight[PHASE_COUNT_MAX_NUM];
 
     bool log_middleware_timer_event;
     bool log_application_register_event;
@@ -262,7 +266,8 @@ typedef struct tsc_command {
     uint8_t phase;
     int16_t effect_time;// is the length of time that the application requests to be adjusted to.
     int8_t adjustment;// the adjustment of time that the application requests to be adjusted.
-    char host_OBU_id[OBU_ID_MAX_LEN + 1];
+    int8_t compensation_time;
+    char host_OBU_id[ID_MAX_LEN + 1];
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
@@ -272,7 +277,8 @@ typedef struct tsc_command_object {
     uint8_t target_phase;
     uint8_t effect_time;// is the length of time that the application requests to be adjusted to. 
     uint8_t adjusted_time;// is the length of time that the traffic signal controller is adjusted to.
-    char host_OBU_id[OBU_ID_MAX_LEN + 1];
+    int8_t compensation_time;
+    char host_OBU_id[ID_MAX_LEN + 1];
     bool send_flag;
 } tsc_command_object_t;
 

@@ -14,6 +14,7 @@ void command_buf_polling();
 int command_buf_insert_effect_time(tsc_command_t *command);
 int command_buf_insert_adjustment(tsc_command_t *command);
 void command_buf_print();
+bool check_command_buf_empty();
 uint8_t is_in_conpensation();
 
 /* Return codes of command buf insert */ 
