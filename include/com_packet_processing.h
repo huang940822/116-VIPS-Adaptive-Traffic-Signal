@@ -12,7 +12,9 @@ void cloud_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_f
 void OBU_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_field);
 int cloud_packet_rx_event_handler(msg_obj_t *msg);
 int OBU_packet_rx_event_handler(msg_obj_t *msg);
-
+double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg);
+void OBU_BSM_tx(uint16_t len, void *buf);
+int Is_Heartbeat(msg_obj_t *msg);
 /* Return codes of packet processing */ 
 typedef enum packet_processing_err {
     PACKET_PROCESSING_ACCEPT = 0,

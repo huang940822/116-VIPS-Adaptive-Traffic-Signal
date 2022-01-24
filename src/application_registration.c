@@ -182,6 +182,9 @@ int app_register(app_obj_t *app)
         if (app->on_cloud_packet_tx) {
             event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_TX], app, app->on_cloud_packet_tx);
         }
+        if (app->on_camera_packet_rx) {
+            event_callback_insert(&callback_list[EVENT_CAMERA_PACKET_RX], app, app->on_camera_packet_rx);
+        }
         if (app->on_traffic_signal_command_tx) {
             event_callback_insert(&callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX], app, app->on_traffic_signal_command_tx);
         }

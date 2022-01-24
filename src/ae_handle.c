@@ -38,11 +38,11 @@ int udp_type_check(uint8_t type)
 //這裡把要送的資料copy到client物件
 void ae_prepare_for_sending(client_t *client, unsigned char *buf, size_t send_len)
 {
-	pthread_mutex_lock(&mutex_client_write);
-	memset(client->write_buffer->buff, 0, HANDLE_MSG_LEN);
-	memcpy(client->write_buffer->buff, buf, send_len);
-	increase_buffer_size(client->write_buffer, send_len);
-	pthread_mutex_unlock(&mutex_client_write);
+	buffer_t *buffer = alloc_buffer();
+	memset(buffer->buff, 0, HANDLE_MSG_LEN);
+	memcpy(buffer->buff, buf, send_len);
+	increase_buffer_size(buffer, send_len);
+	while(!buff_ring_push(buffer, client->write_buffer));
 }
 void ae_prepare_for_enqueue_early(client_t *client, unsigned char *buf)
 {
@@ -58,9 +58,16 @@ size_t udp_send(client_t *client)
 		return HANDLE_ERR;
 	if (udp_check_for_sending(udp_handle) == HANDLE_ERR)
 		return HANDLE_ERR;
-	size_t written = send(client->fd, client->write_buffer->buff, client->write_buffer->size, 0);
-	assert(written == client->write_buffer->size);
-	decrease_buffer_size(client->write_buffer, written);
+
+	buffer_t *buff = buff_ring_pop(client->write_buffer);
+	if(buff == NULL)
+		return HANDLE_ERR;
+		
+	size_t written = send(client->fd, buff->buff, buff->size, 0);
+	if (written != buff->size)
+		printf("send error\n");
+
+	free_buffer(buff);
 	return written;
 }
 size_t udp_recv(client_t *client)
@@ -117,16 +124,20 @@ size_t tcp_send(client_t *client)
 		return HANDLE_ERR;
 	if (tcp_check_for_sending(tcp_handle) == HANDLE_ERR)
 		return HANDLE_ERR;
-	
+	buffer_t *buff = buff_ring_pop(client->write_buffer);
+	if(buff == NULL)
+		return HANDLE_ERR;
+
 	pthread_mutex_lock(&mutex_client_write);
-	size_t written = net_TCP_write(client->fd, client->write_buffer->buff, client->write_buffer->size);
+	size_t written = net_TCP_write(client->fd, buff->buff, buff->size);
 	pthread_mutex_unlock(&mutex_client_write);
 
-	if (written != client->write_buffer->size) {
-		printf("ERR:written %ld v.s expected written %ld\n", written, client->write_buffer->size);
+	if (written != buff->size) {
+		printf("ERR:written %ld v.s expected written %ld\n", written, buff->size);
 	}
+
 	//把已經送出去的長度減掉嗎？
-	decrease_buffer_size(client->write_buffer, written);
+	// decrease_buffer_size(client->write_buffer, written);
 	
 	return written;
 }

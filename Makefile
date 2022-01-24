@@ -1,8 +1,12 @@
 CC = gcc
-CFLAGS = -g
+CFLAGS = -g -m32
 # WARN_OPT = -Wall
 WARN_OPT =
-LIBS = -lpthread -lm -lrt
+LIB_PATH := $(realpath lib)
+LDFLAGS = -g -L$(LIB_PATH) 
+LIB_FILES := $(wildcard $(LIB_PATH)/*.so)
+LIBS = -ldsrc_v2xcast -pthread -lrt -lm -lzmq
+
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
 EXEC_DIR := $(BUILD)/exec
@@ -13,6 +17,8 @@ APP_DIR := application
 INCLUDE_DIR	 := include $(wildcard $(APP_DIR)/*/include)
 INCLUDE_PATH := $(foreach dir, $(INCLUDE_DIR), -I $(dir))
 INCLUDE_FILE := $(foreach dir, $(INCLUDE_DIR), $(wildcard $(dir)/*.h))
+
+linker_opt = -Wl,-rpath,'$$ORIGIN/../../lib'
 
 SRC_DIR  := src $(wildcard $(APP_DIR)/*/src)
 SRC_FILE := $(foreach dir, $(SRC_DIR), $(wildcard $(dir)/*.c))
@@ -32,7 +38,7 @@ $(OBJ_DIR)/%.o: %.c
 
 $(EXEC_DIR)/$(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -o $(EXEC_DIR)/$(TARGET) $^ $(LIBS)
+	$(CC) $(CFLAGS) -o $(EXEC_DIR)/$(TARGET) $^ $(LDFLAGS) $(LIBS) $(linker_opt)
 
 PASS_COLOR = \e[32;01m
 NO_COLOR = \e[0m

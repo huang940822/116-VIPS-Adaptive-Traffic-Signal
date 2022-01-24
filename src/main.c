@@ -9,6 +9,8 @@
 #include "log.h"
 #include "TSP.h"
 #include "EVSP.h"
+#include "CPS.h"
+#include "APP.h"
 #include "server.h"
 #include "config.h"
 #include "EVSP_config.h"
@@ -26,6 +28,8 @@
 #include "traffic_signal_status_updating.h"
 #include "traffic_compensation.h"
 #include "error_status.h"
+#include "j2735_codec.h"
+#include "error_code_user.h"
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
@@ -137,6 +141,20 @@ int main()
     create_timer(&OBU_list_garbage_collection_timer_id, &OBU_list_garbage_collection_timer_num, timer_event_handler);
     set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
 
+//CPS
+    ret = app_register(&CPS_E);
+    ret = app_register(&CPS_W);
+    ret = app_register(&CPS_S);
+    ret = app_register(&CPS_N);
+    //ret = app_register(&APP);
+    if (ret != 0 ) {
+        log_file_write_fatal_error("error registering application: %d (%s)", ret, "CPS");
+    } else {
+        memset(log_content, 0, sizeof(log_content));
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s register successfully", CPS_E.name);
+        log_file_write(log_content);
+    }   
+    event_callback_print();
     /* Packet dispatcher */
 	pthread_t dispatcher_thread;
     ret = pthread_create(&dispatcher_thread, NULL, dispatcher_handler, NULL);
@@ -145,6 +163,13 @@ int main()
 		perror("main: pthread_create");
         exit(errno);
 	}
+    J2735Config cfg;
+	ret  = j2735_init(&cfg);
+	if (!IS_SUCCESS(ret)) {
+        printf("Fail to init J2735\n");
+        return -1;
+    }
+    /* Start server */
     
 	com_layer_init(NULL);
     

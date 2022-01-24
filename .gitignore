@@ -1,6 +1,7 @@
 *.log
 log_*
 build/
+Latency_Test/
 network_test/
 test/
 application/EVSP/config/touching_area/*.txt

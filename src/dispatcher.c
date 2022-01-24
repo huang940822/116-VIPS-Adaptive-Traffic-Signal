@@ -8,6 +8,9 @@
 
 uint8_t cloud_com_id;
 uint8_t OBU_com_id;
+uint8_t Heartbeat_com_id;
+uint8_t AVI_com_id;
+
 
 // which will continuously dequeue message objects form the message queue
 void* dispatcher_handler()
@@ -37,12 +40,23 @@ void* dispatcher_handler()
 		}
 		if (msg->device_id == FROM_DSRC) {
 			// printf("OBU_rx_event\n");
-			OBU_com_id = msg->handle_id;
-			ret = OBU_packet_rx_event_handler(msg);
-			if (ret < 0) {
-				log_file_write_fatal_error("invalid packet from OBU: %d\n", ret);
+			if (Is_Heartbeat(msg) == 1){
+				Heartbeat_com_id = msg->handle_id;
+			}
+			else{
+				OBU_com_id = msg->handle_id;
+				pthread_t APP_thread;
+				//int ret = pthread_create(&APP_thread, NULL, OBU_packet_rx_event_handler, "Child");
+				ret = OBU_packet_rx_event_handler(msg);
+				if (ret < 0) {
+					log_file_write_fatal_error("invalid packet from OBU: %d\n", ret);
+				}
 			}
 		}
+		if (msg->device_id == FROM_SMART_AVI) {
+ 			AVI_com_id = msg->handle_id;
+ 			Smart_AVI_packet_rx_event_handler(msg);		
+ 		}
 		free(msg);
 	}
 	log_file_write_fatal_error("dispatcher thread exit");

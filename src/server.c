@@ -14,7 +14,7 @@ typedef struct Broker comm_broker_t;
 comm_server_t RSU_server;
 pthread_t com_layer_thread;
 extern pthread_mutex_t mutex_client_write;
-
+int first_time = 0;//first time???
 
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)
@@ -189,7 +189,7 @@ client_t *conn_alloc_client(uint8_t client_conn_type)
 	client->el = NULL;
 	client->fd = INVALID_FD; /*default fd = -1*/
 	client->read_buffer = alloc_buffer();
-	client->write_buffer = alloc_buffer();
+	client->write_buffer = alloc_buffer_ring(CLIENT_RING_MAX);
 	if (client->read_buffer == NULL || client->write_buffer == NULL) {
 		goto err1;
 	}
@@ -245,7 +245,7 @@ void conn_free_client(client_t *client)
 		}
 		free(client->read_buffer->buff);
 		free(client->read_buffer);
-		free(client->write_buffer->buff);
+		free_buffer_ring(client->write_buffer);
 		free(client->write_buffer);
 		free(client->handle->_ae_handle);
 		free(client->handle);
@@ -297,10 +297,11 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop, int fd, void *cli
 	char ip_addr[128] = {0};
 	comm_server_t *serv = (comm_server_t *)event_loop->server;
 	char buf[MAX_BUF_LEN] = {0};
-	struct sockaddr_in client_addr;
-	socklen_t client_len = sizeof(client_addr);
-
-	cfd = net_UDP_accept(serv->err_info, serv->port, buf, fd, MAX_BUF_LEN);
+	int Is_smart_AVI = 0;
+	int Is_Heartbeat = 0;
+	struct sockaddr_in heartbeat_addr;
+	
+	cfd = net_UDP_accept(serv->err_info, serv->port, buf, fd, MAX_BUF_LEN, &Is_smart_AVI, &Is_Heartbeat, &heartbeat_addr);
 	if (cfd >= 0) {
 		client_t *client = conn_alloc_client(UDP_HANDLE);
 		if (!client) {
@@ -312,12 +313,29 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop, int fd, void *cli
 		client->fd = cfd;
 		client->com_id = serv->dispatch_com_id++;
 		int retval = comm_dict_add(serv->broker->client_dict, client, client->com_id);
-		ae_prepare_for_enqueue_early(client, buf);
-		comm_packet_enqueue(client, FROM_DSRC);
-		if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_client_UDP, client) == AE_ERR) {
-			fprintf(stderr, "create socket readable event error, close fd: %d\n", fd);
-			comm_dict_delete(serv->broker->client_dict, client->com_id);
-			conn_free_client(client);
+		if (Is_smart_AVI == 1){
+			comm_packet_enqueue(client, FROM_SMART_AVI);
+			if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_SMART_AVI_UDP, client) == AE_ERR) {
+				fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
+				comm_dict_delete(serv->broker->client_dict, client->com_id);
+				conn_free_client(client);
+			}
+			Is_smart_AVI = 0;
+		}
+		else{
+			if (Is_Heartbeat == 1 && first_time == 0){
+				first_time = 1;
+				comm_create_OBU_client(event_loop, fd, serv->err_info, heartbeat_addr);
+				Is_Heartbeat = 0;
+			}
+			else{
+				comm_packet_enqueue(client, FROM_DSRC);
+				if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_client_UDP, client) == AE_ERR) {
+					fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
+					comm_dict_delete(serv->broker->client_dict, client->com_id);
+					conn_free_client(client);
+				}
+			}
 		}
 	}
 }
@@ -354,9 +372,17 @@ void conn_write_to_client_TCP(struct ae_event_loop *event_loop, int fd, void *cl
 	//送資料出去
 	int written = client->handle->send_fn(client);
 
-	//都送出去了 所以可以清掉這個com event?
-	if (get_buffer_size(wbuffer) == 0)
+	pthread_mutex_lock(&client->write_buffer->mutex);
+	if(buff_ring_empty(client->write_buffer))
+	{
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
+	}
+	pthread_mutex_unlock(&client->write_buffer->mutex);
+
+	//都送出去了 所以可以清掉這個com event?
+	// if (get_buffer_size(wbuffer) == 0)
+	// 	ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
+	ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 }
 void conn_read_from_client_UDP(struct ae_event_loop *event_loop, int fd, void *clientData, int mask)
 {
@@ -367,24 +393,93 @@ void conn_read_from_client_UDP(struct ae_event_loop *event_loop, int fd, void *c
 		comm_packet_enqueue(client, FROM_DSRC);
 	}
 }
+void conn_read_from_SMART_AVI_UDP(struct ae_event_loop *event_loop, int fd, void *clientData, int mask)
+{
+	printf("from smart_AVI\n");
+	client_t *client = (client_t *)clientData;
+	comm_server_t *serv = (comm_server_t *)event_loop->server;
+	ssize_t readn = client->handle->recv_fn(client);
+	if (readn > 0) {
+		comm_packet_enqueue(client, FROM_SMART_AVI);
+	}else if(readn == -1){
+	}
+}
 void conn_write_to_client_UDP(struct ae_event_loop *event_loop, int fd, void *clientData, int mask)
 {
 	comm_server_t *serv = (comm_server_t *)event_loop->server;
 	client_t *client = (client_t *)clientData;
-	buffer_t *wbuffer = client->write_buffer;
+	// buffer_t *wbuffer = client->write_buffer;
 
-	int data_size = (int)get_buffer_size(wbuffer);
-	if (data_size == 0) {
-		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
-		return;
-	}
+	// int data_size = (int)get_buffer_size(wbuffer);
+	// if (data_size == 0) {
+	// 	ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
+	// 	return;
+	// }
 	
 	ssize_t send_n = client->handle->send_fn(client);
 
+	// if (get_buffer_size(wbuffer) == 0) {
+	// 	ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
+	// }
 
-	if (get_buffer_size(wbuffer) == 0) {
+	pthread_mutex_lock(&client->write_buffer->mutex);
+	if(buff_ring_empty(client->write_buffer))
+	{
 		ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 	}
+	pthread_mutex_unlock(&client->write_buffer->mutex);
+}
+int comm_create_OBU_client(struct ae_event_loop *event_loop, int listen_fd, char *err, struct sockaddr_in client_addr)
+{
+	socklen_t client_len = sizeof(client_addr);
+	struct sockaddr_in sin;
+	socklen_t len = sizeof(sin);
+	comm_server_t *serv = (comm_server_t *)event_loop->server;
+
+	int cfd = socket(PF_INET, SOCK_DGRAM, 0);
+	if (net_non_block(err, cfd) == NET_ERR) goto err; //set non_blocking
+	
+	if (getsockname(listen_fd, (struct sockaddr *)&sin, &len) == -1) {
+		;//net_set_error(err, "accept: %s", strerror(errno));
+	}
+	if (cfd >= 0) {
+		if (net_set_reuse_addr(err, cfd) == NET_ERR) goto err;
+		if (net_set_reuse_port(err, cfd) == NET_ERR) goto err;
+		int ret = bind(cfd, (struct sockaddr *)&sin, sizeof(struct sockaddr));
+		if (ret) {
+			;//net_set_error(err, "bind: %s", strerror(errno));
+		}
+		client_addr.sin_family = PF_INET;
+		if (connect(cfd, (struct sockaddr *)&client_addr, sizeof(struct sockaddr)) == -1) {
+			printf("connect %s\n",strerror(errno));
+			//net_set_error(err, "connect: %s", strerror(errno));
+			goto err;
+		}
+	}
+	else {
+		//net_set_error(err, "udp_accept:: %s", strerror(errno));
+		return -1;
+	}
+	if (cfd >= 0) {
+		client_t *client = conn_alloc_client(UDP_HANDLE);
+		if (!client) {
+			printf("alloc client error...close socket\n");
+			return -1;
+		}
+		client->el = event_loop;
+		client->fd = cfd;
+		client->com_id = serv->dispatch_com_id++;
+		int retval = comm_dict_add(serv->broker->client_dict, client, client->com_id);
+		comm_packet_enqueue(client, FROM_DSRC);
+		if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_client_UDP, client) == AE_ERR) {
+			fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
+			comm_dict_delete(serv->broker->client_dict, client->com_id);
+			conn_free_client(client);
+		}
+	}
+	return cfd;
+err:
+	close(cfd);
 }
 void config_handle(char *path)
 {

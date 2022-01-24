@@ -49,7 +49,8 @@ typedef enum event_type {
     EVENT_CLOUD_PACKET_RX = 4,
     EVENT_CLOUD_PACKET_TX = 5,
     EVENT_TRAFFIC_SIGNAL_COMMAND_TX = 6,
-    EVENT_REGISTRATION = 7,
+    EVENT_CAMERA_PACKET_RX = 7,
+    EVENT_REGISTRATION = 8,
     EVENT_TYPE_NUMBER
 } event_type_t;
 
@@ -115,6 +116,7 @@ typedef struct application_object {
     int (*on_RSU_packet_tx)(void *);
     int (*on_cloud_packet_rx)(void *);
     int (*on_cloud_packet_tx)(void *);
+    int (*on_camera_packet_rx)(void *);
     int (*on_traffic_signal_command_tx)(void *);
     int (*on_registration)(void *);
     struct application_object *next;

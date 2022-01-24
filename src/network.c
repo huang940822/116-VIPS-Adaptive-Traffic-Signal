@@ -214,7 +214,7 @@ int net_TCP_accept(char *err, int serversock, char *ip, size_t ip_len, int *port
 
 	return fd;
 }
-int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int MAX_BUF_LEN)
+int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int MAX_BUF_LEN, int *Is_smart_AVI, int *Is_Heartbeat, struct sockaddr_in *heartbeat_addr)
 {
 	int cfd = -1, reuse = 1, ret;
 	struct sockaddr_in client_addr;
@@ -223,13 +223,23 @@ int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int MAX_B
 	socklen_t len = sizeof(sin);
 	int recv_bytes = recvfrom(listen_fd, recv_buf, MAX_BUF_LEN, 0, (struct sockaddr *)&client_addr, &client_len);
 	if (recv_bytes > 0) {
+		if (htons(client_addr.sin_port) == SMART_AVI_PORT){
+ 			*Is_smart_AVI = 1;
+ 		}
+		if (htons(client_addr.sin_port) == Heartbeat_PORT){
+ 			*Is_Heartbeat = 1;
+			heartbeat_addr->sin_addr = client_addr.sin_addr;
+			heartbeat_addr->sin_port = client_addr.sin_port - ntohs(1);
+ 		}
 		cfd = socket(PF_INET, SOCK_DGRAM, 0);
+		if (net_non_block(err, cfd) == NET_ERR) goto err; //set non_blocking
 		if (getsockname(listen_fd, (struct sockaddr *)&sin, &len) == -1) {
 			net_set_error(err, "accept: %s", strerror(errno));
 		}
 		if (cfd >= 0) {
 			if (net_set_reuse_addr(err, cfd) == NET_ERR) goto err;
 			if (net_set_reuse_port(err, cfd) == NET_ERR) goto err;
+			if (net_set_send_buf_size(err, cfd, 25600) == NET_ERR) goto err;
 			ret = bind(cfd, (struct sockaddr *)&sin, sizeof(struct sockaddr));
 			if (ret) {
 				net_set_error(err, "bind: %s", strerror(errno));

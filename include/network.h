@@ -22,6 +22,9 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#define SMART_AVI_PORT 12345
+#define Heartbeat_PORT 10001
+
 int net_set_reuse_addr(char *err, int fd);
 int net_set_reuse_port(char *err, int fd);
 int net_set_mss_value(char *err, int fd, int mss_val);
@@ -31,7 +34,7 @@ int net_set_tcp_no_nagle(char *err, int fd);
 int net_non_block(char *err, int fd);
 int net_TCP_server(char *err, int port, char *bindaddr, int backlog);
 int net_TCP_accept(char *err, int serversock, char *ip, size_t ip_len, int *port);
-int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int max_buf_len);
+int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int max_buf_len, int *Is_smart_AVI, int *Is_Heartbeat, struct sockaddr_in *heartbeat_addr);
 int net_TCP_read(int fd, char *buf, int count);
 size_t net_TCP_write(int fd, char *buf, int count);
 int net_UDP_server(char *err, int port, char *bindaddr);

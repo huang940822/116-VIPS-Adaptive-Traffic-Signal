@@ -10,6 +10,7 @@ uint32_t byte2uint32_t(unsigned char *input);
 
 void float2byte(float input, unsigned char *output);
 float byte2float(unsigned char *input);
+double byte2double(unsigned char *input);
 
 void read_char(char *dst, msg_buf_t *buf, int len);
 void read_int8_t(int8_t *dst, msg_buf_t *buf);

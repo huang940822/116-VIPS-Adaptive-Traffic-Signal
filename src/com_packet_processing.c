@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include "log.h"
 #include "com_io.h"
@@ -17,7 +18,39 @@
 #include "application_registration.h"
 #include "traffic_signal_packet_rx.h"
 #include "timer_event.h"
+#include "ObstacleList.h"
+ #define CPS_ID 3
 
+ clock_t start_cpu, end_cpu;
+ struct timeval start, end, diff, start_2, end_2, diff_2, start_5, end_5, diff_5;
+ 	char log_content[LOG_CONTENT_LEN + 1];
+
+void OBU_BSM_tx(uint16_t len, void *buf)
+ {
+     char log_content[LOG_CONTENT_LEN + 1];
+     msg_buf_t write_buf;
+     write_buf.index = 0;
+     write_buf.content = (unsigned char *)malloc(len);
+     if (write_buf.content == NULL) {
+         log_file_write_fatal_error("OBU_BSM_tx: malloc");
+         perror("OBU_packet_tx: malloc");
+         exit(errno);
+     } else {
+         memset(write_buf.content, 0, len);
+     }
+     if (memcpy(&write_buf.content[write_buf.index], (unsigned char *)buf, len) == NULL){
+         log_file_write_fatal_error("OBU_BSM_tx: memcpy");
+     }
+     //printf("obu com id:%d\n", OBU_com_id);
+     int ret = com_send(OBU_com_id, write_buf.content, len);
+     if (ret == COM_IO_ERR) {
+         log_file_write_fatal_error("OBU_BSM_tx: com_send");
+     }
+     if (write_buf.content != NULL) {
+         free(write_buf.content);
+     }
+     return;
+ }
 void OBU_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_field)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -254,8 +287,19 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
 }
 
 int OBU_packet_rx_event_handler(msg_obj_t *msg)
-{   printf("get in obu rx handler\n\r");
+{   /*printf("get in obu rx handler\n\r");
     char log_content[LOG_CONTENT_LEN + 1];
+    event_callback_t *current_c = &callback_list[EVENT_CAMERA_PACKET_RX];
+    //pthread_t APP_thread;
+    while (current_c->next != NULL) {
+        if (5 == current_c->next->app_id) {
+            //int ret = pthread_create(&APP_thread, NULL, current_c->next->callback, "Child");
+            current_c->next->callback(NULL);
+	    }
+        current_c = current_c->next;
+    }
+    //pthread_join(APP_thread, NULL);
+    printf("handler complete\n");*/
 
     msg_buf_t read_buf;
     V2R_common_field_t common_field;
@@ -331,14 +375,14 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     }
     
     // 這裡是用來偵測dsrc是否還活著
-    if(common_field.service_id==0){ //dsrc heart beat packet
-        printf("dsrc alive and postpone the timer handle execution\r\n");
+ //   if(common_field.service_id==0){ //dsrc heart beat packet
+ /*       printf("dsrc alive and postpone the timer handle execution\r\n");
         log_file_write("dsrc alive and postpone the timer handle execution\r\n");
         set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
         clear_dsrc_error();
 
         return PACKET_PROCESSING_ACCEPT;    
-    }
+    }*/
 
 
     OBU_record_t *record = (OBU_record_t *)malloc(sizeof(OBU_record_t));
@@ -431,3 +475,125 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     
     return PACKET_PROCESSING_ACCEPT;
 }
+double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg){
+     int cnt = 0;
+     msg_buf_t read_buf;
+     read_buf.index = 0;
+     read_buf.content = (unsigned char *)malloc(25600);
+     if (read_buf.content == NULL) {
+         //log_file_write_fatal_error("OBU_packet_rx_event_handler: malloc");
+         perror("Smart_AVI_packet_rx_event_handler: malloc");
+         exit(errno);
+     } else {
+
+         memcpy(read_buf.content, msg->msg, 25600);
+     }
+     ObstacleList *obstaclelist = (ObstacleList *)malloc(sizeof(ObstacleList));
+     int index = 0;
+     obstaclelist->dirct = byte2int32_t(read_buf.content);
+     index += 4;
+     obstaclelist->count = byte2int32_t(&read_buf.content[index]);
+     index += 4;
+     obstaclelist->tab = (Obstacle *)malloc(sizeof(Obstacle)*obstaclelist->count);
+
+     int i = 0;
+     for(i = 0;i<obstaclelist->count;i++){
+        index += 4;
+        obstaclelist->tab[i].lat = byte2double(&read_buf.content[index]);
+        index += 8;
+        obstaclelist->tab[i].Long = byte2double(&read_buf.content[index]);
+        index += 8;
+        obstaclelist->tab[i].elev = byte2double(&read_buf.content[index]);
+        index += 8;
+        obstaclelist->tab[i].laneID = byte2int32_t(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].ObstacleID = byte2int32_t(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].description = byte2int32_t(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].length = byte2float(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].width = byte2float(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].hour = byte2int32_t(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].minute = byte2int32_t(&read_buf.content[index]);
+        index += 4;
+        obstaclelist->tab[i].second = byte2double(&read_buf.content[index]);
+        index += 8;
+     }
+     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
+     if (obstaclelist->dirct == 0){
+        while (current->next != NULL) {
+            if (1 == current->next->app_id) {
+                current->next->callback((void *)obstaclelist);
+            }
+            current = current->next;
+        }
+     }
+     else if(obstaclelist->dirct == 1){
+        while (current->next != NULL) {
+            if (2 == current->next->app_id) {
+                current->next->callback((void *)obstaclelist);
+            }
+            current = current->next;
+        }         
+     }
+     else if(obstaclelist->dirct == 2){
+        while (current->next != NULL) {
+            if (3 == current->next->app_id) {
+                current->next->callback((void *)obstaclelist);
+            }
+            current = current->next;
+        }         
+     }
+     else if(obstaclelist->dirct == 3){
+        while (current->next != NULL) {
+            if (4 == current->next->app_id) {
+                current->next->callback((void *)obstaclelist);
+            }
+            current = current->next;
+        }         
+     }
+     if (read_buf.content != NULL) {
+         free(read_buf.content);
+     }
+     if (obstaclelist->tab != NULL) {
+         free(obstaclelist->tab);
+     }
+     if (obstaclelist != NULL){
+         free(obstaclelist);
+     }
+     return 0; 
+ }
+ int Is_Heartbeat(msg_obj_t *msg){
+    char log_content[LOG_CONTENT_LEN + 1];
+
+    msg_buf_t read_buf;
+    V2R_common_field_t common_field;
+    read_buf.index = 0;
+    read_buf.content = (unsigned char *)malloc(V2R_COMMON_FIELD_LEN);
+    if (read_buf.content == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("OBU_packet_rx_event_handler: malloc");
+        perror("OBU_packet_rx_event_handler: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memcpy(read_buf.content, msg->msg, V2R_COMMON_FIELD_LEN);
+    }
+    read_buf.index = 0;
+    read_uint32_t(&common_field.packet_len, &read_buf);
+    read_buf.index = 45;
+    // service id
+    read_uint8_t(&common_field.service_id, &read_buf);
+    if(common_field.service_id==0 && common_field.packet_len == 512){ //dsrc heart beat packet
+        //printf("dsrc alive and postpone the timer handle execution\r\n");
+        log_file_write("dsrc alive and postpone the timer handle execution\r\n");
+        set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
+        clear_dsrc_error();
+
+        return 1;    
+    }   
+    return 0;
+ }

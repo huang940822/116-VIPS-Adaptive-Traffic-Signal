@@ -20,6 +20,7 @@
 #define MAX_BUF_LEN 25600
 #define FROM_CLOUD 1
 #define FROM_DSRC 2
+#define FROM_SMART_AVI 3
 void config_handle(char *path);
 struct Broker {
 	struct Server *server; /*point back to server*/
@@ -66,6 +67,8 @@ void conn_accept_UDP_handler(ae_event_loop *event_loop, int fd, void *clientData
 
 void conn_read_from_client_UDP(ae_event_loop *event_loop, int fd, void *clientData, int mask);
 
+void conn_read_from_SMART_AVI_UDP(ae_event_loop *event_loop, int fd, void *clientData, int mask);
+
 void conn_write_to_client_UDP(ae_event_loop *event_loop, int fd, void *clientData, int mask);
 
 void comm_packet_enqueue(client_t *client, uint8_t from_type);
@@ -76,4 +79,5 @@ int comm_dict_delete(dict *ht, int com_id);
 
 client_t *comm_dict_find(dict *ht, int com_id);
 
+int comm_create_OBU_client(struct ae_event_loop *event_loop, int listen_fd, char *err, struct sockaddr_in client_addr);
 #endif

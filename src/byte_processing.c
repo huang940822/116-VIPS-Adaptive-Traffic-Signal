@@ -42,7 +42,11 @@ uint32_t byte2uint32_t(unsigned char *input)
     uint32_t NBO_num = ((uint32_t)input[0] << 24) | ((uint32_t)input[1] << 16) | ((uint32_t)input[2] << 8) | (uint32_t)input[3];
     return NBO_num;
 }
-
+int32_t byte2int32_t(unsigned char *input)
+{
+    int32_t NBO_num = ((int32_t)input[0] << 24) | ((int32_t)input[1] << 16) | ((int32_t)input[2] << 8) | (int32_t)input[3];
+    return NBO_num;
+}
 void float2byte(float input, unsigned char *output)
 {
     uint32_t NBO_num = htonf(input);
@@ -54,6 +58,14 @@ float byte2float(unsigned char *input)
 {
     uint32_t NBO_num = ((uint32_t)input[0] << 24) | ((uint32_t)input[1] << 16) | ((uint32_t)input[2] << 8) | (uint32_t)input[3];
     float *output = (float *)&NBO_num;
+    return *output;
+}
+
+double byte2double(unsigned char *input)
+{
+    uint64_t NBO_num = ((uint64_t)input[0] << 56) | ((uint64_t)input[1] << 48) | ((uint64_t)input[2] << 40) | ((uint64_t)input[3] << 32)
+                        | ((uint64_t)input[4] << 24) | ((uint64_t)input[5] << 16) | ((uint64_t)input[6] << 8) | ((uint64_t)input[7]);
+    double *output = (double *)&NBO_num;
     return *output;
 }
 
