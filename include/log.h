@@ -3,7 +3,7 @@
 
 #include "typedefine.h"
 
-#define LOG_DIR "./log/"
+#define LOG_DIR FILE_PATH"log/"
 // #define LOG_FILE_NAME_FORMAT "%Y-%m-%d %H:%M"
 // #define LOG_FILE_NAME_LEN 17
 
