@@ -25,7 +25,7 @@
  struct timeval start, end, diff, start_2, end_2, diff_2, start_5, end_5, diff_5;
  	char log_content[LOG_CONTENT_LEN + 1];
 
-void OBU_BSM_tx(uint16_t len, void *buf)
+void OBU_j2735_tx(uint16_t len, void *buf)
  {
      char log_content[LOG_CONTENT_LEN + 1];
      msg_buf_t write_buf;

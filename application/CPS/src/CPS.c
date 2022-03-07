@@ -134,7 +134,7 @@ int CPS_on_camera_packet_rx(void *arg)
         if (bsm_encode(&tx_buf,&len, &(obstaclelist->tab[i]))){
             encode_cnt++;
             // printf("encode %d times\n", encode_cnt);
-            OBU_BSM_tx(len,tx_buf);
+            OBU_j2735_tx(len,tx_buf);
             //for(int i = 0;i < 1000;i++);
             //usleep(50);
         }
