@@ -20,8 +20,6 @@
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 
-#define ROOT_DIR "./"
-
 typedef struct msg_obj msg_obj_t;
 
 typedef enum device_type {

@@ -66,7 +66,7 @@ void OBU_BSM_tx(uint16_t len, void *buf)
     if (write_buf.content != NULL) {
         free(write_buf.content);
     }
-    if (buf == NULL) {
+    if (buf != NULL) {
         free(buf);
     }
     return;

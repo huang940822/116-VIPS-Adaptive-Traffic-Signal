@@ -13,13 +13,13 @@ typedef struct Obstacle {
     double elev; /* Elevation (-4096..61439) */
     float width;
     float hight;
-    int32_t
-        heading; /*  LSB of 0.0125 degrees, A range of 0 to 359.9875 degrees*/
+    /*  LSB of 0.0125 degrees, A range of 0 to 359.9875 degrees*/
+    int32_t heading;
     int32_t description;  //車種
     int32_t speed;
     int32_t hour;
     int32_t minute;
-    double second;
+    float second;
 } Obstacle;
 
 typedef struct ObstacleList {

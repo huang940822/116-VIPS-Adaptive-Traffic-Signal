@@ -106,26 +106,18 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
     char id[4];
     sprintf(id, "%04d", obstacle->ObstacleID);
     asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
-    bsm->coreData.secMark =
-        0;  // fix_data->time.utc.sec * 1000 + fix_data->time.utc.ms;
+    bsm->coreData.secMark = obstacle->second * 1000;
     bsm->coreData.Long = (int) (obstacle->Long);
     bsm->coreData.lat = (int) obstacle->lat;
     bsm->coreData.elev = (int) obstacle->elev;
-    // printf("\n");
-    // printf("coreData.id: %s\n", id);
-    // printf("coreData.secMark: %d\n", bsm->coreData.secMark);
-    // printf("coreData.long: %lf\n", bsm->coreData.Long / 10000000.0);
-    // printf("coreData.lat: %lf\n", bsm->coreData.lat / 10000000.0);
-    /* only set the bit of bitstring */
+
     asn1_bstr_set_bit(&(bsm->coreData.brakes.wheelBrakes),
                       BrakeAppliedStatus_rightFront);
     bsm->coreData.speed = (int) obstacle->speed;
-    // printf("coreData.speed: %d\n", bsm->coreData.speed);
 
     bsm->coreData.heading = (int) obstacle->laneID;
-    // printf("coreData.heading: %d\n", bsm->coreData.heading);
 
-    bsm->coreData.size.length = 4;  //(int)obstacle->length;
+    bsm->coreData.size.length = 4;
     bsm->coreData.size.width = (int) obstacle->width;
     /* Set fixed brakes */
     bsm->coreData.brakes.traction = TractionControlStatus_engaged;
@@ -143,12 +135,9 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
      * call prealloc assistant */
     part2_sf_ext = &(bsm->partII.tab[0]);
     part2_sf_ext->partII_Id = VehicleSafetyExt;
-    /* part2_sp_ext = &(bsm->partII.tab[1]);
-     part2_sp_ext->partII_Id = SpecialVehicleExt;*/
     /* all fields which should be allocated before using are allocated
      * recursively */
     j2735_dataframe_prealloc(PartIIcontent_DF, part2_sf_ext);
-    // j2735_dataframe_prealloc(PartIIcontent_DF, part2_sp_ext);
 
     /* set union to vehicle safety extensions */
     sf_ext = part2_sf_ext->u.safetyExt;
@@ -237,20 +226,11 @@ int bsm_encode_reg(uint8_t **tx_buf,
         printf("bsm alloc failed!\n");
     }
     bsm->coreData.msgCnt = (msg_cnt++) % 127;
-    // printf("message count %d\n", bsm->coreData.msgCnt);
 
-    // char id[4];
-    // sprintf(id, "%04d", obstaclelist->tab[0].hour);
-    // asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
-    bsm->coreData.secMark = 0;  //(int)obstaclelist->tab[0].second * 1000;
+    bsm->coreData.secMark = 0;
     bsm->coreData.Long = 0;
     bsm->coreData.lat = 0;
     bsm->coreData.heading = obstaclelist->dirct;
-    // printf("\n");
-    // printf("coreData.secMark: %d\n", bsm->coreData.secMark);
-    // printf("coreData.long: %lf\n", bsm->coreData.Long / 10000000.0);
-    // printf("coreData.lat: %lf\n", bsm->coreData.lat / 10000000.0);
-    /* only set the bit of bitstring */
     asn1_bstr_set_bit(&(bsm->coreData.brakes.wheelBrakes),
                       BrakeAppliedStatus_rightFront);
     bsm->coreData.speed = 0;
@@ -259,7 +239,6 @@ int bsm_encode_reg(uint8_t **tx_buf,
     bsm->coreData.brakes.abs = AntiLockBrakeStatus_engaged;
     bsm->coreData.brakes.scs = StabilityControlStatus_engaged;
 
-    /* set the optional field to TRUE to include the data when encoding */
     bsm->partII_option = FALSE;
 
     /*regional data*/

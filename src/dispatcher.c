@@ -24,11 +24,11 @@ void *dispatcher_handler()
     char log_content[LOG_CONTENT_LEN + 1];
 
     struct msg_obj *msg;
-    assert((pool = threadpool_create(THREAD, QUEUE, 0)) != NULL);
+    assert((pool = threadpool_create(THREAD, THREADQUEUE, 0)) != NULL);
     fprintf(stderr,
             "Pool started with %d threads and "
             "queue size of %d\n",
-            THREAD, QUEUE);
+            THREAD, THREADQUEUE);
 
     for (;;) {
         memset(log_content, 0, sizeof(log_content));
