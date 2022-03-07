@@ -104,9 +104,9 @@ int CPS_on_camera_packet_rx(void *arg)
             // }
             // encode_cnt++;
             // printf("encode %d times\n", encode_cnt);
-            OBU_j2735_tx(len,tx_buf);
-            //for(int i = 0;i < 1000;i++);
-            //usleep(50);
+            OBU_j2735_tx(len, tx_buf);
+            // for(int i = 0;i < 1000;i++);
+            // usleep(50);
         }
     }
 }

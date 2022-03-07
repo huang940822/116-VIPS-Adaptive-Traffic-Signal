@@ -10,7 +10,7 @@ extern SPaT_config_object_t SPaT_config;
 
 int SPaT_config_init();
 
-/* Return codes of config */ 
+/* Return codes of config */
 typedef enum SPaT_config_err {
     SPAT_CONFIG_ACCEPT = 0,
     CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED = -1,

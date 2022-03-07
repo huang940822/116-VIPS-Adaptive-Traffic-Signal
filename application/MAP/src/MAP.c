@@ -1,17 +1,17 @@
+#include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
 #include <sys/time.h>
+#include <unistd.h>
 
-#include "MAP_config.h"
 #include "MAP.h"
-#include "log.h"
+#include "MAP_config.h"
 #include "config.h"
-#include "timer_event.h"
 #include "j2735_timer_event.h"
+#include "log.h"
+#include "timer_event.h"
 
 
 timer_t MAP_packet_tx_timer_id;
@@ -39,9 +39,10 @@ int MAP_on_registration(void *arg)
     /* init map msg */
     MAP_config_init();
     /* create a timer to send map packet */
-    if(config.MAP_packet_tx) {
-        create_timer(&MAP_packet_tx_timer_id,&MAP_packet_tx_num,j2735_timer_event_handler);
-        set_timer(MAP_packet_tx_timer_id, 0, 1000000000/MAP_config.MAP_packet_transfer_speed , 1, 0);
+    if (config.MAP_packet_tx) {
+        create_timer(&MAP_packet_tx_timer_id, &MAP_packet_tx_num,
+                     j2735_timer_event_handler);
+        set_timer(MAP_packet_tx_timer_id, 0,
+                  1000000000 / MAP_config.MAP_packet_transfer_speed, 1, 0);
     }
-    
-}   
+}

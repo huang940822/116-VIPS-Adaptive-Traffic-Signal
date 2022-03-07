@@ -1,18 +1,18 @@
+#include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "SPaT.h"
-#include "SPaT_utils.h"
 #include "SPaT_config.h"
-#include "log.h"
+#include "SPaT_utils.h"
 #include "config.h"
-#include "timer_event.h"
 #include "j2735_timer_event.h"
+#include "log.h"
+#include "timer_event.h"
 
 SPAT *p_spat;
 timer_t SPaT_packet_tx_timer_id;
@@ -39,10 +39,12 @@ int SPaT_on_registration(void *arg)
 {
     /* init spat msg */
     spat_msg_init(&p_spat);
-    
+
     /* create a timer to send SPaT packet */
-    if(config.SPaT_packet_tx){
-        create_timer(&SPaT_packet_tx_timer_id,&SPaT_packet_tx_num,j2735_timer_event_handler);
-        set_timer(SPaT_packet_tx_timer_id, 0, 1000000000/SPaT_config.SPaT_packet_transfer_speed , 1, 0);
+    if (config.SPaT_packet_tx) {
+        create_timer(&SPaT_packet_tx_timer_id, &SPaT_packet_tx_num,
+                     j2735_timer_event_handler);
+        set_timer(SPaT_packet_tx_timer_id, 0,
+                  1000000000 / SPaT_config.SPaT_packet_transfer_speed, 1, 0);
     }
-}   
+}

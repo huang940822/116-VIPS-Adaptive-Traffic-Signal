@@ -244,114 +244,119 @@ void print_packet(traffic_signal_packet_t *packet)
 
 void recv_info(int fd, traffic_signal_packet_t *packet)
 {
-	// printf("recv_info\n");
-	read_header(fd, packet);
+    // printf("recv_info\n");
+    read_header(fd, packet);
 
-	uint16_t packet_len = 0;
-	uint16_t info_len = 0;
-	uint8_t CKS = 0;
+    uint16_t packet_len = 0;
+    uint16_t info_len = 0;
+    uint8_t CKS = 0;
 
-	packet_len = (uint16_t)packet->LEN[0] << 8 | packet->LEN[1];
-	info_len = packet_len - HEADER_LEN;
+    packet_len = (uint16_t) packet->LEN[0] << 8 | packet->LEN[1];
+    info_len = packet_len - HEADER_LEN;
 
 
-	// 處理info欄位
-	int ret = 0;
-	uint16_t info_index = 0;
-	uint16_t info_less = 0;
-	while (info_index < info_len) {
-		info_less = info_len  - info_index;
-		
-		//為何要特別處理小於vmin_len的狀況？
-		if ( info_less < VMIN_LEN) {
-			ret = read(fd, &packet->INFO[info_index], info_less);
-			if (ret == -1) {
-				log_file_write_fatal_error("recv_info: read");
-			}
-			info_index += info_less;
-		} else {
-			ret = read(fd, &packet->INFO[info_index], VMIN_LEN);
-			if (ret == -1) {
-				log_file_write_fatal_error("recv_info: read");
-			}
-			info_index += VMIN_LEN;
-		}
-	}
+    // 處理info欄位
+    int ret = 0;
+    uint16_t info_index = 0;
+    uint16_t info_less = 0;
+    while (info_index < info_len) {
+        info_less = info_len - info_index;
 
-	read_trailer(fd, packet);
+        //為何要特別處理小於vmin_len的狀況？
+        if (info_less < VMIN_LEN) {
+            ret = read(fd, &packet->INFO[info_index], info_less);
+            if (ret == -1) {
+                log_file_write_fatal_error("recv_info: read");
+            }
+            info_index += info_less;
+        } else {
+            ret = read(fd, &packet->INFO[info_index], VMIN_LEN);
+            if (ret == -1) {
+                log_file_write_fatal_error("recv_info: read");
+            }
+            info_index += VMIN_LEN;
+        }
+    }
 
-	// printf("info_len: %d\n", info_len);
-	// print_packet(packet);
-	//長度錯誤？
-	if (error_length(packet) == 1) {
-		print_packet(packet);
-		send_nak(fd, packet, ERR_LENGTH);
-		return;
-	}
+    read_trailer(fd, packet);
 
-	//cks錯誤
-	ret = read(fd, &packet->CKS, 1);
-	if (ret == -1) {
-		log_file_write_fatal_error("recv_info: read");
-	}
-	print_packet(packet);
-	CKS = check_sum(packet, info_len);
-	if (error_cks(packet, CKS) == 1) {
-		send_nak(fd, packet, ERR_CKS);
-		return;
-	}
+    // printf("info_len: %d\n", info_len);
+    // print_packet(packet);
+    //長度錯誤？
+    if (error_length(packet) == 1) {
+        print_packet(packet);
+        send_nak(fd, packet, ERR_LENGTH);
+        return;
+    }
 
-	send_ack(fd, packet);
+    // cks錯誤
+    ret = read(fd, &packet->CKS, 1);
+    if (ret == -1) {
+        log_file_write_fatal_error("recv_info: read");
+    }
+    print_packet(packet);
+    CKS = check_sum(packet, info_len);
+    if (error_cks(packet, CKS) == 1) {
+        send_nak(fd, packet, ERR_CKS);
+        return;
+    }
 
-	
-	if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xCC) {
-		packet_5FCC(packet);
-	}
-	if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC8) {
-		packet_5FC8(packet);
-	}
-	if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC5) {
-		packet_5FC5(packet);
-	}
-	if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC4) {
-		packet_5FC4(packet);
-	}
-	if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0x0C) {
-		packet_5F0C(packet);
-	}
-	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC2) {
-		packet_0FC2(packet);
-	}
-	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x04) {
-		// printf("tc status report\r\n");
-		packet_0F04(packet);
-	}
-	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x80) {
-		// printf("tc status report\r\n");
-		// packet_0F04(packet);
-		printf("correct packet sent\r\n");
-		printf("%02X  %02X\r\n", packet->INFO[2], packet->INFO[3]);
-	}
-	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x81) {
-		// printf("tc status report\r\n");
-		// packet_0F04(packet);
-		// log_file_write("error packet sent\r\n");
-		printf("%02X  %02X %d\r\n", packet->INFO[2], packet->INFO[3],packet->INFO[4]);
-	}
-	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC3) {
-		// printf("tc status report\r\n");
-		// packet_0F04(packet);
-		// log_file_write("error packet sent\r\n");
-		if(packet->INFO[2]>=0x6E){	//0x6e is 110年度
-			if(config.signal_controller_manufacturer==1){	//若為山竚且年份大於110年度則改為修改過的山竚型號行為(for 行人倒數秒數指令)
-				config.signal_controller_manufacturer=2;
-				printf("new version of shan_zhu and should assign version as shan_zhu_m\r\n");
-				log_file_write("manufacturer is changed from shan_zhu to shan_zhu_m\r\n");
-			}
-			
-		}
-	}
-	return;
+    send_ack(fd, packet);
+
+
+    if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xCC) {
+        packet_5FCC(packet);
+    }
+    if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC8) {
+        packet_5FC8(packet);
+    }
+    if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC5) {
+        packet_5FC5(packet);
+    }
+    if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC4) {
+        packet_5FC4(packet);
+    }
+    if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0x0C) {
+        packet_5F0C(packet);
+    }
+    if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC2) {
+        packet_0FC2(packet);
+    }
+    if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x04) {
+        // printf("tc status report\r\n");
+        packet_0F04(packet);
+    }
+    if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x80) {
+        // printf("tc status report\r\n");
+        // packet_0F04(packet);
+        printf("correct packet sent\r\n");
+        printf("%02X  %02X\r\n", packet->INFO[2], packet->INFO[3]);
+    }
+    if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x81) {
+        // printf("tc status report\r\n");
+        // packet_0F04(packet);
+        // log_file_write("error packet sent\r\n");
+        printf("%02X  %02X %d\r\n", packet->INFO[2], packet->INFO[3],
+               packet->INFO[4]);
+    }
+    if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC3) {
+        // printf("tc status report\r\n");
+        // packet_0F04(packet);
+        // log_file_write("error packet sent\r\n");
+        if (packet->INFO[2] >= 0x6E) {  // 0x6e is 110年度
+            if (config.signal_controller_manufacturer ==
+                1) {  //若為山竚且年份大於110年度則改為修改過的山竚型號行為(for
+                      //行人倒數秒數指令)
+                config.signal_controller_manufacturer = 2;
+                printf(
+                    "new version of shan_zhu and should assign version as "
+                    "shan_zhu_m\r\n");
+                log_file_write(
+                    "manufacturer is changed from shan_zhu to shan_zhu_m\r\n");
+            }
+        }
+    }
+    return;
 }
 
 int16_t recv_ack(int fd, traffic_signal_packet_t *packet)

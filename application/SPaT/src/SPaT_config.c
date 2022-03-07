@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "log.h"
 #include "SPaT_config.h"
+#include "log.h"
 #include "typedefine.h"
 
 SPaT_config_object_t SPaT_config = {
@@ -13,7 +13,8 @@ SPaT_config_object_t SPaT_config = {
 
 
 
-static bool read_uint8_t_from_config_line(char* config_line, uint8_t *val) {    
+static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
+{
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     *val = 0;
     if (sscanf(config_line, "%s %hhd\n", prm_name, val) == 2) {
@@ -30,12 +31,14 @@ int SPaT_config_init()
 
     FILE *fp;
     fp = fopen(SPAT_CONFIG_FILE, "r");
-    if(fp == NULL) {						
+    if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", SPAT_CONFIG_FILE);
-	} else {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s opened successfully", SPAT_CONFIG_FILE);
+    } else {
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "%s opened successfully", SPAT_CONFIG_FILE);
         log_file_write(log_content);
-	}
+    }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
 
@@ -52,12 +55,15 @@ int SPaT_config_init()
         }
 
 
-        //SPaT_packet_transfer_speed
+        // SPaT_packet_transfer_speed
         if (strstr(buf, "SPaT_packet_transfer_speed ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     SPaT_config.SPaT_packet_transfer_speed = uint8_t_val;
-                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "config: SPaT_packet_transfer_speed = %d", SPaT_config.SPaT_packet_transfer_speed);
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: SPaT_packet_transfer_speed = %d",
+                             SPaT_config.SPaT_packet_transfer_speed);
                     log_file_write(log_content);
                     continue;
                 } else {

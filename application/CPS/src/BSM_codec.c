@@ -24,8 +24,8 @@ void dump_mem(void *data, int len)
         printf("%02X ", p[count]);
     }
     printf("\n\n");
-}*/
-void bsm_print(BasicSafetyMessage *bsm)
+}
+* / void bsm_print(BasicSafetyMessage *bsm)
 {
     int i, fbs;
 

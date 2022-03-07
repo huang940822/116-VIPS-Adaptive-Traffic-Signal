@@ -280,8 +280,9 @@ void packet_5FC4(traffic_signal_packet_t *packet)
             count_initialize++;
             // printf("get inside\r\n");
             if (count_initialize >
-                signal_status.SubPhaseCount * 2) {  // 2是為了第一次讀出來的值常常是錯誤的
-                                                    // 所以等到第二次讀取才取值
+                signal_status.SubPhaseCount *
+                    2) {  // 2是為了第一次讀出來的值常常是錯誤的
+                          // 所以等到第二次讀取才取值
 
                 signal_status.plan[i].PreTimeCompensated =
                     signal_status.plan[i].PreGreen;

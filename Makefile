@@ -66,6 +66,10 @@ check:
 		./$(TEST_DIR)/testfile && printf "[ $(PASS_COLOR)Passed$(NO_COLOR) ]\n";\
 	)
 	@rm $(TEST_DIR)/testfile
+	
+clang-format:
+	find -iname *.h -o -iname *.c | xargs clang-format -i
+
 clean:
 	-@rm -rvf $(OBJ_DIR)/*
 	-@rm -rvf $(EXEC_DIR)/*
