@@ -1,34 +1,34 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h> //realloc
-#include <string.h> // memcpy
-#include <stdbool.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <termios.h>
 #include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>  //realloc
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>  // memcpy
+#include <termios.h>
+#include <unistd.h>
 
-#include "log.h"
 #include "config.h"
 #include "error_status.h"
-#include "traffic_signal_packet_tx.h"
+#include "log.h"
 #include "traffic_signal_packet_rx.h"
+#include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
 
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
-uint8_t flag_pretime=0;
-uint8_t flag_countdown_on=0;
-uint8_t flag_countdown_off=0;
-uint8_t flag_query_firm_ver=0;
-uint8_t flag_switch2nextStep=0;
+uint8_t flag_pretime = 0;
+uint8_t flag_countdown_on = 0;
+uint8_t flag_countdown_off = 0;
+uint8_t flag_query_firm_ver = 0;
+uint8_t flag_switch2nextStep = 0;
 
 uint8_t get_seq_num()
 {
     pthread_mutex_lock(&mutex_seq_num);
-    uint8_t value = seq_num ++;
+    uint8_t value = seq_num++;
     pthread_mutex_unlock(&mutex_seq_num);
     return value;
 }
@@ -37,12 +37,15 @@ uint8_t tsc_dynamic()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: DYNAMIC\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: DYNAMIC\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_dynamic: malloc");
+        log_file_write_fatal_error("tsc_dynamic: malloc");
         perror("tsc_dynamic: malloc");
         exit(errno);
     } else {
@@ -56,7 +59,7 @@ uint8_t tsc_dynamic()
     packet->DLE_2 = DLE_VAL;
     packet->ETX = ETX_VAL;
 
-    packet->SEQ = get_seq_num();    
+    packet->SEQ = get_seq_num();
     packet->LEN[0] = DYNAMIC_LEN0_VAL;
     packet->LEN[1] = DYNAMIC_LEN1_VAL;
     packet->INFO[0] = 0x5F;
@@ -66,7 +69,7 @@ uint8_t tsc_dynamic()
     packet->INFO[3] = 0x78;
 
     uint8_t output_byte[DYNAMIC_LEN1_VAL];
-    uint8_t header_byte[HEADER_LEN - 1];    //why -1?
+    uint8_t header_byte[HEADER_LEN - 1];  // why -1?
     uint8_t info_byte[DYNAMIC_LEN1_VAL - HEADER_LEN];
     uint8_t CKS = 0;
 
@@ -74,7 +77,7 @@ uint8_t tsc_dynamic()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, DYNAMIC_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -88,7 +91,9 @@ uint8_t tsc_dynamic()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < DYNAMIC_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -97,7 +102,7 @@ uint8_t tsc_dynamic()
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != DYNAMIC_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_dynamic: write");
+        log_file_write_fatal_error("tsc_dynamic: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -110,12 +115,15 @@ uint8_t tsc_pretime()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: PRETIME\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: PRETIME\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_pretime: malloc");
+        log_file_write_fatal_error("tsc_pretime: malloc");
         perror("tsc_pretime: malloc");
         exit(errno);
     } else {
@@ -147,7 +155,7 @@ uint8_t tsc_pretime()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, PRETIME_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -161,7 +169,9 @@ uint8_t tsc_pretime()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < PRETIME_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -170,7 +180,7 @@ uint8_t tsc_pretime()
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != PRETIME_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_pretime: write");
+        log_file_write_fatal_error("tsc_pretime: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -184,12 +194,15 @@ uint8_t tsc_switch()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: SWITCH\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: SWITCH\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_switch: malloc");
+        log_file_write_fatal_error("tsc_switch: malloc");
         perror("tsc_switch: malloc");
         exit(errno);
     } else {
@@ -221,7 +234,7 @@ uint8_t tsc_switch()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, SWITCH_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -235,7 +248,9 @@ uint8_t tsc_switch()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < SWITCH_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -244,13 +259,14 @@ uint8_t tsc_switch()
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != SWITCH_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_switch: write");
+        log_file_write_fatal_error("tsc_switch: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
         free(packet);
     }
-    return packet->SEQ;;
+    return packet->SEQ;
+    ;
 }
 
 //注意成龍的部份 這裡是改變每個step的時間
@@ -258,12 +274,15 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: EXTEND\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: EXTEND\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_extend: malloc");
+        log_file_write_fatal_error("tsc_extend: malloc");
         perror("tsc_extend: malloc");
         exit(errno);
     } else {
@@ -300,7 +319,7 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, EXTEND_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -314,7 +333,9 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < EXTEND_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -323,7 +344,7 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != EXTEND_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_extend: write");
+        log_file_write_fatal_error("tsc_extend: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -338,10 +359,11 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 // {
 //     char log_content[LOG_CONTENT_LEN + 1];
 //     memset(log_content, 0, sizeof(log_content));
-//     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: EVSP 0N\n");
+//     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+//     strlen(log_content), "signal packet tx: EVSP 0N\n");
 
-//     traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
-//     if (packet == NULL) {
+//     traffic_signal_packet_t *packet = (traffic_signal_packet_t
+//     *)malloc(MAX_PACKET_LEN); if (packet == NULL) {
 //         set_memory_error();
 // 		log_file_write_fatal_error("tsc_EVSP_on: malloc");
 //         perror("tsc_EVSP_on: malloc");
@@ -377,7 +399,7 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 
 //     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
 //     memcpy(info_byte, &packet->INFO, EVSP_LEN1_VAL - HEADER_LEN);
-    
+
 //     for (int i = 0; i < 7; i++) {
 //         output_byte[i] = header_byte[i];
 //     }
@@ -391,7 +413,8 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 
 //     if (config.log_signal_packet_tx) {
 //         for (int i = 0; i < EVSP_LEN1_VAL; i++) {
-//             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+//             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+//             strlen(log_content), "%x ", output_byte[i]);
 //         }
 //         log_file_write(log_content);
 //     }
@@ -411,10 +434,11 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 // {
 //     char log_content[LOG_CONTENT_LEN + 1];
 //     memset(log_content, 0, sizeof(log_content));
-//     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: EVSP 0FF\n");
+//     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+//     strlen(log_content), "signal packet tx: EVSP 0FF\n");
 
-//     traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
-//     if (packet == NULL) {
+//     traffic_signal_packet_t *packet = (traffic_signal_packet_t
+//     *)malloc(MAX_PACKET_LEN); if (packet == NULL) {
 //         set_memory_error();
 // 		log_file_write_fatal_error("tsc_EVSP_off: malloc");
 //         perror("tsc_EVSP_off: malloc");
@@ -450,7 +474,7 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 
 //     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
 //     memcpy(info_byte, &packet->INFO, EVSP_LEN1_VAL - HEADER_LEN);
-    
+
 //     for (int i = 0; i < 7; i++) {
 //         output_byte[i] = header_byte[i];
 //     }
@@ -464,7 +488,8 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
 
 //     if (config.log_signal_packet_tx) {
 //         for (int i = 0; i < EVSP_LEN1_VAL; i++) {
-//             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+//             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+//             strlen(log_content), "%x ", output_byte[i]);
 //         }
 //         log_file_write(log_content);
 //     }
@@ -484,12 +509,14 @@ uint8_t tsc_5F4C()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F4C\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F4C\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_5F4C: malloc");
+        log_file_write_fatal_error("tsc_5F4C: malloc");
         perror("tsc_5F4C: malloc");
         exit(errno);
     } else {
@@ -509,7 +536,7 @@ uint8_t tsc_5F4C()
     packet->INFO[0] = 0x5F;
     packet->INFO[1] = 0x4C;
 
-    uint8_t output_byte[QUERY_LEN1_VAL+1];
+    uint8_t output_byte[QUERY_LEN1_VAL + 1];
     uint8_t header_byte[HEADER_LEN - 1];
     uint8_t info_byte[QUERY_LEN1_VAL - HEADER_LEN];
     uint8_t CKS = 0;
@@ -518,7 +545,7 @@ uint8_t tsc_5F4C()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, QUERY_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -533,7 +560,9 @@ uint8_t tsc_5F4C()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < QUERY_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -544,7 +573,7 @@ uint8_t tsc_5F4C()
     // printf("release 5f4c lock\r\n");
 
     if (ret == -1 || ret != QUERY_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_5F4C: write");
+        log_file_write_fatal_error("tsc_5F4C: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -557,12 +586,14 @@ uint8_t tsc_5F48()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F48\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F48\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_5F48: malloc");
+        log_file_write_fatal_error("tsc_5F48: malloc");
         perror("tsc_5F48: malloc");
         exit(errno);
     } else {
@@ -582,7 +613,7 @@ uint8_t tsc_5F48()
     packet->INFO[0] = 0x5F;
     packet->INFO[1] = 0x48;
 
-    uint8_t output_byte[QUERY_LEN1_VAL+1];
+    uint8_t output_byte[QUERY_LEN1_VAL + 1];
     uint8_t header_byte[HEADER_LEN - 1];
     uint8_t info_byte[QUERY_LEN1_VAL - HEADER_LEN];
     uint8_t CKS = 0;
@@ -591,7 +622,7 @@ uint8_t tsc_5F48()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, QUERY_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -606,7 +637,9 @@ uint8_t tsc_5F48()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < QUERY_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -617,7 +650,7 @@ uint8_t tsc_5F48()
     // printf("release 5f48 lock\r\n");
 
     if (ret == -1 || ret != QUERY_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_5F48: write");
+        log_file_write_fatal_error("tsc_5F48: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -630,12 +663,14 @@ uint8_t tsc_5F44()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F44\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F44\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_5F44: malloc");
+        log_file_write_fatal_error("tsc_5F44: malloc");
         perror("tsc_5F44: malloc");
         exit(errno);
     } else {
@@ -656,7 +691,7 @@ uint8_t tsc_5F44()
     packet->INFO[1] = 0x44;
     packet->INFO[2] = get_plan_id();
 
-    uint8_t output_byte[QUERY_PLAN_LEN1_VAL+1];
+    uint8_t output_byte[QUERY_PLAN_LEN1_VAL + 1];
     uint8_t header_byte[HEADER_LEN - 1];
     uint8_t info_byte[QUERY_PLAN_LEN1_VAL - HEADER_LEN];
     uint8_t CKS = 0;
@@ -665,7 +700,7 @@ uint8_t tsc_5F44()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -680,7 +715,9 @@ uint8_t tsc_5F44()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < QUERY_PLAN_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -690,7 +727,7 @@ uint8_t tsc_5F44()
     pthread_mutex_unlock(&mutex_rs232_write);
     // printf("release 5f44 lock\r\n");
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_5F44: write");
+        log_file_write_fatal_error("tsc_5F44: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -698,17 +735,19 @@ uint8_t tsc_5F44()
     }
     return packet->SEQ;
 }
-// query Plan Info (Green) 
+// query Plan Info (Green)
 uint8_t tsc_5F45()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F45\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F45\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_5F45: malloc");
+        log_file_write_fatal_error("tsc_5F45: malloc");
         perror("tsc_5F45: malloc");
         exit(errno);
     } else {
@@ -729,7 +768,7 @@ uint8_t tsc_5F45()
     packet->INFO[1] = 0x45;
     packet->INFO[2] = get_plan_id();
 
-    uint8_t output_byte[QUERY_PLAN_LEN1_VAL+1];
+    uint8_t output_byte[QUERY_PLAN_LEN1_VAL + 1];
     uint8_t header_byte[HEADER_LEN - 1];
     uint8_t info_byte[QUERY_PLAN_LEN1_VAL - HEADER_LEN];
     uint8_t CKS = 0;
@@ -738,7 +777,7 @@ uint8_t tsc_5F45()
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -753,7 +792,9 @@ uint8_t tsc_5F45()
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < QUERY_PLAN_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -764,7 +805,7 @@ uint8_t tsc_5F45()
     // printf("release 5f45 lock\r\n");
 
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_5F45: write");
+        log_file_write_fatal_error("tsc_5F45: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -852,12 +893,15 @@ uint8_t tsc_countdown_on(uint8_t machine_type)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: COUNTDOWN ON\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: COUNTDOWN ON\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_countdown_on: malloc");
+        log_file_write_fatal_error("tsc_countdown_on: malloc");
         perror("tsc_countdown_on: malloc");
         exit(errno);
     } else {
@@ -880,15 +924,15 @@ uint8_t tsc_countdown_on(uint8_t machine_type)
     packet->INFO[3] = 0x01;
     packet->INFO[4] = 0xFF;
     packet->INFO[5] = 0xFF;
-    //for the reversed setup of 晟隆 and 山竚
-    if(machine_type==0||machine_type==2){
-        packet->INFO[6] = 0xFE; //晟隆
-    }else if(machine_type==1){
-        packet->INFO[6] = 0xFF; //山竚
-    }else{
+    // for the reversed setup of 晟隆 and 山竚
+    if (machine_type == 0 || machine_type == 2) {
+        packet->INFO[6] = 0xFE;  //晟隆
+    } else if (machine_type == 1) {
+        packet->INFO[6] = 0xFF;  //山竚
+    } else {
         printf("unknown tc machine\r\n");
     }
-    
+
 
     uint8_t output_byte[EVSP_LEN1_VAL];
     uint8_t header_byte[HEADER_LEN - 1];
@@ -899,7 +943,7 @@ uint8_t tsc_countdown_on(uint8_t machine_type)
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, EVSP_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -913,7 +957,9 @@ uint8_t tsc_countdown_on(uint8_t machine_type)
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < EVSP_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -922,7 +968,7 @@ uint8_t tsc_countdown_on(uint8_t machine_type)
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != EVSP_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_countdown_on: write");
+        log_file_write_fatal_error("tsc_countdown_on: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -936,12 +982,15 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: COUNTDOWN OFF\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: COUNTDOWN OFF\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("tsc_countdown_off: malloc");
+        log_file_write_fatal_error("tsc_countdown_off: malloc");
         perror("tsc_countdown_off: malloc");
         exit(errno);
     } else {
@@ -964,15 +1013,15 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
     packet->INFO[3] = 0x01;
     packet->INFO[4] = 0xFF;
     packet->INFO[5] = 0xFF;
-    //for the reversed setup of 晟隆 and 山竚
-    if(machine_type==0||machine_type==2){
-        packet->INFO[6] = 0xFF; //晟隆
-    }else if(machine_type==1){
-        packet->INFO[6] = 0xFE; //山竚
-    }else{
+    // for the reversed setup of 晟隆 and 山竚
+    if (machine_type == 0 || machine_type == 2) {
+        packet->INFO[6] = 0xFF;  //晟隆
+    } else if (machine_type == 1) {
+        packet->INFO[6] = 0xFE;  //山竚
+    } else {
         printf("unknown tc machine\r\n");
     }
-    
+
 
     uint8_t output_byte[EVSP_LEN1_VAL];
     uint8_t header_byte[HEADER_LEN - 1];
@@ -983,7 +1032,7 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, EVSP_LEN1_VAL - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -997,7 +1046,9 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < EVSP_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
@@ -1006,7 +1057,7 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != EVSP_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_countdown_off: write");
+        log_file_write_fatal_error("tsc_countdown_off: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {
@@ -1015,17 +1066,20 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
     return packet->SEQ;
 }
 
-//query version of tsc
+// query version of tsc
 uint8_t tsc_query_firmware_version(void)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: tsc version query\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet tx: tsc version query\n");
 
-    traffic_signal_packet_t *packet = (traffic_signal_packet_t *)malloc(MAX_PACKET_LEN);
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
     if (packet == NULL) {
         set_memory_error();
-		log_file_write_fatal_error("query firmware version: malloc");
+        log_file_write_fatal_error("query firmware version: malloc");
         perror("query firmware version: malloc");
         exit(errno);
     } else {
@@ -1048,15 +1102,15 @@ uint8_t tsc_query_firmware_version(void)
     // packet->INFO[3] = 0x01;
     // packet->INFO[4] = 0xFF;
     // packet->INFO[5] = 0xFF;
-    //for the reversed setup of 晟隆 and 山竚
+    // for the reversed setup of 晟隆 and 山竚
     // if(machine_type==0){
-        // packet->INFO[6] = 0xFF; //晟隆
+    // packet->INFO[6] = 0xFF; //晟隆
     // }else if(machine_type==1){
-        // packet->INFO[6] = 0xFE; //山竚
+    // packet->INFO[6] = 0xFE; //山竚
     // }else{
-        // printf("unknown tc machine\r\n");
+    // printf("unknown tc machine\r\n");
     // }
-    
+
 
     uint8_t output_byte[FIRMQ_LEN1];
     uint8_t header_byte[HEADER_LEN - 1];
@@ -1067,7 +1121,7 @@ uint8_t tsc_query_firmware_version(void)
 
     memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
     memcpy(info_byte, &packet->INFO, FIRMQ_LEN1 - HEADER_LEN);
-    
+
     for (int i = 0; i < 7; i++) {
         output_byte[i] = header_byte[i];
     }
@@ -1081,16 +1135,18 @@ uint8_t tsc_query_firmware_version(void)
 
     if (config.log_signal_packet_tx) {
         for (int i = 0; i < QUERY_PLAN_LEN1_VAL; i++) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%x ", output_byte[i]);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
         }
         log_file_write(log_content);
     }
     pthread_mutex_lock(&mutex_rs232_write);
     int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
     pthread_mutex_unlock(&mutex_rs232_write);
-    
+
     if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
-		log_file_write_fatal_error("tsc_version_query: write");
+        log_file_write_fatal_error("tsc_version_query: write");
     }
     // tcdrain(serial_port_fd);
     if (packet != NULL) {

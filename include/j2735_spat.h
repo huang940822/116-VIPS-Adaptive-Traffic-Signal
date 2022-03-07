@@ -14,13 +14,13 @@ extern "C" {
 #endif
 
 typedef struct SPAT {
-	BOOL timeStamp_option;
-	int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
-	BOOL name_option;
-	OctetString name; /* DescriptiveName (1..63) */
-	IntersectionStateList intersections;
-	BOOL regional_option;
-	Reg_SPATList regional;
+    BOOL timeStamp_option;
+    int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
+    BOOL name_option;
+    OctetString name; /* DescriptiveName (1..63) */
+    IntersectionStateList intersections;
+    BOOL regional_option;
+    Reg_SPATList regional;
 } SPAT;
 
 #ifdef __cplusplus

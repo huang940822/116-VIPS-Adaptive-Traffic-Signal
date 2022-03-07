@@ -1,11 +1,13 @@
 #ifndef TYPEDEFINE_H
 #define TYPEDEFINE_H
 
-#include <stdint.h>
 #include <stdbool.h>
-#define __USE_XOPEN // TO SOLVE WARNING MSG: implicit declaration of function ‘strptime’
+#include <stdint.h>
+#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function
+                     // ‘strptime’
 #include <time.h>
 
+#define FILE_PATH "./"
 #define OBU_ID_MAX_LEN 10
 #define RSU_ID_MAX_LEN 10
 #define COMPENSATION_MAX_LEN 15
@@ -17,6 +19,9 @@
 #define PHASE_COUNT_MAX_NUM 8
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
+
+#define ROOT_DIR "./"
+
 typedef struct msg_obj msg_obj_t;
 
 typedef enum device_type {
@@ -61,6 +66,7 @@ typedef enum timer_event_type {
     TIMER_EVENT_LOG_FILE_NAME_UPDATE = 3,
     TIMER_EVENT_SPAT_PACKET_TX = 4,
     TIMER_EVENT_MAP_PACKET_TX = 5,
+    TIMER_EVENT_DSRC_SEND = 6,
     // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
@@ -70,7 +76,7 @@ typedef struct config_object {
     float RSU_lat;
     float RSU_lon;
     uint8_t signal_controller_manufacturer;
-    
+
     bool signal_status_report_active;
     bool signal_adjust_upper_bound_active;
     bool signal_adjust_lower_bound_active;
@@ -81,7 +87,7 @@ typedef struct config_object {
 
     bool log_middleware_timer_event;
     bool log_application_register_event;
-    bool log_command_buffer;    //what for??
+    bool log_command_buffer;  // what for??
     bool log_signal_packet_rx;
     bool log_signal_packet_tx;
     bool log_signal_packet_info;
@@ -157,8 +163,8 @@ typedef struct OBU_record {
 
 typedef struct OBU_record_ring {
     OBU_record_t record[OBU_RECORD_RING_CAPACITY];
-    uint8_t first_record_pointer; // queue.front
-    uint8_t last_record_pointer; // queue.back
+    uint8_t first_record_pointer;  // queue.front
+    uint8_t last_record_pointer;   // queue.back
     uint8_t length;
 } OBU_record_ring_t;
 
@@ -169,7 +175,7 @@ typedef struct application_private_space {
 
 
 typedef struct OBU_object {
-    char OBU_id[OBU_ID_MAX_LEN + 1];    //+1 if for \0
+    char OBU_id[OBU_ID_MAX_LEN + 1];  //+1 if for \0
     uint8_t vehicle_type;
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
@@ -186,7 +192,7 @@ typedef struct traffic_signal_packet {
     uint8_t LEN[2];
     uint8_t DLE_2;
     uint8_t ETX;
-    uint8_t INFO[]; //這是指標？
+    uint8_t INFO[];  //這是指標？
 } traffic_signal_packet_t;
 
 typedef struct static_plan {
@@ -215,7 +221,7 @@ typedef struct traffic_signal_status {
     uint8_t PlanID;
     // 5F C5
     uint8_t PhaseOrder;
-    uint8_t SubPhaseCount; //1~8
+    uint8_t SubPhaseCount;  // 1~8
     uint16_t CycleTime;
     uint16_t Offset;
 
@@ -251,7 +257,7 @@ typedef struct R2C_common_field {
     char RSU_id[RSU_ID_MAX_LEN];
     char timestamp[TIMESTAMP_LEN];
     float position_lon;
-    float position_lat; 
+    float position_lat;
     uint8_t service_id;
 } R2C_common_field_t;
 
@@ -266,6 +272,8 @@ typedef struct V2R_common_field {
     uint8_t speed;
     uint8_t direction;
     uint8_t service_id;
+    char *payload;
+    uint32_t payload_len;
 } V2R_common_field_t;
 
 typedef struct C2R_app_section {
@@ -285,22 +293,27 @@ typedef struct tsc_command {
     uint8_t app_id;
     uint8_t app_priority;
     uint8_t target_phase;
-    // cycle and phase are used to "indicate the index of the target_command buffer object".
+    // cycle and phase are used to "indicate the index of the target_command
+    // buffer object".
     uint8_t cycle;
     uint8_t phase;
-    int16_t effect_time;// is the length of time that the application requests to be adjusted to.
-    int8_t adjustment;// the adjustment of time that the application requests to be adjusted.
+    int16_t effect_time;  // is the length of time that the application requests
+                          // to be adjusted to.
+    int8_t adjustment;  // the adjustment of time that the application requests
+                        // to be adjusted.
     int8_t compensation_time;
     char host_OBU_id[ID_MAX_LEN + 1];
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
-typedef struct tsc_command_object { 
+typedef struct tsc_command_object {
     uint8_t app_id;
     uint8_t app_priority;
     uint8_t target_phase;
-    uint8_t effect_time;// is the length of time that the application requests to be adjusted to. 
-    uint8_t adjusted_time;// is the length of time that the traffic signal controller is adjusted to.
+    uint8_t effect_time;  // is the length of time that the application requests
+                          // to be adjusted to.
+    uint8_t adjusted_time;  // is the length of time that the traffic signal
+                            // controller is adjusted to.
     int8_t compensation_time;
     char host_OBU_id[ID_MAX_LEN + 1];
     bool send_flag;

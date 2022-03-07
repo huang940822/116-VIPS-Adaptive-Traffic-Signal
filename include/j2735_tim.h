@@ -14,16 +14,16 @@ extern "C" {
 #endif
 
 typedef struct TravelerInformation {
-	int32_t msgCnt; /* MsgCount (0..127) */
-	BOOL timeStamp_option;
-	int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
-	BOOL packetID_option;
-	OctetString packetID; /* UniqueMSGID (9..9) */
-	BOOL urlB_option;
-	OctetString urlB; /* URL_Base (1..45) */
-	TravelerDataFrameList dataFrames;
-	BOOL regional_option;
-	Reg_TravelerInformationList regional;
+    int32_t msgCnt; /* MsgCount (0..127) */
+    BOOL timeStamp_option;
+    int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
+    BOOL packetID_option;
+    OctetString packetID; /* UniqueMSGID (9..9) */
+    BOOL urlB_option;
+    OctetString urlB; /* URL_Base (1..45) */
+    TravelerDataFrameList dataFrames;
+    BOOL regional_option;
+    Reg_TravelerInformationList regional;
 } TravelerInformation;
 
 #ifdef __cplusplus
