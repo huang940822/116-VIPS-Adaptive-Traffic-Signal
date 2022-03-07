@@ -18,7 +18,7 @@
 #define HANDLE_MSG_LEN 25600
 #define INVALID_FD -1
 #define INVALID_PORT -2
-#define CLIENT_RING_MAX 10
+#define CLIENT_RING_MAX 4000
 typedef struct Client client_t;
 typedef struct _tcp_handle {
 	size_t cur_msg_len;

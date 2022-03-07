@@ -45,7 +45,7 @@ double bearing(double lat,double lon,double lat2,double lon2){
     return brng;
 
 
-  }
+}
 double deg2rad(double deg){
     return deg * (PI/180);
 }

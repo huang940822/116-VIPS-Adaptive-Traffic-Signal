@@ -14,7 +14,6 @@ typedef struct Broker comm_broker_t;
 comm_server_t RSU_server;
 pthread_t com_layer_thread;
 extern pthread_mutex_t mutex_client_write;
-int first_time = 0;//first time???
 
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)
@@ -94,6 +93,15 @@ int init_server(comm_server_t *server)
 		fprintf(stderr, "Open port %d error: %s\n", server->port, server->err_info);
 		return SERVER_ERR_INIT;
 	}
+	server->listen_SMART_AVI_fd = net_UDP_server(server->err_info, SMART_AVI_PORT, server->bind_addr);
+	if (server->listen_SMART_AVI_fd != NET_ERR) {
+		if (net_non_block(server->err_info, server->listen_SMART_AVI_fd) == NET_ERR)
+			return SERVER_ERR_INIT;
+	}
+	else {
+		fprintf(stderr, "Open port %d error: %s\n", SMART_AVI_PORT, server->err_info);
+		return SERVER_ERR_INIT;
+	}
 	/* add listen_TCP_fd to epoll instance，setting to callback function to  accept TCP Handler */
 	if (ae_create_comm_event(server->el, server->listen_TCP_fd, AE_READABLE, conn_accept_TCP_handler, server) != AE_ERR) {
 		char conn_info[64];
@@ -108,6 +116,16 @@ int init_server(comm_server_t *server)
 	if (ae_create_comm_event(server->el, server->listen_UDP_fd, AE_READABLE, conn_accept_UDP_handler, server) != AE_ERR) {
 		char conn_info[64];
 		net_format_sock(server->listen_UDP_fd, conn_info, sizeof(conn_info));
+		printf("UDP:listen on: %s\n", conn_info);
+	}
+	else {
+		fprintf(stderr, "Fail to add listener event on %d\n", server->listen_UDP_fd);
+		return SERVER_ERR_INIT;
+	}
+	/* add listen_SMART_AVI_fd to epoll instance，setting to callback function to  accept Smart AVI Handler */
+	if (ae_create_comm_event(server->el, server->listen_SMART_AVI_fd, AE_READABLE, conn_accept_Smart_AVI_handler, server) != AE_ERR) {
+		char conn_info[64];
+		net_format_sock(server->listen_SMART_AVI_fd, conn_info, sizeof(conn_info));
 		printf("UDP:listen on: %s\n", conn_info);
 	}
 	else {
@@ -139,7 +157,7 @@ int start_server(comm_server_t *server)
 //queue似乎是用來收data用的 送data出去沒用到queue
 void comm_packet_enqueue(client_t *client, uint8_t from_type)
 {
-	struct msg_obj *_msg_obj = msg_obj_create(client->read_buffer->buff, from_type, client->com_id);
+	struct msg_obj *_msg_obj = msg_obj_create(client->read_buffer, from_type, client->com_id);
 	if (_msg_obj != NULL) {
 		msg_queue_enqueue(_msg_obj);
 	}
@@ -246,7 +264,7 @@ void conn_free_client(client_t *client)
 		free(client->read_buffer->buff);
 		free(client->read_buffer);
 		free_buffer_ring(client->write_buffer);
-		free(client->write_buffer);
+		//free(client->write_buffer);
 		free(client->handle->_ae_handle);
 		free(client->handle);
 		free(client);
@@ -297,11 +315,11 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop, int fd, void *cli
 	char ip_addr[128] = {0};
 	comm_server_t *serv = (comm_server_t *)event_loop->server;
 	char buf[MAX_BUF_LEN] = {0};
-	int Is_smart_AVI = 0;
 	int Is_Heartbeat = 0;
 	struct sockaddr_in heartbeat_addr;
 	
-	cfd = net_UDP_accept(serv->err_info, serv->port, buf, fd, MAX_BUF_LEN, &Is_smart_AVI, &Is_Heartbeat, &heartbeat_addr);
+	cfd = net_UDP_accept(serv->err_info, serv->port, buf, fd, MAX_BUF_LEN,&Is_Heartbeat, &heartbeat_addr);
+	
 	if (cfd >= 0) {
 		client_t *client = conn_alloc_client(UDP_HANDLE);
 		if (!client) {
@@ -313,29 +331,52 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop, int fd, void *cli
 		client->fd = cfd;
 		client->com_id = serv->dispatch_com_id++;
 		int retval = comm_dict_add(serv->broker->client_dict, client, client->com_id);
-		if (Is_smart_AVI == 1){
-			comm_packet_enqueue(client, FROM_SMART_AVI);
-			if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_SMART_AVI_UDP, client) == AE_ERR) {
+		if (Is_Heartbeat == 1){
+			comm_packet_enqueue(client, FROM_DSRC);
+			if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_client_UDP, client) == AE_ERR) {
 				fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
 				comm_dict_delete(serv->broker->client_dict, client->com_id);
 				conn_free_client(client);
 			}
-			Is_smart_AVI = 0;
+			comm_create_OBU_client(event_loop, fd, serv->err_info, heartbeat_addr);
+			Is_Heartbeat = 0;
 		}
 		else{
-			if (Is_Heartbeat == 1 && first_time == 0){
-				first_time = 1;
-				comm_create_OBU_client(event_loop, fd, serv->err_info, heartbeat_addr);
-				Is_Heartbeat = 0;
+			comm_packet_enqueue(client, FROM_DSRC);
+			if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_client_UDP, client) == AE_ERR) {
+				fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
+				comm_dict_delete(serv->broker->client_dict, client->com_id);
+				conn_free_client(client);
 			}
-			else{
-				comm_packet_enqueue(client, FROM_DSRC);
-				if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_client_UDP, client) == AE_ERR) {
-					fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
-					comm_dict_delete(serv->broker->client_dict, client->com_id);
-					conn_free_client(client);
-				}
-			}
+		}
+	}
+}
+void conn_accept_Smart_AVI_handler(struct ae_event_loop *event_loop, int fd, void *clientData, int mask)
+{
+	int cfd, cport;
+	char ip_addr[128] = {0};
+	comm_server_t *serv = (comm_server_t *)event_loop->server;
+	char buf[MAX_BUF_LEN] = {0};
+	int Is_Heartbeat = 0;
+	struct sockaddr_in heartbeat_addr;
+	cfd = net_UDP_accept(serv->err_info, serv->port, buf, fd, MAX_BUF_LEN, &Is_Heartbeat, &heartbeat_addr);
+	
+	if (cfd >= 0) {
+		client_t *client = conn_alloc_client(UDP_HANDLE);
+		if (!client) {
+			printf("alloc client error...close socket\n");
+			close(fd);
+			return;
+		}
+		client->el = event_loop;
+		client->fd = cfd;
+		client->com_id = serv->dispatch_com_id++;
+		int retval = comm_dict_add(serv->broker->client_dict, client, client->com_id);
+		// comm_packet_enqueue(client, FROM_SMART_AVI);
+		if (ae_create_comm_event(event_loop, cfd, AE_READABLE, conn_read_from_SMART_AVI_UDP, client) == AE_ERR) {
+			fprintf(stderr, "create socket readable event error, close fd: %d\n", cfd);
+			comm_dict_delete(serv->broker->client_dict, client->com_id);
+			conn_free_client(client);
 		}
 	}
 }

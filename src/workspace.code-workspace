@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../OSlink_error_report"
+		},
+		{
+			"path": "../../文件/smart_avi_simulation"
+		},
+		{
+			"path": "../../文件/OBU_controller_v2"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"ae_handle.h": "c"
+		}
+	}
+}

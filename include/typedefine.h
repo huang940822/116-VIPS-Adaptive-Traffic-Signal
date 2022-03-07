@@ -18,6 +18,9 @@
 #define PHASE_COUNT_MAX_NUM 8
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
+
+#define ROOT_DIR "./"
+
 typedef struct msg_obj msg_obj_t;
 
 typedef enum device_type {
@@ -60,6 +63,7 @@ typedef enum timer_event_type {
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING = 1,
     TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION = 2,
     TIMER_EVENT_LOG_FILE_NAME_UPDATE = 3,
+    TIMER_EVENT_DSRC_SEND = 4,
     // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
@@ -245,6 +249,8 @@ typedef struct V2R_common_field {
     uint8_t speed;
     uint8_t direction;
     uint8_t service_id;
+    char *payload;
+    uint32_t payload_len;
 } V2R_common_field_t;
 
 typedef struct C2R_app_section {

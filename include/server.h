@@ -34,6 +34,7 @@ struct Server {
 	char *bind_addr;
 	int32_t listen_TCP_fd;
 	int32_t listen_UDP_fd;
+	int32_t listen_SMART_AVI_fd;
 	int32_t cloud_expired_id;
 	int32_t timer_logged_id;
 	int32_t dispatch_com_id;
@@ -64,6 +65,8 @@ client_t *conn_alloc_client(uint8_t client_conn_type);
 void conn_free_client(client_t *client);
 
 void conn_accept_UDP_handler(ae_event_loop *event_loop, int fd, void *clientData, int mask);
+
+void conn_accept_Smart_AVI_handler(ae_event_loop *event_loop, int fd, void *clientData, int mask);
 
 void conn_read_from_client_UDP(ae_event_loop *event_loop, int fd, void *clientData, int mask);
 

@@ -214,7 +214,7 @@ int net_TCP_accept(char *err, int serversock, char *ip, size_t ip_len, int *port
 
 	return fd;
 }
-int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int MAX_BUF_LEN, int *Is_smart_AVI, int *Is_Heartbeat, struct sockaddr_in *heartbeat_addr)
+int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int MAX_BUF_LEN, int *Is_Heartbeat, struct sockaddr_in *heartbeat_addr)
 {
 	int cfd = -1, reuse = 1, ret;
 	struct sockaddr_in client_addr;
@@ -223,10 +223,8 @@ int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int MAX_B
 	socklen_t len = sizeof(sin);
 	int recv_bytes = recvfrom(listen_fd, recv_buf, MAX_BUF_LEN, 0, (struct sockaddr *)&client_addr, &client_len);
 	if (recv_bytes > 0) {
-		if (htons(client_addr.sin_port) == SMART_AVI_PORT){
- 			*Is_smart_AVI = 1;
- 		}
 		if (htons(client_addr.sin_port) == Heartbeat_PORT){
+			
  			*Is_Heartbeat = 1;
 			heartbeat_addr->sin_addr = client_addr.sin_addr;
 			heartbeat_addr->sin_port = client_addr.sin_port - ntohs(1);
