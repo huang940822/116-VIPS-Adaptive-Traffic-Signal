@@ -33,14 +33,31 @@ int net_set_send_buf_size(char *err, int fd, int send_size);
 int net_set_tcp_no_nagle(char *err, int fd);
 int net_non_block(char *err, int fd);
 int net_TCP_server(char *err, int port, char *bindaddr, int backlog);
-int net_TCP_accept(char *err, int serversock, char *ip, size_t ip_len, int *port);
-int net_UDP_accept(char *err, int port, char *recv_buf, int listen_fd, int max_buf_len, int *Is_smart_AVI, int *Is_Heartbeat, struct sockaddr_in *heartbeat_addr);
+int net_TCP_accept(char *err,
+                   int serversock,
+                   char *ip,
+                   size_t ip_len,
+                   int *port);
+int net_UDP_accept(char *err,
+                   int port,
+                   char *recv_buf,
+                   int listen_fd,
+                   int max_buf_len,
+                   int *Is_Heartbeat,
+                   struct sockaddr_in *heartbeat_addr);
 int net_TCP_read(int fd, char *buf, int count);
 size_t net_TCP_write(int fd, char *buf, int count);
 int net_UDP_server(char *err, int port, char *bindaddr);
 int net_format_peer(int fd, char *buf, size_t buf_len);
 int net_format_sock(int fd, char *buf, size_t buf_len);
-int net_listen(char *err, int s, struct sockaddr *sa, socklen_t len, int backlog);
-int net_generic_accept(char *err, int serversock, struct sockaddr *sa, socklen_t *len);
+int net_listen(char *err,
+               int s,
+               struct sockaddr *sa,
+               socklen_t len,
+               int backlog);
+int net_generic_accept(char *err,
+                       int serversock,
+                       struct sockaddr *sa,
+                       socklen_t *len);
 int net_TCP_client(char *err, char *server_addr, int server_port);
 #endif

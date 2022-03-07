@@ -27,8 +27,8 @@
  *******************************************************************************
  */
 
-#define IS_SUCCESS(__rc__) (((int32_t)__rc__) >= 0)
-#define IS_FAIL(__rc__) (((int32_t)__rc__) < 0)
+#define IS_SUCCESS(__rc__) (((int32_t) __rc__) >= 0)
+#define IS_FAIL(__rc__) (((int32_t) __rc__) < 0)
 
 #define ERROR_MSG(__rc__) error_msg(__rc__)
 

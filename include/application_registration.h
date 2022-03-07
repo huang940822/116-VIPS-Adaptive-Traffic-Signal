@@ -8,7 +8,7 @@ int app_register(app_obj_t *);
 void app_list_print();
 void event_callback_print();
 
-/* Return codes of application register */ 
+/* Return codes of application register */
 typedef enum app_register_err {
     APP_REGISTER_ACCEPT = 0,
     APP_REGISTER_INVALID_APP_NAME = -1,

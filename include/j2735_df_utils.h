@@ -1,4 +1,4 @@
-/* 
+/*
  * Utility function definitions for J2735 data frame
  * Copyright (C) Unex Technology Corporation - All Rights Reserved
  * Unauthorized copying of this file, via any medium is strictly prohibited
@@ -12,7 +12,7 @@
 /**
  * allocate the memory of the data frame which is inside union type
  *
- * The union type is not allocated by j2735_msg_prealloc() 
+ * The union type is not allocated by j2735_msg_prealloc()
  * because there is no way to know the choice of user.
  * This function does the allocation upon the choice field inside "data"
  * with the same policy of j2735_msg_prealloc().
@@ -35,12 +35,13 @@
  *   part2.partII_Id = VehicleSafetyExt;
  *   j2735_dataframe_prealloc(PartIIcontent_Id, &part2);
  *
- *   The memory of part2.u.safetyExt and fields inside it are 
- *   allocated recursively with max. size defined in J2735 ASN.1 
+ *   The memory of part2.u.safetyExt and fields inside it are
+ *   allocated recursively with max. size defined in J2735 ASN.1
  *   definitions.
  *
- * @param[in]  df_id The supported data frame 
- * @param[in,out]  data The address of the structure memory corresponding to df_id 
+ * @param[in]  df_id The supported data frame
+ * @param[in,out]  data The address of the structure memory corresponding to
+ * df_id
  * @retval -1 Failed
  *         0 Successful
  */
@@ -49,7 +50,7 @@ extern int j2735_dataframe_prealloc(DataFrameID df_id, void *data);
 /**
  * free the memory of the data frame which is inside union type
  *
- * The union type is not freed by j2735_msg_dealloc() 
+ * The union type is not freed by j2735_msg_dealloc()
  * because there is no way to know the choice of user.
  * This function does the free upon the choice field inside "data"
  * with the same policy of j2735_msg_dealloc().
@@ -57,7 +58,8 @@ extern int j2735_dataframe_prealloc(DataFrameID df_id, void *data);
  * This is designed to be used with j2735_dataframe_prealloc() in pairs.
  *
  * @param[in]  df_id The supported data frame.
- * @param[in,out]  data The address of the structure memory corresponding to df_id. 
+ * @param[in,out]  data The address of the structure memory corresponding to
+ * df_id.
  * @retval -1 Failed
  *         0 Successful
  */

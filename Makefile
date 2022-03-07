@@ -5,7 +5,7 @@ WARN_OPT =
 LIB_PATH := $(realpath lib)
 LDFLAGS = -g -L$(LIB_PATH) 
 LIB_FILES := $(wildcard $(LIB_PATH)/*.so)
-LIBS = -ldsrc_v2xcast -pthread -lrt -lm -lzmq
+LIBS =  -ldsrc_v2xcast -pthread -lrt -lm -lzmq
 
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects

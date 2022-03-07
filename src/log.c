@@ -1,14 +1,14 @@
-#include <stdio.h>
 #include <errno.h>
+#include <pthread.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
-#include <pthread.h>
 
-#include "log.h"
-#include "typedefine.h"
-#include "timer_event.h"
 #include "error_status.h"
+#include "log.h"
+#include "timer_event.h"
+#include "typedefine.h"
 
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 
@@ -18,12 +18,13 @@ FILE *log_file_ptr;
 timer_t log_file_name_update_timer_id;
 uint8_t log_file_name_update_num = TIMER_EVENT_LOG_FILE_NAME_UPDATE;
 
-void log_file_init() {
+void log_file_init()
+{
     // timestamp
     time_t rawtime;
     struct tm *info;
     time(&rawtime);
-    info = localtime( &rawtime );
+    info = localtime(&rawtime);
     strftime(log_file_name, LOG_FILE_NAME_LEN, LOG_FILE_NAME_FORMAT, info);
 
     /* Get file path */
@@ -38,26 +39,29 @@ void log_file_init() {
 
     log_file_ptr = fopen(file_path, "a+");
 
-    if(log_file_ptr == NULL) {
+    if (log_file_ptr == NULL) {
         log_file_write_fatal_error("error opening %s", file_path);
-	} else {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s opened successfully", file_path);
+    } else {
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "%s opened successfully", file_path);
         log_file_write(log_content);
-	}
+    }
 
     /* log file name update timer event */
-    create_timer(&log_file_name_update_timer_id, &log_file_name_update_num, timer_event_handler);
+    create_timer(&log_file_name_update_timer_id, &log_file_name_update_num,
+                 timer_event_handler);
     set_timer(log_file_name_update_timer_id, 15, 0, 1, 0);
 }
 
-void log_file_name_update() {
-
+void log_file_name_update()
+{
     // timestamp
     time_t rawtime;
     struct tm *info;
     char buffer[LOG_FILE_NAME_LEN];
     time(&rawtime);
-    info = localtime( &rawtime );
+    info = localtime(&rawtime);
     strftime(buffer, LOG_FILE_NAME_LEN, LOG_FILE_NAME_FORMAT, info);
 
     if (strncmp(buffer, log_file_name, LOG_FILE_NAME_LEN) != 0) {
@@ -76,10 +80,12 @@ void log_file_name_update() {
 
         new_log_file_ptr = fopen(file_path, "a+");
 
-        if(new_log_file_ptr == NULL) {						
+        if (new_log_file_ptr == NULL) {
             log_file_write_fatal_error("error opening %s", file_path);
         } else {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s opened successfully", file_path);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content),
+                     "%s opened successfully", file_path);
             log_file_write(log_content);
 
             pthread_mutex_lock(&mutex_log_file_ptr);
@@ -94,7 +100,9 @@ void log_file_name_update() {
             strncat(file_path, ".log", sizeof(char) * 4);
 
             if (fclose(tmp_log_file_ptr) == 0) {
-                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s closed successfully", file_path);
+                snprintf(log_content + strlen(log_content),
+                         LOG_CONTENT_LEN - strlen(log_content),
+                         "%s closed successfully", file_path);
                 log_file_write(log_content);
             } else {
                 log_file_write_fatal_error("error closing %s", file_path);
@@ -106,15 +114,15 @@ void log_file_name_update() {
     return;
 }
 
-void log_file_write(char *content) {
-
+void log_file_write(char *content)
+{
     // timestamp
     time_t rawtime;
     struct tm *info;
     char buffer[20];
     memset(buffer, 0, sizeof(buffer));
     time(&rawtime);
-    info = localtime( &rawtime );// 轉換成本地時間表示的分解時間
+    info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
     strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
 
     pthread_mutex_lock(&mutex_log_file_ptr);
@@ -141,15 +149,15 @@ void log_file_write(char *content) {
     return;
 }
 
-void log_file_write_fatal_error(const char *format, ...) {
-
+void log_file_write_fatal_error(const char *format, ...)
+{
     // timestamp
     time_t rawtime;
     struct tm *info;
     char buffer[20];
     memset(buffer, 0, sizeof(buffer));
     time(&rawtime);
-    info = localtime( &rawtime );
+    info = localtime(&rawtime);
     strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
 
     // content

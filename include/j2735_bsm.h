@@ -14,11 +14,11 @@ extern "C" {
 #endif
 
 typedef struct BasicSafetyMessage {
-	BSMcoreData coreData;
-	BOOL partII_option;
-	PartIIcontentList partII;
-	BOOL regional_option;
-	Reg_BasicSafetyMessageList regional;
+    BSMcoreData coreData;
+    BOOL partII_option;
+    PartIIcontentList partII;
+    BOOL regional_option;
+    Reg_BasicSafetyMessageList regional;
 } BasicSafetyMessage;
 
 #ifdef __cplusplus

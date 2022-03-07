@@ -14,16 +14,16 @@ extern "C" {
 #endif
 
 typedef struct SignalRequestMessage {
-	BOOL timeStamp_option;
-	int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
-	int32_t second;    /* DSecond (0..65535) */
-	BOOL sequenceNumber_option;
-	int32_t sequenceNumber; /* MsgCount (0..127) */
-	BOOL requests_option;
-	SignalRequestList requests;
-	RequestorDescription requestor;
-	BOOL regional_option;
-	Reg_SignalRequestMessageList regional;
+    BOOL timeStamp_option;
+    int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
+    int32_t second;    /* DSecond (0..65535) */
+    BOOL sequenceNumber_option;
+    int32_t sequenceNumber; /* MsgCount (0..127) */
+    BOOL requests_option;
+    SignalRequestList requests;
+    RequestorDescription requestor;
+    BOOL regional_option;
+    Reg_SignalRequestMessageList regional;
 } SignalRequestMessage;
 
 #ifdef __cplusplus

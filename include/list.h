@@ -17,20 +17,20 @@
  */
 #ifndef container_of
 #ifdef __LIST_HAVE_TYPEOF
-#define container_of(ptr, type, member)                           \
-	__extension__({                                               \
-		const __typeof__(((type *)0)->member) *__pmember = (ptr); \
-		(type *)((char *)__pmember - offsetof(type, member));     \
-	})
+#define container_of(ptr, type, member)                            \
+    __extension__({                                                \
+        const __typeof__(((type *) 0)->member) *__pmember = (ptr); \
+        (type *) ((char *) __pmember - offsetof(type, member));    \
+    })
 #else
 #define container_of(ptr, type, member) \
-	((type *)((char *)(ptr)-offsetof(type, member)))
+    ((type *) ((char *) (ptr) -offsetof(type, member)))
 #endif
-#endif  //end of function 'container_of'
+#endif  // end of function 'container_of'
 
 struct list_head {
-	struct list_head *prev;
-	struct list_head *next;
+    struct list_head *prev;
+    struct list_head *next;
 };
 #define LIST_HEAD(head) struct list_head head = {&(head), &(head)}
 
@@ -45,10 +45,10 @@ struct list_head {
 #define list_entry(node, type, member) container_of(node, type, member)
 
 #define list_first_entry(head, type, member) \
-	list_entry((head)->next, type, member)
+    list_entry((head)->next, type, member)
 
 #define list_last_entry(head, type, member) \
-	list_entry((head)->prev, type, member)
+    list_entry((head)->prev, type, member)
 
 /**
  * list_for_each - iterate over list nodes
@@ -60,7 +60,7 @@ struct list_head {
  * behavior.
  */
 #define list_for_each(node, head) \
-	for (node = (head)->next; node != (head); node = node->next)
+    for (node = (head)->next; node != (head); node = node->next)
 
 /**
  * list_for_each_entry - iterate over list entries
@@ -76,9 +76,9 @@ struct list_head {
  */
 #ifdef __LIST_HAVE_TYPEOF
 #define list_for_each_entry(entry, head, member)                       \
-	for (entry = list_entry((head)->next, __typeof__(*entry), member); \
-	     &entry->member != (head);                                     \
-	     entry = list_entry(entry->member.next, __typeof__(*entry), member))
+    for (entry = list_entry((head)->next, __typeof__(*entry), member); \
+         &entry->member != (head);                                     \
+         entry = list_entry(entry->member.next, __typeof__(*entry), member))
 #endif
 
 /**
@@ -91,8 +91,8 @@ struct list_head {
  * other modifications to the the list will cause undefined behavior.
  */
 #define list_for_each_safe(node, safe, head)                     \
-	for (node = (head)->next, safe = node->next; node != (head); \
-	     node = safe, safe = node->next)
+    for (node = (head)->next, safe = node->next; node != (head); \
+         node = safe, safe = node->next)
 
 /**
  * list_for_each_entry_safe - iterate over list entries and allow deletes
@@ -107,15 +107,15 @@ struct list_head {
  * FIXME: remove dependency of __typeof__ extension
  */
 #define list_for_each_entry_safe(entry, safe, head, member)                \
-	for (entry = list_entry((head)->next, __typeof__(*entry), member),     \
-	    safe = list_entry(entry->member.next, __typeof__(*entry), member); \
-	     &entry->member != (head); entry = safe,                           \
-	    safe = list_entry(safe->member.next, __typeof__(*entry), member))
+    for (entry = list_entry((head)->next, __typeof__(*entry), member),     \
+        safe = list_entry(entry->member.next, __typeof__(*entry), member); \
+         &entry->member != (head); entry = safe,                           \
+        safe = list_entry(safe->member.next, __typeof__(*entry), member))
 
 static inline void INIT_LIST_HEAD(struct list_head *head)
 {
-	head->next = head;
-	head->prev = head;
+    head->next = head;
+    head->prev = head;
 }
 /**
  * list_add() - Add a list node to the beginning of the list
@@ -124,12 +124,12 @@ static inline void INIT_LIST_HEAD(struct list_head *head)
  */
 static inline void list_add(struct list_head *node, struct list_head *head)
 {
-	struct list_head *next = head->next;
+    struct list_head *next = head->next;
 
-	next->prev = node;
-	node->next = next;
-	node->prev = head;
-	head->next = node;
+    next->prev = node;
+    node->next = next;
+    node->prev = head;
+    head->next = node;
 }
 /**
  * list_add_tail() - Add a list node to the end of the list
@@ -138,12 +138,12 @@ static inline void list_add(struct list_head *node, struct list_head *head)
  */
 static inline void list_add_tail(struct list_head *node, struct list_head *head)
 {
-	struct list_head *prev = head->prev;
+    struct list_head *prev = head->prev;
 
-	prev->next = node;
-	node->next = head;
-	node->prev = prev;
-	head->prev = node;
+    prev->next = node;
+    node->next = head;
+    node->prev = prev;
+    head->prev = node;
 }
 /**
  * list_del() - Remove a list node from the list
@@ -155,7 +155,7 @@ static inline void list_add_tail(struct list_head *node, struct list_head *head)
  * pointer of the node is not safe.
  *
  * Unlinked, initialized nodes are also uninitialized after list_del.
- * (If due to some usage or some reason the deleted node will not be freed for a 
+ * (If due to some usage or some reason the deleted node will not be freed for a
  * while,I strongly recommand you to use list_del_init.)
  *
  * LIST_POISONING can be enabled during build-time to provoke an invalid memory
@@ -165,15 +165,15 @@ static inline void list_add_tail(struct list_head *node, struct list_head *head)
  */
 static inline void list_del(struct list_head *node)
 {
-	struct list_head *next = node->next;
-	struct list_head *prev = node->prev;
+    struct list_head *next = node->next;
+    struct list_head *prev = node->prev;
 
-	next->prev = prev;
-	prev->next = next;
+    next->prev = prev;
+    prev->next = next;
 
 #ifdef LIST_POISONING
-	node->prev = (struct list_head *)(0x00100100);
-	node->next = (struct list_head *)(0x00200200);
+    node->prev = (struct list_head *) (0x00100100);
+    node->next = (struct list_head *) (0x00200200);
 #endif
 }
 
@@ -186,8 +186,8 @@ static inline void list_del(struct list_head *node)
  */
 static inline void list_del_init(struct list_head *node)
 {
-	list_del(node);
-	INIT_LIST_HEAD(node);
+    list_del(node);
+    INIT_LIST_HEAD(node);
 }
 
 /**
@@ -198,7 +198,7 @@ static inline void list_del_init(struct list_head *node)
  */
 static inline int list_empty(const struct list_head *head)
 {
-	return (head->next == head);
+    return (head->next == head);
 }
 
 /**
@@ -209,7 +209,7 @@ static inline int list_empty(const struct list_head *head)
  */
 static inline int list_is_singular(const struct list_head *head)
 {
-	return (!list_empty(head) && head->prev == head->next);
+    return (!list_empty(head) && head->prev == head->next);
 }
 
 /**
@@ -222,8 +222,8 @@ static inline int list_is_singular(const struct list_head *head)
  */
 static inline void list_move(struct list_head *node, struct list_head *head)
 {
-	list_del(node);
-	list_add(node, head);
+    list_del(node);
+    list_add(node, head);
 }
 
 /**
@@ -236,10 +236,10 @@ static inline void list_move(struct list_head *node, struct list_head *head)
 static inline void list_move_tail(struct list_head *node,
                                   struct list_head *head)
 {
-	list_del(node);
-	list_add_tail(node, head);
+    list_del(node);
+    list_add_tail(node, head);
 }
 
 #undef __LIST_HAVE_TYPEOF
 
-#endif  //end of list.h
+#endif  // end of list.h

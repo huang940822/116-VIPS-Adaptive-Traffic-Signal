@@ -1,9 +1,9 @@
 #ifndef TRAFFIC_SIGNAL_STATUS_UPDATING_H
 #define TRAFFIC_SIGNAL_STATUS_UPDATING_H
 
-#include "typedefine.h"
 #include <pthread.h>
 #include <semaphore.h>
+#include "typedefine.h"
 
 #define SEM_SIGNAL_STATUS_TIMEOUT 999
 
@@ -16,6 +16,7 @@ void packet_5FC5(traffic_signal_packet_t *packet);
 
 void packet_5F0C(traffic_signal_packet_t *packet);
 void packet_0F04(traffic_signal_packet_t *packet);
+void packet_0FC2(traffic_signal_packet_t *packet);
 
 void get_traffic_signal_status(traffic_signal_status_t *);
 void get_current_traffic_signal_status(traffic_signal_status_t *);

@@ -7,7 +7,7 @@
 #define DYNAMIC_LEN0_VAL 0x00
 #define DYNAMIC_LEN1_VAL 0x0E
 #define PRETIME_LEN0_VAL 0x00
-#define PRETIME_LEN1_VAL 0x0E 
+#define PRETIME_LEN1_VAL 0x0E
 #define SWITCH_LEN0_VAL 0x00
 #define SWITCH_LEN1_VAL 0x0F
 #define EXTEND_LEN0_VAL 0x00
@@ -36,6 +36,7 @@ uint8_t tsc_5F4C();
 uint8_t tsc_5F48();
 uint8_t tsc_5F44();
 uint8_t tsc_5F45();
+uint8_t tsc_0F42();
 
 uint8_t tsc_countdown_on(uint8_t);
 uint8_t tsc_countdown_off(uint8_t);
