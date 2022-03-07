@@ -16,6 +16,8 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "com_packet_processing.h"
+#include "buffer.h"
 #include "traffic_compensation.h"
 
 // extern pthread_mutex_t mutex_rs232_write;
@@ -25,7 +27,7 @@ extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
 extern uint8_t flag_switch2nextStep;
 extern pthread_mutex_t mutex_uart_comple_protect;
-
+extern buffer_ring_t *DSRC_send_buffer;
 void timer_event_handler(__sigval_t value)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -143,6 +145,13 @@ void timer_event_handler(__sigval_t value)
         }
         
         log_file_name_update();
+    }
+    else if (*(uint8_t *)value.sival_ptr == TIMER_EVENT_DSRC_SEND) {
+        // if (config.log_middleware_timer_event) {
+        //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s", "timer event: OBU list garbage collection");
+        //     log_file_write(log_content);
+        // }
+        DSRC_send_timer_handler(DSRC_send_buffer);
     }
 }
 

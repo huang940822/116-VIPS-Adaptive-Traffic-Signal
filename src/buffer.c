@@ -26,7 +26,7 @@ err:
 	return NULL;
 }
 
-buffer_ring_t *alloc_buffer_ring(uint8_t max)
+buffer_ring_t *alloc_buffer_ring(int max)
 {
 	buffer_ring_t *buffer_ring = malloc(sizeof(buffer_ring_t));
 	memset(buffer_ring, 0 ,sizeof(buffer_ring_t));
@@ -42,7 +42,9 @@ void free_buffer(buffer_t *buffer)
 {
 	if (buffer) {
 		free(buffer->buff);
+		buffer->buff = NULL;
 		free(buffer);
+		buffer = NULL;
 	}
 }
 

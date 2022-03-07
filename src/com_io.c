@@ -1,9 +1,10 @@
+#include <sys/time.h>
 #include "com_io.h"
 
 #include "ae_handle.h"
 #include "dict.h"
 #include "server.h"
-
+#include "buffer.h"
 
 int com_send(int com_id, unsigned char *buf, size_t send_len)
 {	// printf("com_send com_id: %d\n", com_id);

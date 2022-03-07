@@ -1,5 +1,3 @@
-#ifndef DISPATCHER_H
-#define DISPATCHER_H
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -7,12 +5,15 @@
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <stdint.h>
+#include <pthread.h>
 
+#include "BSM_codec.h"
 #include "j2735_codec.h"
 #include "asn1defs_if.h"
 #include "asn1defs_if.h"
 #include "ObstacleList.h"
-
+extern pthread_mutex_t lock;
 void dump_mem(void *data, int len)
 {
     int count;
@@ -90,7 +91,6 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
     // char id[] = "RSU";
     static int msg_cnt = 0;
     int ret = 1;
-    memset(&msgf, 0, sizeof(msgf));
     /* all fields which should be allocated before using are allocated recursively */
     bsm = (BasicSafetyMessage *)j2735_msg_prealloc(BasicSafetyMessage_Id);
     if(bsm == NULL){
@@ -104,9 +104,8 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
     char id[4];
     sprintf(id, "%04d", obstacle->ObstacleID);
     asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
-
-bsm->coreData.secMark = (int)(obstacle->second*1000);//fix_data->time.utc.sec * 1000 + fix_data->time.utc.ms;
-    bsm->coreData.Long = (int)(obstacle->second*100000);
+    bsm->coreData.secMark = 0;//fix_data->time.utc.sec * 1000 + fix_data->time.utc.ms;
+    bsm->coreData.Long = (int)(obstacle->Long);
     bsm->coreData.lat = (int)obstacle->lat;
     bsm->coreData.elev = (int)obstacle->elev;
     // printf("\n");
@@ -217,30 +216,29 @@ int bsm_encode_reg(uint8_t **tx_buf, int *tx_buf_len, ObstacleList *obstaclelist
     PartIIcontent *part2_sp_ext;
     VehicleSafetyExtensions *sf_ext;
     SpecialVehicleExtensions *sp_ext;
-    char id[] = "RSU";
     static int msg_cnt = 0;
     int ret = 1;
 
-    memset(&msgf, 0, sizeof(msgf));
+    //memset(&msgf, 0, sizeof(msgf));
     /* all fields which should be allocated before using are allocated recursively */
     bsm = (BasicSafetyMessage *)j2735_msg_prealloc(BasicSafetyMessage_Id);
     if(bsm == NULL){
         printf("bsm alloc failed!\n");
     }
     bsm->coreData.msgCnt = (msg_cnt++) % 127;
-    printf("message count %d\n", bsm->coreData.msgCnt);
+    // printf("message count %d\n", bsm->coreData.msgCnt);
 
-    /* Set fixed id */
-    asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
-
+    // char id[4];
+    // sprintf(id, "%04d", obstaclelist->tab[0].hour);
+    // asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
     bsm->coreData.secMark = 0;//(int)obstaclelist->tab[0].second * 1000;
     bsm->coreData.Long = 0;
     bsm->coreData.lat = 0;
     bsm->coreData.heading = obstaclelist->dirct;
-    printf("\n");
-    printf("coreData.secMark: %d\n", bsm->coreData.secMark);
-    printf("coreData.long: %lf\n", bsm->coreData.Long / 10000000.0);
-    printf("coreData.lat: %lf\n", bsm->coreData.lat / 10000000.0);
+    // printf("\n");
+    // printf("coreData.secMark: %d\n", bsm->coreData.secMark);
+    // printf("coreData.long: %lf\n", bsm->coreData.Long / 10000000.0);
+    // printf("coreData.lat: %lf\n", bsm->coreData.lat / 10000000.0);
     /* only set the bit of bitstring */
     asn1_bstr_set_bit(&(bsm->coreData.brakes.wheelBrakes), BrakeAppliedStatus_rightFront);
     bsm->coreData.speed = 0;
@@ -250,7 +248,7 @@ int bsm_encode_reg(uint8_t **tx_buf, int *tx_buf_len, ObstacleList *obstaclelist
     bsm->coreData.brakes.scs = StabilityControlStatus_engaged;
  
     /* set the optional field to TRUE to include the data when encoding */
-   // bsm->partII_option = FALSE;
+    bsm->partII_option = FALSE;
 
     /*regional data*/
     Reg_BasicSafetyMessage * reg_bsm = (Reg_BasicSafetyMessage *)malloc(sizeof(Reg_BasicSafetyMessage));
@@ -266,10 +264,11 @@ int bsm_encode_reg(uint8_t **tx_buf, int *tx_buf_len, ObstacleList *obstaclelist
     /* does the encoding and providing the error msg if there is */
     msgf.messageId = BasicSafetyMessage_Id;
     msgf.u.data = bsm;
-    printf("\n\ncoreData.heading: %d\n\n", bsm->coreData.heading);
+
     J2735CodecErr *err = (J2735CodecErr *)malloc(sizeof(J2735CodecErr));
     err->msg = (char *)malloc(sizeof(char)*100);
     err->msg_size = 100;
+    
     *tx_buf_len = j2735_msg_encode(tx_buf, &msgf, err);
     
     if (*tx_buf_len <= 0) {
@@ -291,6 +290,8 @@ int bsm_encode_reg(uint8_t **tx_buf, int *tx_buf_len, ObstacleList *obstaclelist
     }
     j2735_msg_dealloc(BasicSafetyMessage_Id, bsm);
 
+    free(err->msg);
+    free(err);
     return ret;
 }
 void bsm_decode(uint8_t *rx_buf, int rx_buf_len)
@@ -316,5 +317,3 @@ void bsm_decode(uint8_t *rx_buf, int rx_buf_len)
 
     return;
 }
-
-#endif

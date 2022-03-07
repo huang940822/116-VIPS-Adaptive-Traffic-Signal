@@ -1,29 +1,37 @@
 #include <stdio.h>
+#include <pthread.h>
 
 #include "log.h"
 #include "server.h"
 #include "msg_queue.h"
 #include "dispatcher.h"
 #include "com_packet_processing.h"
+#include "threadpool.h"
 
 uint8_t cloud_com_id;
 uint8_t OBU_com_id;
 uint8_t Heartbeat_com_id;
 uint8_t AVI_com_id;
-
-
+threadpool_t *pool;
+pthread_mutex_t lock;
+int f_flag = 0;
 // which will continuously dequeue message objects form the message queue
 void* dispatcher_handler()
 {
 	msg_queue_init();
-
+	pthread_mutex_init(&lock, NULL);
 	int ret = 0;
 	char log_content[LOG_CONTENT_LEN + 1];
 
 	struct msg_obj* msg;
+	assert((pool = threadpool_create(THREAD, QUEUE, 0)) != NULL);
+    fprintf(stderr, "Pool started with %d threads and "
+            "queue size of %d\n", THREAD, QUEUE);
+
 	for (;;) {
 		memset(log_content, 0, sizeof(log_content));
 		msg = msg_queue_dequeue();
+	
 		snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "dispatcher: MSG(%d)", msg->device_id);
 		log_file_write(log_content);
 		if (msg->device_id == FROM_CLOUD) {
@@ -44,9 +52,9 @@ void* dispatcher_handler()
 				Heartbeat_com_id = msg->handle_id;
 			}
 			else{
+				// if(f_flag < 2)
 				OBU_com_id = msg->handle_id;
-				pthread_t APP_thread;
-				//int ret = pthread_create(&APP_thread, NULL, OBU_packet_rx_event_handler, "Child");
+					// f_flag++;
 				ret = OBU_packet_rx_event_handler(msg);
 				if (ret < 0) {
 					log_file_write_fatal_error("invalid packet from OBU: %d\n", ret);
@@ -55,9 +63,10 @@ void* dispatcher_handler()
 		}
 		if (msg->device_id == FROM_SMART_AVI) {
  			AVI_com_id = msg->handle_id;
- 			Smart_AVI_packet_rx_event_handler(msg);		
+ 			Smart_AVI_packet_rx_event_handler(msg);	
  		}
 		free(msg);
 	}
+	assert(threadpool_destroy(pool, 0) == 0);
 	log_file_write_fatal_error("dispatcher thread exit");
 }

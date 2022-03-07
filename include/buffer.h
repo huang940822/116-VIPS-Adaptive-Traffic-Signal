@@ -20,7 +20,7 @@ typedef struct {
 
 #define DEFAULT_BUFF_SIZE 25600
 buffer_t *alloc_buffer();
-buffer_ring_t *alloc_buffer_ring(uint8_t max);
+buffer_ring_t *alloc_buffer_ring(int max);
 void free_buffer(buffer_t *buffer);
 void free_buffer_ring(buffer_ring_t *buffer_ring);
 int get_buffer_size(buffer_t *buffer);

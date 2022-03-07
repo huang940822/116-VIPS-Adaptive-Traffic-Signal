@@ -1,4 +1,5 @@
 #include "msg_queue.h"
+#include "buffer.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
@@ -39,12 +40,13 @@ int8_t msg_queue_init()
 		return MSG_Q_ERR;
 	return MSG_Q_OK;
 }
-msg_obj_t *msg_obj_create(char *msg, uint8_t device_id, uint8_t handle_id)
+struct msg_obj_t *msg_obj_create(buffer_t *buf, uint8_t device_id, uint8_t handle_id)
 {
 	msg_obj_t *_msg_obj = malloc(sizeof(msg_obj_t));
 	if (_msg_obj != NULL) {
 		_msg_obj->device_id = device_id;
-		memcpy(_msg_obj->msg, msg, MSG_Default_LEN);
+		memcpy(_msg_obj->msg, buf->buff, buf->size);
+		_msg_obj->msg_len = buf->size;
 		_msg_obj->handle_id = handle_id;
 		return _msg_obj;
 	}

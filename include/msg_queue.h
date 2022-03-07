@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "buffer.h"
 #include "queue.h"
 #include "util.h"
 
@@ -33,6 +34,7 @@
 
 struct msg_obj {
 	unsigned char msg[MSG_Default_LEN];
+	size_t msg_len;
 	uint8_t device_id;
 	uint8_t handle_id;
 	QUEUE queue;
@@ -52,5 +54,5 @@ void msg_queue_enqueue(struct msg_obj *new_msg_obj);
 
 int8_t msg_queue_init();
 
-struct msg_obj *msg_obj_create(char *msg, uint8_t device_id, uint8_t handle_id);
+struct msg_obj_t *msg_obj_create(buffer_t *buf, uint8_t device_id, uint8_t handle_id);
 #endif

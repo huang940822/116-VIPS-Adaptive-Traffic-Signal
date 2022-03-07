@@ -213,6 +213,7 @@ void ae_main(ae_event_loop *event_loop)
 	event_loop->stop = 0;
 	while (!event_loop->stop) {
 		ae_process_events(event_loop, AE_ALL_EVENTS);
+
 	}
 }
 
