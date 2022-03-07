@@ -10,11 +10,15 @@
 #include "TSP.h"
 #include "EVSP.h"
 #include "CPS.h"
+#include "SPaT.h"
+#include "MAP.h"
 #include "APP.h"
 #include "server.h"
 #include "config.h"
 #include "EVSP_config.h"
 #include "TSP_config.h"
+#include "SPaT_config.h"
+#include "MAP_config.h"
 #include "msg_queue.h"
 #include "dispatcher.h"
 #include "typedefine.h"
@@ -78,11 +82,23 @@ int main()
         log_file_write_fatal_error("error evsp reading config file: %d", ret);
     }
 
+    /* read tsp confile file*/
     ret = TSP_config_init();
     if (ret != 0 ) {
         log_file_write_fatal_error("error tsp reading config file: %d", ret);
     }
 
+    /* read spat confile file*/
+    ret = SPaT_config_init();
+    if(ret != 0) {
+        log_file_write_fatal_error("error spat reading config file: %d", ret);
+    }
+
+    /* read map confile file*/
+    // ret = MAP_config_init();
+    // if(ret != 0) {
+    //     log_file_write_fatal_error("error map reading config file: %d", ret);
+    // }
 
     printf("query tc firmware version\r\n");
     flag_query_firm_ver=true;
@@ -141,7 +157,7 @@ int main()
     create_timer(&OBU_list_garbage_collection_timer_id, &OBU_list_garbage_collection_timer_num, timer_event_handler);
     set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
 
-//CPS
+    //CPS
     ret = app_register(&CPS_E);
     ret = app_register(&CPS_W);
     ret = app_register(&CPS_S);
@@ -154,6 +170,27 @@ int main()
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s register successfully", CPS_E.name);
         log_file_write(log_content);
     }   
+
+    // SPaT
+    // ret = app_register(&SPaT);
+    // if(ret != 0) {
+    //    log_file_write_fatal_error("error registering application: %d (%s)", ret, "SPaT");
+    // } else {
+    //     memset(log_content, 0, sizeof(log_content));
+    //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s register successfully", SPaT.name);
+    //     log_file_write(log_content);
+    // }
+    // // MAP
+    // ret = app_register(&MAP);
+    // if(ret != 0) {
+    //     log_file_write_fatal_error("error registering application: %d (%s)", ret, "MAP");
+    // } else {
+    //     memset(log_content, 0, sizeof(log_content));
+    //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s register successfully", MAP.name);
+    //     log_file_write(log_content);
+    // }
+
+
     event_callback_print();
     /* Packet dispatcher */
 	pthread_t dispatcher_thread;
@@ -189,8 +226,33 @@ int main()
     // // flag_countdown_off=true;
     // printf("input the sec want to adjust for phase:\r\n");
     // scanf("%d",&input);
+
+
+    //SPAT *p_spat;
+    //uint8_t *tx_buf = NULL;
+    //int tx_buf_len = 0;
+    //if(Spat_msg_init(&p_spat) == 0) {
+    //    printf("error on init\n");
+    //    return 0;
+    //}
+    //traffic_signal_status_t qsignal_status;
+
     while(1){
-        
+        //get_traffic_signal_status(&qsignal_status);
+        //int phase = get_current_phase()-1;
+        //printf("count = %d\n\n", qsignal_status.SubPhaseCount);
+        //printf("\nphase = %d\n", phase);
+        //printf("GREEN :%d, pedgreen :%d, yellow :%d, red :%d\n",qsignal_status.plan[0].Green,qsignal_status.plan[0].PedGreenFlash,qsignal_status.plan[0].Yellow,qsignal_status.plan[0].AllRed);
+        //printf("GREEN :%d, pedgreen :%d, yellow :%d, red :%d\n",qsignal_status.plan[1].Green,qsignal_status.plan[1].PedGreenFlash,qsignal_status.plan[1].Yellow,qsignal_status.plan[1].AllRed);
+        //printf("GREEN :%d, pedgreen :%d, yellow :%d, red :%d\n",qsignal_status.plan[2].Green,qsignal_status.plan[2].PedGreenFlash,qsignal_status.plan[2].Yellow,qsignal_status.plan[2].AllRed);
+        //printf("GREEN :%d, pedgreen :%d, yellow :%d, red :%d\n",qsignal_status.plan[3].Green,qsignal_status.plan[3].PedGreenFlash,qsignal_status.plan[3].Yellow,qsignal_status.plan[3].AllRed);
+        //printf("now second :%d\n",get_current_second());
+        //spat_msg_update(&p_spat);
+        //tx_buf_len = Compose_spat(&tx_buf, p_spat);
+        //printf("SPAT encoded data:\n");
+        //dump_mem(tx_buf, tx_buf_len);
+        //decode_spat(tx_buf, tx_buf_len);
+
     //     // printf("count down off\r\n");
     //     // flag_countdown_off=1;
 
@@ -216,7 +278,7 @@ int main()
         b1=signal_status.plan[1].PreGreen;
         c1=signal_status.plan[2].PreGreen;
         d1=signal_status.plan[3].PreGreen;
-
+        
         char log_content[LOG_CONTENT_LEN + 1];
         // memset(log_content, 0, sizeof(log_content));
         // if (config.log_command_buffer) {
@@ -227,6 +289,8 @@ int main()
         a1,b1,c1,d1);
         log_file_write(log_content);
 
+        printf("StepSec: %d\r\n",get_current_second());
+        
         // if(flag){
         //     printf("flag:%d\r\n",flag);
         //     get_compensation_buffer(compensation_time);

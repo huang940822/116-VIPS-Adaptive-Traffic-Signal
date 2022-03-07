@@ -19,38 +19,38 @@
 #include "traffic_signal_packet_rx.h"
 #include "timer_event.h"
 #include "ObstacleList.h"
- #define CPS_ID 3
+#define CPS_ID 3
 
- clock_t start_cpu, end_cpu;
- struct timeval start, end, diff, start_2, end_2, diff_2, start_5, end_5, diff_5;
- 	char log_content[LOG_CONTENT_LEN + 1];
+clock_t start_cpu, end_cpu;
+struct timeval start, end, diff, start_2, end_2, diff_2, start_5, end_5, diff_5;
+char log_content[LOG_CONTENT_LEN + 1];
 
-void OBU_BSM_tx(uint16_t len, void *buf)
- {
-     char log_content[LOG_CONTENT_LEN + 1];
-     msg_buf_t write_buf;
-     write_buf.index = 0;
-     write_buf.content = (unsigned char *)malloc(len);
-     if (write_buf.content == NULL) {
-         log_file_write_fatal_error("OBU_BSM_tx: malloc");
-         perror("OBU_packet_tx: malloc");
-         exit(errno);
-     } else {
-         memset(write_buf.content, 0, len);
-     }
-     if (memcpy(&write_buf.content[write_buf.index], (unsigned char *)buf, len) == NULL){
-         log_file_write_fatal_error("OBU_BSM_tx: memcpy");
-     }
-     //printf("obu com id:%d\n", OBU_com_id);
-     int ret = com_send(OBU_com_id, write_buf.content, len);
-     if (ret == COM_IO_ERR) {
-         log_file_write_fatal_error("OBU_BSM_tx: com_send");
-     }
-     if (write_buf.content != NULL) {
-         free(write_buf.content);
-     }
-     return;
- }
+void OBU_j2735_tx(uint16_t len, void *buf)
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    write_buf.content = (unsigned char *)malloc(len);
+    if (write_buf.content == NULL) {
+        log_file_write_fatal_error("OBU_j2735_tx: malloc");
+        perror("OBU_j2735_tx: malloc");
+        exit(errno);
+    } else {
+        memset(write_buf.content, 0, len);
+    }
+    if (memcpy(&write_buf.content[write_buf.index], (unsigned char *)buf, len) == NULL){
+        log_file_write_fatal_error("OBU_j2735_tx: memcpy");
+    }
+    //printf("obu com id:%d\n", OBU_com_id);
+    int ret = com_send(OBU_com_id, write_buf.content, len);
+    if (ret == COM_IO_ERR) {
+        log_file_write_fatal_error("OBU_j2735_tx: com_send");
+    }
+    if (write_buf.content != NULL) {
+        free(write_buf.content);
+    }
+    return;
+}
 void OBU_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_field)
 {
     char log_content[LOG_CONTENT_LEN + 1];

@@ -298,6 +298,9 @@ void recv_info(int fd, traffic_signal_packet_t *packet)
 	if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0x0C) {
 		packet_5F0C(packet);
 	}
+	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC2) {
+		packet_0FC2(packet);
+	}
 	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0x04) {
 		// printf("tc status report\r\n");
 		packet_0F04(packet);
@@ -312,7 +315,7 @@ void recv_info(int fd, traffic_signal_packet_t *packet)
 		// printf("tc status report\r\n");
 		// packet_0F04(packet);
 		// log_file_write("error packet sent\r\n");
-		printf("%02X  %02X\r\n", packet->INFO[2], packet->INFO[3]);
+		printf("%02X  %02X %d\r\n", packet->INFO[2], packet->INFO[3],packet->INFO[4]);
 	}
 	if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC3) {
 		// printf("tc status report\r\n");

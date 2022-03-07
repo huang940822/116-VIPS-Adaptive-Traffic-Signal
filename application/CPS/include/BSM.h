@@ -13,7 +13,7 @@
 #include "asn1defs_if.h"
 #include "ObstacleList.h"
 
-void dump_mem(void *data, int len)
+/*void dump_mem(void *data, int len)
 {
     int count;
     unsigned char *p = (unsigned char *)data;
@@ -24,7 +24,7 @@ void dump_mem(void *data, int len)
         printf("%02X ", p[count]);
     }
     printf("\n\n");
-}
+}*/
 void bsm_print(BasicSafetyMessage *bsm)
 {
     int i, fbs;

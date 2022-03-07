@@ -59,6 +59,8 @@ typedef enum timer_event_type {
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING = 1,
     TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION = 2,
     TIMER_EVENT_LOG_FILE_NAME_UPDATE = 3,
+    TIMER_EVENT_SPAT_PACKET_TX = 4,
+    TIMER_EVENT_MAP_PACKET_TX = 5,
     // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
@@ -88,6 +90,9 @@ typedef struct config_object {
     bool log_OBU_packet_rx;
     bool log_OBU_packet_tx;
     bool log_OBU_list;
+
+    bool SPaT_packet_tx;
+    bool MAP_packet_tx;
 } config_object_t;
 
 typedef struct EVSP_config_object {
@@ -103,6 +108,14 @@ typedef struct TSP_config_object {
     uint16_t tsp_remaining_distance_max;
 } TSP_config_object_t;
 
+typedef struct SPaT_config_object{
+    uint8_t SPaT_packet_transfer_speed;
+    uint8_t signalcount;
+}SPaT_config_object_t;
+
+typedef struct MAP_config_object{
+    uint8_t MAP_packet_transfer_speed;
+}MAP_config_object_t;
 
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
@@ -205,6 +218,15 @@ typedef struct traffic_signal_status {
     uint8_t SubPhaseCount; //1~8
     uint16_t CycleTime;
     uint16_t Offset;
+
+    // 0F C2
+    uint8_t Year; // (00~255) (國曆)
+    uint8_t Month;// (01~12)
+    uint8_t Day;  // (01~31)
+    uint8_t Week; // (01~07)
+    uint8_t Hour; // (00~23)
+    uint8_t Min;  // (00~59)
+    uint8_t Sec;  // (00~59)
 
     static_plan_t plan[PHASE_COUNT_MAX_NUM];
 

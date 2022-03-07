@@ -50,13 +50,15 @@ void timer_event_handler(__sigval_t value)
         command_buf_polling();
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
-        temp_ack_seq=tsc_5F4C();//查詢號控器目前時相及步階
-        WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F45();//查詢時制計劃之設定內容
         WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F44();
         WAIT_ACK_LOOP
         temp_ack_seq=tsc_5F48();//查詢目前時制計劃內容
+        WAIT_ACK_LOOP
+        temp_ack_seq=tsc_0F42();//查詢日期、時間
+        WAIT_ACK_LOOP
+        temp_ack_seq=tsc_5F4C();//查詢號控器目前時相及步階
         WAIT_ACK_LOOP
         if(flag_pretime==true){
             temp_ack_seq=tsc_pretime();

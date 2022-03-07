@@ -141,6 +141,7 @@ void packet_5FC8(traffic_signal_packet_t *packet)
 
     current_signal_status.PhaseOrder = packet->INFO[4];
     current_signal_status.SubPhaseCount = packet->INFO[5];
+    // printf("current_signal_status.SubPhaseCount:%d\r\n",current_signal_status.SubPhaseCount);
     for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
         current_signal_status.plan[i].Green = (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
     }
@@ -258,6 +259,32 @@ void packet_5F0C(traffic_signal_packet_t *packet)
     
 }
 
+void packet_0FC2(traffic_signal_packet_t *packet)
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    pthread_mutex_lock(&mutex_signal_status);
+
+    signal_status.Year = packet->INFO[2];
+    signal_status.Month = packet->INFO[3];
+    signal_status.Day = packet->INFO[4];
+    signal_status.Week = packet->INFO[5];
+    signal_status.Hour = packet->INFO[6];
+    signal_status.Min = packet->INFO[7];
+    signal_status.Sec = packet->INFO[8];
+
+    // printf("%d/%d/%d/%d %d:%d:%d\r\n",signal_status.Year,
+    //                                 signal_status.Month,
+    //                                 signal_status.Day,
+    //                                 signal_status.Week,
+    //                                 signal_status.Hour,
+    //                                 signal_status.Min,
+    //                                 signal_status.Sec);
+
+    pthread_mutex_unlock(&mutex_signal_status);
+    return;
+}
 
 void packet_0F04(traffic_signal_packet_t *packet)
 {   
