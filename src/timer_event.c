@@ -200,9 +200,9 @@ int create_timer(timer_t *timer_id,
      * sigev_notify_function,並傳入 sigev_value 作為參數 */
 
     evp.sigev_value.sival_ptr =
-        signal_value;  //用於標識定時器
-                       //(這和timerid有什麼區別？回調函數可以獲得)
-    evp.sigev_notify = SIGEV_THREAD;  //線程通知的方式，派駐新線程
+        signal_value;                             //用於標識定時器
+                                                  //(這和timerid有什麼區別？回調函數可以獲得)
+    evp.sigev_notify = SIGEV_THREAD;              //線程通知的方式，派駐新線程
     evp.sigev_notify_function = notify_function;  //線程函數地址
     if (timer_create(CLOCK_REALTIME, &evp, timer_id) == -1) {
         log_file_write_fatal_error("create_timer: timer_create");

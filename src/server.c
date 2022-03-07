@@ -41,7 +41,7 @@ static void callback_key_destructor(void *private_data, void *key)
 }
 
 static dict_type client_callback_dict = {
-    callback_hash,           NULL, NULL, callback_key_compare,
+    callback_hash, NULL, NULL, callback_key_compare,
     callback_key_destructor, NULL};
 
 int com_layer_init(char *config_file_path)

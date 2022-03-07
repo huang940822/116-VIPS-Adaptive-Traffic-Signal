@@ -234,7 +234,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
 
     {  // it's for evsp service's rx and try to get it's duty status and route
-       // it to cloud
+        // it to cloud
         // printf("recv special obu object and will route it to cloud for it's
         // evsp packet\n\r");
 

@@ -1,8 +1,8 @@
 #ifndef ERROR_STATUS_H
 #define ERROR_STATUS_H
 
-#include "typedefine.h"
 #include <signal.h>
+#include "typedefine.h"
 
 #define DSRC_BIT_POSITION 1
 #define TSC_BIT_POSITION 2

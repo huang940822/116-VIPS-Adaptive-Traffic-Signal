@@ -74,8 +74,8 @@ typedef struct ae_event_loop {
     void *server;
     void *apidata; /* This is used for epoll API specific data */
     /*The following members are used in time event*/
-    long long time_event_next_id; /*Timed event ID*/
-    time_t last_time; /*Time when the event was last processed, used to detect
+    long long time_event_next_id;            /*Timed event ID*/
+    time_t last_time;                        /*Time when the event was last processed, used to detect
                          system clock skew */
     ae_time_event *time_event_head;          /*Timer event linked list header*/
     ae_before_sleep_prcess *before_sleep_fn; /*callback executed before sleep*/

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function
+#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
                      // ‘strptime’
 #include <time.h>
 
@@ -297,8 +297,8 @@ typedef struct tsc_command {
     uint8_t phase;
     int16_t effect_time;  // is the length of time that the application requests
                           // to be adjusted to.
-    int8_t adjustment;  // the adjustment of time that the application requests
-                        // to be adjusted.
+    int8_t adjustment;    // the adjustment of time that the application requests
+                          // to be adjusted.
     int8_t compensation_time;
     char host_OBU_id[ID_MAX_LEN + 1];
 } tsc_command_t;
@@ -308,8 +308,8 @@ typedef struct tsc_command_object {
     uint8_t app_id;
     uint8_t app_priority;
     uint8_t target_phase;
-    uint8_t effect_time;  // is the length of time that the application requests
-                          // to be adjusted to.
+    uint8_t effect_time;    // is the length of time that the application requests
+                            // to be adjusted to.
     uint8_t adjusted_time;  // is the length of time that the traffic signal
                             // controller is adjusted to.
     int8_t compensation_time;

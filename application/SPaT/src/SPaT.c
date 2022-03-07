@@ -42,9 +42,7 @@ int SPaT_on_registration(void *arg)
 
     /* create a timer to send SPaT packet */
     if (config.SPaT_packet_tx) {
-        create_timer(&SPaT_packet_tx_timer_id, &SPaT_packet_tx_num,
-                     j2735_timer_event_handler);
-        set_timer(SPaT_packet_tx_timer_id, 0,
-                  1000000000 / SPaT_config.SPaT_packet_transfer_speed, 1, 0);
+        create_timer(&SPaT_packet_tx_timer_id, &SPaT_packet_tx_num, j2735_timer_event_handler);
+        set_timer(SPaT_packet_tx_timer_id, 0, 1000000000 / SPaT_config.SPaT_packet_transfer_speed, 1, 0);
     }
 }

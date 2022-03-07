@@ -432,7 +432,7 @@ void set_serial_attribs()
     serial_port_settings.c_cflag &=
         ~CSTOPB; /* CSTOPB = 2 Stop bits,here it is cleared so 1 Stop bit */
     serial_port_settings.c_cflag &=
-        ~CSIZE; /* Clears the mask for setting the data size             */
+        ~CSIZE;                          /* Clears the mask for setting the data size             */
     serial_port_settings.c_cflag |= CS8; /* Set the data bits = 8 */
 
     serial_port_settings.c_cflag |=

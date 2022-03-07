@@ -9,7 +9,9 @@
 #include "CPS.h"
 #include "EVSP.h"
 #include "EVSP_config.h"
+#include "MAP.h"
 #include "OBU_record_processing.h"
+#include "SPaT.h"
 #include "TSP.h"
 #include "TSP_config.h"
 #include "application_registration.h"
@@ -182,16 +184,14 @@ int main()
     }
 
     // SPaT
-    // ret = app_register(&SPaT);
-    // if(ret != 0) {
-    //    log_file_write_fatal_error("error registering application: %d (%s)",
-    //    ret, "SPaT");
-    // } else {
-    //     memset(log_content, 0, sizeof(log_content));
-    //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
-    //     strlen(log_content), "%s register successfully", SPaT.name);
-    //     log_file_write(log_content);
-    // }
+    ret = app_register(&SPaT);
+    if (ret != 0) {
+        log_file_write_fatal_error("error registering application: %d (%s)", ret, "SPaT");
+    } else {
+        memset(log_content, 0, sizeof(log_content));
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s register successfully", SPaT.name);
+        log_file_write(log_content);
+    }
     // // MAP
     // ret = app_register(&MAP);
     // if(ret != 0) {

@@ -15,7 +15,7 @@ typedef struct Obstacle {
     float width;
     float length;
     int32_t
-        heading; /*  LSB of 0.0125 degrees, A range of 0 to 359.9875 degrees*/
+        heading;          /*  LSB of 0.0125 degrees, A range of 0 to 359.9875 degrees*/
     int32_t description;  //車種
     int32_t speed;
     int32_t hour;
