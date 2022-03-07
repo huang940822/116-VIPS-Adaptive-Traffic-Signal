@@ -203,80 +203,80 @@ int main()
     //     strlen(log_content), "%s register successfully", MAP.name);
     //     log_file_write(log_content);
     // }
-}
-event_callback_print();
 
-/*DSRC send timer event*/
-// timer_t DSRC_send_timer_id;
-// uint8_t DSRC_send_timer_id_num = TIMER_EVENT_DSRC_SEND;
-// create_timer(&DSRC_send_timer_id, &DSRC_send_timer_id_num,
-// timer_event_handler); set_timer(DSRC_send_timer_id, 0, 10000, 1, 0);
+    event_callback_print();
 
-/* Packet dispatcher */
-pthread_t dispatcher_thread;
-ret = pthread_create(&dispatcher_thread, NULL, dispatcher_handler, NULL);
-if (ret != 0) {
-    log_file_write_fatal_error("error creating dispatcher_thread: %d", ret);
-    perror("main: pthread_create");
-    exit(errno);
-}
-J2735Config cfg;
-ret = j2735_init(&cfg);
-if (!IS_SUCCESS(ret)) {
-    printf("Fail to init J2735\n");
-    return -1;
-}
-/* Start server */
+    /*DSRC send timer event*/
+    // timer_t DSRC_send_timer_id;
+    // uint8_t DSRC_send_timer_id_num = TIMER_EVENT_DSRC_SEND;
+    // create_timer(&DSRC_send_timer_id, &DSRC_send_timer_id_num,
+    // timer_event_handler); set_timer(DSRC_send_timer_id, 0, 10000, 1, 0);
 
-com_layer_init(NULL);
+    /* Packet dispatcher */
+    pthread_t dispatcher_thread;
+    ret = pthread_create(&dispatcher_thread, NULL, dispatcher_handler, NULL);
+    if (ret != 0) {
+        log_file_write_fatal_error("error creating dispatcher_thread: %d", ret);
+        perror("main: pthread_create");
+        exit(errno);
+    }
+    J2735Config cfg;
+    ret = j2735_init(&cfg);
+    if (!IS_SUCCESS(ret)) {
+        printf("Fail to init J2735\n");
+        return -1;
+    }
+    /* Start server */
 
-// int input, temp_ack_seq;
-int c, d, a, b;
-int a1, b1, c1, d1;
-traffic_signal_status_t signal_status;
+    com_layer_init(NULL);
 
-// // usleep(10000000);
-// // get_traffic_signal_status(&signal_status);
+    // int input, temp_ack_seq;
+    int c, d, a, b;
+    int a1, b1, c1, d1;
+    traffic_signal_status_t signal_status;
 
-// // printf("pretime for phase 2 is %d phase 4 is %d\r\n", c,d);
-// tsc_command_t test_a, test_b;
-// uint8_t flag=true;
-// // uint8_t flag_2=false;
-// uint8_t current_phase=signal_status.SubPhaseID;
-// // flag_countdown_off=true;
-// printf("input the sec want to adjust for phase:\r\n");
-// scanf("%d",&input);
+    // // usleep(10000000);
+    // // get_traffic_signal_status(&signal_status);
+
+    // // printf("pretime for phase 2 is %d phase 4 is %d\r\n", c,d);
+    // tsc_command_t test_a, test_b;
+    // uint8_t flag=true;
+    // // uint8_t flag_2=false;
+    // uint8_t current_phase=signal_status.SubPhaseID;
+    // // flag_countdown_off=true;
+    // printf("input the sec want to adjust for phase:\r\n");
+    // scanf("%d",&input);
 
 
-// SPAT *p_spat;
-// uint8_t *tx_buf = NULL;
-// int tx_buf_len = 0;
-// if(Spat_msg_init(&p_spat) == 0) {
-//    printf("error on init\n");
-//    return 0;
-//}
-// traffic_signal_status_t qsignal_status;
+    // SPAT *p_spat;
+    // uint8_t *tx_buf = NULL;
+    // int tx_buf_len = 0;
+    // if(Spat_msg_init(&p_spat) == 0) {
+    //    printf("error on init\n");
+    //    return 0;
+    //}
+    // traffic_signal_status_t qsignal_status;
 
-while (1) {
-    // get_traffic_signal_status(&qsignal_status);
-    // int phase = get_current_phase()-1;
-    // printf("count = %d\n\n", qsignal_status.SubPhaseCount);
-    // printf("\nphase = %d\n", phase);
-    // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-    // :%d\n",qsignal_status.plan[0].Green,qsignal_status.plan[0].PedGreenFlash,qsignal_status.plan[0].Yellow,qsignal_status.plan[0].AllRed);
-    // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-    // :%d\n",qsignal_status.plan[1].Green,qsignal_status.plan[1].PedGreenFlash,qsignal_status.plan[1].Yellow,qsignal_status.plan[1].AllRed);
-    // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-    // :%d\n",qsignal_status.plan[2].Green,qsignal_status.plan[2].PedGreenFlash,qsignal_status.plan[2].Yellow,qsignal_status.plan[2].AllRed);
-    // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-    // :%d\n",qsignal_status.plan[3].Green,qsignal_status.plan[3].PedGreenFlash,qsignal_status.plan[3].Yellow,qsignal_status.plan[3].AllRed);
-    // printf("now second :%d\n",get_current_second());
-    // spat_msg_update(&p_spat);
-    // tx_buf_len = Compose_spat(&tx_buf, p_spat);
-    // printf("SPAT encoded data:\n");
-    // dump_mem(tx_buf, tx_buf_len);
-    // decode_spat(tx_buf, tx_buf_len);
-
+    while (1) {
+        // get_traffic_signal_status(&qsignal_status);
+        // int phase = get_current_phase()-1;
+        // printf("count = %d\n\n", qsignal_status.SubPhaseCount);
+        // printf("\nphase = %d\n", phase);
+        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
+        // :%d\n",qsignal_status.plan[0].Green,qsignal_status.plan[0].PedGreenFlash,qsignal_status.plan[0].Yellow,qsignal_status.plan[0].AllRed);
+        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
+        // :%d\n",qsignal_status.plan[1].Green,qsignal_status.plan[1].PedGreenFlash,qsignal_status.plan[1].Yellow,qsignal_status.plan[1].AllRed);
+        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
+        // :%d\n",qsignal_status.plan[2].Green,qsignal_status.plan[2].PedGreenFlash,qsignal_status.plan[2].Yellow,qsignal_status.plan[2].AllRed);
+        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
+        // :%d\n",qsignal_status.plan[3].Green,qsignal_status.plan[3].PedGreenFlash,qsignal_status.plan[3].Yellow,qsignal_status.plan[3].AllRed);
+        // printf("now second :%d\n",get_current_second());
+        // spat_msg_update(&p_spat);
+        // tx_buf_len = Compose_spat(&tx_buf, p_spat);
+        // printf("SPAT encoded data:\n");
+        // dump_mem(tx_buf, tx_buf_len);
+        // decode_spat(tx_buf, tx_buf_len);
+    }
     //     // printf("count down off\r\n");
     //     // flag_countdown_off=1;
     while (1) {

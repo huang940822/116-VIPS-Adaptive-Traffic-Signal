@@ -13,19 +13,7 @@
 #include "asn1defs_if.h"
 #include "j2735_codec.h"
 extern pthread_mutex_t lock;
-void dump_mem(void *data, int len)
-{
-    int count;
-    unsigned char *p = (unsigned char *) data;
-    for (count = 0; count < len; count++) {
-        if (count % 16 == 0)
-            printf("\n");
-
-        printf("%02X ", p[count]);
-    }
-    printf("\n\n");
-}
-* / void bsm_print(BasicSafetyMessage *bsm)
+void bsm_print(BasicSafetyMessage *bsm)
 {
     int i, fbs;
 
@@ -293,7 +281,6 @@ void bsm_decode(uint8_t *rx_buf, int rx_buf_len)
     MessageFrame *p_msgf;
 
     printf("BSM decoding data:\n");
-    dump_mem(rx_buf, rx_buf_len);
     J2735CodecErr *err = (J2735CodecErr *) malloc(sizeof(J2735CodecErr));
     err->msg = (char *) malloc(sizeof(char) * 20);
     ret = j2735_msg_decode(&p_msgf, rx_buf, rx_buf_len, err);

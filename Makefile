@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -m32
+CFLAGS = -g -m32 
 # WARN_OPT = -Wall
 WARN_OPT =
 LIB_PATH := $(realpath lib)
@@ -66,7 +66,7 @@ check:
 		./$(TEST_DIR)/testfile && printf "[ $(PASS_COLOR)Passed$(NO_COLOR) ]\n";\
 	)
 	@rm $(TEST_DIR)/testfile
-	
+
 clang-format:
 	find -iname *.h -o -iname *.c | xargs clang-format -i
 
