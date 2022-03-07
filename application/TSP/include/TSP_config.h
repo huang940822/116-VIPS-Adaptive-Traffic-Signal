@@ -11,7 +11,7 @@ extern TSP_config_object_t TSP_config;
 
 int TSP_config_init();
 
-/* Return codes of config */ 
+/* Return codes of config */
 // typedef enum EVSP_config_err {
 //     EVSP_CONFIG_ACCEPT = 0,
 //     CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT = -1,
@@ -20,9 +20,6 @@ int TSP_config_init();
 //     CONFIG_INVALID_MAX_GREEN=-4,
 //     CONFIG_INVALID_VALID_RECORD_DISTANCE=-5,
 // } EVSP_config_err_t;
-
-
-
 
 
 

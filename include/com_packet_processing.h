@@ -1,5 +1,5 @@
-#include "typedefine.h"
 #include "buffer.h"
+#include "typedefine.h"
 
 #define R2C_COMMON_FIELD_LEN 43
 #define R2V_COMMON_FIELD_LEN 43
@@ -10,15 +10,19 @@
 #define R2C_SPECIFIC_FIELD_MAX_LEN 1000
 #define R2V_SPECIFIC_FIELD_MAX_LEN 1000
 
-void cloud_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_field);
-void OBU_packet_tx(uint16_t len, uint8_t service_id, unsigned char *specific_field);
+void cloud_packet_tx(uint16_t len,
+                     uint8_t service_id,
+                     unsigned char *specific_field);
+void OBU_packet_tx(uint16_t len,
+                   uint8_t service_id,
+                   unsigned char *specific_field);
 int cloud_packet_rx_event_handler(msg_obj_t *msg);
 int OBU_packet_rx_event_handler(msg_obj_t *msg);
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg);
 int DSRC_send_timer_handler(buffer_ring_t *buffer);
 void OBU_BSM_tx(uint16_t len, void *buf);
 int Is_Heartbeat(msg_obj_t *msg);
-/* Return codes of packet processing */ 
+/* Return codes of packet processing */
 typedef enum packet_processing_err {
     PACKET_IS_BSM = 3,
     PACKET_IS_J2735_BUT_NOT_BSM = 2,

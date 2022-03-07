@@ -16,7 +16,6 @@ extern timer_t dsrc_heartbeat_timer_id;
 
 
 
-
 void set_tsc_error();
 void clear_tsc_error();
 

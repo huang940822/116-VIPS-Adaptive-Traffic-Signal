@@ -3,7 +3,7 @@
 
 #include "typedefine.h"
 
-#define CONFIG_FILE FILE_PATH"config/config.txt"
+#define CONFIG_FILE FILE_PATH "config/config.txt"
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 
@@ -11,7 +11,7 @@ extern config_object_t config;
 
 int config_init();
 
-/* Return codes of config */ 
+/* Return codes of config */
 typedef enum config_err {
     CONFIG_ACCEPT = 0,
     CONFIG_INVALID_RSU_ID = -1,

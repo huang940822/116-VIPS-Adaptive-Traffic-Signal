@@ -14,17 +14,17 @@ extern "C" {
 #endif
 
 typedef struct RTCMcorrections {
-	int32_t msgCnt; /* MsgCount (0..127) */
-	RTCM_Revision rev;
-	BOOL timeStamp_option;
-	int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
-	BOOL anchorPoint_option;
-	FullPositionVector anchorPoint;
-	BOOL rtcmHeader_option;
-	RTCMheader rtcmHeader;
-	RTCMmessageList msgs;
-	BOOL regional_option;
-	Reg_RTCMcorrectionsList regional;
+    int32_t msgCnt; /* MsgCount (0..127) */
+    RTCM_Revision rev;
+    BOOL timeStamp_option;
+    int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
+    BOOL anchorPoint_option;
+    FullPositionVector anchorPoint;
+    BOOL rtcmHeader_option;
+    RTCMheader rtcmHeader;
+    RTCMmessageList msgs;
+    BOOL regional_option;
+    Reg_RTCMcorrectionsList regional;
 } RTCMcorrections;
 
 #ifdef __cplusplus

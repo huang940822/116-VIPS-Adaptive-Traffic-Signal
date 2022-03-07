@@ -6,11 +6,11 @@
 #include "uthash.h"
 
 extern app_obj_t CPS;
-typedef struct geoinfo_table {           
+typedef struct geoinfo_table {
     double lat;
     double lon;
     float second;
-}geoinfo_table;
+} geoinfo_table;
 int table_init(geoinfo_table **g_table);
 int CPS_on_camera_packet_rx(void *);
 int CPS_on_camera_packet_rx_performance(void *);

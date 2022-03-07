@@ -17,7 +17,7 @@ void command_buf_print();
 bool check_command_buf_empty();
 uint8_t is_in_conpensation();
 
-/* Return codes of command buf insert */ 
+/* Return codes of command buf insert */
 typedef enum command_buf_err {
     INSERT_ACCEPT = 0,
     INVALID_APP_ID = -1,

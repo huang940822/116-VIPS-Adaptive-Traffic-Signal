@@ -1,9 +1,9 @@
 #ifndef TRAFFIC_SIGNAL_STATUS_UPDATING_H
 #define TRAFFIC_SIGNAL_STATUS_UPDATING_H
 
-#include "typedefine.h"
 #include <pthread.h>
 #include <semaphore.h>
+#include "typedefine.h"
 
 #define SEM_SIGNAL_STATUS_TIMEOUT 999
 

@@ -1,12 +1,12 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "application_registration.h"
+#include "error_status.h"
 #include "log.h"
 #include "timer_event.h"
-#include "error_status.h"
-#include "application_registration.h"
 
 uint8_t app_num;
 app_obj_t app_list;
@@ -21,7 +21,8 @@ event_callback_t callback_list[EVENT_TYPE_NUMBER];
 ******************************************************************************/
 event_callback_t *event_callback_new(app_obj_t *app, int (*callback)(void *))
 {
-    event_callback_t *event_callback = (event_callback_t *)malloc(sizeof(event_callback_t));
+    event_callback_t *event_callback =
+        (event_callback_t *) malloc(sizeof(event_callback_t));
     if (event_callback == NULL) {
         set_memory_error();
         log_file_write_fatal_error("event_callback_new: malloc");
@@ -46,7 +47,9 @@ event_callback_t *event_callback_new(app_obj_t *app, int (*callback)(void *))
 **              callback: callback function
 ** Return:      none
 ******************************************************************************/
-void event_callback_insert(event_callback_t *head, app_obj_t *app, int (*callback)(void *))
+void event_callback_insert(event_callback_t *head,
+                           app_obj_t *app,
+                           int (*callback)(void *))
 {
     event_callback_t *previous = head;
     event_callback_t *current = head->next;
@@ -69,7 +72,7 @@ void event_callback_insert(event_callback_t *head, app_obj_t *app, int (*callbac
         /* last node */
         if (current->next == NULL) {
             current->next = event_callback_new(app, callback);
-            if (current->priority > app->priority ) {
+            if (current->priority > app->priority) {
                 previous->next = current->next;
                 previous->next->next = current;
                 current->next = NULL;
@@ -92,7 +95,7 @@ void event_callback_insert(event_callback_t *head, app_obj_t *app, int (*callbac
 
 /*****************************************************************************
 ** Function:    app_obj_insert
-** Description: Insert app obj in app list. 
+** Description: Insert app obj in app list.
 **              Check if app with same name or id already exist.
 ** Parameter:   app: application for registration
 ** Return:      num: num of app
@@ -103,7 +106,7 @@ int app_obj_insert(app_obj_t *app)
     app_obj_t *current = app_list.next;
     uint8_t num = 0;
 
-    /* empty list */ 
+    /* empty list */
     if (current == NULL) {
         app_list.next = app;
         return num;
@@ -165,31 +168,41 @@ int app_register(app_obj_t *app)
     } else {
         app_num = ret + 1;
         if (app->on_OBU_packet_rx) {
-            event_callback_insert(&callback_list[EVENT_OBU_PACKET_RX], app, app->on_OBU_packet_rx);
+            event_callback_insert(&callback_list[EVENT_OBU_PACKET_RX], app,
+                                  app->on_OBU_packet_rx);
         }
         if (app->on_OBU_packet_tx) {
-            event_callback_insert(&callback_list[EVENT_OBU_PACKET_TX], app, app->on_OBU_packet_tx);
+            event_callback_insert(&callback_list[EVENT_OBU_PACKET_TX], app,
+                                  app->on_OBU_packet_tx);
         }
         if (app->on_RSU_packet_rx) {
-            event_callback_insert(&callback_list[EVENT_RSU_PACKET_RX], app, app->on_RSU_packet_rx);
+            event_callback_insert(&callback_list[EVENT_RSU_PACKET_RX], app,
+                                  app->on_RSU_packet_rx);
         }
         if (app->on_RSU_packet_tx) {
-            event_callback_insert(&callback_list[EVENT_RSU_PACKET_TX], app, app->on_RSU_packet_tx);
+            event_callback_insert(&callback_list[EVENT_RSU_PACKET_TX], app,
+                                  app->on_RSU_packet_tx);
         }
         if (app->on_cloud_packet_rx) {
-            event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_RX], app, app->on_cloud_packet_rx);
+            event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_RX], app,
+                                  app->on_cloud_packet_rx);
         }
         if (app->on_cloud_packet_tx) {
-            event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_TX], app, app->on_cloud_packet_tx);
+            event_callback_insert(&callback_list[EVENT_CLOUD_PACKET_TX], app,
+                                  app->on_cloud_packet_tx);
         }
         if (app->on_camera_packet_rx) {
-            event_callback_insert(&callback_list[EVENT_CAMERA_PACKET_RX], app, app->on_camera_packet_rx);
+            event_callback_insert(&callback_list[EVENT_CAMERA_PACKET_RX], app,
+                                  app->on_camera_packet_rx);
         }
         if (app->on_traffic_signal_command_tx) {
-            event_callback_insert(&callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX], app, app->on_traffic_signal_command_tx);
+            event_callback_insert(
+                &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX], app,
+                app->on_traffic_signal_command_tx);
         }
         if (app->on_registration) {
-            event_callback_insert(&callback_list[EVENT_REGISTRATION], app, app->on_registration);
+            event_callback_insert(&callback_list[EVENT_REGISTRATION], app,
+                                  app->on_registration);
         }
 
         event_callback_t *current = &callback_list[EVENT_REGISTRATION];
@@ -208,48 +221,71 @@ void event_callback_print()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%-50s%s", 
-        "callback_list[EVENT_TYPE_NAME]:", "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content), "%-50s%s",
+             "callback_list[EVENT_TYPE_NAME]:",
+             "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
 
     event_callback_t *current;
     for (int i = 0; i < EVENT_TYPE_NUMBER; i++) {
         current = &callback_list[i];
-        switch (i)
-        {
+        switch (i) {
         case EVENT_OBU_PACKET_RX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_OBU_PACKET_RX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_OBU_PACKET_RX]:");
             break;
         case EVENT_OBU_PACKET_TX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_OBU_PACKET_TX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_OBU_PACKET_TX]:");
             break;
         case EVENT_RSU_PACKET_RX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_RSU_PACKET_RX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_RSU_PACKET_RX]:");
             break;
         case EVENT_RSU_PACKET_TX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_RSU_PACKET_TX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_RSU_PACKET_TX]:");
             break;
         case EVENT_CLOUD_PACKET_RX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_CLOUD_PACKET_RX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_CLOUD_PACKET_RX]:");
             break;
         case EVENT_CLOUD_PACKET_TX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_CLOUD_PACKET_TX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_CLOUD_PACKET_TX]:");
             break;
         case EVENT_TRAFFIC_SIGNAL_COMMAND_TX:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX]:");
             break;
         case EVENT_REGISTRATION:
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n%-50s", "callback_list[EVENT_REGISTRATION]:");
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_REGISTRATION]:");
             break;
         default:
             break;
         }
-        // snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%-50s", log_content);
+        // snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+        // strlen(log_content), "%-50s", log_content);
         while (current->next != NULL) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s", current->next->name);
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "(%d)", current->next->priority);          
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%s",
+                     current->next->name);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "(%d)",
+                     current->next->priority);
             current = current->next;
             if (current->next != NULL) {
-                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s", "-> ");
+                snprintf(log_content + strlen(log_content),
+                         LOG_CONTENT_LEN - strlen(log_content), "%s", "-> ");
             }
         }
     }

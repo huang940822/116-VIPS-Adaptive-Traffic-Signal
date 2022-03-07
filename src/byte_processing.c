@@ -1,20 +1,20 @@
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
-#include <arpa/inet.h>
 
 #include "byte_processing.h"
 
 uint32_t htonf(float f)
 {
-  uint32_t *p_tmpu32 = (uint32_t *) &f;
-  return htonl(*p_tmpu32);
+    uint32_t *p_tmpu32 = (uint32_t *) &f;
+    return htonl(*p_tmpu32);
 }
 
 float ntohf(uint32_t p)
 {
-  uint32_t tmpu32 = ntohl(p);
-  float *p_tmpfloat = (float *)&tmpu32;
-  return (*p_tmpfloat);
+    uint32_t tmpu32 = ntohl(p);
+    float *p_tmpfloat = (float *) &tmpu32;
+    return (*p_tmpfloat);
 }
 
 void uint16_t2byte(uint16_t input, unsigned char *output)
@@ -26,7 +26,7 @@ void uint16_t2byte(uint16_t input, unsigned char *output)
 
 uint16_t byte2uint16_t(unsigned char *input)
 {
-    uint16_t NBO_num = ((uint16_t)input[0] << 8) | (uint16_t)input[1];
+    uint16_t NBO_num = ((uint16_t) input[0] << 8) | (uint16_t) input[1];
     return NBO_num;
 }
 
@@ -39,12 +39,15 @@ void uint32_t2byte(uint32_t input, unsigned char *output)
 
 uint32_t byte2uint32_t(unsigned char *input)
 {
-    uint32_t NBO_num = ((uint32_t)input[0] << 24) | ((uint32_t)input[1] << 16) | ((uint32_t)input[2] << 8) | (uint32_t)input[3];
+    uint32_t NBO_num = ((uint32_t) input[0] << 24) |
+                       ((uint32_t) input[1] << 16) |
+                       ((uint32_t) input[2] << 8) | (uint32_t) input[3];
     return NBO_num;
 }
 int32_t byte2int32_t(unsigned char *input)
 {
-    int32_t NBO_num = ((int32_t)input[0] << 24) | ((int32_t)input[1] << 16) | ((int32_t)input[2] << 8) | (int32_t)input[3];
+    int32_t NBO_num = ((int32_t) input[0] << 24) | ((int32_t) input[1] << 16) |
+                      ((int32_t) input[2] << 8) | (int32_t) input[3];
     return NBO_num;
 }
 void float2byte(float input, unsigned char *output)
@@ -56,16 +59,21 @@ void float2byte(float input, unsigned char *output)
 
 float byte2float(unsigned char *input)
 {
-    uint32_t NBO_num = ((uint32_t)input[0] << 24) | ((uint32_t)input[1] << 16) | ((uint32_t)input[2] << 8) | (uint32_t)input[3];
-    float *output = (float *)&NBO_num;
+    uint32_t NBO_num = ((uint32_t) input[0] << 24) |
+                       ((uint32_t) input[1] << 16) |
+                       ((uint32_t) input[2] << 8) | (uint32_t) input[3];
+    float *output = (float *) &NBO_num;
     return *output;
 }
 
 double byte2double(unsigned char *input)
 {
-    uint64_t NBO_num = ((uint64_t)input[0] << 56) | ((uint64_t)input[1] << 48) | ((uint64_t)input[2] << 40) | ((uint64_t)input[3] << 32)
-                        | ((uint64_t)input[4] << 24) | ((uint64_t)input[5] << 16) | ((uint64_t)input[6] << 8) | ((uint64_t)input[7]);
-    double *output = (double *)&NBO_num;
+    uint64_t NBO_num =
+        ((uint64_t) input[0] << 56) | ((uint64_t) input[1] << 48) |
+        ((uint64_t) input[2] << 40) | ((uint64_t) input[3] << 32) |
+        ((uint64_t) input[4] << 24) | ((uint64_t) input[5] << 16) |
+        ((uint64_t) input[6] << 8) | ((uint64_t) input[7]);
+    double *output = (double *) &NBO_num;
     return *output;
 }
 
@@ -79,13 +87,13 @@ void read_char(char *dst, msg_buf_t *buf, int len)
 
 void read_int8_t(int8_t *dst, msg_buf_t *buf)
 {
-    *dst = (int8_t)buf->content[buf->index];
+    *dst = (int8_t) buf->content[buf->index];
     buf->index += 1;
 }
 
 void read_uint8_t(uint8_t *dst, msg_buf_t *buf)
 {
-    *dst = (uint8_t)buf->content[buf->index];
+    *dst = (uint8_t) buf->content[buf->index];
     buf->index += 1;
 }
 
