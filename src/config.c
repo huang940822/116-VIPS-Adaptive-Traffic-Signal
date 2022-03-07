@@ -36,6 +36,8 @@ config_object_t config = {
     .log_OBU_packet_rx = 1,
     .log_OBU_packet_tx = 1,
     .log_OBU_list = 1,
+    .SPaT_packet_tx = 1,
+    .MAP_packet_tx = 1,
 };
 
 static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
@@ -639,6 +641,58 @@ int config_init()
                 }
             } else {
                 return CONFIG_INVALID_LOG_OBU_LIST;
+            }
+        }
+        // SPaT packet tx
+        if (strstr(buf, "SPAT_PACKET_TX ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "yes") == 0) {
+                    config.SPaT_packet_tx = 1;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: .SPaT_packet_tx = %d",
+                             config.SPaT_packet_tx);
+                    log_file_write(log_content);
+                    continue;
+                } else if (strcmp(string_val, "no") == 0) {
+                    config.SPaT_packet_tx = 0;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: .SPaT_packet_tx = %d",
+                             config.SPaT_packet_tx);
+                    log_file_write(log_content);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_SPAT_PACKET_TX;
+                }
+            } else {
+                return CONFIG_INVALID_SPAT_PACKET_TX;
+            }
+        }
+        // MAP packet tx
+        if (strstr(buf, "MAP_PACKET_TX ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "yes") == 0) {
+                    config.MAP_packet_tx = 1;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: .MAP_packet_tx = %d",
+                             config.SPaT_packet_tx);
+                    log_file_write(log_content);
+                    continue;
+                } else if (strcmp(string_val, "no") == 0) {
+                    config.MAP_packet_tx = 0;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: .MAP_packet_tx = %d",
+                             config.SPaT_packet_tx);
+                    log_file_write(log_content);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_MAP_PACKET_TX;
+                }
+            } else {
+                return CONFIG_INVALID_MAP_PACKET_TX;
             }
         }
     }

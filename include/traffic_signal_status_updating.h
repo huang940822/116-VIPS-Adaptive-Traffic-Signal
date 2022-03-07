@@ -16,6 +16,7 @@ void packet_5FC5(traffic_signal_packet_t *packet);
 
 void packet_5F0C(traffic_signal_packet_t *packet);
 void packet_0F04(traffic_signal_packet_t *packet);
+void packet_0FC2(traffic_signal_packet_t *packet);
 
 void get_traffic_signal_status(traffic_signal_status_t *);
 void get_current_traffic_signal_status(traffic_signal_status_t *);

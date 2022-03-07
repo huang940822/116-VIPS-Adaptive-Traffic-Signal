@@ -97,8 +97,9 @@ void command_buf_send(tsc_command_object_t *command_obj,
 
     switch (config.signal_controller_manufacturer) {
     case CHENG_LONG:
-        if (command_obj->app_id == TSP.id) {  //這裡就算要核對app_id也應該要從app_list裡面去撈
-                                              //而不是這樣直接assign!!
+        if (command_obj->app_id ==
+            TSP.id) {  //這裡就算要核對app_id也應該要從app_list裡面去撈
+                       //而不是這樣直接assign!!
             if (TSP.dontSend2TC == 1) {
                 printf(
                     "TSP cmd isn't sent to TC machine for dontSend2TC "

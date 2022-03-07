@@ -37,31 +37,31 @@ int DSRC_send_timer_handler(buffer_ring_t *buffer)
     if (pkg != NULL && OBU_com_id != 0) {
         int ret = com_send(OBU_com_id, pkg->buff, pkg->size);
         if (ret == COM_IO_ERR) {
-            log_file_write_fatal_error("OBU_BSM_tx: com_send");
+            log_file_write_fatal_error("OBU_j2735_tx: com_send");
         }
     }
 }
-void OBU_BSM_tx(uint16_t len, void *buf)
+void OBU_j2735_tx(uint16_t len, void *buf)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(len);
     if (write_buf.content == NULL) {
-        log_file_write_fatal_error("OBU_BSM_tx: malloc");
-        perror("OBU_packet_tx: malloc");
+        log_file_write_fatal_error("OBU_j2735_tx: malloc");
+        perror("OBU_j2735_tx: malloc");
         exit(errno);
     } else {
         memset(write_buf.content, 0, len);
     }
     if (memcpy(&write_buf.content[write_buf.index], (unsigned char *) buf,
                len) == NULL) {
-        log_file_write_fatal_error("OBU_BSM_tx: memcpy");
+        log_file_write_fatal_error("OBU_j2735_tx: memcpy");
     }
     // printf("obu com id:%d\n", OBU_com_id);
     int ret = com_send(OBU_com_id, write_buf.content, len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("OBU_BSM_tx: com_send");
+        log_file_write_fatal_error("OBU_j2735_tx: com_send");
     }
     if (write_buf.content != NULL) {
         free(write_buf.content);

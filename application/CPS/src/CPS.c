@@ -87,8 +87,15 @@ int CPS_on_camera_packet_rx(void *arg)
             buffer_t *bsm = malloc(sizeof(buffer_t));
             bsm->buff = tx_buf;
             bsm->size = len;
-
-            OBU_BSM_tx(len, tx_buf);
+            // if (buff_ring_push(bsm, DSRC_send_buffer)){
+            //     printf("push successed\n");
+            //     usleep(50);
+            // }
+            // encode_cnt++;
+            // printf("encode %d times\n", encode_cnt);
+            OBU_j2735_tx(len, tx_buf);
+            // for(int i = 0;i < 1000;i++);
+            // usleep(50);
         }
     }
 }
