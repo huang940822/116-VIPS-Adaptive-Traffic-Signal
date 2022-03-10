@@ -14,6 +14,7 @@ int SPaT_config_init();
 typedef enum SPaT_config_err {
     SPAT_CONFIG_ACCEPT = 0,
     CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED = -1,
+    CONFIG_INVALID_SPAT_OPEN_FILE = -2
 } SPaT_config_err_t;
 
 

@@ -425,7 +425,7 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
     return PACKET_IS_BSM;
 }
 
-int OBU_packet_rx_analyze(V2R_common_field_t *common_field, msg_obj_t *msg)
+int OBU_packet_rx_row_data(V2R_common_field_t *common_field, msg_obj_t *msg)
 {
     msg_buf_t read_buf;
 
@@ -533,7 +533,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         return ret;
 
     if (ret != PACKET_IS_BSM)
-        ret = OBU_packet_rx_analyze(&common_field, msg);
+        ret = OBU_packet_rx_row_data(&common_field, msg);
     if (ret < 0)
         return ret;
 
@@ -650,6 +650,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     }
     return PACKET_PROCESSING_ACCEPT;
 }
+
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 {
     int cnt = 0;
@@ -661,47 +662,40 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         perror("Smart_AVI_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
-        memcpy(read_buf.content, msg->msg, 25600);
+        memcpy(read_buf.content, msg->msg, msg->msg_len);
     }
     ObstacleList *obstaclelist = (ObstacleList *) malloc(sizeof(ObstacleList));
-    int index = 0;
-    obstaclelist->dirct = byte2int32_t(read_buf.content);
-    index += 4;
-    obstaclelist->count = byte2int32_t(&read_buf.content[index]);
-    index += 4;
+    int hour, min, second;
+
+    read_uint32_t(&obstaclelist->dirct, &read_buf);
+    read_uint32_t(&hour, &read_buf);
+    read_uint32_t(&min, &read_buf);
+    read_uint32_t(&second, &read_buf);
+    read_uint32_t(&obstaclelist->count, &read_buf);
+
     obstaclelist->tab =
-        (Obstacle *) malloc(sizeof(Obstacle) * obstaclelist->count);
+        (Obstacle *) calloc(sizeof(Obstacle), obstaclelist->count);
+
     if (obstaclelist->tab == NULL) {
         perror("Smart_AVI_packet_rx_event_handler: malloc");
         exit(errno);
     }
-    int i = 0;
-    for (i = 0; i < obstaclelist->count; i++) {
-        index += 4;
-        obstaclelist->tab[i].lat = byte2double(&read_buf.content[index]);
-        index += 8;
-        obstaclelist->tab[i].Long = byte2double(&read_buf.content[index]);
-        index += 8;
-        obstaclelist->tab[i].elev = byte2double(&read_buf.content[index]);
-        index += 8;
-        obstaclelist->tab[i].laneID = byte2int32_t(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].ObstacleID =
-            byte2int32_t(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].description =
-            byte2int32_t(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].length = byte2float(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].width = byte2float(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].hour = byte2int32_t(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].minute = byte2int32_t(&read_buf.content[index]);
-        index += 4;
-        obstaclelist->tab[i].second = byte2double(&read_buf.content[index]);
-        index += 8;
+    for (int i = 0; i < obstaclelist->count; i++) {
+        read_double(&obstaclelist->tab[i].lat, &read_buf);
+        read_double(&obstaclelist->tab[i].Long, &read_buf);
+        read_double(&obstaclelist->tab[i].elev, &read_buf);
+
+        read_uint32_t(&obstaclelist->tab[i].laneID, &read_buf);
+        read_uint32_t(&obstaclelist->tab[i].ObstacleID, &read_buf);
+        read_uint32_t(&obstaclelist->tab[i].description, &read_buf);
+
+        obstaclelist->tab[i].length = 0;
+        obstaclelist->tab[i].width = 0;
+        obstaclelist->tab[i].hour = hour;
+        obstaclelist->tab[i].minute = min;
+        obstaclelist->tab[i].second = second;
+
+        read_buf.index += 24;
     }
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {

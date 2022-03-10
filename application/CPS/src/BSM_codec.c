@@ -259,8 +259,8 @@ int bsm_encode_reg(uint8_t **tx_buf,
         printf("%d\n", err->bit_pos);
         printf("%d\n", err->msg_len);
     } else {
-        printf("encode successfully\n");
-        printf("encoded %d byte\n", *tx_buf_len);
+        // printf("encode successfully\n");
+        // printf("encoded %d byte\n", *tx_buf_len);
         // dump_mem(*tx_buf, *tx_buf_len);
     }
     /* free the memory for encoding */

@@ -33,6 +33,7 @@ int SPaT_config_init()
     fp = fopen(SPAT_CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", SPAT_CONFIG_FILE);
+        return CONFIG_INVALID_SPAT_OPEN_FILE;
     } else {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),

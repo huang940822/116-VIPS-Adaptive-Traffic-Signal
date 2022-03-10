@@ -37,6 +37,7 @@ int EVSP_config_init()
     fp = fopen(EVSP_CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", EVSP_CONFIG_FILE);
+        return CONFIG_INVALID_EVSP_OPEN_FILE;
     } else {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),

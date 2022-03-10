@@ -19,6 +19,7 @@ typedef enum EVSP_config_err {
     CONFIG_INVALID_MIN_GREEN = -3,
     CONFIG_INVALID_MAX_GREEN = -4,
     CONFIG_INVALID_VALID_RECORD_DISTANCE = -5,
+    CONFIG_INVALID_EVSP_OPEN_FILE = -6
 } EVSP_config_err_t;
 
 

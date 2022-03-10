@@ -103,6 +103,7 @@ int config_init()
     fp = fopen(CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", CONFIG_FILE);
+        return CONFIG_INVALID_OPEN_FILE;
     } else {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
@@ -698,5 +699,5 @@ int config_init()
     }
 
     fclose(fp);
-    return 0;
+    return CONFIG_ACCEPT;
 }

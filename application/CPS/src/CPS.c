@@ -14,6 +14,7 @@
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"
+#include "dispatcher.h"
 #include "log.h"
 #include "post_processing.h"
 #include "timer_event.h"
@@ -33,8 +34,6 @@ app_obj_t CPS = {
     .on_registration = &CPS_on_registration,
     .next = NULL,
 };
-
-int encode_cnt = 0;
 // struct timeval start, end, diff;
 geoinfo_table *g_table = NULL;
 buffer_ring_t *DSRC_send_buffer = NULL;
@@ -81,7 +80,7 @@ int CPS_on_camera_packet_rx(void *arg)
 
         transfer_datatype(
             &(obstaclelist->tab[i].lat), &(obstaclelist->tab[i].Long),
-            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].hight),
+            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].width),
             &(obstaclelist->tab[i].width));
         if (bsm_encode(&tx_buf, &len, &(obstaclelist->tab[i]))) {
             buffer_t *bsm = malloc(sizeof(buffer_t));
@@ -94,8 +93,6 @@ int CPS_on_camera_packet_rx(void *arg)
             // encode_cnt++;
             // printf("encode %d times\n", encode_cnt);
             OBU_j2735_tx(len, tx_buf);
-            // for(int i = 0;i < 1000;i++);
-            // usleep(50);
         }
     }
 }
@@ -125,19 +122,19 @@ int CPS_on_camera_packet_rx_performance(void *arg)
         table->lat = obstaclelist->tab[i].lat;
         table->lon = obstaclelist->tab[i].Long;
         table->second = obstaclelist->tab[i].second;
-
         transfer_datatype(
             &(obstaclelist->tab[i].lat), &(obstaclelist->tab[i].Long),
-            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].hight),
+            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].width),
             &(obstaclelist->tab[i].width));
     }
     if (bsm_encode_reg(&tx_buf, &len, obstaclelist)) {
-        buffer_t *bsm = malloc(sizeof(buffer_t));
-        bsm->buff = tx_buf;
-        bsm->size = len;
-        if (buff_ring_push(bsm, DSRC_send_buffer)) {
-            printf("push successed\n");
-        }
+        com_send(OBU_com_id, tx_buf, len);
+        // buffer_t *bsm = malloc(sizeof(buffer_t));
+        // bsm->buff = tx_buf;
+        // bsm->size = len;
+        // if (buff_ring_push(bsm, DSRC_send_buffer)) {
+        //     printf("push successed\n");
+        // }
     }
     if (obstaclelist->tab != NULL) {
         free(obstaclelist->tab);
@@ -153,7 +150,7 @@ int CPS_on_registration(void *arg)
     // }
     if (g_table == NULL)
         table_init(&g_table);
-    if (DSRC_send_buffer == NULL) {
-        DSRC_send_buffer = alloc_buffer_ring(24000);
-    }
+    // if (DSRC_send_buffer == NULL) {
+    //     DSRC_send_buffer = alloc_buffer_ring(24000);
+    // }
 }
