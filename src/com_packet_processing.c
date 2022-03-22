@@ -665,12 +665,13 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         memcpy(read_buf.content, msg->msg, msg->msg_len);
     }
     ObstacleList *obstaclelist = (ObstacleList *) malloc(sizeof(ObstacleList));
-    int hour, min, second;
+    int hour, min;
+    float second;
 
     read_uint32_t(&obstaclelist->dirct, &read_buf);
     read_uint32_t(&hour, &read_buf);
     read_uint32_t(&min, &read_buf);
-    read_uint32_t(&second, &read_buf);
+    read_float(&second, &read_buf);
     read_uint32_t(&obstaclelist->count, &read_buf);
 
     obstaclelist->tab =

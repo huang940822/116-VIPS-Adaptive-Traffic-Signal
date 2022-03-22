@@ -3,7 +3,7 @@
 
 #include "typedefine.h"
 
-#define SPAT_CONFIG_FILE "./application/SPaT/config/config.txt"
+#define SPAT_CONFIG_FILE FILE_PATH "application/SPaT/config/config.txt"
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 extern SPaT_config_object_t SPaT_config;

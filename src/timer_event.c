@@ -160,14 +160,16 @@ void timer_event_handler(__sigval_t value)
         }
 
         log_file_name_update();
-    } else if (*(uint8_t *) value.sival_ptr == TIMER_EVENT_DSRC_SEND) {
-        // if (config.log_middleware_timer_event) {
-        //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
-        //     strlen(log_content), "%s", "timer event: OBU list garbage
-        //     collection"); log_file_write(log_content);
-        // }
-        DSRC_send_timer_handler(DSRC_send_buffer);
     }
+    // 在thread pool 中傳 bsm 的 timer
+    // else if (*(uint8_t *) value.sival_ptr == TIMER_EVENT_DSRC_SEND) {
+    // if (config.log_middleware_timer_event) {
+    //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+    //     strlen(log_content), "%s", "timer event: OBU list garbage
+    //     collection"); log_file_write(log_content);
+    // }
+    // DSRC_send_timer_handler(DSRC_send_buffer);
+    // }
 }
 
 /*****************************************************************************

@@ -3,7 +3,7 @@
 
 #include "EVSP_typedefine.h"
 
-#define TOUCHING_AREA_DIR "./application/EVSP/config/touching_area/"
+#define TOUCHING_AREA_DIR FILE_PATH "application/EVSP/config/touching_area/"
 
 extern EVSP_touching_area_plan_list_t EVSP_touching_area_plan_list;
 
