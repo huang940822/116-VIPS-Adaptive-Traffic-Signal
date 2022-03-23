@@ -115,6 +115,12 @@ void read_float(float *dst, msg_buf_t *buf)
     buf->index += 4;
 }
 
+void read_double(double *dst, msg_buf_t *buf)
+{
+    *dst = byte2double(&buf->content[buf->index]);
+    buf->index += 8;
+}
+
 void write_char(char *src, msg_buf_t *buf, int src_len, int max_len)
 {
     memset(&buf->content[buf->index], ' ', max_len);

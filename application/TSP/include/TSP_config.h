@@ -3,7 +3,7 @@
 
 #include "typedefine.h"
 
-#define TSP_CONFIG_FILE "./application/TSP/config/config.txt"
+#define TSP_CONFIG_FILE FILE_PATH "application/TSP/config/config.txt"
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 

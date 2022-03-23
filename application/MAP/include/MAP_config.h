@@ -3,7 +3,7 @@
 
 #include "typedefine.h"
 
-#define MAP_CONFIG_FILE "./application/MAP/config/config.txt"
+#define MAP_CONFIG_FILE FILE_PATH "application/MAP/config/config.txt"
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 

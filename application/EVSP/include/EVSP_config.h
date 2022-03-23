@@ -3,7 +3,7 @@
 
 #include "typedefine.h"
 
-#define EVSP_CONFIG_FILE "./application/EVSP/config/config.txt"
+#define EVSP_CONFIG_FILE FILE_PATH "application/EVSP/config/config.txt"
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 
@@ -19,6 +19,7 @@ typedef enum EVSP_config_err {
     CONFIG_INVALID_MIN_GREEN = -3,
     CONFIG_INVALID_MAX_GREEN = -4,
     CONFIG_INVALID_VALID_RECORD_DISTANCE = -5,
+    CONFIG_INVALID_EVSP_OPEN_FILE = -6
 } EVSP_config_err_t;
 
 
