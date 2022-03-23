@@ -3,8 +3,8 @@
 
 #include "TSP_typedefine.h"
 
-#define RSU_SUPERMATRIX_DIR "./application/TSP/config/RSU_supermatrix/"
-#define OBU_SUPERMATRIX_DIR "./application/TSP/config/OBU_supermatrix/"
+#define RSU_SUPERMATRIX_DIR FILE_PATH "application/TSP/config/RSU_supermatrix/"
+#define OBU_SUPERMATRIX_DIR FILE_PATH "application/TSP/config/OBU_supermatrix/"
 
 extern TSP_RSU_matrix_t TSP_RSU_matrix_list;
 extern TSP_OBU_matrix_t TSP_OBU_matrix_list;

@@ -18,6 +18,7 @@ void read_uint8_t(uint8_t *dst, msg_buf_t *buf);
 void read_uint16_t(uint16_t *dst, msg_buf_t *buf);
 void read_uint32_t(uint32_t *dst, msg_buf_t *buf);
 void read_float(float *dst, msg_buf_t *buf);
+void read_double(double *dst, msg_buf_t *buf);
 
 void write_char(char *src, msg_buf_t *buf, int src_len, int max_len);
 void write_uint8_t(uint8_t src, msg_buf_t *buf);

@@ -72,13 +72,13 @@ int main()
 
     /* read config file*/
     ret = config_init();
-    if (ret != 0) {
+    if (ret != CONFIG_ACCEPT) {
         log_file_write_fatal_error("error reading config file: %d", ret);
     }
 
-    /* read evsp confile file*/
+    // /* read evsp confile file*/
     ret = EVSP_config_init();
-    if (ret != 0) {
+    if (ret != EVSP_CONFIG_ACCEPT) {
         log_file_write_fatal_error("error evsp reading config file: %d", ret);
     }
 
@@ -89,10 +89,10 @@ int main()
     }
 
     /* read spat confile file*/
-    ret = SPaT_config_init();
-    if (ret != 0) {
-        log_file_write_fatal_error("error spat reading config file: %d", ret);
-    }
+    // ret = SPaT_config_init();
+    // if (ret != 0) {
+    //     log_file_write_fatal_error("error spat reading config file: %d", ret);
+    // }
 
     /* read map confile file*/
     // ret = MAP_config_init();
@@ -133,7 +133,7 @@ int main()
         event_callback_print();
     }
 
-    /* taffic signal packet serial port init */
+    // /* taffic signal packet serial port init */
     traffic_signal_port_init();
 
     /* Receive traffic signal packet */
@@ -208,12 +208,6 @@ int main()
 
     event_callback_print();
 
-    /*DSRC send timer event*/
-    // timer_t DSRC_send_timer_id;
-    // uint8_t DSRC_send_timer_id_num = TIMER_EVENT_DSRC_SEND;
-    // create_timer(&DSRC_send_timer_id, &DSRC_send_timer_id_num,
-    // timer_event_handler); set_timer(DSRC_send_timer_id, 0, 10000, 1, 0);
-
     /* Packet dispatcher */
     pthread_t dispatcher_thread;
     ret = pthread_create(&dispatcher_thread, NULL, dispatcher_handler, NULL);
@@ -249,36 +243,8 @@ int main()
     // printf("input the sec want to adjust for phase:\r\n");
     // scanf("%d",&input);
 
-
-    // SPAT *p_spat;
-    // uint8_t *tx_buf = NULL;
-    // int tx_buf_len = 0;
-    // if(Spat_msg_init(&p_spat) == 0) {
-    //    printf("error on init\n");
-    //    return 0;
-    //}
     // traffic_signal_status_t qsignal_status;
 
-    while (1) {
-        // get_traffic_signal_status(&qsignal_status);
-        // int phase = get_current_phase()-1;
-        // printf("count = %d\n\n", qsignal_status.SubPhaseCount);
-        // printf("\nphase = %d\n", phase);
-        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-        // :%d\n",qsignal_status.plan[0].Green,qsignal_status.plan[0].PedGreenFlash,qsignal_status.plan[0].Yellow,qsignal_status.plan[0].AllRed);
-        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-        // :%d\n",qsignal_status.plan[1].Green,qsignal_status.plan[1].PedGreenFlash,qsignal_status.plan[1].Yellow,qsignal_status.plan[1].AllRed);
-        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-        // :%d\n",qsignal_status.plan[2].Green,qsignal_status.plan[2].PedGreenFlash,qsignal_status.plan[2].Yellow,qsignal_status.plan[2].AllRed);
-        // printf("GREEN :%d, pedgreen :%d, yellow :%d, red
-        // :%d\n",qsignal_status.plan[3].Green,qsignal_status.plan[3].PedGreenFlash,qsignal_status.plan[3].Yellow,qsignal_status.plan[3].AllRed);
-        // printf("now second :%d\n",get_current_second());
-        // spat_msg_update(&p_spat);
-        // tx_buf_len = Compose_spat(&tx_buf, p_spat);
-        // printf("SPAT encoded data:\n");
-        // dump_mem(tx_buf, tx_buf_len);
-        // decode_spat(tx_buf, tx_buf_len);
-    }
     //     // printf("count down off\r\n");
     //     // flag_countdown_off=1;
     while (1) {
@@ -324,8 +290,6 @@ int main()
                  "is %d phase 4 is %d\r\n",
                  a1, b1, c1, d1);
         log_file_write(log_content);
-
-        printf("StepSec: %d\r\n", get_current_second());
 
         // if(flag){
         //     printf("flag:%d\r\n",flag);

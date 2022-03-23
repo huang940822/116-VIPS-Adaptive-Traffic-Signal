@@ -45,6 +45,7 @@ int TSP_config_init()
     fp = fopen(TSP_CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", TSP_CONFIG_FILE);
+        return -1;
     } else {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
