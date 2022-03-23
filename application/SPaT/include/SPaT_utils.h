@@ -35,9 +35,15 @@ typedef struct timemark {
     unsigned int ms;
 } timemark_t;
 
+struct tc_now_time {
+    int8_t Sec, Min, Hour, Day, Month, Year;
+};
+time_t compare_to_tc_time;
+
+bool compare_time(const traffic_signal_status_t * const signal_status);
 void dump_mem(void *data, int len);
 int spat_msg_init(SPAT **pp_spat);
 int compose_spat(uint8_t **pp_spat_buf, SPAT *p_spat);
 int spat_msg_update(SPAT **pp_spat);
-static void print_spat(SPAT **pp_spat);
+void print_spat(SPAT **pp_spat);
 #endif

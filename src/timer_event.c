@@ -28,6 +28,7 @@ extern uint8_t flag_query_firm_ver;
 extern uint8_t flag_switch2nextStep;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
+static unsigned int count = 0;
 void timer_event_handler(__sigval_t value)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -65,10 +66,17 @@ void timer_event_handler(__sigval_t value)
         WAIT_ACK_LOOP
         temp_ack_seq = tsc_5F48();  //查詢目前時制計劃內容
         WAIT_ACK_LOOP
-        temp_ack_seq = tsc_0F42();  //查詢日期、時間
-        WAIT_ACK_LOOP
         temp_ack_seq = tsc_5F4C();  //查詢號控器目前時相及步階
         WAIT_ACK_LOOP
+        if (count == 0) {
+            temp_ack_seq = tsc_0F42();  //查詢日期、時間
+            WAIT_ACK_LOOP
+            count++;
+        } else {
+            count++;
+            if (count == 7200)
+                count = 0;
+        }
         if (flag_pretime == true) {
             temp_ack_seq = tsc_pretime();
             WAIT_ACK_LOOP

@@ -6,7 +6,7 @@
 #define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
                      // ‘strptime’
 #include <time.h>
-
+#include "j2735_map.h"
 #define FILE_PATH "./"
 #define OBU_ID_MAX_LEN 10
 #define RSU_ID_MAX_LEN 10
@@ -119,6 +119,23 @@ typedef struct SPaT_config_object {
 
 typedef struct MAP_config_object {
     uint8_t MAP_packet_transfer_speed;
+    BOOL timeStamp_option;
+    int32_t timeStamp;        /* MinuteOfTheYear (0..527040) */
+    int32_t msgIssueRevision; /* MsgCount (0..127) */
+    BOOL layerType_option;
+    LayerType layerType;
+    BOOL layerID_option;
+    int32_t layerID; /* LayerID (0..100) */
+    BOOL intersections_option;
+    IntersectionGeometryList intersections;
+    BOOL roadSegments_option;
+    RoadSegmentList roadSegments;
+    BOOL dataParameters_option;
+    DataParameters dataParameters;
+    BOOL restrictionList_option;
+    RestrictionClassList restrictionList;
+    BOOL regional_option;
+    Reg_MapDataList regional;
 } MAP_config_object_t;
 
 typedef struct application_object {
