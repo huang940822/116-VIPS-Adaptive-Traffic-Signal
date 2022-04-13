@@ -47,7 +47,7 @@ struct msg_obj_t *msg_obj_create(buffer_t *buf,
     msg_obj_t *_msg_obj = malloc(sizeof(msg_obj_t));
     if (_msg_obj != NULL) {
         _msg_obj->device_id = device_id;
-        memcpy(_msg_obj->msg, buf->buff, buf->size);
+        memcpy(_msg_obj->msg, buf->buff, MSG_Default_LEN);
         _msg_obj->msg_len = buf->size;
         _msg_obj->handle_id = handle_id;
         return _msg_obj;
