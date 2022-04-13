@@ -1,12 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
+#include "SPaT.h"
 #include "SPaT_packet_tx.h"
 #include "SPaT_utils.h"
+#include "byte_processing.h"
 #include "com_packet_processing.h"
+#include "error_status.h"
 #include "log.h"
-#include <stdlib.h>
-#include <string.h>
+
 static uint8_t *tx_buf = NULL;
 static int tx_buf_len = 0;
 extern SPAT *p_spat;
@@ -54,4 +58,28 @@ void SPaT_packet_tx()
     OBU_j2735_tx(tx_buf_len, tx_buf);
     // if(++x == 36000)
     //     fclose(f);
+}
+
+void SPaT_send_ack()
+{
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
+    if (write_buf.content == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("SPaT_send_ack: malloc");
+        perror("SPaT_send_ack: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
+    }
+
+    // cmd
+    write_uint8_t(0, &write_buf);
+    write_uint8_t(0, &write_buf);
+
+    cloud_packet_tx(write_buf.index, SPaT.id, write_buf.content);
+    free(write_buf.content);
+    return;
 }
