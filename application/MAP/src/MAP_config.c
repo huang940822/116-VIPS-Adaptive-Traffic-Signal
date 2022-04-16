@@ -62,14 +62,14 @@ int MAP_config_init()
     // memset(&msgf, 0, sizeof(msgf));
     // /* all fields which should be allocated before using are allocated
     // recursively */ map = (MapData *)j2735_msg_prealloc(MapData_Id);
-
-    MAP_config.timeStamp_option = FALSE;
-    MAP_config.msgIssueRevision = 0;
-    MAP_config.layerType_option = TRUE;
-    MAP_config.layerType = LayerType_intersectionData;
-    MAP_config.layerID_option = TRUE;
-    MAP_config.layerID = 1;
-    MAP_config.intersections_option = TRUE;
+ 
+    // MAP_config.timeStamp_option = FALSE;
+    // MAP_config.msgIssueRevision = 0;
+    // MAP_config.layerType_option = TRUE;
+    // MAP_config.layerType = LayerType_intersectionData;
+    // MAP_config.layerID_option = TRUE;
+    // MAP_config.layerID = 1;
+    // MAP_config.intersections_option = TRUE;
 
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -97,6 +97,8 @@ int MAP_config_init()
     int intersection_speedLimits_number=0;
     int intersection_laneSet_NodeXY_count=1;
     int intersection_laneSet_NodeXY_number=0;
+    MAP_config.intersections.tab = (IntersectionGeometry *) calloc(1, sizeof(IntersectionGeometry));
+    MAP_config.intersections.tab->speedLimits.tab = (RegulatorySpeedLimit *) calloc(1, sizeof(RegulatorySpeedLimit));
     while (!feof(fp)) {
         memset(log_content, 0, sizeof(log_content));
 
@@ -107,6 +109,7 @@ int MAP_config_init()
         if (strstr(buf, "intersection_count ")) {
             if (read_int_from_config_line(buf, &int_val)) {
                     MAP_config.intersections.count = int_val;
+                    printf("count is %d\n",MAP_config.intersections.count);
             }
         }
         if (strstr(buf, "intersection_n ")) {
@@ -118,6 +121,7 @@ int MAP_config_init()
             if (read_int_from_config_line(buf, &int_val)) {
                     MAP_config.intersections.tab[intersection_number].id.id =
                     int_val;
+                    printf("id is %d\n",MAP_config.intersections.tab[intersection_number].id.id);
             }
         }
         if (strstr(buf, "intersection_revision ")) {
@@ -171,6 +175,7 @@ int MAP_config_init()
             if (read_int_from_config_line(buf, &int_val)) {
                     MAP_config.intersections.tab[intersection_number].speedLimits.tab[intersection_speedLimits_number].speed=
                     int_val;
+                    printf("speed = %d\n ",MAP_config.intersections.tab[intersection_number].speedLimits.tab[intersection_speedLimits_number].speed);
             }
         }
         if (strstr(buf, "intersection_laneSet_count ")) {
@@ -184,93 +189,93 @@ int MAP_config_init()
                     intersection_laneSet_number= int_val;
             }
         }
-        if (strstr(buf, "intersection_laneSet_id ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneID=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_ingressApproach ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].ingressApproach=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_egressApproach ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].egressApproach=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_laneAttributes_directionalUse"
-        )) {
-            if (read_string_from_config_line(buf, string_val)) {
-                    asn1_bstr_alloc(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS); for(int
-                    i=0;i<LaneDirection_MAX_BITS;i++){
-                        if(strcmp(string_val[i],"1")==1)
-                            asn1_bstr_set_bit(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.directionalUse),
-                            i);
-                    }
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_laneAttributes_sharedWith ")) {
-            if (read_string_from_config_line(buf, string_val)) {
-                    asn1_bstr_alloc(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.sharedWith),
-                    LaneSharing_MAX_BITS); for(int
-                    i=0;i<LaneSharing_MAX_BITS;i++){
-                        if(strcmp(string_val[i],"1")==1)
-                            asn1_bstr_set_bit(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.sharedWith),
-                            i);
-                    }
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_laneAttributes_laneType ")) {
-        //VEHICLE ONLY NOW
-            if (read_string_from_config_line(buf, string_val)) {
-                    asn1_bstr_alloc(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS); for(int
-                    i=0;i<LaneAttributes_Vehicle_MAX_BITS;i++){
-                        if(strcmp(string_val[i],"1")==1)
-                            asn1_bstr_set_bit(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.laneType.u.vehicle),
-                            i);
-                    }
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_NodeXY_count ")) {
-            //CHOICE SHOULD ADD
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.choice
-                    = NodeListXY_nodes;
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.count=
-                    int_val;
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab
-                    = (NodeXY *)calloc(3, sizeof(NodeXY));
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_NodeXY_n ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    intersection_laneSet_NodeXY_number= int_val;
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.choice
-                    = NodeOffsetPointXY_node_XY6;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_NodeXY_X ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_XY6.x=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_NodeXY_Y ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_XY6.y=
-                    int_val;
-            }
-        }
+        // if (strstr(buf, "intersection_laneSet_id ")) {
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[0].laneID=
+        //             int_val;
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_ingressApproach ")) {
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].ingressApproach=
+        //             int_val;
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_egressApproach ")) {
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].egressApproach=
+        //             int_val;
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_laneAttributes_directionalUse")) {
+        //     if (read_string_from_config_line(buf, string_val)) {
+        //     //         asn1_bstr_alloc(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.directionalUse),
+        //     //         LaneDirection_MAX_BITS); for(int
+        //     //         i=0;i<LaneDirection_MAX_BITS;i++){
+        //     //             if(strcmp(string_val[i],"1")==1)
+        //     //                 asn1_bstr_set_bit(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.directionalUse),
+        //     //                 i);
+        //             //  }
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_laneAttributes_sharedWith ")) {
+        //     if (read_string_from_config_line(buf, string_val)) {
+        //             // asn1_bstr_alloc(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.sharedWith),
+        //             // LaneSharing_MAX_BITS); for(int
+        //             // i=0;i<LaneSharing_MAX_BITS;i++){
+        //             //     if(strcmp(string_val[i],"1")==1)
+        //             //         asn1_bstr_set_bit(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.sharedWith),
+        //             //         i);
+        //             // }
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_laneAttributes_laneType ")) {
+        // //VEHICLE ONLY NOW
+        //     if (read_string_from_config_line(buf, string_val)) {
+        //             // asn1_bstr_alloc(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.laneType.u.vehicle),
+        //             // LaneAttributes_Vehicle_MAX_BITS); for(int
+        //             // i=0;i<LaneAttributes_Vehicle_MAX_BITS;i++){
+        //             //     if(strcmp(string_val[i],"1")==1)
+        //             //         asn1_bstr_set_bit(&(MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.laneType.u.vehicle),
+        //             //         i);
+        //             // }
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_NodeXY_count ")) {
+        //     //CHOICE SHOULD ADD
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.choice
+        //             = NodeListXY_nodes;
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.count=
+        //             int_val;
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab
+        //             = (NodeXY *)calloc(3, sizeof(NodeXY));
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_NodeXY_n ")) {
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             intersection_laneSet_NodeXY_number= int_val;
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.choice
+        //             = NodeOffsetPointXY_node_XY6;
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_NodeXY_X ")) {
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_XY6.x=
+        //             int_val;
+        //     }
+        // }
+        // if (strstr(buf, "intersection_laneSet_NodeXY_Y ")) {
+        //     if (read_int_from_config_line(buf, &int_val)) {
+        //             MAP_config.intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_XY6.y=
+        //             int_val;
+        //     }
+        // }
         //MAP_packet_transfer_speed
         if (strstr(buf, "MAP_packet_transfer_speed ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
+            
                     MAP_config.MAP_packet_transfer_speed = uint8_t_val;
                     snprintf(log_content + strlen(log_content),LOG_CONTENT_LEN - strlen(log_content), "config: MAP_packet_transfer_speed = %d",MAP_config.MAP_packet_transfer_speed);
                     log_file_write(log_content);
@@ -284,13 +289,13 @@ int MAP_config_init()
         }
     }
     //lanelist end
-    MAP_config.intersections.tab[0].preemptPriorityData_option = FALSE;
-    MAP_config.intersections.tab[0].regional_option = FALSE;
+    // MAP_config.intersections.tab[0].preemptPriorityData_option = FALSE;
+    // MAP_config.intersections.tab[0].regional_option = FALSE;
 
-    MAP_config.roadSegments_option = FALSE;
-    MAP_config.dataParameters_option = FALSE;
-    MAP_config.restrictionList_option = FALSE;
-    MAP_config.regional_option = FALSE;
+    // MAP_config.roadSegments_option = FALSE;
+    // MAP_config.dataParameters_option = FALSE;
+    // MAP_config.restrictionList_option = FALSE;
+    // MAP_config.regional_option = FALSE;
 
     // /* does the encoding and providing the error msg if there is */
     // msgf.messageId = MapData_Id;
