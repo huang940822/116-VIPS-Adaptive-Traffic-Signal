@@ -59,10 +59,10 @@ int SPaT_on_CLOUD_packet_rx(void *arg)
         memcpy(read_buf.content, app_section->payload,
                app_section->payload_len);
     }
-printf("asd\n");
+
     // needs a evsp sned ack function to send ack to cloud
     SPaT_send_ack();
-printf("asdaa\n");
+
     // read cmd
     uint8_t cmd;
     read_uint8_t(&cmd, &read_buf);

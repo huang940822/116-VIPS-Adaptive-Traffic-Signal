@@ -1,9 +1,19 @@
 #include "MAP_utils.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "error_code_user.h"
 #include "j2735_codec.h"
 #include "j2735_msg.h"
+#include "MAP_config.h"
+void map_print(MapData *map);
+
+void compose_map(uint8_t **tx_buf, int *tx_buf_len);
+
+void map_decode(uint8_t *rx_buf, int rx_buf_len);
+
+void map_dump_mem(void *data, int len);
 void compose_map(uint8_t **tx_buf, int *tx_buf_len)
+// void compose_map(MapData **map, int *tx_buf_len)
 {
     MessageFrame msgf;
     MapData *map;
@@ -27,23 +37,23 @@ void compose_map(uint8_t **tx_buf, int *tx_buf_len)
 
     map->intersections.tab[0].name_option = FALSE;
     map->intersections.tab[0].id.region_option = FALSE;
-    map->intersections.tab[0].id.id = 4009;
-    map->intersections.tab[0].revision = 102;
-    map->intersections.tab[0].refPoint.lat = 248087872;
-    map->intersections.tab[0].refPoint.Long = 1210358460;
+    map->intersections.tab[0].id.id = MAP_config.intersections.tab[0].id.id; 
+    map->intersections.tab[0].revision = MAP_config.intersections.tab[0].revision;
+    map->intersections.tab[0].refPoint.lat = MAP_config.intersections.tab[0].refPoint.lat;
+    map->intersections.tab[0].refPoint.Long = MAP_config.intersections.tab[0].refPoint.Long;
     map->intersections.tab[0].refPoint.elevation_option = TRUE;
-    map->intersections.tab[0].refPoint.elevation = 640;
+    map->intersections.tab[0].refPoint.elevation = MAP_config.intersections.tab[0].refPoint.elevation;
     map->intersections.tab[0].refPoint.regional_option = FALSE;
     map->intersections.tab[0].laneWidth_option = TRUE;
-    map->intersections.tab[0].laneWidth = 360;
+    map->intersections.tab[0].laneWidth = MAP_config.intersections.tab[0].laneWidth;
     map->intersections.tab[0].speedLimits_option = TRUE;
 
     map->intersections.tab[0].speedLimits.count = 1;
     map->intersections.tab[0].speedLimits.tab[0].type =
         SpeedLimitType_vehicleMaxSpeed;
-    map->intersections.tab[0].speedLimits.tab[0].speed = 693;
+    map->intersections.tab[0].speedLimits.tab[0].speed = MAP_config.intersections.tab[0].speedLimits.tab[0].speed;
 
-    map->intersections.tab[0].laneSet.count = 12;
+    map->intersections.tab[0].laneSet.count = 1; //*
     /* Lane 1 */
     map->intersections.tab[0].laneSet.tab[0].laneID = 1;
     map->intersections.tab[0].laneSet.tab[0].name_option = FALSE;
@@ -239,7 +249,7 @@ void compose_map(uint8_t **tx_buf, int *tx_buf_len)
 
     map->intersections.tab[0].laneSet.tab[0].overlays_option = FALSE;
     map->intersections.tab[0].laneSet.tab[0].regional_option = FALSE;
-    /* Lane 2 */
+    // /* Lane 2 */
     map->intersections.tab[0].laneSet.tab[1].laneID = 2;
     map->intersections.tab[0].laneSet.tab[1].name_option = FALSE;
     map->intersections.tab[0].laneSet.tab[1].ingressApproach_option = FALSE;
@@ -1474,207 +1484,7 @@ void compose_map(uint8_t **tx_buf, int *tx_buf_len)
     return;
 }
 
-// void map_decode(uint8_t *rx_buf, int rx_buf_len)
-// {
-//     int ret;
-//     /* a pointer to containing decoded msg */
-//     MessageFrame *p_msgf;
-
-//     printf("MAP decoding data:\n");
-//     dump_mem(rx_buf, rx_buf_len);
-
-//     ret = j2735_msg_decode(&p_msgf, rx_buf, rx_buf_len, NULL);
-//     if (ret < 0) {
-//         /* handling the decoding error */
-//         printf("decode msg error\n");
-//     }
-//     else if ((ret > 0) && (p_msgf->messageId == MapData_Id)) {
-//         map_print((MapData *)(p_msgf->u.data));
-//         J2735_FREE_MSG_FRAME(p_msgf);
-//     }
-
-//     return;
-// }
-
-// void map_print(MapData *map)
-// {
-//     int intersection_index, speedLimits_index, lane_index, node_index,
-//     connectionTo_index, maneuver_index; printf("Decoded MAP\n"); if
-//     (map->intersections_option) {
-//         printf("intersections count: %d\n", map->intersections.count);
-//         for (intersection_index = 0; intersection_index <
-//         map->intersections.count; intersection_index++) {
-//             printf("intersection [%d]:", intersection_index);
-//             if (map->intersections.tab[intersection_index].id.region_option)
-//             {
-//                 printf("region %d,",
-//                 map->intersections.tab[intersection_index].id.region);
-//             }
-//             printf(" id: %d, revision: %d\n",
-//             map->intersections.tab[intersection_index].id.id,
-//             map->intersections.tab[intersection_index].revision); printf("
-//             refPoint latitude: %d, longitude: %d\n",
-//             map->intersections.tab[intersection_index].refPoint.lat,
-//             map->intersections.tab[intersection_index].refPoint.Long); if
-//             (map->intersections.tab[intersection_index].laneWidth_option) {
-//                 printf(" laneWidth: %d\n",
-//                 map->intersections.tab[intersection_index].laneWidth);
-//             }
-//             if
-//             (map->intersections.tab[intersection_index].speedLimits_option) {
-//                 for (speedLimits_index = 0; speedLimits_index <
-//                 map->intersections.tab[intersection_index].speedLimits.count;
-//                 speedLimits_index++) {
-//                     printf(" speedLimit[%d] type: %d, speed value: %d\n",
-//                     speedLimits_index,
-//                     map->intersections.tab[intersection_index].speedLimits.tab[speedLimits_index].type,
-//                     map->intersections.tab[intersection_index].speedLimits.tab[speedLimits_index].speed);
-//                 }
-//             }
-//             printf(" Lane set count : %d\n",
-//             map->intersections.tab[intersection_index].laneSet.count); for
-//             (lane_index = 0; lane_index <
-//             map->intersections.tab[intersection_index].laneSet.count;
-//             lane_index++) {
-//                 printf(" Lane[%d] ID: %d, lane type: %d\n", lane_index,
-//                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].laneID,
-//                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].laneAttributes.laneType.choice);
-//                 /* Mapping union format based on choice */
-//                 if (NodeListXY_nodes ==
-//                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice)
-//                 {
-//                     /* The function only show nodes type */
-//                     printf("  node list count: %d\n",
-//                     map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count);
-//                     for (node_index = 0; node_index <
-//                     map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count;
-//                     node_index++) {
-//                         switch
-//                         (map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice)
-//                         {
-//                             case NodeOffsetPointXY_node_XY1:
-//                                 printf("   [%d] node_XY1 x: %d, y: %d\n",
-//                                 node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.x,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.y);
-//                                 break;
-//                             case NodeOffsetPointXY_node_XY2:
-//                                 printf("   [%d] node_XY2 x: %d, y: %d\n",
-//                                 node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.x,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.y);
-//                                 break;
-//                             case NodeOffsetPointXY_node_XY3:
-//                                 printf("   [%d] node_XY3 x: %d, y: %d\n",
-//                                 node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.x,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.y);
-//                                 break;
-//                             case NodeOffsetPointXY_node_XY4:
-//                                 printf("   [%d] node_XY4 x: %d, y: %d\n",
-//                                 node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.x,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.y);
-//                                 break;
-//                             case NodeOffsetPointXY_node_XY5:
-//                                 printf("   [%d] node_XY5 x: %d, y: %d\n",
-//                                 node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.x,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.y);
-//                                 break;
-//                             case NodeOffsetPointXY_node_XY6:
-//                                 printf("   [%d] node_XY6 x: %d, y: %d\n",
-//                                 node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.x,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.y);
-//                                 break;
-//                             case NodeOffsetPointXY_node_LatLon:
-//                                 printf("   [%d] LatLon latitude: %d,
-//                                 longitude: %d\n", node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lat,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lon);
-//                                 break;
-//                             default:
-//                                 printf("   [%d] Unhandled delta choice type:
-//                                 %d\n", node_index,
-//                                 map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice);
-//                                 break;
-//                         }
-//                     }
-//                 }
-//                 else {
-//                     printf("  Unhandled node choice type: %d\n",
-//                     map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice);
-//                 }
-//                 if
-//                 (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo_option)
-//                 {
-//                     printf("  ConnectsToList count: %d\n",
-//                     map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.count);
-//                     for (connectionTo_index = 0; connectionTo_index <
-//                     map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.count;
-//                     connectionTo_index++) {
-//                         printf("  ConnectsToList[%d]\n", connectionTo_index);
-//                         if
-//                         (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].remoteIntersection_option)
-//                         {
-//                             if
-//                             (map->intersections.tab[intersection_index].id.region_option)
-//                             {
-//                                 printf("   remoteIntersection region: %d,",
-//                                 map->intersections.tab[intersection_index].id.region);
-//                             }
-//                             printf(" id: %d, revision: %d\n",
-//                             map->intersections.tab[intersection_index].id.id,
-//                             map->intersections.tab[intersection_index].revision);
-//                         }
-//                         printf("   connectingLane lane: %d\n",
-//                         map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.lane);
-//                         if
-//                         (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.maneuver_option)
-//                         {
-//                             printf("   connectingLane maneuver:");
-//                             for (maneuver_index = 0; maneuver_index <
-//                             AllowedManeuvers_MAX_BITS; maneuver_index++) {
-//                                 if
-//                                 (asn1_bstr_is_bit_set(&(map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.maneuver),
-//                                 maneuver_index)) {
-//                                     switch (maneuver_index) {
-//                                         case
-//                                         AllowedManeuvers_maneuverStraightAllowed:
-//                                             printf("
-//                                             maneuverStraightAllowed"); break;
-//                                         case
-//                                         AllowedManeuvers_maneuverLeftAllowed:
-//                                             printf(" maneuverLeftAllowed");
-//                                             break;
-//                                         case
-//                                         AllowedManeuvers_maneuverRightAllowed:
-//                                             printf(" maneuverRightAllowed");
-//                                             break;
-//                                         default:
-//                                             printf(" bit %d",
-//                                             maneuver_index); break;
-//                                     }
-//                                 }
-//                             }
-//                             printf("\n");
-//                         }
-//                         if
-//                         (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].signalGroup_option)
-//                         {
-//                             printf("   signalGroup: %d\n",
-//                             map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].signalGroup);
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     return;
-// }
-
-/*void dump_mem(void *data, int len)
+void map_dump_mem(void *data, int len)
 {
     int count;
     unsigned char *p = (unsigned char *)data;
@@ -1685,4 +1495,131 @@ void compose_map(uint8_t **tx_buf, int *tx_buf_len)
         printf("%02X ", p[count]);
     }
     printf("\n\n");
-}*/
+}
+
+void map_decode(uint8_t *rx_buf, int rx_buf_len)
+{
+    int ret;
+    /* a pointer to containing decoded msg */
+    MessageFrame *p_msgf;
+
+    printf("MAP decoding data:\n");
+    dump_mem(rx_buf, rx_buf_len);
+
+    ret = j2735_msg_decode(&p_msgf, rx_buf, rx_buf_len, NULL);
+    if (ret < 0) {
+        /* handling the decoding error */
+        printf("decode msg error\n");
+    }
+    else if ((ret > 0) && (p_msgf->messageId == MapData_Id)) {
+        map_print((MapData *)(p_msgf->u.data));
+        J2735_FREE_MSG_FRAME(p_msgf);
+    }
+
+    return;
+}
+
+void map_print(MapData *map)
+{
+    int intersection_index, speedLimits_index, lane_index, node_index, connectionTo_index, maneuver_index;
+    printf("Decoded MAP\n");
+    if (map->intersections_option) {
+        printf("intersections count: %d\n", map->intersections.count);
+        for (intersection_index = 0; intersection_index < map->intersections.count; intersection_index++) {
+            printf("intersection [%d]:", intersection_index);
+            if (map->intersections.tab[intersection_index].id.region_option) {
+                printf("region %d,", map->intersections.tab[intersection_index].id.region);
+            }
+            printf(" id: %d, revision: %d\n", map->intersections.tab[intersection_index].id.id, map->intersections.tab[intersection_index].revision);
+            printf(" refPoint latitude: %d, longitude: %d\n", map->intersections.tab[intersection_index].refPoint.lat, map->intersections.tab[intersection_index].refPoint.Long);
+            if (map->intersections.tab[intersection_index].laneWidth_option) {
+                printf(" laneWidth: %d\n", map->intersections.tab[intersection_index].laneWidth);
+            }
+            if (map->intersections.tab[intersection_index].speedLimits_option) {
+                for (speedLimits_index = 0; speedLimits_index < map->intersections.tab[intersection_index].speedLimits.count; speedLimits_index++) {
+                    printf(" speedLimit[%d] type: %d, speed value: %d\n", speedLimits_index, map->intersections.tab[intersection_index].speedLimits.tab[speedLimits_index].type, map->intersections.tab[intersection_index].speedLimits.tab[speedLimits_index].speed);
+                }
+            }
+            printf(" Lane set count : %d\n", map->intersections.tab[intersection_index].laneSet.count);
+            for (lane_index = 0; lane_index < map->intersections.tab[intersection_index].laneSet.count; lane_index++) {
+                printf(" Lane[%d] ID: %d, lane type: %d\n", lane_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].laneID, map->intersections.tab[intersection_index].laneSet.tab[lane_index].laneAttributes.laneType.choice);
+                /* Mapping union format based on choice */
+                if (NodeListXY_nodes == map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice) {
+                    /* The function only show nodes type */
+                    printf("  node list count: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count);
+                    for (node_index = 0; node_index < map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count; node_index++) {
+                        switch (map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice) {
+                            case NodeOffsetPointXY_node_XY1:
+                                printf("   [%d] node_XY1 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.y);
+                                break;
+                            case NodeOffsetPointXY_node_XY2:
+                                printf("   [%d] node_XY2 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.y);
+                                break;
+                            case NodeOffsetPointXY_node_XY3:
+                                printf("   [%d] node_XY3 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.y);
+                                break;
+                            case NodeOffsetPointXY_node_XY4:
+                                printf("   [%d] node_XY4 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.y);
+                                break;
+                            case NodeOffsetPointXY_node_XY5:
+                                printf("   [%d] node_XY5 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.y);
+                                break;
+                            case NodeOffsetPointXY_node_XY6:
+                                printf("   [%d] node_XY6 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.y);
+                                break;
+                            case NodeOffsetPointXY_node_LatLon:
+                                printf("   [%d] LatLon latitude: %d, longitude: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lat, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lon);
+                                break;
+                            default:
+                                printf("   [%d] Unhandled delta choice type: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice);
+                                break;
+                        }
+                    }
+                }
+                else {
+                    printf("  Unhandled node choice type: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice);
+                }
+                if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo_option) {
+                    printf("  ConnectsToList count: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.count);
+                    for (connectionTo_index = 0; connectionTo_index < map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.count; connectionTo_index++) {
+                        printf("  ConnectsToList[%d]\n", connectionTo_index);
+                        if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].remoteIntersection_option) {
+                            if (map->intersections.tab[intersection_index].id.region_option) {
+                                printf("   remoteIntersection region: %d,", map->intersections.tab[intersection_index].id.region);
+                            }
+                            printf(" id: %d, revision: %d\n", map->intersections.tab[intersection_index].id.id, map->intersections.tab[intersection_index].revision);
+                        }
+                        printf("   connectingLane lane: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.lane);
+                        if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.maneuver_option) {
+                            printf("   connectingLane maneuver:");
+                            for (maneuver_index = 0; maneuver_index < AllowedManeuvers_MAX_BITS; maneuver_index++) {
+                                if (asn1_bstr_is_bit_set(&(map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.maneuver), maneuver_index)) {
+                                    switch (maneuver_index) {
+                                        case AllowedManeuvers_maneuverStraightAllowed:
+                                            printf(" maneuverStraightAllowed");
+                                            break;
+                                        case AllowedManeuvers_maneuverLeftAllowed:
+                                            printf(" maneuverLeftAllowed");
+                                            break;
+                                        case AllowedManeuvers_maneuverRightAllowed:
+                                            printf(" maneuverRightAllowed");
+                                            break;
+                                        default:
+                                            printf(" bit %d", maneuver_index);
+                                            break;
+                                    }
+                                }
+                            }
+                            printf("\n");
+                        }
+                        if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].signalGroup_option) {
+                            printf("   signalGroup: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].signalGroup);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return;
+}
+

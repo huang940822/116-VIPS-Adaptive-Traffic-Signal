@@ -74,18 +74,6 @@ int SPaT_config_init()
                 return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
             }
         }
-        if (strstr(buf, "signalcount ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                if (uint8_t_val >= 0) {
-                    SPaT_config.signalcount = uint8_t_val;
-                    continue;
-                } else {
-                    return -1;
-                }
-            } else {
-                return -1;
-            }
-        }
     }
 
     fclose(fp);
