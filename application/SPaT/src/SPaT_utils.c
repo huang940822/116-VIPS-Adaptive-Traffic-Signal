@@ -54,26 +54,6 @@ int spat_msg_init(SPAT **pp_spat)
     asn1_bstr_alloc(&(int_state->status), IntersectionStatusObject_MAX_BITS);
     asn1_bstr_set_bit(&(int_state->status),
                       IntersectionStatusObject_fixedTimeOperation);
-    //int_state->states.count = signal_status.SubPhaseCount;// SPaT_config.signalcount;
-    //int_state->states.tab = (MovementState *) calloc(int_state->states.count,
-    //                                                 sizeof(MovementState));
-    //for (i = 0; i < int_state->states.count; i++) {
-    //    /* only support to update 1 state */
-    //    int_state->states.tab[i].signalGroup = i;
-    //    int_state->states.tab[i].state_time_speed.count = 3;
-    //    int_state->states.tab[i].state_time_speed.tab =
-    //        (MovementEvent *) calloc(3, sizeof(MovementEvent));
-    //    for (int j = 0; j < 3; j++) {
-    //        int_state->states.tab[i].state_time_speed.tab[j].timing_option =
-    //           TRUE;
-    //    }
-    //    int_state->states.tab[i].state_time_speed.tab[0].eventState =
-    //        SIGNAL_GREEN;
-    //    int_state->states.tab[i].state_time_speed.tab[1].eventState =
-    //        SIGNAL_YELLOW;
-    //    int_state->states.tab[i].state_time_speed.tab[2].eventState =
-    //        SIGNAL_RED;
-    //}
     return 0;
 }
 
@@ -141,7 +121,7 @@ int spat_msg_update(SPAT **pp_spat)
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
 
     if( int_state->states.count != signal_status.SubPhaseCount) {
-        int_state->states.count = signal_status.SubPhaseCount;// SPaT_config.signalcount;
+        int_state->states.count = signal_status.SubPhaseCount;
         int_state->states.tab = (MovementState *) calloc(int_state->states.count,
                                                      sizeof(MovementState));
         for (int i = 0; i < int_state->states.count; i++) {
@@ -165,10 +145,26 @@ int spat_msg_update(SPAT **pp_spat)
 
     compare_time(&signal_status);
     time_t local_time= time(NULL);
+    unsigned int diff_time = (unsigned int) difftime(local_time, compare_to_tc_time);
     unsigned int now_time = tc_store_time.Min * 60 + tc_store_time.Sec + (unsigned int)difftime(local_time, compare_to_tc_time);
 
-    int_state->timeStamp_option =TRUE;
-    int_state->timeStamp = now_time;
+    unsigned int moy = (unsigned int) ((unsigned int) ((tc_store_time.Sec  + diff_time) / 60) + 
+                                       calDate(tc_store_time.Year + 1911, 
+                                               tc_store_time.Month - 1,
+                                               tc_store_time.Day - 1
+                                              ) * 24 * 60 + 
+                                       tc_store_time.Hour * 60 +
+                                       tc_store_time.Min);
+    
+    if(leapYear(tc_store_time.Year + 1911))
+        moy %= 527040;
+    else
+        moy %= 525600;
+
+    int_state->timeStamp_option = TRUE;
+    int_state->timeStamp = (tc_store_time.Sec + diff_time) % 60 * 1000;
+    int_state->moy_option = TRUE;
+    int_state->moy = moy;
 
     int second = get_current_second();
     int phase = get_current_phase() - 1;
@@ -301,8 +297,27 @@ int spat_msg_update(SPAT **pp_spat)
         int_state->states.tab[i].state_time_speed.tab[j].timing.minEndTime =
             to_TimeMark(timemark);
     }
-    //print_spat(pp_spat);
+    // print_spat(pp_spat);
     return 1;
+}
+
+int leapYear(int a)
+{
+    if((a % 4 == 0 && a % 100 != 0) || a % 400 == 0) 
+        return 1;
+    return 0;
+}
+
+int calDate(int year, int month, int day)
+{
+    int sum = 0, i;
+    int a[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    for(i = 0;i < month;i++)
+        sum += a[i];
+    if(leapYear(year) && month > 1)
+        sum++;
+    sum += day;
+    return sum;
 }
 
 void print_spat(SPAT **pp_spat)

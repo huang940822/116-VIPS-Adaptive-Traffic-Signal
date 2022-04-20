@@ -46,4 +46,6 @@ int spat_msg_init(SPAT **pp_spat);
 int compose_spat(uint8_t **pp_spat_buf, SPAT *p_spat);
 int spat_msg_update(SPAT **pp_spat);
 void print_spat(SPAT **pp_spat);
+int leapYear(int a);
+int calDate(int year, int month, int day);
 #endif
