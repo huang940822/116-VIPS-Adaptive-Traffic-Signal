@@ -48,7 +48,7 @@ int spat_msg_init(SPAT **pp_spat)
         (IntersectionState *) calloc(1, sizeof(IntersectionState));
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     /* set randomly  */
-    int_state->id.id = 4009;
+    int_state->id.id = SPaT_config.intersection_id;
     /* init. to 0 */
     int_state->revision = 0;
     asn1_bstr_alloc(&(int_state->status), IntersectionStatusObject_MAX_BITS);
@@ -126,7 +126,7 @@ int spat_msg_update(SPAT **pp_spat)
                                                      sizeof(MovementState));
         for (int i = 0; i < int_state->states.count; i++) {
             /* only support to update 1 state */
-            int_state->states.tab[i].signalGroup = i;
+            int_state->states.tab[i].signalGroup = i+1;
             int_state->states.tab[i].state_time_speed.count = 3;
             int_state->states.tab[i].state_time_speed.tab =
                 (MovementEvent *) calloc(3, sizeof(MovementEvent));
@@ -324,6 +324,7 @@ void print_spat(SPAT **pp_spat)
 {
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     printf("nowtime : %d\n", int_state->timeStamp);
+    printf("moy : %d\n", int_state->moy);
     printf("region : %d\n", int_state->id.region);
     printf("id : %d\n", int_state->id.id);
     for (int i = 0; i < int_state->states.count; i++) {

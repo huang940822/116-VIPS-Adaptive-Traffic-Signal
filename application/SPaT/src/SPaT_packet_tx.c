@@ -32,10 +32,10 @@ void SPaT_packet_tx()
         if (tx_buf_len <= 0) {
             printf("failed to encode the msg\n");
         } else {
-            printf("encode successfully %d\n", tx_buf_len);
+            // printf("encode successfully %d\n", tx_buf_len);
         }
-        printf("SPAT encoded data:\n");
-        dump_mem(tx_buf, tx_buf_len);
+        // printf("SPAT encoded data:\n");
+        // dump_mem(tx_buf, tx_buf_len);
         // print_spat(&p_spat);
     }
     spat_update_delay = (spat_update_delay + 1) % 5;
