@@ -4,12 +4,21 @@ reboot_midnight(){
     	while true
     	do	
 		currenttime=$(date +%H:%M:%S)
+		NOW=$( date '+%F_%H:%M:%S' )
 		echo "$currenttime"
-   		if [[ "$currenttime" > "00:00:01" ]] && [[ "$currenttime" < "00:00:15" ]]; then
+		
+		if [[ "$currenttime" > "00:00:01" ]] && [[ "$currenttime" < "00:00:15" ]]; then
      			#reboot
 			echo "time to reboot"
 			echo "system reboot at midnight">>/home/oslab/RSU_Controller_v3-master/log/system_reboot_$NOW.log
 			reboot
+   		fi
+
+		if [[ "$currenttime" > "00:05:01" ]] && [[ "$currenttime" < "00:05:03" ]]; then
+     			#dsrc reboot
+			echo "time to dsrc reboot"
+			echo "DSRC reboot at midnight">>/home/oslab/RSU_Controller_v3-master/log/system_reboot_$NOW.log
+			ssh root@192.168.100.3 '/sbin/reboot'
    		fi
 
 		sleep 1
