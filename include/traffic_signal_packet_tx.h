@@ -37,6 +37,7 @@ uint8_t tsc_5F48();
 uint8_t tsc_5F44();
 uint8_t tsc_5F45();
 uint8_t tsc_0F42();
+uint8_t tsc_5F43();
 
 uint8_t tsc_countdown_on(uint8_t);
 uint8_t tsc_countdown_off(uint8_t);
