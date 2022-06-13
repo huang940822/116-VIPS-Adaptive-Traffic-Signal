@@ -25,11 +25,14 @@ sem_t sem_signal_status;
 static uint16_t pretime_sent_count = 0;
 extern uint8_t flag_pretime;
 extern uint8_t flag_switch2nextStep;
+extern uint8_t flag_PhaseOrder;
 uint8_t phase_change_flag = false;
 uint8_t real_pretime = 0;
 static uint8_t FirstSwitchFlag = true;
+static uint8_t PhaseOrder_initial = true;
+
 // static bool flag = true;
-// extern int16_t compensation_buffer[SUBPHASEID_NUM];
+extern int16_t compensation_buffer[SUBPHASEID_NUM];
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
@@ -152,7 +155,7 @@ void packet_5FC8(traffic_signal_packet_t *packet)
 
     pthread_mutex_lock(&mutex_current_signal_status);
 
-    current_signal_status.PlanID = packet->INFO[2];
+    signal_status.PlanID = packet->INFO[2];
 
     current_signal_status.PhaseOrder = packet->INFO[4];
     current_signal_status.SubPhaseCount = packet->INFO[5];
@@ -201,7 +204,6 @@ void packet_5FC8(traffic_signal_packet_t *packet)
     pthread_mutex_unlock(&mutex_current_signal_status);
     return;
 }
-
 /* 5F C5 回報時制計畫編號與資料庫 */  //收tc箱資料
 void packet_5FC5(traffic_signal_packet_t *packet)
 {
@@ -210,8 +212,14 @@ void packet_5FC5(traffic_signal_packet_t *packet)
 
     pthread_mutex_lock(&mutex_signal_status);
     // signal_status.PlanID = packet->INFO[2];
+    // 
+    if(PhaseOrder_initial == true) {
+        flag_PhaseOrder = true;
+        PhaseOrder_initial = false;
+    }
     if (signal_status.PhaseOrder != packet->INFO[4]) {
         command_buf_clear();
+        flag_PhaseOrder = true;
     }
     signal_status.PhaseOrder = packet->INFO[4];
     signal_status.SubPhaseCount = packet->INFO[5];
@@ -230,6 +238,9 @@ void packet_5FC5(traffic_signal_packet_t *packet)
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
                  "signal packet info: 5FC5");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content), "\nPlanID: %d",
+                 signal_status.PlanID);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nPhaseOrder: %d",
                  signal_status.PhaseOrder);
@@ -280,9 +291,9 @@ void packet_5FC4(traffic_signal_packet_t *packet)
             count_initialize++;
             // printf("get inside\r\n");
             if (count_initialize >
-                signal_status.SubPhaseCount *
-                    2) {  // 2是為了第一次讀出來的值常常是錯誤的
-                          // 所以等到第二次讀取才取值
+                signal_status.SubPhaseCount *2) {  
+                    // 2是為了第一次讀出來的值常常是錯誤的
+                    // 所以等到第二次讀取才取值
 
                 signal_status.plan[i].PreTimeCompensated =
                     signal_status.plan[i].PreGreen;
@@ -319,6 +330,45 @@ void packet_5FC4(traffic_signal_packet_t *packet)
         }
         log_file_write(log_content);
     }
+    pthread_mutex_unlock(&mutex_signal_status);
+    return;
+}
+
+void packet_5FC3(traffic_signal_packet_t *packet)
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    pthread_mutex_lock(&mutex_signal_status);
+
+    signal_status.SignalMap = packet->INFO[3];
+    signal_status.SignalCount = packet->INFO[4];
+
+    snprintf(log_content + strlen(log_content),
+            LOG_CONTENT_LEN - strlen(log_content),
+            "\nSignalMap:%x SignalCount:%x\r\n",
+            signal_status.SignalMap,signal_status.SignalCount);
+
+    printf("SignalMap:%x SignalCount:%x\r\n",signal_status.SignalMap,signal_status.SignalCount);
+
+
+    for (int i = 0; i < signal_status.SubPhaseCount; i++) {
+        for(int j = 0; j < signal_status.SignalCount; j++) {
+            signal_status.phaseorder_plan[i][j].SignalStatus = packet->INFO[6 + i*signal_status.SignalCount+j];
+            snprintf(log_content + strlen(log_content),
+                    LOG_CONTENT_LEN - strlen(log_content),
+                    "SignalStatus:%x ",
+                    signal_status.phaseorder_plan[i][j].SignalStatus);
+            printf("SignalStatus:%x ",signal_status.phaseorder_plan[i][j].SignalStatus);
+        }
+        printf("\r\n");
+        snprintf(log_content + strlen(log_content),
+                    LOG_CONTENT_LEN - strlen(log_content),
+                    "\r\n");
+    }
+
+    log_file_write(log_content);
+
     pthread_mutex_unlock(&mutex_signal_status);
     return;
 }
@@ -366,6 +416,7 @@ void packet_0F04(traffic_signal_packet_t *packet)
     // dont show bit 14, 8, 9 for they seprately means controller ready,
     // cabinated opened, communication connect
     // original_tc_hstatus=original_tc_hstatus&0xbcff;
+    // 1001 1101 0001 0011
     original_tc_hstatus =
         original_tc_hstatus &
         0x9d13;  //介庸學長建議如下
@@ -443,10 +494,26 @@ uint16_t get_current_second()
     return second;
 }
 
+uint8_t get_SubPhaseCount()
+{
+    pthread_mutex_lock(&mutex_signal_status);
+    uint16_t SubPhaseCount = signal_status.SubPhaseCount;
+    pthread_mutex_unlock(&mutex_signal_status);
+    return SubPhaseCount;
+}
+
+uint8_t get_SignalCount()
+{
+    pthread_mutex_lock(&mutex_signal_status);
+    uint16_t SignalCount = signal_status.SignalCount;
+    pthread_mutex_unlock(&mutex_signal_status);
+    return SignalCount;
+}
+
 uint8_t get_plan_id()
 {
     pthread_mutex_lock(&mutex_signal_status);
-    uint8_t plan_id = current_signal_status.PlanID;
+    uint8_t plan_id = signal_status.PlanID;
     pthread_mutex_unlock(&mutex_signal_status);
     return plan_id;
 }
@@ -505,6 +572,37 @@ uint8_t get_next_SubPhaseID()
     } else {
         return phase + 1;
     }
+}
+
+uint8_t get_prev_SubPhaseID()
+{
+    pthread_mutex_lock(&mutex_signal_status);
+    uint8_t phase_count = signal_status.SubPhaseCount;
+    uint8_t phase = signal_status.SubPhaseID;
+    pthread_mutex_unlock(&mutex_signal_status);
+    uint8_t prev = phase - 1;
+    if(prev == 0)
+        return phase_count;
+    else
+        return prev;
+}
+
+uint8_t get_PhaseOrder()
+{
+    pthread_mutex_lock(&mutex_signal_status);
+    uint8_t PhaseOrder = signal_status.PhaseOrder;
+    pthread_mutex_unlock(&mutex_signal_status);
+    return PhaseOrder;
+}
+
+// SubPhaseCount_index:第幾個 phase
+// SignalCount_index: 第幾個岔路口 ; 北邊 index 為 0
+uint8_t get_SignalStatus(uint8_t SubPhaseCount_index, uint8_t SignalCount_index)
+{
+    pthread_mutex_lock(&mutex_signal_status);
+    uint8_t SignalStatus = signal_status.phaseorder_plan[SubPhaseCount_index][SignalCount_index].SignalStatus;
+    pthread_mutex_unlock(&mutex_signal_status);
+    return SignalStatus;
 }
 
 int16_t get_total_compensation_second()

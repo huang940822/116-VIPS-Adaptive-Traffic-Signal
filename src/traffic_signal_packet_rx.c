@@ -319,6 +319,9 @@ void recv_info(int fd, traffic_signal_packet_t *packet)
     if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0x0C) {
         packet_5F0C(packet);
     }
+    if (packet->INFO[0] == 0x5F && packet->INFO[1] == 0xC3) {
+        packet_5FC3(packet);
+    }
     if (packet->INFO[0] == 0x0F && packet->INFO[1] == 0xC2) {
         packet_0FC2(packet);
     }
