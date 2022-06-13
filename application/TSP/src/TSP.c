@@ -307,6 +307,9 @@ int TSP_on_cloud_packet_rx(void *arg)
         break;
     case 3:
         /* group control */
+        snprintf(log_content + strlen(log_content),
+                LOG_CONTENT_LEN - strlen(log_content),
+                "TSP group control\r\n");
         // read host OBU
         read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
         // read target phase
@@ -365,6 +368,14 @@ int TSP_on_cloud_packet_rx(void *arg)
                  "\ndelete host OBU (%s)", host_OBU_id);
         TSP_host_OBU_obj_delete(host_OBU_id);
         TSP_host_OBU_obj_print();
+        for (int i = 0; i < SUBPHASEID_NUM; i++) {
+            // printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
+            snprintf(log_content + strlen(log_content),
+                    LOG_CONTENT_LEN - strlen(log_content),
+                    "compensation_buffer[%d]:%d\r\n", i,
+                    compensation_buffer[i]);
+        }
+        log_file_write(log_content);
         // 進行補償
         switch (config.traffic_compensation_method) {
         case 1:
@@ -423,9 +434,11 @@ int TSP_on_cloud_packet_rx(void *arg)
             // the variable all exposed to app?
             // tsc_countdown_on(config.signal_controller_manufacturer);
             flag_countdown_on = true;
+            log_file_write("countdown is enable\r\n");
         } else if (enableOrdisable == 1) {  // disable
             // tsc_countdown_off(config.signal_controller_manufacturer);
             flag_countdown_off = true;
+            log_file_write("countdown is disable\r\n");
         } else {
             printf("Illegal command of tsc_countdown\r\n");
         }

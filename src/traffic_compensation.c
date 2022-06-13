@@ -68,6 +68,10 @@ void traffic_compensation_method1()
     printf("start compensation 1\r\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "start compensation 1\r\n");
+    log_file_write(log_content);
 
     int16_t compensation_time = 0;
     int16_t effect_time = 0;
@@ -75,6 +79,12 @@ void traffic_compensation_method1()
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
+
+    int16_t T = get_total_compensation_second();
+    snprintf(log_content + strlen(log_content),
+            LOG_CONTENT_LEN - strlen(log_content),
+            "Total compensation second:%d\r\n",
+            T);
 
     tsc_command_t command;
     memset(&command, 0, sizeof(tsc_command_t));
@@ -131,6 +141,10 @@ void traffic_compensation_method2()
     printf("start compensation 2\r\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "start compensation 2\r\n");
+    log_file_write(log_content);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -140,6 +154,11 @@ void traffic_compensation_method2()
     int16_t compensation_time[SUBPHASEID_NUM];
     bool flag[SUBPHASEID_NUM];  // 是否要重新計算
     int16_t t[COMPENSATION_CYCLE] = {T / 2, T - T / 2};
+
+    snprintf(log_content + strlen(log_content),
+            LOG_CONTENT_LEN - strlen(log_content),
+            "Total compensation second:%d\r\n",
+            T);
 
     printf("T:%d\r\n", T);
     printf("%d %d\r\n", t[0], t[1]);
@@ -221,6 +240,10 @@ void traffic_compensation_method3()
     printf("start compensation 3\r\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "start compensation 3\r\n");
+    log_file_write(log_content);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -251,6 +274,11 @@ void traffic_compensation_method3()
     int16_t effect_time = 0;
 
     int16_t T = get_total_compensation_second();
+    snprintf(log_content + strlen(log_content),
+            LOG_CONTENT_LEN - strlen(log_content),
+            "Total compensation second:%d\r\n",
+            T);
+            
     int16_t branch_pretime = signal_status.plan[branch_phase - 1].PreGreen;
     int16_t atrerial_pretime = signal_status.plan[atrerial_phase - 1].PreGreen;
     uint16_t branch_min_green = signal_status.plan[branch_phase - 1].MinGreen;
@@ -269,6 +297,10 @@ void traffic_compensation_method3()
     // 進行負補償
     if (T > 0) {
         printf("minus compensation\r\n");
+        snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "minus compensation\r\n");
+        log_file_write(log_content);
         command.target_phase = branch_phase;
         compensation_time = T / COMPENSATION_CYCLE;  // 一開始預設
         for (int i = 0; i < COMPENSATION_CYCLE; i++) {
@@ -302,6 +334,10 @@ void traffic_compensation_method3()
 
     } else {  // 進行正補償
         printf("positive compensation\r\n");
+        snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "positive compensation\r\n");
+        log_file_write(log_content);
         command.target_phase = atrerial_phase;
         T = abs(T);
         compensation_time = T / COMPENSATION_CYCLE;
