@@ -1,1487 +1,292 @@
-#include "MAP_utils.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
+#include "log.h"
+#include "traffic_signal_status_updating.h"
 #include "error_code_user.h"
 #include "j2735_codec.h"
 #include "j2735_msg.h"
+#include "MAP_utils.h"
 #include "MAP_config.h"
-void map_print(MapData *map);
 
-void compose_map(uint8_t **tx_buf, int *tx_buf_len);
+extern MapData *map;
 
-void map_decode(uint8_t *rx_buf, int rx_buf_len);
-
-void map_dump_mem(void *data, int len);
-void compose_map(uint8_t **tx_buf, int *tx_buf_len)
-// void compose_map(MapData **map, int *tx_buf_len)
+void map_msg_init(MapData **map)
 {
-    MessageFrame msgf;
-    MapData *map;
-    J2735CodecErr j2735_err;
-
-    /* Make sure we reset the data structure at least once. */
-    memset(&msgf, 0, sizeof(msgf));
-    /* all fields which should be allocated before using are allocated
-     * recursively */
-    map = (MapData *) j2735_msg_prealloc(MapData_Id);
-
-    map->timeStamp_option = FALSE;
-    map->msgIssueRevision = 0;
-    map->layerType_option = TRUE;
-    map->layerType = LayerType_intersectionData;
-    map->layerID_option = TRUE;
-    map->layerID = 1;
-    map->intersections_option = TRUE;
-
-    map->intersections.count = 1;
-
-    map->intersections.tab[0].name_option = FALSE;
-    map->intersections.tab[0].id.region_option = FALSE;
-    map->intersections.tab[0].id.id = MAP_config.intersections.tab[0].id.id; 
-    map->intersections.tab[0].revision = MAP_config.intersections.tab[0].revision;
-    map->intersections.tab[0].refPoint.lat = MAP_config.intersections.tab[0].refPoint.lat;
-    map->intersections.tab[0].refPoint.Long = MAP_config.intersections.tab[0].refPoint.Long;
-    map->intersections.tab[0].refPoint.elevation_option = TRUE;
-    map->intersections.tab[0].refPoint.elevation = MAP_config.intersections.tab[0].refPoint.elevation;
-    map->intersections.tab[0].refPoint.regional_option = FALSE;
-    map->intersections.tab[0].laneWidth_option = TRUE;
-    map->intersections.tab[0].laneWidth = MAP_config.intersections.tab[0].laneWidth;
-    map->intersections.tab[0].speedLimits_option = TRUE;
-
-    map->intersections.tab[0].speedLimits.count = 1;
-    map->intersections.tab[0].speedLimits.tab[0].type =
-        SpeedLimitType_vehicleMaxSpeed;
-    map->intersections.tab[0].speedLimits.tab[0].speed = MAP_config.intersections.tab[0].speedLimits.tab[0].speed;
-
-    map->intersections.tab[0].laneSet.count = 1; //*
-    /* Lane 1 */
-    map->intersections.tab[0].laneSet.tab[0].laneID = 1;
-    map->intersections.tab[0].laneSet.tab[0].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[0].ingressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[0].ingressApproach = 1;
-    map->intersections.tab[0].laneSet.tab[0].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[0]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[0]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_ingressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[0].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[0].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[0]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[0].laneAttributes.regional_option =
-        FALSE;
-
-    map->intersections.tab[0].laneSet.tab[0].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[0].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[0].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[0].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = 298;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = 2090;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = 814;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = 1537;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = 759;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = 1429;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[0].connectsTo_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[0].connectsTo.count = 3;
-
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[0]
-        .connectingLane.lane = 4;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[0]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[0]
-                          .connectsTo.tab[0]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[0]
-                            .connectsTo.tab[0]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverStraightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[0]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[0]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[0].connectsTo.tab[0].signalGroup = 1;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[0]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[0]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[1]
-        .connectingLane.lane = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[1]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[0]
-                          .connectsTo.tab[1]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[0]
-                            .connectsTo.tab[1]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverRightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[1]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[1]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[0].connectsTo.tab[1].signalGroup = 1;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[1]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[1]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[2]
-        .connectingLane.lane = 6;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[2]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[0]
-                          .connectsTo.tab[2]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[0]
-                            .connectsTo.tab[2]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverLeftAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[2]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[2]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[0].connectsTo.tab[2].signalGroup = 1;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[2]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[0]
-        .connectsTo.tab[2]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[0].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[0].regional_option = FALSE;
-    // /* Lane 2 */
-    map->intersections.tab[0].laneSet.tab[1].laneID = 2;
-    map->intersections.tab[0].laneSet.tab[1].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[1].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[1].egressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[1].egressApproach = 2;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[1]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[1]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_egressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[1].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[1].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[1]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[1].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[1].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[1].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[1].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[1].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = -1817;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = 1025;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = -1492;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = 890;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = -1383;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = 755;
-    map->intersections.tab[0]
-        .laneSet.tab[1]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[1].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[1].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[1].regional_option = FALSE;
-    /* Lane 3 */
-    map->intersections.tab[0].laneSet.tab[2].laneID = 3;
-    map->intersections.tab[0].laneSet.tab[2].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[2].ingressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[2].ingressApproach = 3;
-    map->intersections.tab[0].laneSet.tab[2].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[2]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[2]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_ingressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[2].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[2].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[2]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[2].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[2].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[2].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[2].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[2].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = -2142;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = 310;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = -1763;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = 998;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = -1329;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = 755;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[2].connectsTo_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[2].connectsTo.count = 3;
-
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[0]
-        .connectingLane.lane = 6;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[0]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[2]
-                          .connectsTo.tab[0]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[2]
-                            .connectsTo.tab[0]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverStraightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[0]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[0]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[2].connectsTo.tab[0].signalGroup = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[0]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[0]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[1]
-        .connectingLane.lane = 4;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[1]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[2]
-                          .connectsTo.tab[1]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[2]
-                            .connectsTo.tab[1]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverRightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[1]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[1]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[2].connectsTo.tab[1].signalGroup = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[1]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[1]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[2]
-        .connectingLane.lane = 8;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[2]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[2]
-                          .connectsTo.tab[2]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[2]
-                            .connectsTo.tab[2]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverLeftAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[2]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[2]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[2].connectsTo.tab[2].signalGroup = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[2]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[2]
-        .connectsTo.tab[2]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[2].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[2].regional_option = FALSE;
-    /* Lane 4 */
-    map->intersections.tab[0].laneSet.tab[3].laneID = 4;
-    map->intersections.tab[0].laneSet.tab[3].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[3].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[3].egressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[3].egressApproach = 4;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[3]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[3]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_egressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[3].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[3].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[3]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[3].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[3].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[3].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[3].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[3].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = -1464;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = -1416;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = -868;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = -1780;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = -732;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = -1564;
-    map->intersections.tab[0]
-        .laneSet.tab[3]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[3].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[3].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[3].regional_option = FALSE;
-    /* Lane 5 */
-    map->intersections.tab[0].laneSet.tab[4].laneID = 5;
-    map->intersections.tab[0].laneSet.tab[4].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[4].ingressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[4].ingressApproach = 5;
-    map->intersections.tab[0].laneSet.tab[4].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[4]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[4]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_ingressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[4].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[4].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[4]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[4].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[4].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[4].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[4].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[4].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = -190;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = -1982;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = -868;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = -1780;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = -732;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = -1591;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[4].connectsTo_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[4].connectsTo.count = 3;
-
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[0]
-        .connectingLane.lane = 8;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[0]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[4]
-                          .connectsTo.tab[0]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[4]
-                            .connectsTo.tab[0]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverStraightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[0]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[0]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[4].connectsTo.tab[0].signalGroup = 1;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[0]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[0]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[1]
-        .connectingLane.lane = 6;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[1]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[4]
-                          .connectsTo.tab[1]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[4]
-                            .connectsTo.tab[1]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverRightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[1]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[1]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[4].connectsTo.tab[1].signalGroup = 1;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[1]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[1]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[2]
-        .connectingLane.lane = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[2]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[4]
-                          .connectsTo.tab[2]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[4]
-                            .connectsTo.tab[2]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverLeftAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[2]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[2]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[4].connectsTo.tab[2].signalGroup = 1;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[2]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[4]
-        .connectsTo.tab[2]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[4].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[4].regional_option = FALSE;
-    /* Lane 6 */
-    map->intersections.tab[0].laneSet.tab[5].laneID = 6;
-    map->intersections.tab[0].laneSet.tab[5].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[5].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[5].egressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[5].egressApproach = 6;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[5]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[5]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_egressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[5].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[5].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[5]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[5].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[5].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[5].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[5].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[5].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = 1546;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = -1551;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = 1437;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = -674;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = 1627;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = -701;
-    map->intersections.tab[0]
-        .laneSet.tab[5]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[5].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[5].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[5].regional_option = FALSE;
-    /* Lane 7 */
-    map->intersections.tab[0].laneSet.tab[6].laneID = 7;
-    map->intersections.tab[0].laneSet.tab[6].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[6].ingressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[6].ingressApproach = 7;
-    map->intersections.tab[0].laneSet.tab[6].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[6]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[6]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_ingressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[6].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[6].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[6]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[6].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[6].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[6].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[6].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[6].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = 1980;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = -782;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = 1464;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = -674;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = 1573;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = -782;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[6].connectsTo_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[6].connectsTo.count = 3;
-
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[0]
-        .connectingLane.lane = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[0]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[6]
-                          .connectsTo.tab[0]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[6]
-                            .connectsTo.tab[0]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverStraightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[0]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[0]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[6].connectsTo.tab[0].signalGroup = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[0]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[0]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[1]
-        .connectingLane.lane = 8;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[1]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[6]
-                          .connectsTo.tab[1]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[6]
-                            .connectsTo.tab[1]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverRightAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[1]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[1]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[6].connectsTo.tab[1].signalGroup = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[1]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[1]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[2]
-        .connectingLane.lane = 4;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[2]
-        .connectingLane.maneuver_option = TRUE;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[6]
-                          .connectsTo.tab[2]
-                          .connectingLane.maneuver),
-                    AllowedManeuvers_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[6]
-                            .connectsTo.tab[2]
-                            .connectingLane.maneuver),
-                      AllowedManeuvers_maneuverLeftAllowed);
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[2]
-        .remoteIntersection_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[2]
-        .signalGroup_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[6].connectsTo.tab[2].signalGroup = 2;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[2]
-        .userClass_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[6]
-        .connectsTo.tab[2]
-        .connectionID_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[6].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[6].regional_option = FALSE;
-    /* Lane 8 */
-    map->intersections.tab[0].laneSet.tab[7].laneID = 8;
-    map->intersections.tab[0].laneSet.tab[7].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[7].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[7].egressApproach_option = TRUE;
-    map->intersections.tab[0].laneSet.tab[7].egressApproach = 8;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[7]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_set_bit(&(map->intersections.tab[0]
-                            .laneSet.tab[7]
-                            .laneAttributes.directionalUse),
-                      LaneDirection_egressPath);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[7].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[7].laneAttributes.laneType.choice =
-        LaneTypeAttributes_vehicle;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[7]
-                          .laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[7].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[7].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[7].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[7].nodeList.u.nodes.count = 3;
-    map->intersections.tab[0].laneSet.tab[7].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(3, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = 1465;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = 1470;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = 868;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = 1834;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[2]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.x = 705;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[2]
-        .delta.u.node_XY6.y = 1429;
-    map->intersections.tab[0]
-        .laneSet.tab[7]
-        .nodeList.u.nodes.tab[2]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[7].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[7].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[7].regional_option = FALSE;
-    /* Lane 9 */
-    map->intersections.tab[0].laneSet.tab[8].laneID = 9;
-    map->intersections.tab[0].laneSet.tab[8].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[8].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[8].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[8]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[8].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[8].laneAttributes.laneType.choice =
-        LaneTypeAttributes_crosswalk;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[8]
-                          .laneAttributes.laneType.u.crosswalk),
-                    LaneAttributes_Crosswalk_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[8].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[8].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[8].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[8].nodeList.u.nodes.count = 2;
-    map->intersections.tab[0].laneSet.tab[8].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(2, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = 1248;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = 741;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = -1492;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = 782;
-    map->intersections.tab[0]
-        .laneSet.tab[8]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[8].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[8].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[8].regional_option = FALSE;
-    /* Lane 10 */
-    map->intersections.tab[0].laneSet.tab[9].laneID = 10;
-    map->intersections.tab[0].laneSet.tab[9].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[9].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[9].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[9]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[9].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[9].laneAttributes.laneType.choice =
-        LaneTypeAttributes_crosswalk;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[9]
-                          .laneAttributes.laneType.u.crosswalk),
-                    LaneAttributes_Crosswalk_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[9].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[9].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[9].nodeList.choice = NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[9].nodeList.u.nodes.count = 2;
-    map->intersections.tab[0].laneSet.tab[9].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(2, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = -1139;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = 984;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = -569;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = -1079;
-    map->intersections.tab[0]
-        .laneSet.tab[9]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[9].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[9].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[9].regional_option = FALSE;
-    /* Lane 11 */
-    map->intersections.tab[0].laneSet.tab[10].laneID = 11;
-    map->intersections.tab[0].laneSet.tab[10].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[10].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[10].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[10]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[10].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[10].laneAttributes.laneType.choice =
-        LaneTypeAttributes_crosswalk;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[10]
-                          .laneAttributes.laneType.u.crosswalk),
-                    LaneAttributes_Crosswalk_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[10].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[10].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[10].nodeList.choice =
-        NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[10].nodeList.u.nodes.count = 2;
-    map->intersections.tab[0].laneSet.tab[10].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(2, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = -1302;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = -553;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = 1383;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = -701;
-    map->intersections.tab[0]
-        .laneSet.tab[10]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[10].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[10].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[10].regional_option = FALSE;
-    /* Lane 12 */
-    map->intersections.tab[0].laneSet.tab[11].laneID = 12;
-    map->intersections.tab[0].laneSet.tab[11].name_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[11].ingressApproach_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[11].egressApproach_option = FALSE;
-
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[11]
-                          .laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS);
-    asn1_bstr_alloc(
-        &(map->intersections.tab[0].laneSet.tab[11].laneAttributes.sharedWith),
-        LaneSharing_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[11].laneAttributes.laneType.choice =
-        LaneTypeAttributes_crosswalk;
-    asn1_bstr_alloc(&(map->intersections.tab[0]
-                          .laneSet.tab[11]
-                          .laneAttributes.laneType.u.crosswalk),
-                    LaneAttributes_Crosswalk_MAX_BITS);
-    map->intersections.tab[0].laneSet.tab[11].laneAttributes.regional_option =
-        FALSE;
-    map->intersections.tab[0].laneSet.tab[11].maneuvers_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[11].nodeList.choice =
-        NodeListXY_nodes;
-    map->intersections.tab[0].laneSet.tab[11].nodeList.u.nodes.count = 2;
-    map->intersections.tab[0].laneSet.tab[11].nodeList.u.nodes.tab =
-        (NodeXY *) calloc(2, sizeof(NodeXY));
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[0]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.x = 814;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[0]
-        .delta.u.node_XY6.y = -1349;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[0]
-        .attributes_option = FALSE;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[1]
-        .delta.choice = NodeOffsetPointXY_node_XY6;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.x = 651;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[1]
-        .delta.u.node_XY6.y = 1268;
-    map->intersections.tab[0]
-        .laneSet.tab[11]
-        .nodeList.u.nodes.tab[1]
-        .attributes_option = FALSE;
-
-    map->intersections.tab[0].laneSet.tab[11].connectsTo_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[11].overlays_option = FALSE;
-    map->intersections.tab[0].laneSet.tab[11].regional_option = FALSE;
-    /* Lane list end */
-    map->intersections.tab[0].preemptPriorityData_option = FALSE;
-    map->intersections.tab[0].regional_option = FALSE;
-
-    map->roadSegments_option = FALSE;
-    map->dataParameters_option = FALSE;
-    map->restrictionList_option = FALSE;
-    map->regional_option = FALSE;
-
-    /* does the encoding and providing the error msg if there is */
-    msgf.messageId = MapData_Id;
-    msgf.u.data = map;
-    // j2735_err.msg_size = ERROR_MSG;
-    j2735_err.msg = error_msg;
-    *tx_buf_len = j2735_msg_encode(tx_buf, &msgf, &j2735_err);
-    if (*tx_buf_len <= 0) {
-        printf("failed to encode the msg\n");
-        printf("encode err: %s\n", j2735_err.msg);
-    } else {
-        printf("encode successfully\n");
+    (*map) = (MapData *) calloc(1,sizeof(MapData));
+    if((*map) == NULL) {
+        printf("MapData calloc failed\r\n");
     }
+    (*map)->timeStamp_option = FALSE;
+    (*map)->msgIssueRevision = MAP_config.Mapconfig -> msgIssueRevision;
+    // printf("revision=%d\n", (*map)->msgIssueRevision);
+    (*map)->layerType_option = TRUE;
+    (*map)->layerType = LayerType_intersectionData;
+    (*map)->layerID_option = FALSE;
+    (*map)->intersections_option = TRUE;
+    (*map)->intersections.count = 1;
+    (*map)->roadSegments_option = FALSE;
+    (*map)->dataParameters_option = FALSE;
+    (*map)->restrictionList_option = FALSE;
+    (*map)->regional_option = FALSE;
+    (*map)->intersections.tab = calloc(1,sizeof(IntersectionGeometry));
 
-    /* free the memory for encoding */
-    for (int i = 0; i < map->intersections.tab[0].laneSet.count; i++) {
-        asn1_bstr_free(&(map->intersections.tab[0]
-                             .laneSet.tab[i]
-                             .laneAttributes.directionalUse));
-        asn1_bstr_free(&(map->intersections.tab[0]
-                             .laneSet.tab[i]
-                             .laneAttributes.sharedWith));
-        if (i < 8) {
-            asn1_bstr_free(&(map->intersections.tab[0]
-                                 .laneSet.tab[i]
-                                 .laneAttributes.laneType.u.vehicle));
-            if (0 == (i % 2)) {
-                if (map->intersections.tab[0]
-                        .laneSet.tab[i]
-                        .connectsTo_option) {
-                    asn1_bstr_free(&(map->intersections.tab[0]
-                                         .laneSet.tab[i]
-                                         .connectsTo.tab[0]
-                                         .connectingLane.maneuver));
-                    asn1_bstr_free(&(map->intersections.tab[0]
-                                         .laneSet.tab[i]
-                                         .connectsTo.tab[1]
-                                         .connectingLane.maneuver));
-                    asn1_bstr_free(&(map->intersections.tab[0]
-                                         .laneSet.tab[i]
-                                         .connectsTo.tab[2]
-                                         .connectingLane.maneuver));
+    (*map)->intersections.tab->name_option = FALSE;
+    (*map)->intersections.tab->id.region_option = FALSE;
+    (*map)->intersections.tab->id.id = MAP_config.Mapconfig->intersections.tab[0].id.id;
+    (*map)->intersections.tab->revision = MAP_config.Mapconfig->intersections.tab[0].revision;
+    (*map)->intersections.tab->refPoint.lat = MAP_config.Mapconfig->intersections.tab[0].refPoint.lat;
+    (*map)->intersections.tab->refPoint.Long = MAP_config.Mapconfig->intersections.tab[0].refPoint.Long;
+    (*map)->intersections.tab->refPoint.elevation_option = TRUE;
+    (*map)->intersections.tab->refPoint.elevation = MAP_config.Mapconfig->intersections.tab[0].refPoint.elevation;
+    (*map)->intersections.tab->refPoint.regional_option = FALSE;
+    (*map)->intersections.tab->laneWidth_option = TRUE;
+    (*map)->intersections.tab->laneWidth = MAP_config.Mapconfig->intersections.tab[0].laneWidth;
+    (*map)->intersections.tab->speedLimits_option = TRUE;
+    (*map)->intersections.tab->speedLimits.count = 1;
+    (*map)->intersections.tab->speedLimits.tab = calloc((*map)->intersections.tab->speedLimits.count,
+                                                        sizeof(RegulatorySpeedLimit));
+    (*map)->intersections.tab->speedLimits.tab->type = SpeedLimitType_vehicleMaxSpeed;   
+    (*map)->intersections.tab->speedLimits.tab->speed = MAP_config.Mapconfig->intersections.tab[0].speedLimits.tab[0].speed;
+    (*map)->intersections.tab->preemptPriorityData_option = FALSE;
+    (*map)->intersections.tab->regional_option = FALSE;
+
+    (*map)->intersections.tab->laneSet.count = MAP_config.Mapconfig->intersections.tab[0].laneSet.count;
+    (*map)->intersections.tab->laneSet.tab = (GenericLane *) calloc((*map)->intersections.tab->laneSet.count,sizeof(GenericLane));
+    GenericLane *GeLane = (*map)->intersections.tab->laneSet.tab;
+
+    for(int i = 0;i < (*map)->intersections.tab[0].laneSet.count ;i++) {
+        GeLane[i].laneID = MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].laneID;
+        GeLane[i].name_option = FALSE;
+        if(MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].ingressApproach==0 && MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].egressApproach==1){
+            GeLane[i].ingressApproach_option = TRUE;
+            GeLane[i].ingressApproach = 1;
+            GeLane[i].egressApproach_option = FALSE;
+            asn1_bstr_alloc(&(GeLane[i].laneAttributes.directionalUse),
+                            LaneDirection_MAX_BITS);
+            asn1_bstr_set_bit(&(GeLane[i].laneAttributes.directionalUse),
+                            LaneDirection_ingressPath);
+        } else if (MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].egressApproach==0 && MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].ingressApproach==1) {
+            GeLane[i].egressApproach_option = TRUE;
+            GeLane[i].egressApproach = 1;
+            GeLane[i].ingressApproach_option = FALSE;
+            asn1_bstr_alloc(&(GeLane[i].laneAttributes.directionalUse),
+                            LaneDirection_MAX_BITS);
+            asn1_bstr_set_bit(&(GeLane[i].laneAttributes.directionalUse),
+                            LaneDirection_egressPath);
+        }
+        asn1_bstr_alloc(&(GeLane[i].laneAttributes.sharedWith),
+                            LaneSharing_MAX_BITS);
+        GeLane[i].laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
+        asn1_bstr_alloc(&(GeLane[i].laneAttributes.laneType.u.vehicle),
+                            LaneAttributes_Vehicle_MAX_BITS);
+        GeLane[i].laneAttributes.regional_option = FALSE;
+        GeLane[i].maneuvers_option = FALSE;
+        
+        GeLane[i].nodeList.choice = NodeListXY_nodes;
+        GeLane[i].nodeList.u.nodes.count = MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].nodeList.u.nodes.count;
+        GeLane[i].nodeList.u.nodes.tab = (NodeXY *) calloc (GeLane[i].nodeList.u.nodes.count,
+                                                                sizeof(NodeXY));
+        for(int j = 0 ;j < GeLane[i].nodeList.u.nodes.count;j++) {
+            GeLane[i].nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
+            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = 
+                MAP_config.Mapconfig->intersections.tab[0].laneSet
+                .tab[i].nodeList.u.nodes
+                .tab[j].delta.u.node_LatLon.lat;
+            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = 
+                MAP_config.Mapconfig->intersections.tab[0].laneSet
+                .tab[i].nodeList.u.nodes
+                .tab[j].delta.u.node_LatLon.lon;
+        }
+        if(MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].connectsTo.count > 0){
+            GeLane[i].connectsTo_option = TRUE;
+            GeLane[i].connectsTo.count = 
+                MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].connectsTo.count;
+        
+            GeLane[i].connectsTo.tab = (Connection *) calloc(GeLane[i].connectsTo.count,
+                                                                sizeof(Connection));
+            for(int j = 0;j < GeLane[i].connectsTo.count;j++) {
+                GeLane[i]
+                .connectsTo.tab[j]
+                .connectingLane.lane =  MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].connectsTo.tab[j].connectingLane.lane;
+                // 尚需確認
+                GeLane[i].connectsTo.tab[j].connectingLane.maneuver_option = FALSE;
+                GeLane[i].connectsTo.tab[j].remoteIntersection_option = FALSE;
+                // 要改成 TRUE
+                GeLane[i].connectsTo.tab[j].signalGroup_option = TRUE;
+
+                GeLane[i].connectsTo.tab[j].userClass_option = FALSE;
+                GeLane[i].connectsTo.tab[i].connectionID_option = FALSE;
+            }
+        }
+        GeLane[i].overlays_option = FALSE;
+        GeLane[i].regional_option = FALSE;
+    }
+    return ;
+}
+
+
+void map_signal_group(MapData **map, int SubPhaseCount_index, int SignalCount_index) {
+    GenericLane *GeLane = (*map)->intersections.tab->laneSet.tab;
+    int j = SignalCount_index;
+    uint8_t SignalStatus = get_SignalStatus(SubPhaseCount_index-1,SignalCount_index);
+    
+    // 去 and SignalStatus_t
+    if(SignalStatus & GREEN) {
+        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+                if(GeLane[k].laneID == LANEID) {
+                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
+                        if(!con_lane_id)
+                            continue;
+                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+                            }
+                        }
+                    }
+                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
+                        if(!con_lane_id)
+                            continue;
+                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+                            }
+                        }
+                    }
+                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
+                        if(!con_lane_id)
+                            continue;
+                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+                            }
+                        }
+                    }
                 }
             }
-        } else {
-            asn1_bstr_free(&(map->intersections.tab[0]
-                                 .laneSet.tab[i]
-                                 .laneAttributes.laneType.u.crosswalk));
         }
     }
-    j2735_msg_dealloc(MapData_Id, map);
+    if(SignalStatus & LEFT_GREEN) {
+        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+                if(GeLane[k].laneID == LANEID) {
+                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
+                        if(!con_lane_id)
+                            continue;
+                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if(SignalStatus & STRAIGHT_GREEN) {
+        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+                if(GeLane[k].laneID == LANEID) {
+                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
+                        if(!con_lane_id)
+                            continue;
+                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if(SignalStatus & RIGHT_GREEN) {
+        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+                if(GeLane[k].laneID == LANEID) {
+                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
+                        if(!con_lane_id)
+                            continue;
+                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
-    return;
+void map_msg_update(MapData **map)
+{
+    uint8_t SubPhaseCount = get_SubPhaseCount();
+    uint8_t SignalCount = get_SignalCount();
+    uint8_t current_phase = get_current_phase();
+    
+    for(int i = SubPhaseCount;i > 0;i--) {
+        for(int j = 0;j<SignalCount;j++){
+            map_signal_group(map, i, j);
+        }
+    }
+    for(int j = 0;j<SignalCount;j++){
+        map_signal_group(map, current_phase, j);
+    }
+}
+
+int compose_map(uint8_t **map_buf, MapData *map)
+{
+    int buf_len;
+    J2735CodecErr err;
+
+    char log_content[LOG_CONTENT_LEN + 1];
+    char errmsg_buf[ERR_MSG_SZ];
+
+    MessageFrame msgf;
+    memset(&msgf, 0, sizeof(msgf));
+
+    memset(&err, 0, sizeof(J2735CodecErr));
+    err.msg_size = ERR_MSG_SZ;
+    err.msg = errmsg_buf;
+
+    msgf.messageId = MapData_Id;
+    msgf.u.data = map;
+    buf_len = j2735_msg_encode(map_buf, &msgf, &err);
+
+    if (buf_len <= 0) {
+        printf("failed to encode map msg\n");
+        printf("  [error msg] %s\n", err.msg);
+        memset(log_content, 0, sizeof(log_content));
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "failed to encode map msg\r\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content), "  [error msg] %s \r\n",
+                 err.msg);
+        log_file_write(log_content);
+    }
+    return buf_len;
 }
 
 void map_dump_mem(void *data, int len)
@@ -1495,28 +300,6 @@ void map_dump_mem(void *data, int len)
         printf("%02X ", p[count]);
     }
     printf("\n\n");
-}
-
-void map_decode(uint8_t *rx_buf, int rx_buf_len)
-{
-    int ret;
-    /* a pointer to containing decoded msg */
-    MessageFrame *p_msgf;
-
-    printf("MAP decoding data:\n");
-    dump_mem(rx_buf, rx_buf_len);
-
-    ret = j2735_msg_decode(&p_msgf, rx_buf, rx_buf_len, NULL);
-    if (ret < 0) {
-        /* handling the decoding error */
-        printf("decode msg error\n");
-    }
-    else if ((ret > 0) && (p_msgf->messageId == MapData_Id)) {
-        map_print((MapData *)(p_msgf->u.data));
-        J2735_FREE_MSG_FRAME(p_msgf);
-    }
-
-    return;
 }
 
 void map_print(MapData *map)
@@ -1620,6 +403,28 @@ void map_print(MapData *map)
             }
         }
     }
+    return;
+}
+
+void map_decode(uint8_t *rx_buf, int rx_buf_len)
+{
+    int ret;
+    /* a pointer to containing decoded msg */
+    MessageFrame *p_msgf;
+
+    printf("MAP decoding data:\n");
+    map_dump_mem(rx_buf, rx_buf_len);
+
+    ret = j2735_msg_decode(&p_msgf, rx_buf, rx_buf_len, NULL);
+    if (ret < 0) {
+        /* handling the decoding error */
+        printf("decode msg error\n");
+    }
+    else if ((ret > 0) && (p_msgf->messageId == MapData_Id)) {
+        map_print((MapData *)(p_msgf->u.data));
+        J2735_FREE_MSG_FRAME(p_msgf);
+    }
+
     return;
 }
 

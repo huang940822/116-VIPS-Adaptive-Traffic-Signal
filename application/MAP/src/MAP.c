@@ -8,6 +8,7 @@
 
 #include "MAP.h"
 #include "MAP_config.h"
+#include "MAP_utils.h"
 #include "MAP_packet_tx.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
@@ -17,7 +18,7 @@
 #include "log.h"
 #include "timer_event.h"
 
-MapData *p_map;
+MapData *map;
 timer_t MAP_packet_tx_timer_id;
 uint8_t MAP_packet_tx_num = TIMER_EVENT_MAP_PACKET_TX;
 
@@ -59,7 +60,7 @@ int MAP_on_CLOUD_packet_rx(void *arg)
                app_section->payload_len);
     }
 
-    // needs a evsp sned ack function to send ack to cloud
+    // needs a map sned ack function to send ack to cloud
     MAP_send_ack();
 
     // read cmd
@@ -119,8 +120,8 @@ int MAP_on_CLOUD_packet_rx(void *arg)
 
 int MAP_on_registration(void *arg)
 {
-    /* init map msg */
-    // MAP_config_init();
+    /* MAP msg init */
+    map_msg_init(&map);
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, &MAP_packet_tx_num, j2735_timer_event_handler);
     if(MAP_config.MAP_packet_transfer_speed == 1)

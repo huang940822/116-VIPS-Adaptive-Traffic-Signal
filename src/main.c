@@ -95,10 +95,10 @@ int main()
     }
 
     /* read map confile file*/
-    // ret = MAP_config_init();
-    // if(ret != 0) {
-    //     log_file_write_fatal_error("error map reading config file: %d", ret);
-    // }
+    ret = MAP_config_init();
+    if(ret != 0) {
+        log_file_write_fatal_error("error map reading config file: %d", ret);
+    }
 
     printf("query tc firmware version\r\n");
     flag_query_firm_ver = true;
@@ -194,17 +194,16 @@ int main()
         snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "%s register successfully", SPaT.name);
         log_file_write(log_content);
     }
-    // // MAP
-    // ret = app_register(&MAP);
-    // if(ret != 0) {
-    //     log_file_write_fatal_error("error registering application: %d (%s)",
-    //     ret, "MAP");
-    // } else {
-    //     memset(log_content, 0, sizeof(log_content));
-    //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
-    //     strlen(log_content), "%s register successfully", MAP.name);
-    //     log_file_write(log_content);
-    // }
+    // MAP
+    ret = app_register(&MAP);
+    if(ret != 0) {
+        log_file_write_fatal_error("error registering application: %d (%s)", ret, "MAP");
+    } else {
+       memset(log_content, 0, sizeof(log_content));
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
+        strlen(log_content), "%s register successfully", MAP.name);
+        log_file_write(log_content);
+    }
 
     event_callback_print();
 

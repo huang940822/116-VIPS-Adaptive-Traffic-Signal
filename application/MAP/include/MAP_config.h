@@ -9,7 +9,7 @@
 
 extern MAP_config_object_t MAP_config;
 
-// int MAP_config_init();
+int MAP_config_init();
 
 /* Return codes of config */
 typedef enum MAP_config_err {
