@@ -421,6 +421,7 @@ void packet_0F04(traffic_signal_packet_t *packet)
         original_tc_hstatus &
         0x9d13;  //介庸學長建議如下
                  // Bit0、1、4、8、10、11、12、15要通報處理，因為控制不是無法控制就是故障不亮或跳閃光模式
+    set_original_tc_hstatus(original_tc_hstatus);
     printf("tc status\n\r");
     printf("%04X\n\r", original_tc_hstatus);
 

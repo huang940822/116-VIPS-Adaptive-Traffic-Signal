@@ -58,7 +58,7 @@ void TSP_report_plan()
     get_traffic_signal_status(&signal_status);
 
     uint8_t error_status = get_error_status();
-
+    uint8_t original_tc_hstatus=get_original_tc_hstatus();
     // cmd
     write_uint8_t(1, &write_buf);
 
@@ -95,6 +95,7 @@ void TSP_report_plan()
     write_uint8_t(signal_status.ControlStrategy, &write_buf);
     // error status
     write_uint8_t(error_status, &write_buf);
+    write_uint8_t(original_tc_hstatus,&write_buf);
     // printf("test\r\n");
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
