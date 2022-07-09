@@ -7,7 +7,7 @@ typedef struct ae_epoll_state {
 } ae_epoll_state;
 int ae_epoll_create(ae_event_loop *event_loop)
 {
-    ae_epoll_state *state = malloc(sizeof(ae_epoll_state));
+    ae_epoll_state *state = malloc(sizeof(ae_epoll_state));;
 
     if (!state)
         return -1;
