@@ -187,7 +187,7 @@ void packet_5FC8(traffic_signal_packet_t *packet)
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d",
                  current_signal_status.SubPhaseCount);
-        for (int i = 0; i < signal_status.SubPhaseCount; i++) {
+        for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d",
                      current_signal_status.plan[i].Green);
