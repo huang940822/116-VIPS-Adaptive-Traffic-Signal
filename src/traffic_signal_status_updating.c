@@ -180,7 +180,7 @@ void packet_5FC8(traffic_signal_packet_t *packet)
                  "signal packet info: 5FC8");
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nPlanID: %d",
-                 current_signal_status.PlanID);
+                 signal_status.PlanID);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nPhaseOrder: %d",
                  current_signal_status.PhaseOrder);
