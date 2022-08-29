@@ -25,7 +25,7 @@
 
 // Below two define CPS_DEBUG_APPLI and CPS_LOG is for CPS testing.
 #define CPS_DEBUG_APPLI 16000
-#define CPS_LOG 1
+#define CPS_LOG 0
 
 # if CPS_LOG
     int32_t id[100000];
@@ -44,7 +44,7 @@
 
 app_obj_t CPS = {
         .name = "CPS",
-        .id = 4,
+        .id = 3,
         .priority = 3,
         .on_OBU_packet_rx = NULL,
         .on_OBU_packet_tx = NULL,
@@ -163,7 +163,7 @@ int CPS_on_camera_packet_rx(void *arg)
 
         transfer_datatype(
             &(obstaclelist->tab[i].lat), &(obstaclelist->tab[i].Long),
-            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].width),
+            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].length),
             &(obstaclelist->tab[i].width));
         if (bsm_encode(&tx_buf, &len, &(obstaclelist->tab[i]))) {
             buffer_t *bsm = malloc(sizeof(buffer_t));
@@ -233,7 +233,7 @@ int CPS_on_camera_packet_rx_performance(void *arg)
         table->second = obstaclelist->tab[i].second;
         transfer_datatype(
             &(obstaclelist->tab[i].lat), &(obstaclelist->tab[i].Long),
-            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].width),
+            &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].length),
             &(obstaclelist->tab[i].width));
         # if CPS_LOG
             id[cnt_log] = obstaclelist->tab[i].ObstacleID;

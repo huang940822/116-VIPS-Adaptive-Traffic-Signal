@@ -665,13 +665,12 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         memcpy(read_buf.content, msg->msg, msg->msg_len);
     }
     ObstacleList *obstaclelist = (ObstacleList *) malloc(sizeof(ObstacleList));
-    int hour, min;
-    float second;
+    uint32_t hour, min, second;
 
     read_uint32_t(&obstaclelist->dirct, &read_buf);
     read_uint32_t(&hour, &read_buf);
     read_uint32_t(&min, &read_buf);
-    read_float(&second, &read_buf);
+    read_uint32_t(&second, &read_buf);
     read_uint32_t(&obstaclelist->count, &read_buf);
 
     obstaclelist->tab =
@@ -690,13 +689,14 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         read_uint32_t(&obstaclelist->tab[i].ObstacleID, &read_buf);
         read_uint32_t(&obstaclelist->tab[i].description, &read_buf);
 
-        obstaclelist->tab[i].length = 0;
-        obstaclelist->tab[i].width = 0;
+        read_float(&obstaclelist->tab[i].length, &read_buf);
+        read_float(&obstaclelist->tab[i].width, &read_buf);
+
         obstaclelist->tab[i].hour = hour;
         obstaclelist->tab[i].minute = min;
         obstaclelist->tab[i].second = second;
 
-        read_buf.index += 24;
+        read_buf.index += 16;
     }
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {
