@@ -2,6 +2,8 @@
 #include "ae_timer_event.h"
 #include "msg_queue.h"
 #include "network.h"
+#include "typedefine.h"
+
 #define USING_DEFAULT 1
 #ifdef USING_DEFAULT
 const int CONFIG_BINDADDR_MAX = 16;
@@ -14,7 +16,10 @@ typedef struct Broker comm_broker_t;
 comm_server_t RSU_server;
 pthread_t com_layer_thread;
 extern pthread_mutex_t mutex_client_write;
-
+# if CPS_DEBUG > 0
+    int cnt = 0;
+    double tsmp[CPS_DEBUG] = {0.0};
+# endif
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)
 {
@@ -486,7 +491,15 @@ void conn_read_from_SMART_AVI_UDP(struct ae_event_loop *event_loop,
                                   void *clientData,
                                   int mask)
 {
-    printf("from smart_AVI\n");
+    # if CPS_DEBUG > 0
+        double timestamp;
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        timestamp = (double)(tv.tv_sec % 60) + tv.tv_usec / 1e6f;
+        if (cnt < CPS_DEBUG)
+            tsmp[cnt] = timestamp;
+        cnt++;
+    # endif
     client_t *client = (client_t *) clientData;
     comm_server_t *serv = (comm_server_t *) event_loop->server;
     ssize_t readn = client->handle->recv_fn(client);

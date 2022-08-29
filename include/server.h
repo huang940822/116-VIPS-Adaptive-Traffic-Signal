@@ -21,6 +21,11 @@
 #define FROM_CLOUD 1
 #define FROM_DSRC 2
 #define FROM_SMART_AVI 3
+
+# if CPS_DEBUG > 0
+    double tsmp[CPS_DEBUG];
+# endif
+
 void config_handle(char *path);
 struct Broker {
     struct Server *server; /*point back to server*/

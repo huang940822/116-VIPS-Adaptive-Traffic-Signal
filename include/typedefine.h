@@ -20,6 +20,12 @@
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 
+// This define CPS_DEBUG is for CPS testing. 
+// It's for the log buffer size. 
+// If testing can set 1000 or other you want the positive number.
+// Set negative for normal.
+#define CPS_DEBUG -1
+
 typedef struct msg_obj msg_obj_t;
 
 typedef enum device_type {

@@ -425,7 +425,7 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
     return PACKET_IS_BSM;
 }
 
-int OBU_packet_rx_row_data(V2R_common_field_t *common_field, msg_obj_t *msg)
+int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
 {
     msg_buf_t read_buf;
 
@@ -533,7 +533,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         return ret;
 
     if (ret != PACKET_IS_BSM)
-        ret = OBU_packet_rx_row_data(&common_field, msg);
+        ret = OBU_packet_rx_raw_data(&common_field, msg);
     if (ret < 0)
         return ret;
 
