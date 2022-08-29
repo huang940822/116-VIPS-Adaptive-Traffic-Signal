@@ -260,6 +260,11 @@ void event_callback_print()
                      LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
                      "callback_list[EVENT_CLOUD_PACKET_TX]:");
             break;
+        case EVENT_CAMERA_PACKET_RX:
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_CAMERA_PACKET_RX]:");
+            break;
         case EVENT_TRAFFIC_SIGNAL_COMMAND_TX:
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",

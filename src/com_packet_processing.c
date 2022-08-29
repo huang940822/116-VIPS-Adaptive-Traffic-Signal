@@ -357,8 +357,8 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
     common_field->service_id = reg_bsm->buf[0];
     common_field->device_type = reg_bsm->buf[1];
 
-    common_field->position_lat = bsm->coreData.lat / 10000000;
-    common_field->position_lon = bsm->coreData.Long / 10000000;
+    common_field->position_lat = bsm->coreData.lat / 10000000.0;
+    common_field->position_lon = bsm->coreData.Long / 10000000.0;
 
     common_field->speed = bsm->coreData.speed / 50;
     common_field->direction = (u_int8_t)(bsm->coreData.heading / 3600);
@@ -438,7 +438,7 @@ int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
         exit(errno);
     } else {
         clear_memory_error();
-        memcpy(read_buf.content, msg->msg, V2R_COMMON_FIELD_LEN);
+        memcpy(read_buf.content, msg->msg, msg->msg_len);
     }
 
     read_buf.index = 0;

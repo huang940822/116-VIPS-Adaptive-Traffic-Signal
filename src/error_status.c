@@ -12,10 +12,27 @@
 uint8_t error_status = 0;
 timer_t dsrc_heartbeat_timer_id;
 timer_t tc_5fcc_timer_id;
-
+uint8_t tc_hstatus=0;
 // static uint8_t err_count_5fcc=0;
 
 pthread_mutex_t mutex_error_status = PTHREAD_MUTEX_INITIALIZER;
+
+uint8_t get_original_tc_hstatus()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    uint8_t status = tc_hstatus;
+    pthread_mutex_unlock(&mutex_error_status);
+    return status;
+}
+
+void set_original_tc_hstatus(uint8_t value)
+{
+    pthread_mutex_lock(&mutex_error_status);
+    // printf("don't get dsrc heartbeat packet and set dsrc err bit\r\n");
+    tc_hstatus = value;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}
 
 uint8_t get_error_status()
 {

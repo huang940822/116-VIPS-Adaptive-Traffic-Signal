@@ -19,8 +19,8 @@ void EVSP_send_ack()
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_send_ack: malloc");
-        perror("TSP_send_ack: malloc");
+        log_file_write_fatal_error("EVSP_send_ack: malloc");
+        perror("EVSP_send_ack: malloc");
         exit(errno);
     } else {
         clear_memory_error();

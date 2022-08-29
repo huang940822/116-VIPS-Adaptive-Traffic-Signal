@@ -53,7 +53,7 @@ void ae_prepare_for_enqueue_early(client_t *client, unsigned char *buf)
     memcpy(client->read_buffer->buff, buf, HANDLE_MSG_LEN);
     increase_buffer_size(client->read_buffer, HANDLE_MSG_LEN);
 }
-int send_cnt = 0;
+
 size_t udp_send(client_t *client)
 {
     uint8_t _type = client->handle->type;
@@ -68,8 +68,6 @@ size_t udp_send(client_t *client)
         return HANDLE_ERR;
 
     size_t written = send(client->fd, buff->buff, buff->size, 0);
-    send_cnt++;
-    printf("send_cnt: %d\n", send_cnt);
     if (written != buff->size)
         printf("send error\n");
 

@@ -17,8 +17,11 @@
 #define OBU_RECORD_RING_CAPACITY 5 /* should be 3 ~ 256 */
 #define STATIC_APP_PRIVATE_SPACE_CAPACITY 256
 #define PHASE_COUNT_MAX_NUM 8
+#define SIGNAL_COUNT_MAX_NUM 8 // 岔路數目
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
+#define LANE_MAX_NUMBER 5
+#define DIRECTION_MAX_NUMBER 8
 
 // This define CPS_DEBUG is for CPS testing. 
 // It's for the log buffer size. 
@@ -75,6 +78,44 @@ typedef enum timer_event_type {
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
 
+typedef enum position {
+    NORTH,
+    NORTHEAST,
+    EAST,
+    SOUTHEAST,
+    SOUTH,
+    SOUTHWEST,
+    WEST,
+    NORTHWEST,
+} position_t;
+
+typedef enum signalstatus {
+    RED = 1,
+    YELLOW = 2,
+    GREEN = 4,// 圓頭綠
+    LEFT_GREEN = 8,
+    STRAIGHT_GREEN = 16,
+    RIGHT_GREEN = 32,
+    PEDESTRIAN_GREEN = 64,
+    PEDESTRIAN_RED = 128,
+} SignalStatus_t;
+
+typedef struct LaneID_connectingLane {
+    uint8_t LaneID;
+    uint8_t LeftconnectingLane[LANE_MAX_NUMBER];
+    uint8_t StrightconnectingLane[LANE_MAX_NUMBER];
+    uint8_t RightconnectingLane[LANE_MAX_NUMBER];
+} LaneID_connectingLane_t;
+
+typedef struct Direction_lane_ {
+    uint8_t Lane_count;
+    LaneID_connectingLane_t connectingLane[LANE_MAX_NUMBER];
+} Direction_lane_t;
+
+typedef struct Direction_total_information {
+    Direction_lane_t Direction[DIRECTION_MAX_NUMBER];
+}Direction_total_information_t;
+
 typedef struct config_object {
     char RSU_id[RSU_ID_MAX_LEN];
     float RSU_lat;
@@ -121,27 +162,13 @@ typedef struct TSP_config_object {
 typedef struct SPaT_config_object {
     uint8_t SPaT_packet_transfer_speed;
     uint8_t signalcount;
+    uint8_t intersection_id;
 } SPaT_config_object_t;
 
 typedef struct MAP_config_object {
+    MapData *Mapconfig;
     uint8_t MAP_packet_transfer_speed;
-    BOOL timeStamp_option;
-    int32_t timeStamp;        /* MinuteOfTheYear (0..527040) */
-    int32_t msgIssueRevision; /* MsgCount (0..127) */
-    BOOL layerType_option;
-    LayerType layerType;
-    BOOL layerID_option;
-    int32_t layerID; /* LayerID (0..100) */
-    BOOL intersections_option;
-    IntersectionGeometryList intersections;
-    BOOL roadSegments_option;
-    RoadSegmentList roadSegments;
-    BOOL dataParameters_option;
-    DataParameters dataParameters;
-    BOOL restrictionList_option;
-    RestrictionClassList restrictionList;
-    BOOL regional_option;
-    Reg_MapDataList regional;
+    Direction_total_information_t map_lane2connecting;
 } MAP_config_object_t;
 
 typedef struct application_object {
@@ -232,6 +259,10 @@ typedef struct static_plan {
     uint16_t PreTimeCompensated;
 } static_plan_t;
 
+typedef struct phaseorder_plan {
+    uint8_t SignalStatus;
+} phaseorder_plan_t;
+
 typedef struct traffic_signal_status {
     // 5F CC
     uint8_t ControlStrategy;
@@ -256,6 +287,10 @@ typedef struct traffic_signal_status {
     uint8_t Sec;    // (00~59)
 
     static_plan_t plan[PHASE_COUNT_MAX_NUM];
+
+    uint8_t SignalMap;
+    uint8_t SignalCount;
+    phaseorder_plan_t phaseorder_plan[PHASE_COUNT_MAX_NUM][SIGNAL_COUNT_MAX_NUM];
 
     uint8_t control_status;
 } traffic_signal_status_t;

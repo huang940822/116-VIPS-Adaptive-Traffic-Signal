@@ -58,8 +58,8 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_on_cloud_packet_rx: malloc");
-        perror("TSP_on_cloud_packet_rx: malloc");
+        log_file_write_fatal_error("EVSP_on_cloud_packet_rx: malloc");
+        perror("EVSP_on_cloud_packet_rx: malloc");
         exit(errno);
     } else {
         clear_memory_error();

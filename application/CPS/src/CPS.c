@@ -42,9 +42,9 @@
     FILE *fp4;
 #endif
 
-    app_obj_t CPS = {
+app_obj_t CPS = {
         .name = "CPS",
-        .id = 3,
+        .id = 4,
         .priority = 3,
         .on_OBU_packet_rx = NULL,
         .on_OBU_packet_tx = NULL,

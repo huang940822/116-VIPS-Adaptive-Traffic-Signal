@@ -24,6 +24,7 @@ uint8_t flag_countdown_on = 0;
 uint8_t flag_countdown_off = 0;
 uint8_t flag_query_firm_ver = 0;
 uint8_t flag_switch2nextStep = 0;
+uint8_t flag_PhaseOrder = 0;
 
 uint8_t get_seq_num()
 {
@@ -808,6 +809,83 @@ uint8_t tsc_5F45()
         log_file_write_fatal_error("tsc_5F45: write");
     }
     // tcdrain(serial_port_fd);
+    if (packet != NULL) {
+        free(packet);
+    }
+    return packet->SEQ;
+}
+
+// 查詢號誌控制器之時向排列
+uint8_t tsc_5F43()
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content), "signal packet tx: 5F43\n");
+
+    traffic_signal_packet_t *packet =
+        (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
+    if (packet == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("tsc_5F43: malloc");
+        perror("tsc_5F43: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(packet, 0, MAX_PACKET_LEN);
+    }
+    packet->DLE_1 = DLE_VAL;
+    packet->TYPE = STX_VAL;
+    packet->ADDR[0] = ADDR0_VAL;
+    packet->ADDR[1] = ADDR1_VAL;
+    packet->DLE_2 = DLE_VAL;
+    packet->ETX = ETX_VAL;
+
+    packet->SEQ = get_seq_num();
+    packet->LEN[0] = QUERY_PLAN_LEN0_VAL;
+    packet->LEN[1] = QUERY_PLAN_LEN1_VAL;
+    packet->INFO[0] = 0x5F;
+    packet->INFO[1] = 0x43;
+    packet->INFO[2] = get_PhaseOrder();
+
+    uint8_t output_byte[QUERY_PLAN_LEN1_VAL + 1];
+    uint8_t header_byte[HEADER_LEN - 1];
+    uint8_t info_byte[QUERY_PLAN_LEN1_VAL - HEADER_LEN];
+    uint8_t CKS = 0;
+
+    CKS = check_sum(packet, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
+
+    memcpy(header_byte, &packet->DLE_1, HEADER_LEN - 1);
+    memcpy(info_byte, &packet->INFO, QUERY_PLAN_LEN1_VAL - HEADER_LEN);
+
+    for (int i = 0; i < 7; i++) {
+        output_byte[i] = header_byte[i];
+    }
+    for (int i = 0; i < QUERY_PLAN_LEN1_VAL - HEADER_LEN; i++) {
+        output_byte[i + 7] = info_byte[i];
+    }
+    for (int i = 0; i < 2; i++) {
+        output_byte[QUERY_PLAN_LEN1_VAL - 3 + i] = header_byte[i + 7];
+    }
+    output_byte[QUERY_PLAN_LEN1_VAL - 1] = CKS;
+    output_byte[QUERY_PLAN_LEN1_VAL] = '\0';
+
+    if (config.log_signal_packet_tx) {
+        for (int i = 0; i < QUERY_PLAN_LEN1_VAL; i++) {
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+                     output_byte[i]);
+        }
+        log_file_write(log_content);
+    }
+    pthread_mutex_lock(&mutex_rs232_write);
+    int ret = write(serial_port_fd, output_byte, QUERY_PLAN_LEN1_VAL);
+    pthread_mutex_unlock(&mutex_rs232_write);
+
+    if (ret == -1 || ret != QUERY_PLAN_LEN1_VAL) {
+        log_file_write_fatal_error("tsc_5F43: write");
+    }
+
     if (packet != NULL) {
         free(packet);
     }

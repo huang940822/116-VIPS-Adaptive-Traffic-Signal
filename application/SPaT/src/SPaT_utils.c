@@ -48,32 +48,12 @@ int spat_msg_init(SPAT **pp_spat)
         (IntersectionState *) calloc(1, sizeof(IntersectionState));
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     /* set randomly  */
-    int_state->id.id = 4009;
+    int_state->id.id = SPaT_config.intersection_id;
     /* init. to 0 */
     int_state->revision = 0;
     asn1_bstr_alloc(&(int_state->status), IntersectionStatusObject_MAX_BITS);
     asn1_bstr_set_bit(&(int_state->status),
                       IntersectionStatusObject_fixedTimeOperation);
-    int_state->states.count = SPaT_config.signalcount;
-    int_state->states.tab = (MovementState *) calloc(SPaT_config.signalcount,
-                                                     sizeof(MovementState));
-    for (i = 0; i < SPaT_config.signalcount; i++) {
-        /* only support to update 1 state */
-        int_state->states.tab[i].signalGroup = i;
-        int_state->states.tab[i].state_time_speed.count = 3;
-        int_state->states.tab[i].state_time_speed.tab =
-            (MovementEvent *) calloc(3, sizeof(MovementEvent));
-        for (int j = 0; j < 3; j++) {
-            int_state->states.tab[i].state_time_speed.tab[j].timing_option =
-                TRUE;
-        }
-        int_state->states.tab[i].state_time_speed.tab[0].eventState =
-            SIGNAL_GREEN;
-        int_state->states.tab[i].state_time_speed.tab[1].eventState =
-            SIGNAL_YELLOW;
-        int_state->states.tab[i].state_time_speed.tab[2].eventState =
-            SIGNAL_RED;
-    }
     return 0;
 }
 
@@ -139,9 +119,53 @@ int spat_msg_update(SPAT **pp_spat)
     if (get_current_phase() == 0 || get_current_step() == 0)
         return -1;
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
+
+    if( int_state->states.count != signal_status.SubPhaseCount) {
+        int_state->states.count = signal_status.SubPhaseCount;
+        int_state->states.tab = (MovementState *) calloc(int_state->states.count,
+                                                     sizeof(MovementState));
+        for (int i = 0; i < int_state->states.count; i++) {
+            /* only support to update 1 state */
+            int_state->states.tab[i].signalGroup = i+1;
+            int_state->states.tab[i].state_time_speed.count = 3;
+            int_state->states.tab[i].state_time_speed.tab =
+                (MovementEvent *) calloc(3, sizeof(MovementEvent));
+            for (int j = 0; j < 3; j++) {
+                int_state->states.tab[i].state_time_speed.tab[j].timing_option =
+                    TRUE;
+            }
+            int_state->states.tab[i].state_time_speed.tab[0].eventState =
+                SIGNAL_GREEN;
+            int_state->states.tab[i].state_time_speed.tab[1].eventState =
+                SIGNAL_YELLOW;
+            int_state->states.tab[i].state_time_speed.tab[2].eventState =
+                SIGNAL_RED;
+        }
+    }
+
     compare_time(&signal_status);
     time_t local_time= time(NULL);
+    unsigned int diff_time = (unsigned int) difftime(local_time, compare_to_tc_time);
     unsigned int now_time = tc_store_time.Min * 60 + tc_store_time.Sec + (unsigned int)difftime(local_time, compare_to_tc_time);
+
+    unsigned int moy = (unsigned int) ((unsigned int) ((tc_store_time.Sec  + diff_time) / 60) + 
+                                       calDate(tc_store_time.Year + 1911, 
+                                               tc_store_time.Month - 1,
+                                               tc_store_time.Day - 1
+                                              ) * 24 * 60 + 
+                                       tc_store_time.Hour * 60 +
+                                       tc_store_time.Min);
+    
+    if(leapYear(tc_store_time.Year + 1911))
+        moy %= 527040;
+    else
+        moy %= 525600;
+
+    int_state->timeStamp_option = TRUE;
+    int_state->timeStamp = (tc_store_time.Sec + diff_time) % 60 * 1000;
+    int_state->moy_option = TRUE;
+    int_state->moy = moy;
+
     int second = get_current_second();
     int phase = get_current_phase() - 1;
     int step = get_current_step();
@@ -198,10 +222,10 @@ int spat_msg_update(SPAT **pp_spat)
     }
     // main phase
     if (step == 1 || step == 2) {
-        Green[phase] = 0;
         Green_end[phase] = Yellow[phase] = 
             second +
             ((step == 1) ? signal_status.plan[phase].PedGreenFlash : 0);
+        Green[phase] = Green_end[phase] - signal_status.plan[phase].Green;
         Yellow_end[phase] = Red[phase] = 
             Yellow[phase] + signal_status.plan[phase].Yellow;
         Red_end[phase] = 
@@ -210,8 +234,8 @@ int spat_msg_update(SPAT **pp_spat)
         Green[phase] = Red_end[phase] = 
             second + signal_status.plan[phase].AllRed + all[phase];
         Green_end[phase] = Green[phase] + signal_status.plan[phase].Green;
-        Yellow[phase] = 0;
         Yellow_end[phase] = Red[phase] = second;
+        Yellow[phase] = Red[phase] - signal_status.plan[phase].Yellow;
     } else if (step == 5) {
         Green[phase] = Red_end[phase] = second + all[phase];
         Green_end[phase] = Yellow[phase] = 
@@ -227,6 +251,12 @@ int spat_msg_update(SPAT **pp_spat)
         Green_end[i] = Yellow[i] = Green[i] + signal_status.plan[i].Green;
         Yellow_end[i] = Red[i] = Yellow[i] + signal_status.plan[i].Yellow;
     }
+    for (int i = (phase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount, j = phase; 
+         i != phase; i = (i - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount, 
+             j = (j - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount) { 
+        Red[i] = Red[j] + signal_status.plan[j].AllRed - all[j] - signal_status.plan[i].AllRed;
+    }
+
     for (int i = 0, j = 0; i < int_state->states.count; i++, j = 0) {
         timemark_t timemark;
         timemark.min = 0;
@@ -235,10 +265,10 @@ int spat_msg_update(SPAT **pp_spat)
         int_state->states.tab[i]
             .state_time_speed.tab[j]
             .timing.startTime_option = TRUE;
-        timemark.sec = (unsigned int) (Green[i] + now_time) % 3600;
+        timemark.sec = (unsigned int) (Green[i] + now_time + 3600) % 3600;
         int_state->states.tab[i].state_time_speed.tab[j].timing.startTime =
             to_TimeMark(timemark);
-        timemark.sec = (unsigned int) (Green_end[i] + now_time) % 3600;
+        timemark.sec = (unsigned int) (Green_end[i] + now_time + 3600) % 3600;
         int_state->states.tab[i].state_time_speed.tab[j].timing.minEndTime =
             to_TimeMark(timemark);
         j++;
@@ -247,54 +277,54 @@ int spat_msg_update(SPAT **pp_spat)
             int_state->states.tab[i]
                 .state_time_speed.tab[j]
                 .timing.startTime_option = TRUE;
-            timemark.sec = (unsigned int) (Yellow[i] + now_time) % 3600;
+            timemark.sec = (unsigned int) (Yellow[i] + now_time + 3600) % 3600;
             int_state->states.tab[i].state_time_speed.tab[j].timing.startTime =
                 to_TimeMark(timemark);
-            timemark.sec = (unsigned int) (Yellow_end[i] + now_time) % 3600;
+            timemark.sec = (unsigned int) (Yellow_end[i] + now_time + 3600) % 3600;
             int_state->states.tab[i].state_time_speed.tab[j].timing.minEndTime =
                 to_TimeMark(timemark);
             j++;
         }
 
         // red
-        if (i == phase) {
-            int_state->states.tab[i]
-                .state_time_speed.tab[j]
-                .timing.startTime_option = TRUE;
-            timemark.sec = (unsigned int) (Red[i] + now_time) % 3600;
-            int_state->states.tab[i].state_time_speed.tab[j].timing.startTime =
-                to_TimeMark(timemark);
-        } else
-            int_state->states.tab[i]
-                .state_time_speed.tab[j]
-                .timing.startTime_option = FALSE;
-        timemark.sec = (unsigned int) (Red_end[i] + now_time) % 3600;
+        int_state->states.tab[i]
+            .state_time_speed.tab[j]
+            .timing.startTime_option = TRUE;
+        timemark.sec = (unsigned int) (Red[i] + now_time + 3600) % 3600;
+        int_state->states.tab[i].state_time_speed.tab[j].timing.startTime =
+            to_TimeMark(timemark);
+        timemark.sec = (unsigned int) (Red_end[i] + now_time + 3600) % 3600;
         int_state->states.tab[i].state_time_speed.tab[j].timing.minEndTime =
             to_TimeMark(timemark);
-    }
-    // for main phase, we do not give it main step starttime, because it may be
-    // wrong.
-    if (step == 1 || step == 2) {
-        int_state->states.tab[phase]
-            .state_time_speed.tab[0]
-            .timing.startTime_option = FALSE;
-    } else if (step == 4) {
-        int_state->states.tab[phase]
-            .state_time_speed.tab[1]
-            .timing.startTime_option = FALSE;
-    } else if (step == 5) {
-        int_state->states.tab[phase]
-            .state_time_speed.tab[(phase_plan_num[phase] == 3) ? 2 : 1]
-            .timing.startTime_option = FALSE;
     }
     // print_spat(pp_spat);
     return 1;
 }
 
+int leapYear(int a)
+{
+    if((a % 4 == 0 && a % 100 != 0) || a % 400 == 0) 
+        return 1;
+    return 0;
+}
+
+int calDate(int year, int month, int day)
+{
+    int sum = 0, i;
+    int a[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    for(i = 0;i < month;i++)
+        sum += a[i];
+    if(leapYear(year) && month > 1)
+        sum++;
+    sum += day;
+    return sum;
+}
+
 void print_spat(SPAT **pp_spat)
 {
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
-
+    printf("nowtime : %d\n", int_state->timeStamp);
+    printf("moy : %d\n", int_state->moy);
     printf("region : %d\n", int_state->id.region);
     printf("id : %d\n", int_state->id.id);
     for (int i = 0; i < int_state->states.count; i++) {

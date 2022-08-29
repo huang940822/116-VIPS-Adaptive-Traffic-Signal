@@ -9,6 +9,7 @@
 SPaT_config_object_t SPaT_config = {
     .SPaT_packet_transfer_speed = 10,
     .signalcount = 2,
+    .intersection_id = 1,
 };
 
 
@@ -55,6 +56,24 @@ int SPaT_config_init()
             continue;
         }
 
+        if (strstr(buf, "intersection_id ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    SPaT_config.intersection_id= uint8_t_val;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: intersection_id = %d",
+                             SPaT_config.intersection_id);
+                    log_file_write(log_content);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+                }
+            } else {
+                return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+            }
+        }
+
 
         // SPaT_packet_transfer_speed
         if (strstr(buf, "SPaT_packet_transfer_speed ")) {
@@ -72,18 +91,6 @@ int SPaT_config_init()
                 }
             } else {
                 return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
-            }
-        }
-        if (strstr(buf, "signalcount ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                if (uint8_t_val >= 0) {
-                    SPaT_config.signalcount = uint8_t_val;
-                    continue;
-                } else {
-                    return -1;
-                }
-            } else {
-                return -1;
             }
         }
     }

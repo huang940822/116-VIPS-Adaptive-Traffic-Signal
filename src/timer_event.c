@@ -26,6 +26,7 @@ extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
 extern uint8_t flag_switch2nextStep;
+extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
 static unsigned int count = 0;
@@ -43,7 +44,7 @@ void timer_event_handler(__sigval_t value)
             log_file_write(log_content);
         }
 
-        report_plan();  //對obu 廣播 plan
+        // report_plan();  //對obu 廣播 plan
     } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING) {
         if (config.log_middleware_timer_event) {
@@ -55,7 +56,6 @@ void timer_event_handler(__sigval_t value)
 
         pthread_mutex_lock(&mutex_uart_comple_protect);
         // printf("get in uart mutex\r\n");
-        command_buf_polling();
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
         temp_ack_seq = tsc_5F4C();  //查詢號控器目前時相及步階
@@ -66,6 +66,7 @@ void timer_event_handler(__sigval_t value)
         WAIT_ACK_LOOP
         temp_ack_seq = tsc_5F48();  //查詢目前時制計劃內容
         WAIT_ACK_LOOP
+        command_buf_polling();
         if (count == 0) {
             temp_ack_seq = tsc_0F42();  //查詢日期、時間
             WAIT_ACK_LOOP
@@ -74,6 +75,11 @@ void timer_event_handler(__sigval_t value)
             count++;
             if (count == 7200)
                 count = 0;
+        }
+        if(flag_PhaseOrder == true){
+            temp_ack_seq = tsc_5F43();
+            WAIT_ACK_LOOP
+            flag_PhaseOrder = false;
         }
         if (flag_pretime == true) {
             temp_ack_seq = tsc_pretime();

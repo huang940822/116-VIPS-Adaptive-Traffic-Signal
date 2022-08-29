@@ -1,0 +1,775 @@
+# any line started with '#' '\n' ' ' will be ignored
+# 高發一路
+# MAP packet tranfer speed
+# default 1 Hz
+MAP_packet_transfer_speed 1
+# LayerType_intersectionData
+LayerType LayerType_intersectionData
+
+# intersection[0]
+intersection_count 2
+intersection_n 0
+intersection_id 199
+intersection_revision 1
+intersection_lat 229236390
+intersection_long 1202890910
+intersection_elevation 650
+intersection_laneWidth 200
+intersection_speedLimits_count 1
+intersection_speedLimits_n 0
+intersection_speedLimits_type SpeedLimitType_vehicleMaxSpeed
+intersection_speedLimits_speed 694 
+
+intersection_laneSet_count 22
+# lane[0]
+intersection_laneSet_n 0
+intersection_laneSet_id 1
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238660 
+intersection_laneSet_NodeXY_lon 1202889900
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238660 
+intersection_laneSet_NodeXY_lon 1202889900
+
+intersection_connectsTo_count 0
+
+# lane[1]
+intersection_laneSet_n 1
+intersection_laneSet_id 2
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238790 
+intersection_laneSet_NodeXY_lon 1202890200
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238790 
+intersection_laneSet_NodeXY_lon 1202890200
+
+intersection_connectsTo_count 0
+
+# lane[2]
+intersection_laneSet_n 2
+intersection_laneSet_id 3
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238920 
+intersection_laneSet_NodeXY_lon 1202890490
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238920 
+intersection_laneSet_NodeXY_lon 1202890490
+
+intersection_connectsTo_count 0
+
+# lane[3]
+intersection_laneSet_n 3
+intersection_laneSet_id 17
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238410 
+intersection_laneSet_NodeXY_lon 1202889400
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238410 
+intersection_laneSet_NodeXY_lon 1202889400
+
+# 要填入的 signalgroup 
+intersection_connectsTo_count 5
+# 直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 65
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 66
+intersection_connectsTo_signalGroup 1
+# 左轉
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 33
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 34
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 35
+intersection_connectsTo_signalGroup 1
+
+# lane[4]
+intersection_laneSet_n 4
+intersection_laneSet_id 18
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238290
+intersection_laneSet_NodeXY_lon 1202889130
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238290
+intersection_laneSet_NodeXY_lon 1202889130
+
+# 要填入的 signalgroup 
+intersection_connectsTo_count 2
+# 直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 65
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 66
+intersection_connectsTo_signalGroup 1
+
+# lane[5]
+intersection_laneSet_n 5
+intersection_laneSet_id 19
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238150 
+intersection_laneSet_NodeXY_lon 1202888760
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238150 
+intersection_laneSet_NodeXY_lon 1202888760
+
+# 要填入的 signalgroup 
+intersection_connectsTo_count 5
+# 直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 65
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 66
+intersection_connectsTo_signalGroup 1
+# 右轉
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 99
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 98
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 97
+intersection_connectsTo_signalGroup 1
+
+# lane[6]
+intersection_laneSet_n 6
+intersection_laneSet_id 33
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229237380 
+intersection_laneSet_NodeXY_lon 1202892420
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229237380 
+intersection_laneSet_NodeXY_lon 1202892420
+
+intersection_connectsTo_count 0
+
+# lane[7]
+intersection_laneSet_n 7
+intersection_laneSet_id 34
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229237090 
+intersection_laneSet_NodeXY_lon 1202892520
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229237090 
+intersection_laneSet_NodeXY_lon 1202892520
+
+intersection_connectsTo_count 0
+
+# lane[8]
+intersection_laneSet_n 8
+intersection_laneSet_id 35
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236850 
+intersection_laneSet_NodeXY_lon 1202892640
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236850 
+intersection_laneSet_NodeXY_lon 1202892640
+intersection_connectsTo_count 0
+
+# lane[9]
+intersection_laneSet_n 9
+intersection_laneSet_id 51
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238490 
+intersection_laneSet_NodeXY_lon 1202892460
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238490 
+intersection_laneSet_NodeXY_lon 1202892460
+
+intersection_connectsTo_count 6
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 99
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 98
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 97
+intersection_connectsTo_signalGroup 2
+#右轉
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 1
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 2
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 5
+intersection_connectsTo_connectingLane_lane 3
+intersection_connectsTo_signalGroup 2
+
+# lane[10]
+intersection_laneSet_n 10
+intersection_laneSet_id 50
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238280 
+intersection_laneSet_NodeXY_lon 1202892560
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229238280 
+intersection_laneSet_NodeXY_lon 1202892560
+
+intersection_connectsTo_count 3
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 99
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 98
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 97
+intersection_connectsTo_signalGroup 1
+
+# lane[11]
+intersection_laneSet_n 11
+intersection_laneSet_id 49
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229237790
+intersection_laneSet_NodeXY_lon 1202892220
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229237790
+intersection_laneSet_NodeXY_lon 1202892220
+
+intersection_connectsTo_count 5
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 99
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 98
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 97
+intersection_connectsTo_signalGroup 2
+#左轉
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 65
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 66
+intersection_connectsTo_signalGroup 2
+
+# lane[12]
+intersection_laneSet_n 12
+intersection_laneSet_id 65
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235630 
+intersection_laneSet_NodeXY_lon 1202890680
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235630 
+intersection_laneSet_NodeXY_lon 1202890680
+
+intersection_connectsTo_count 0
+
+# lane[13]
+intersection_laneSet_n 13
+intersection_laneSet_id 66
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235480 
+intersection_laneSet_NodeXY_lon 1202890210
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235480 
+intersection_laneSet_NodeXY_lon 1202890210
+
+intersection_connectsTo_count 0
+
+# lane[14]
+intersection_laneSet_n 14
+intersection_laneSet_id 81
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236110 
+intersection_laneSet_NodeXY_lon 1202891750
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236110 
+intersection_laneSet_NodeXY_lon 1202891750
+
+intersection_connectsTo_count 6
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 1
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 2
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 3
+intersection_connectsTo_signalGroup 1
+#左轉
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 99
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 98
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 5
+intersection_connectsTo_connectingLane_lane 97
+intersection_connectsTo_signalGroup 1
+
+
+# lane[15]
+intersection_laneSet_n 15
+intersection_laneSet_id 82
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236260 
+intersection_laneSet_NodeXY_lon 1202892120
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236260 
+intersection_laneSet_NodeXY_lon 1202892120
+
+intersection_connectsTo_count 6
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 1
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 2
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 3
+intersection_connectsTo_signalGroup 1
+#右轉
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 33
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 34
+intersection_connectsTo_signalGroup 1
+intersection_connectsTo_n 5
+intersection_connectsTo_connectingLane_lane 35
+intersection_connectsTo_signalGroup 1
+
+# lane[16]
+intersection_laneSet_n 16
+intersection_laneSet_id 99
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236710
+intersection_laneSet_NodeXY_lon 1202888290
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236710
+intersection_laneSet_NodeXY_lon 1202888290
+
+intersection_connectsTo_count 0
+
+# lane[17]
+intersection_laneSet_n 17
+intersection_laneSet_id 98
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236460 
+intersection_laneSet_NodeXY_lon 1202888390
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236460 
+intersection_laneSet_NodeXY_lon 1202888390
+
+intersection_connectsTo_count 0
+
+# lane[18]
+intersection_laneSet_n 18
+intersection_laneSet_id 97
+intersection_laneSet_ingressApproach 0
+intersection_laneSet_egressApproach 1
+intersection_laneSet_laneAttributes_directionalUse 10
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236210 
+intersection_laneSet_NodeXY_lon 1202888510
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229236210 
+intersection_laneSet_NodeXY_lon 1202888510
+
+intersection_connectsTo_count 0
+
+# lane[19]
+intersection_laneSet_n 19
+intersection_laneSet_id 113
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235830 
+intersection_laneSet_NodeXY_lon 1202888710
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235830 
+intersection_laneSet_NodeXY_lon 1202888710
+
+intersection_connectsTo_count 6
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 33
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 34
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 35
+intersection_connectsTo_signalGroup 2
+#左轉
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 1
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 2
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 5
+intersection_connectsTo_connectingLane_lane 3
+intersection_connectsTo_signalGroup 2
+
+# lane[20]
+intersection_laneSet_n 20
+intersection_laneSet_id 114
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235570 
+intersection_laneSet_NodeXY_lon 1202888820
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235570 
+intersection_laneSet_NodeXY_lon 1202888820
+
+intersection_connectsTo_count 3
+
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 33
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 34
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 35
+intersection_connectsTo_signalGroup 2
+
+# lane[21]
+intersection_laneSet_n 21
+intersection_laneSet_id 115
+intersection_laneSet_ingressApproach 1
+intersection_laneSet_egressApproach 0
+intersection_laneSet_laneAttributes_directionalUse 01
+intersection_laneSet_laneAttributes_sharedWith 0011111111
+intersection_laneSet_laneAttributes_laneType 00000001
+
+intersection_laneSet_NodeXY_count 2
+# node[0]
+intersection_laneSet_NodeXY_n 0
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235530 
+intersection_laneSet_NodeXY_lon 1202888950
+# node[1]
+intersection_laneSet_NodeXY_n 1
+intersection_laneSet_NodeXY_choice NodeOffsetPointXY_node_LatLon
+intersection_laneSet_NodeXY_lat 229235530 
+intersection_laneSet_NodeXY_lon 1202888950
+
+intersection_connectsTo_count 5
+#直走
+intersection_connectsTo_n 0
+intersection_connectsTo_connectingLane_lane 33
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 1
+intersection_connectsTo_connectingLane_lane 34
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 2
+intersection_connectsTo_connectingLane_lane 35
+intersection_connectsTo_signalGroup 2
+#右轉
+intersection_connectsTo_n 3
+intersection_connectsTo_connectingLane_lane 65
+intersection_connectsTo_signalGroup 2
+intersection_connectsTo_n 4
+intersection_connectsTo_connectingLane_lane 66
+intersection_connectsTo_signalGroup 2
+
+# LaneID 0 ~ 255
+# NORTH : 0
+Direction 0
+Lane_count 3
+Lane_Index 0
+LaneID 17
+LeftconnectingLane 33 34 35 0 0
+StrightconnectingLane 65 66 0 0 0
+
+
+Lane_Index 1
+LaneID 18
+StrightconnectingLane 65 66 0 0 0
+
+
+Lane_Index 2
+LaneID 19
+StrightconnectingLane 65 66 0 0 0
+RightconnectingLane 97 98 99 0 0
+
+# EAST : 1
+Direction 1
+Lane_count 3
+Lane_Index 0
+LaneID 51
+StrightconnectingLane 97 98 99 0 0
+RightconnectingLane 1 2 3 0 0
+
+Lane_Index 1
+LaneID 50
+StrightconnectingLane 97 98 99 0 0
+
+Lane_Index 2
+LaneID 49
+StrightconnectingLane 97 98 99 0 0
+LeftconnectingLane 65 66 0 0 0 
+
+# SOUTH : 2
+Direction 2
+Lane_count 2
+Lane_Index 0
+LaneID 81
+LeftconnectingLane 97 98 99 0 0
+StrightconnectingLane 1 2 3 0 0
+
+Lane_Index 1
+LaneID 82
+StrightconnectingLane 1 2 3 0 0
+RightconnectingLane 33 34 35 0 0
+
+# WEST : 3
+Direction 3
+Lane_count 3
+Lane_Index 0
+LaneID 113
+LeftconnectingLane 1 2 3 0 0
+StrightconnectingLane 33 34 35 0 0
+
+Lane_Index 1
+LaneID 114
+StrightconnectingLane 33 34 35 0 0
+
+Lane_Index 2
+LaneID 115
+StrightconnectingLane 33 34 35 0 0
+RightconnectingLane 65 66 0 0 0
+
