@@ -77,7 +77,7 @@ app_obj_t CPS = {
         }
         # if CPS_LOG
             for (int i = 0; i < cnt_log; i++) {
-                fprintf(fp4, "%d %d %lf %lf %lf %f %f ", \
+                fprintf(fp4, "%d %d %lf %lf %lf %f %f %f", \
                 id[i], dscr[i], lat[i], lon[i], elev[i],\
                 width[i], length[i], speed[i]);
                 fprintf(fp4, "%d %f \n", minute[i], second[i]);
@@ -134,7 +134,7 @@ int CPS_on_camera_packet_rx(void *arg)
     ObstacleList *obstaclelist;
     obstaclelist = (ObstacleList *) arg;
     size_t len = 0;
-    int8_t *tx_buf;
+    uint8_t *tx_buf;
     # if CPS_DEBUG > 0 && CPS_DEBUG_APPLI
         cnter++;
         obtsmp[cnter] = obstaclelist->tab[1].second;
@@ -207,7 +207,7 @@ int CPS_on_camera_packet_rx_performance(void *arg)
     int i = 0;
     ObstacleList *obstaclelist = (ObstacleList *) arg;
     size_t len = 0;
-    int8_t *tx_buf;
+    uint8_t *tx_buf;
     # if CPS_DEBUG > 0
         if (cnter < CPS_DEBUG)
             obtsmp[cnter] = obstaclelist->tab[1].second;
