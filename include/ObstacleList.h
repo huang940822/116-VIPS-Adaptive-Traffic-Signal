@@ -20,7 +20,7 @@ typedef struct Obstacle {
     int32_t speed;
     int32_t hour;
     int32_t minute;
-    int32_t second;
+    float second;
 } Obstacle;
 
 typedef struct ObstacleList {
