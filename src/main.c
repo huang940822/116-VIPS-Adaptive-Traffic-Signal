@@ -65,13 +65,14 @@ int main()
     /* log init */
     log_file_init();  //一個timer被created
 
+    /* read config file*/
+    ret = config_init();
+
     // init dsrc error detect
     dsrc_error_detect_init();
     // init tc fail detect
     tc_5fcc_error_detect_init();
 
-    /* read config file*/
-    ret = config_init();
     if (ret != CONFIG_ACCEPT) {
         log_file_write_fatal_error("error reading config file: %d", ret);
     }
