@@ -464,7 +464,7 @@ int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
 
     free(read_buf.content);
     /* common field value valid */
-    if (common_field->packet_len < V2R_COMMON_FIELD_LEN)
+    if (common_field->packet_len < V2R_COMMON_FIELD_LEN || common_field->packet_len > MSG_Default_LEN)
         return PACKET_INVALID_PACKET_LEN;
 
     if (common_field->device_type < 0 ||
@@ -532,7 +532,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     if (ret < 0)
         return ret;
 
-    if (ret != PACKET_IS_BSM)
+    if (ret != PACKET_IS_BSM) 
         ret = OBU_packet_rx_raw_data(&common_field, msg);
     if (ret < 0)
         return ret;

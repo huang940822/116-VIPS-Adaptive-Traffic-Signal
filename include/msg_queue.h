@@ -13,7 +13,7 @@
 #define MSG_Q_OK 0
 #define MSG_Q_ERR -1
 #define MAX_MSG_QUEUE_SIZE 1024
-#define MSG_Default_LEN 25600
+#define MSG_Default_LEN 25600U
 
 #define CLOUD_BIT_POS (0)
 #define CLOUD_BIT (BIT(CLOUD_BIT_POS))
