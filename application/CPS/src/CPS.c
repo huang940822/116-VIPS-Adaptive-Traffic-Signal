@@ -294,7 +294,7 @@ int CPS_on_registration(void *arg)
         memset(buffer, 0, sizeof(buffer));
         time(&rawtime);
         info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
-        strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+        strftime(buffer, 20, "%Y-%m-%d_%H:%M:%S", info);
         sprintf(name, "./cps_log/Perf_%s.txt", buffer);
         fp2 = fopen(name, "w");
 
