@@ -452,14 +452,14 @@ void conn_write_to_client_TCP(struct ae_event_loop *event_loop,
     client_t *client = (client_t *) clientData;
 
     // pthread_mutex_lock(&mutex_client_write);
-    buffer_t *wbuffer = client->write_buffer;
+    // buffer_t *wbuffer = client->write_buffer;
     // pthread_mutex_unlock(&mutex_client_write);
 
-    int data_size = (int) get_buffer_size(wbuffer);
-    if (data_size == 0) {
-        ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
-        return;
-    }
+    // int data_size = (int) get_buffer_size(wbuffer);
+    // if (data_size == 0) {
+    //     ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
+    //     return;
+    // }
     //送資料出去
     int written = client->handle->send_fn(client);
 
