@@ -16,10 +16,7 @@ typedef struct Broker comm_broker_t;
 comm_server_t RSU_server;
 pthread_t com_layer_thread;
 extern pthread_mutex_t mutex_client_write;
-# if CPS_DEBUG > 0
-    int cnt = 0;
-    double tsmp[CPS_DEBUG] = {0.0};
-# endif
+
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)
 {
@@ -498,7 +495,7 @@ void conn_read_from_SMART_AVI_UDP(struct ae_event_loop *event_loop,
         timestamp = (double)(tv.tv_sec % 60) + tv.tv_usec / 1e6f;
         if (cnt < CPS_DEBUG)
             tsmp[cnt] = timestamp;
-        cnt++;
+        
     # endif
     client_t *client = (client_t *) clientData;
     comm_server_t *serv = (comm_server_t *) event_loop->server;

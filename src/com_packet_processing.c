@@ -674,6 +674,9 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     read_float(&second, &read_buf);
     read_uint32_t(&obstaclelist->count, &read_buf);
 
+    if(obstaclelist->count <= 0)
+        return 0;
+
     obstaclelist->tab =
         (Obstacle *) calloc(sizeof(Obstacle), obstaclelist->count);
 

@@ -62,17 +62,16 @@ app_obj_t CPS = {
         .next = NULL,
     };
 # if CPS_DEBUG > 0
-
+#include "server.h"
 # if CPS_RX_MODE
 
     FILE *fp2;
-    int cnter = 0;
     double tsmps[CPS_DEBUG] = {0.0};
     float obtsmp[CPS_DEBUG] = {0.0};
     void sigintHandlerCPS(int sig_num)
     {
         // signal(SIGINT, sigintHandler);
-        for (int i = 0; i < cnter; i++) {
+        for (int i = 0; i < cnt; i++) {
             fprintf(fp2, "%f, %lf, %lf\n", obtsmp[i], tsmp[i], tsmps[i]);
         }
         # if CPS_LOG
@@ -118,7 +117,7 @@ geoinfo_table *g_table = NULL;
 buffer_ring_t *DSRC_send_buffer = NULL;
 int table_init(geoinfo_table **g_table)
 {
-    *g_table = calloc(1000, sizeof(geoinfo_table));
+    *g_table = calloc(100000, sizeof(geoinfo_table));
     if (g_table == NULL) {
         return -1;
     }
@@ -136,8 +135,7 @@ int CPS_on_camera_packet_rx(void *arg)
     size_t len = 0;
     uint8_t *tx_buf;
     # if CPS_DEBUG > 0 && CPS_DEBUG_APPLI
-        cnter++;
-        obtsmp[cnter] = obstaclelist->tab[1].second;
+        obtsmp[cnt] = obstaclelist->tab[1].second;
     # endif
     // printf("\n--------------next msg, count: %d\n", obstaclelist->count);
     for (int i = 0; i < obstaclelist->count; i++) {
@@ -208,9 +206,12 @@ int CPS_on_camera_packet_rx_performance(void *arg)
     ObstacleList *obstaclelist = (ObstacleList *) arg;
     size_t len = 0;
     uint8_t *tx_buf;
+
+    if (obstaclelist->count <= 0)
+        return 0;
     # if CPS_DEBUG > 0
-        if (cnter < CPS_DEBUG)
-            obtsmp[cnter] = obstaclelist->tab[1].second;
+        if (cnt < CPS_DEBUG)
+            obtsmp[cnt] = obstaclelist->tab[0].second;
     # endif
     for (i = 0; i < obstaclelist->count; i++) {
         geoinfo_table *table = &g_table[obstaclelist->tab[i].ObstacleID];
@@ -262,9 +263,9 @@ int CPS_on_camera_packet_rx_performance(void *arg)
             struct timeval tv;
             gettimeofday(&tv, NULL);
             timestamp = (double)(tv.tv_sec % 60) + tv.tv_usec / 1e6f;
-            if (cnter < CPS_DEBUG)
-                tsmps[cnter] = timestamp;
-            cnter++;
+            if (cnt < CPS_DEBUG)
+                tsmps[cnt] = timestamp;
+            cnt++;
         # endif
     }
     if (obstaclelist->tab != NULL) {
@@ -286,6 +287,7 @@ int CPS_on_registration(void *arg)
     //     DSRC_send_buffer = alloc_buffer_ring(24000);
     // }
     # if CPS_DEBUG > 0 
+    cnt = 0;
     # if CPS_RX_MODE
         time_t rawtime;
         struct tm *info;

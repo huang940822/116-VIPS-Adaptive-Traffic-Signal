@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "typedefine.h"
 #include "ae_event.h"
 #include "ae_handle.h"
 #include "buffer.h"
@@ -22,7 +23,9 @@
 #define FROM_DSRC 2
 #define FROM_SMART_AVI 3
 
+
 # if CPS_DEBUG > 0
+    int cnt;
     double tsmp[CPS_DEBUG];
 # endif
 
