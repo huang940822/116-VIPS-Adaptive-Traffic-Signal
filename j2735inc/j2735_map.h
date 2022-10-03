@@ -15,7 +15,7 @@ extern "C" {
 
 typedef struct MapData {
     BOOL timeStamp_option;
-    int32_t timeStamp;        /* MinuteOfTheYear (0..527040) */
+    int32_t timeStamp; /* MinuteOfTheYear (0..527040) */
     int32_t msgIssueRevision; /* MsgCount (0..127) */
     BOOL layerType_option;
     LayerType layerType;

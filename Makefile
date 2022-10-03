@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS = -g -m32 
+CFLAGS = -g
 # WARN_OPT = -Wall
 WARN_OPT =
-LIB_PATH := $(realpath lib)
+LIB_PATH := $(realpath j2735lib)
 LDFLAGS = -g -L$(LIB_PATH) 
 LIB_FILES := $(wildcard $(LIB_PATH)/*.so)
-LIBS =  -ldsrc_v2xcast -pthread -lrt -lm -lzmq
+LIBS =  -lus_v2xcast -pthread -lrt -lm -lzmq
 
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
@@ -14,11 +14,11 @@ EXEC_DIR := $(BUILD)/exec
 TARGET  := middleware
 APP_DIR := application
 
-INCLUDE_DIR	 := include $(wildcard $(APP_DIR)/*/include)
+INCLUDE_DIR	 := include j2735inc $(wildcard $(APP_DIR)/*/include)
 INCLUDE_PATH := $(foreach dir, $(INCLUDE_DIR), -I $(dir))
 INCLUDE_FILE := $(foreach dir, $(INCLUDE_DIR), $(wildcard $(dir)/*.h))
 
-linker_opt = -Wl,-rpath,'$$ORIGIN/../../lib'
+linker_opt = -Wl,-rpath,'$$ORIGIN/../../j2735lib'
 
 SRC_DIR  := src $(wildcard $(APP_DIR)/*/src)
 SRC_FILE := $(foreach dir, $(SRC_DIR), $(wildcard $(dir)/*.c))

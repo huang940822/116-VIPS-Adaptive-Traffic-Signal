@@ -7,13 +7,12 @@
 #ifndef __J2735_CODEC_H__
 #define __J2735_CODEC_H__
 #include "asn1helper_if.h"
-#include "j2735_df_utils.h"
 #include "j2735_msg.h"
+#include "j2735_df_utils.h"
 
 typedef struct J2735Config {
-    uint8_t *mem_pool_buf; /* Address of large memory as heap for internal
-                              dynamic memory usage  */
-    int mem_pool_sz;       /* the size of the above memory pool */
+    uint8_t *mem_pool_buf; /* Address of large memory as heap for internal dynamic memory usage  */
+    int mem_pool_sz; /* the size of the above memory pool */
 } J2735Config;
 
 typedef struct J2735CodecErr {
@@ -57,11 +56,12 @@ extern unsigned int j2735_get_error_msg_size();
  *
  * Recursively allocate memory of each fields with list(sequence-of),
  * octec string, bitstring type in the message structure.
- * The allocated size of memory is the max size defined in J2735 ASN.1
- * definitions. The len of octec and bit string type is filled with the max
- * size. The count of list type is filled with 0. All other memory content are
- * initialized as zero. The memory of field with union type will not be
- * allocated. This is designed to be used with j2735_msg_dealloc() in pairs.
+ * The allocated size of memory is the max size defined in J2735 ASN.1 definitions.
+ * The len of octec and bit string type is filled with the max size.
+ * The count of list type is filled with 0.
+ * All other memory content are initialized as zero.
+ * The memory of field with union type will not be allocated.
+ * This is designed to be used with j2735_msg_dealloc() in pairs.
  *
  * @param[in]  msg_id The msg type (BSM, SPAT, MAP, ...).
  * @return It is the address of the memory of message structure.
@@ -115,8 +115,7 @@ extern int j2735_msg_dealloc(DSRCmsgID msg_id, void *msg);
  *   definitions.
  *
  * @param[in]  df_id The supported data frame
- * @param[in,out]  data The address of the structure memory corresponding to
- * df_id
+ * @param[in,out]  data The address of the structure memory corresponding to df_id
  * @retval -1 Failed
  *         0 Successful
  */
@@ -133,8 +132,7 @@ extern int j2735_dataframe_prealloc(DataFrameID df_id, void *data);
  * This is designed to be used with j2735_dataframe_prealloc() in pairs.
  *
  * @param[in]  df_id The supported data frame.
- * @param[in,out]  data The address of the structure memory corresponding to
- * df_id.
+ * @param[in,out]  data The address of the structure memory corresponding to df_id.
  * @retval -1 Failed
  *         0 Successful
  */
@@ -146,45 +144,82 @@ extern int j2735_dataframe_dealloc(DataFrameID df_id, void *data);
  * Because user has no way to determine the size of result,
  * the memory is allocated inside the function.
  *
- * @param[in,out]  buf The address for the encoder to store the address of
- * allocated memory where the encoded result is stored if error, it is NULL and
- * no memory is allocated.
+ * @param[in,out]  buf The address for the encoder to store the address of allocated memory
+ *                     where the encoded result is stored
+ *                     if error, it is NULL and no memory is allocated.
  * @param[in]  msg The message to be encoded
- * @param[in,out]  err The address of the J2735CodecErr structure which is for
- * recording the error message if encode fail. It could be NULL if it is not
- * necessary.
- * @return It is the size in byte of encoded result, the space which *buf point
- * to.
+ * @param[in,out]  err The address of the J2735CodecErr structure which is for recording
+ *                     the error message if encode fail.
+ *                     It could be NULL if it is not necessary.
+ * @return It is the size in byte of encoded result, the space which *buf point to.
  * @retval -1 Failed.
  */
-extern int j2735_msg_encode(uint8_t **buf,
-                            MessageFrame *msg,
-                            J2735CodecErr *err);
+extern int j2735_msg_encode(uint8_t **buf, MessageFrame *msg, J2735CodecErr *err);
+
+/**
+ * Encode the pre-defined message structure as UPER format for tansmitting and all memory usage will limited in targer memory buffer
+ *
+ * Because user has no way to determine the size of result,
+ * the target memory buffer size need fine tune and
+ * the memory of decoded message structure will limited in target buffer.
+ * Please note that this function is in Alpha stage.
+ *
+ * @param[in,out]  buf The address for the encoder to store the address of allocated memory
+ *                     where the encoded result is stored
+ *                     if error, it is NULL and no memory is allocated.
+ * @param[in]      msg The message to be encoded
+ * @param[in,out]  err The address of the J2735CodecErr structure which is for recording
+ *                     the error message if encode fail.
+ *                     It could be NULL if it is not necessary.
+ * @param[in]      cfg The config for target memory buffer, include buffer pointer and size
+ * @return It is the size in byte of encoded result, the space which *buf point to.
+ * @retval -1 Failed.
+ */
+extern int j2735_msg_encode_in_target_buf(uint8_t **buf, MessageFrame *msg, J2735CodecErr *err, const J2735Config *cfg);
 
 /**
  * Decode the UPER format data to pre-defined message structure for processing
  *
  * Because user has no way to determine the type of message after decoding,
  * the memory of decoded message structure is allocated inside the function.
- * The type of decoded message could be gotten from (*msg)->messageId if decode
- * successfully.
+ * The type of decoded message could be gotten from (*msg)->messageId if decode successfully.
  *
  *
- * @param[in,out]  msg The address for the encoder to store the address of
- * allocated memory of decoded message structure. if error, it is NULL and no
- * memory is allocated.
+ * @param[in,out]  msg The address for the encoder to store the address of allocated memory
+ *                     of decoded message structure.
+ *                     if error, it is NULL and no memory is allocated.
  * @param[in]  buf The UPER format data to be decoded
  * @param[in]  buf_len The length of buf in bytes
- * @param[in,out]  err The address of the J2735CodecErr structure which is for
- * recording the error message if encode fail. It could be NULL if it is not
- * necessary.
+ * @param[in,out]  err The address of the J2735CodecErr structure which is for recording
+ *                     the error message if encode fail.
+ *                     It could be NULL if it is not necessary.
  * @return The number of consumed bytes.
  * @retval -1 Failed.
  */
-extern int j2735_msg_decode(MessageFrame **msg,
-                            const uint8_t *buf,
-                            const unsigned int buf_len,
-                            J2735CodecErr *err);
+extern int j2735_msg_decode(MessageFrame **msg, const uint8_t *buf, const unsigned int buf_len, J2735CodecErr *err);
+
+/**
+ * Decode the UPER format data to pre-defined message structure for processing and all memory usage will limited in targer memory buffer
+ *
+ * Because user has no way to determine the type of message after decoding,
+ * the target memory buffer size need fine tune and
+ * the memory of decoded message structure will limited in target buffer.
+ * The type of decoded message could be gotten from (*msg)->messageId if decode successfully.
+ * Please note that this function is in Alpha stage.
+ *
+ * @param[in,out]  msg The address for the encoder to store the address of allocated memory
+ *                     of decoded message structure.
+ *                     if error, it is NULL and no memory is allocated.
+ * @param[in]  buf The UPER format data to be decoded
+ * @param[in]  buf_len The length of buf in bytes
+ * @param[in,out]  err The address of the J2735CodecErr structure which is for recording
+ *                     the error message if encode fail.
+ *                     It could be NULL if it is not necessary.
+ * @param[in]  cfg The config for target memory buffer, include buffer pointer and size
+ * @return The number of consumed bytes.
+ * @retval -1 Failed.
+ */
+extern int j2735_msg_decode_in_target_buf(MessageFrame **msg, const uint8_t *buf, const unsigned int buf_len, J2735CodecErr *err, const J2735Config *cfg);
 
 /**
  * Free the memory of message structure
@@ -194,8 +229,8 @@ extern int j2735_msg_decode(MessageFrame **msg,
  * optional field with presented flag (TRUE).
  * It is designed mainly to free the memory allocated by decoder.
  *
- * WANR: DO NOT use the function to free the memory allocated by
- * j2735_msg_peralloc(). It will cause memory leakage.
+ * WANR: DO NOT use the function to free the memory allocated by j2735_msg_peralloc().
+ *       It will cause memory leakage.
  *
  * @param[in]  msg_id The msg type (MessageFrame, BSM, SPAT, MAP, ...)
  * @param[in]  msg The address of message structue to be freed
@@ -211,8 +246,8 @@ extern int j2735_msg_free(DSRCmsgID msg_id, void *msg);
  * Please find more details in the description of j2735_msg_free().
  * It is designed mainly to free the memory allocated by decoder.
  *
- * WANR: DO NOT use the function to free the memory allocated by
- * j2735_msg_peralloc(). It will cause memory leakage.
+ * WANR: DO NOT use the function to free the memory allocated by j2735_msg_peralloc().
+ *       It will cause memory leakage.
  *
  * @param[in]  p_msgf The address of MessageFrame structue to be freed
  */

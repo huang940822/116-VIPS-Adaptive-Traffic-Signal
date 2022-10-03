@@ -21,6 +21,7 @@ typedef struct BasicSafetyMessage {
     Reg_BasicSafetyMessageList regional;
 } BasicSafetyMessage;
 
+
 #ifdef __cplusplus
 }
 #endif
