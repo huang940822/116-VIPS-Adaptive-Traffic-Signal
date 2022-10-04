@@ -22,7 +22,7 @@
 // Close debug mode on deployment
 #define DEBUG_MOD 1
 #if DEBUG_MOD
-#define printf(...) if(DEBUG_MOD) printf(__VA_ARGS__)
+#define printf(...) printf(__VA_ARGS__)
 #else
 #define printf(...) ;
 #endif
