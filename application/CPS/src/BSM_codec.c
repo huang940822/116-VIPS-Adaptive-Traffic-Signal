@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "util.h"
 #include "BSM_codec.h"
 #include "ObstacleList.h"
 #include "asn1defs_if.h"
@@ -193,6 +194,7 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
     }
     return ret;
 }
+
 int bsm_encode_reg(uint8_t **tx_buf,
                    size_t *tx_buf_len,
                    ObstacleList *obstaclelist)

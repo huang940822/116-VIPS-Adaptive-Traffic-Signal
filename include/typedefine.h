@@ -6,6 +6,7 @@
 #define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
                      // ‘strptime’
 #include <time.h>
+#include "util.h"
 #include "j2735_map.h"
 #define FILE_PATH "./"
 #define OBU_ID_MAX_LEN 10

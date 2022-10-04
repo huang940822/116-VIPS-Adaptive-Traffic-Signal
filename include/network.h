@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include "util.h"
 #define SMART_AVI_PORT 12345
 #define Heartbeat_PORT 10001
 
