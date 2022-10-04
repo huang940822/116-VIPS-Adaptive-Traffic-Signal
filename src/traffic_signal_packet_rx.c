@@ -498,7 +498,7 @@ void traffic_signal_port_init()
 void *traffic_signal_packet_rx_handler()
 {
     if (serial_port_fd == -1)
-        return;
+        return NULL;
 
     uint8_t read_buffer[1]; /* Buffer to store the data received */
     uint8_t bytes_read = 0; /* Number of bytes read by the read() system call */

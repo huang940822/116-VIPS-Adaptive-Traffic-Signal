@@ -132,7 +132,7 @@ int CPS_on_camera_packet_rx(void *arg)
 {
     ObstacleList *obstaclelist;
     obstaclelist = (ObstacleList *) arg;
-    size_t len = 0;
+    int len = 0;
     uint8_t *tx_buf;
     # if CPS_DEBUG > 0 && CPS_DEBUG_APPLI
         obtsmp[cnt] = obstaclelist->tab[1].second;

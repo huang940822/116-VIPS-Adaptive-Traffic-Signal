@@ -54,7 +54,7 @@ void msg_queue_enqueue(struct msg_obj *new_msg_obj);
 
 int8_t msg_queue_init();
 
-struct msg_obj_t *msg_obj_create(buffer_t *buf,
+struct msg_obj *msg_obj_create(buffer_t *buf,
                                  uint8_t device_id,
                                  uint8_t handle_id);
 #endif

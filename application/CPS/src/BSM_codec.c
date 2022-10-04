@@ -91,7 +91,7 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
 
     /* Set fixed id */
     // asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
-    char id[4];
+    char id[5];
     sprintf(id, "%04d", obstacle->ObstacleID);
     asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
     bsm->coreData.secMark = obstacle->second * 1000;
@@ -194,7 +194,7 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
     return ret;
 }
 int bsm_encode_reg(uint8_t **tx_buf,
-                   int *tx_buf_len,
+                   size_t *tx_buf_len,
                    ObstacleList *obstaclelist)
 {
     MessageFrame msgf;
