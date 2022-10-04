@@ -32,7 +32,7 @@ void log_file_init()
     memset(file_path, 0, sizeof(file_path));
     strncpy(file_path, LOG_DIR, sizeof(LOG_DIR));
     strncat(file_path, log_file_name, sizeof(file_path));
-    strncat(file_path, ".log", sizeof(char) * 4);
+    strcat(file_path, ".log");
 
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -70,7 +70,7 @@ void log_file_name_update()
         memset(file_path, 0, sizeof(file_path));
         strncpy(file_path, LOG_DIR, sizeof(LOG_DIR));
         strncat(file_path, buffer, sizeof(file_path));
-        strncat(file_path, ".log", sizeof(char) * 4);
+        strcat(file_path, ".log");
 
         char log_content[LOG_CONTENT_LEN + 1];
         memset(log_content, 0, sizeof(log_content));
@@ -97,7 +97,7 @@ void log_file_name_update()
             memset(file_path, 0, sizeof(file_path));
             strncpy(file_path, LOG_DIR, sizeof(LOG_DIR));
             strncat(file_path, log_file_name, sizeof(file_path));
-            strncat(file_path, ".log", sizeof(char) * 4);
+            strcat(file_path, ".log");
 
             if (fclose(tmp_log_file_ptr) == 0) {
                 snprintf(log_content + strlen(log_content),

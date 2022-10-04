@@ -231,10 +231,11 @@ void traffic_compensation_method2()
     }
     compensation_buffer_clear();
 }
-
-// 幹支道明顯的道路
-// 1. 延長延幹道
-// 2. 縮短縮支道
+/***************
+幹支道明顯的道路
+ 1. 延長延幹道
+ 2. 縮短縮支道
+***************/
 void traffic_compensation_method3()
 {
     printf("start compensation 3\r\n");

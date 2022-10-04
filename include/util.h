@@ -18,4 +18,13 @@
 #define SET_BIT(var, bit) (WRITE_BIT(var, bit, 1UL))
 
 #define CLEAR_BIT(var, bit) (WRITE_BIT(var, bit, 0UL))
+
+// Close debug mode on deployment
+#define DEBUG_MOD 1
+#if DEBUG_MOD
+#define printf(...) printf(__VA_ARGS__)
+#else
+#define printf(...) ;
+#endif
+
 #endif

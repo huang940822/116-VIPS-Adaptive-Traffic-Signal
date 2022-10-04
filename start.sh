@@ -12,5 +12,5 @@ do
     prev=$i
 done
 
-echo "Build middleware"
-sudo ./build/exec/middleware
+echo "Start middleware"
+./build/exec/middleware

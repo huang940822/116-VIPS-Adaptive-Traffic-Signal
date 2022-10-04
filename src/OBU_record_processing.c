@@ -294,7 +294,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
 void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
 {
     strncpy(record->OBU_id, packet->OBU_id, OBU_ID_MAX_LEN);
-    strptime(packet->timestamp, "%Y-%m-%d %H:%M:%S", &record->time_stamp);
+    strftime(packet->timestamp, sizeof(packet->timestamp), "%Y-%m-%d %H:%M:%S", &record->time_stamp);
     /*Convert tm structure to time_t*/
     record->time_second = mktime(&record->time_stamp);
     record->position_lon = packet->position_lon;

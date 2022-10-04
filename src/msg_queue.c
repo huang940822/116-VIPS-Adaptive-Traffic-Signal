@@ -40,7 +40,7 @@ int8_t msg_queue_init()
         return MSG_Q_ERR;
     return MSG_Q_OK;
 }
-struct msg_obj_t *msg_obj_create(buffer_t *buf,
+msg_obj_t *msg_obj_create(buffer_t *buf,
                                  uint8_t device_id,
                                  uint8_t handle_id)
 {
