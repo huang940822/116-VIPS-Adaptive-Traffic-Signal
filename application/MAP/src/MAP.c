@@ -122,6 +122,7 @@ int MAP_on_registration(void *arg)
 {
     /* MAP msg init */
     map_msg_init(&map);
+    MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, &MAP_packet_tx_num, j2735_timer_event_handler);
     if(MAP_config.MAP_packet_transfer_speed == 1)

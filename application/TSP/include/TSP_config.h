@@ -7,8 +7,6 @@
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 
-extern TSP_config_object_t TSP_config;
-
 int TSP_config_init();
 
 /* Return codes of config */
@@ -21,6 +19,11 @@ int TSP_config_init();
 //     CONFIG_INVALID_VALID_RECORD_DISTANCE=-5,
 // } EVSP_config_err_t;
 
+typedef struct TSP_config_object {
+    uint8_t tsp_host_obu_list_timeout;
+    uint16_t tsp_remaining_distance_max;
+} TSP_config_object_t;
 
+extern TSP_config_object_t TSP_config;
 
 #endif

@@ -21,8 +21,6 @@
 #define SIGNAL_COUNT_MAX_NUM 8 // 岔路數目
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
-#define LANE_MAX_NUMBER 5
-#define DIRECTION_MAX_NUMBER 8
 
 // This define CPS_DEBUG is for CPS testing. 
 // It's for the log buffer size. 
@@ -101,22 +99,6 @@ typedef enum signalstatus {
     PEDESTRIAN_RED = 128,
 } SignalStatus_t;
 
-typedef struct LaneID_connectingLane {
-    uint8_t LaneID;
-    uint8_t LeftconnectingLane[LANE_MAX_NUMBER];
-    uint8_t StrightconnectingLane[LANE_MAX_NUMBER];
-    uint8_t RightconnectingLane[LANE_MAX_NUMBER];
-} LaneID_connectingLane_t;
-
-typedef struct Direction_lane_ {
-    uint8_t Lane_count;
-    LaneID_connectingLane_t connectingLane[LANE_MAX_NUMBER];
-} Direction_lane_t;
-
-typedef struct Direction_total_information {
-    Direction_lane_t Direction[DIRECTION_MAX_NUMBER];
-}Direction_total_information_t;
-
 typedef struct config_object {
     char RSU_id[RSU_ID_MAX_LEN];
     float RSU_lat;
@@ -146,31 +128,6 @@ typedef struct config_object {
     bool SPaT_packet_tx;
     bool MAP_packet_tx;
 } config_object_t;
-
-typedef struct EVSP_config_object {
-    uint8_t evsp_host_obu_packet_timeout;
-    uint8_t evsp_host_obu_list_timeout;
-    uint8_t min_green;
-    uint8_t max_green;
-    uint8_t valid_record_distance;
-} EVSP_config_object_t;
-
-typedef struct TSP_config_object {
-    uint8_t tsp_host_obu_list_timeout;
-    uint16_t tsp_remaining_distance_max;
-} TSP_config_object_t;
-
-typedef struct SPaT_config_object {
-    uint8_t SPaT_packet_transfer_speed;
-    uint8_t signalcount;
-    uint8_t intersection_id;
-} SPaT_config_object_t;
-
-typedef struct MAP_config_object {
-    MapData *Mapconfig;
-    uint8_t MAP_packet_transfer_speed;
-    Direction_total_information_t map_lane2connecting;
-} MAP_config_object_t;
 
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];

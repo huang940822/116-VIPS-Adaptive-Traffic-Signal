@@ -10,6 +10,7 @@
 
 MAP_config_object_t MAP_config = {
     .MAP_packet_transfer_speed = 1,
+    .MAP_dontSend2TC = 1,
 };
 
 static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
@@ -392,6 +393,25 @@ int MAP_config_init()
                 }
             } else {
                 return CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
+            }
+        }
+
+        // MAP_dontSend2TC
+        if (strstr(buf, "MAP_dontSend2TC ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    MAP_config.MAP_dontSend2TC = uint8_t_val;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: MAP_dontSend2TC = %d",
+                             MAP_config.MAP_dontSend2TC);
+                    log_file_write(log_content);
+                    continue;
+                } else {
+                    return -1;
+                }
+            } else {
+                return -1;
             }
         }
     }

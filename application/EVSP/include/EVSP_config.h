@@ -7,8 +7,6 @@
 #define CONFIG_LINE_BUFFER_SIZE 100
 #define MAX_CONFIG_VARIABLE_LEN 100
 
-extern EVSP_config_object_t EVSP_config;
-
 int EVSP_config_init();
 
 /* Return codes of config */
@@ -22,6 +20,14 @@ typedef enum EVSP_config_err {
     CONFIG_INVALID_EVSP_OPEN_FILE = -6
 } EVSP_config_err_t;
 
+typedef struct EVSP_config_object {
+    uint8_t evsp_host_obu_packet_timeout;
+    uint8_t evsp_host_obu_list_timeout;
+    uint8_t min_green;
+    uint8_t max_green;
+    uint8_t valid_record_distance;
+} EVSP_config_object_t;
 
+extern EVSP_config_object_t EVSP_config;
 
 #endif

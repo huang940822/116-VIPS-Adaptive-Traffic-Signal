@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "j2735_codec.h"
+#include "SPaT_config.h"
 #include "traffic_signal_status_updating.h"
 
 #define MAX_NUM_SIGNAL_GROUP 2

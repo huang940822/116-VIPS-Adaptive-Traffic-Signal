@@ -7,8 +7,6 @@
 #include "TSP_typedefine.h"
 #include "log.h"
 
-// EVSP_config_object_t EVSP_config;
-
 TSP_config_object_t TSP_config = {
     .tsp_host_obu_list_timeout = 120,
     .tsp_remaining_distance_max = 500,
