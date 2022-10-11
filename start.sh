@@ -12,5 +12,7 @@ do
     prev=$i
 done
 
+ABSPATH=$(readlink -f "$0") # /home/user/bin/foo.sh
+SCRIPTPATH=$(dirname "$ABSPATH") # /home/user/bin
 echo "Start middleware"
-./build/exec/middleware
+$SCRIPTPATH/build/exec/middleware
