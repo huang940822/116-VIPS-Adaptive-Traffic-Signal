@@ -14,7 +14,7 @@ uint8_t Heartbeat_com_id;
 uint8_t AVI_com_id;
 threadpool_t *pool;
 pthread_mutex_t lock;
-int f_flag = 0;
+// int f_flag = 0;
 // which will continuously dequeue message objects form the message queue
 void *dispatcher_handler()
 {

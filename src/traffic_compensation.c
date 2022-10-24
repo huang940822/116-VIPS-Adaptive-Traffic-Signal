@@ -263,7 +263,7 @@ void traffic_compensation_method3()
         } else {
             if (signal_status.plan[i].PreGreen >= branch) {
                 branch = signal_status.plan[i].PreGreen;
-                branch = i + 1;
+                branch_phase = i + 1;
             }
         }
     }
@@ -279,7 +279,7 @@ void traffic_compensation_method3()
             LOG_CONTENT_LEN - strlen(log_content),
             "Total compensation second:%d\r\n",
             T);
-            
+
     int16_t branch_pretime = signal_status.plan[branch_phase - 1].PreGreen;
     int16_t atrerial_pretime = signal_status.plan[atrerial_phase - 1].PreGreen;
     uint16_t branch_min_green = signal_status.plan[branch_phase - 1].MinGreen;

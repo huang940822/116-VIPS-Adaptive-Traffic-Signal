@@ -343,21 +343,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  "%hd\nlast OBU direction: %hhd",
                  static_space.last_lat, static_space.last_lon,
                  last_record_distance, static_space.last_direction);
-
-        if (last_record_distance >
-            EVSP_config
-                .valid_record_distance) {  //位移有超過閥值 才會紀錄下來？
-            static_space.last_lon =
-                app_section->OBU_object->record_ring.record[last_record_index]
-                    .position_lon;
-            static_space.last_lat =
-                app_section->OBU_object->record_ring.record[last_record_index]
-                    .position_lat;
-            static_space.last_direction =
-                app_section->OBU_object->record_ring.record[last_record_index]
-                    .direction;
-        }
-    } else {  //第一筆資料
+    } 
+    //位移有超過閥值 才會紀錄下來 or 第一筆資料
+    if (last_record_distance > EVSP_config.valid_record_distance || last_record_distance == 0) {  
         static_space.last_lon =
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lon;
@@ -750,6 +738,12 @@ int EVSP_on_registration(void *arg)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
+
+    /* read evsp confile file*/
+    int ret = EVSP_config_init();
+    if (ret != EVSP_CONFIG_ACCEPT) {
+        log_file_write_fatal_error("error evsp reading config file: %d", ret);
+    }
 
     /* touching area */
     DIR *dp;

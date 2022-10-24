@@ -2,9 +2,7 @@
 #define EVSP_OBU_LIST_H
 
 #include "EVSP_typedefine.h"
-
-extern EVSP_host_OBU_obj_t EVSP_host_OBU_list;
-extern pthread_mutex_t EVSP_host_OBU_list_mutex;
+#include <pthread.h>
 
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_id,
                                            uint8_t target_phase,

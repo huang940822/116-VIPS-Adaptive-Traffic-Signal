@@ -120,6 +120,11 @@ int SPaT_on_CLOUD_packet_rx(void *arg)
 
 int SPaT_on_registration(void *arg)
 {
+    /* read spat confile file*/
+    int ret = SPaT_config_init();
+    if (ret != 0) {
+        log_file_write_fatal_error("error spat reading config file: %d", ret);
+    }
     /* init spat msg */
     spat_msg_init(&p_spat);
     SPaT.dontSend2TC = SPaT_config.SPaT_dontSend2TC;

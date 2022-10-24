@@ -77,30 +77,6 @@ int main()
         log_file_write_fatal_error("error reading config file: %d", ret);
     }
 
-    // /* read evsp confile file*/
-    ret = EVSP_config_init();
-    if (ret != EVSP_CONFIG_ACCEPT) {
-        log_file_write_fatal_error("error evsp reading config file: %d", ret);
-    }
-
-    /* read tsp confile file*/
-    ret = TSP_config_init();
-    if (ret != 0) {
-        log_file_write_fatal_error("error tsp reading config file: %d", ret);
-    }
-
-    /* read spat confile file*/
-    ret = SPaT_config_init();
-    if (ret != 0) {
-        log_file_write_fatal_error("error spat reading config file: %d", ret);
-    }
-
-    /* read map confile file*/
-    ret = MAP_config_init();
-    if(ret != 0) {
-        log_file_write_fatal_error("error map reading config file: %d", ret);
-    }
-
     printf("query tc firmware version\r\n");
     flag_query_firm_ver = true;
 

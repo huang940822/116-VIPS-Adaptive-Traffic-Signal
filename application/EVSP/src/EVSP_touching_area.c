@@ -7,7 +7,7 @@
 #include "error_status.h"
 #include "log.h"
 
-EVSP_touching_area_plan_list_t EVSP_touching_area_plan_list;
+EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_list_head = NULL;
 
 EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
                                                             uint8_t plan_id)
@@ -105,51 +105,36 @@ EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
 
 void EVSP_touching_area_plan_insert(char *file_name, uint8_t plan_id)
 {
-    EVSP_touching_area_plan_list_t *current = EVSP_touching_area_plan_list.next;
-
+    EVSP_touching_area_plan_list_t *current;
     /* empty list */
-    if (current == NULL) {
-        EVSP_touching_area_plan_list.next =
+    if (EVSP_touching_area_plan_list_head == NULL) {
+        EVSP_touching_area_plan_list_head =
             EVSP_touching_area_plan_new(file_name, plan_id);
-        return;
-    }
-
-    /* traverse touching area plan list */
-    while (current != NULL) {
-        if (current->plan_id == plan_id) {
-            return;
+    } else {
+        current = EVSP_touching_area_plan_list_head;
+        /* traverse touching area plan list */
+        while (current->next != NULL) {
+            if (current->plan_id == plan_id) {
+                return;
+            }
+            current = current->next;
         }
-
-        /* last node */
-        if (current->next == NULL) {
-            current->next = EVSP_touching_area_plan_new(file_name, plan_id);
-            return;
-        }
-        current = current->next;
+        current->next = EVSP_touching_area_plan_new(file_name, plan_id);
     }
 }
 
 EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_search(uint8_t plan_id)
 {
-    EVSP_touching_area_plan_list_t *current = EVSP_touching_area_plan_list.next;
-
-    /* empty list */
-    if (current == NULL) {
-        return NULL;
-    }
+    EVSP_touching_area_plan_list_t *current = EVSP_touching_area_plan_list_head;
 
     /* traverse RSU matrix list */
     while (current != NULL) {
         if (current->plan_id == plan_id) {
-            return current;
-        }
-        /* last node */
-        if (current->next == NULL) {
-            return NULL;
+            break;
         }
         current = current->next;
     }
-    return NULL;
+    return current;
 }
 
 void EVSP_touching_area_plan_print()
@@ -160,7 +145,7 @@ void EVSP_touching_area_plan_print()
              LOG_CONTENT_LEN - strlen(log_content),
              "EVSP touching area plan list:");
 
-    EVSP_touching_area_plan_list_t *current = EVSP_touching_area_plan_list.next;
+    EVSP_touching_area_plan_list_t *current = EVSP_touching_area_plan_list_head;
 
     /* empty list */
     if (current == NULL) {
@@ -176,11 +161,6 @@ void EVSP_touching_area_plan_print()
                  LOG_CONTENT_LEN - strlen(log_content), "\nplan ID: %d",
                  current->plan_id);
         EVSP_touching_area_print(current);
-        /* last node */
-        if (current->next == NULL) {
-            log_file_write(log_content);
-            return;
-        }
         current = current->next;
     }
     log_file_write(log_content);
@@ -368,10 +348,6 @@ bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
         if (lon < current->lon_high && lon > current->lon_low &&
             lat < current->lat_high && lat > current->lat_low) {
             return true;
-        }
-        /* last node */
-        if (current->next == NULL) {
-            break;
         }
         current = current->next;
     }

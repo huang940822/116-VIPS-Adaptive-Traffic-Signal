@@ -485,6 +485,12 @@ int TSP_on_traffic_signal_command_tx(void *arg)
 
 int TSP_on_registration(void *arg)
 {
+    /* read tsp confile file*/
+    int ret = TSP_config_init();
+    if (ret != 0) {
+        log_file_write_fatal_error("error tsp reading config file: %d", ret);
+    }
+
     // printf("TSP_on_registration function\n");
 
     /* report plan timer event */
