@@ -14,13 +14,11 @@
 #include "com_packet_processing.h"
 #include "error_status.h"
 #include "config.h"
-#include "j2735_timer_event.h"
 #include "log.h"
 #include "timer_event.h"
 
 SPAT *p_spat;
 timer_t SPaT_packet_tx_timer_id;
-uint8_t SPaT_packet_tx_num = TIMER_EVENT_SPAT_PACKET_TX;
 
 app_obj_t SPaT = {
     .name = "SPaT",
@@ -129,6 +127,6 @@ int SPaT_on_registration(void *arg)
     spat_msg_init(&p_spat);
     SPaT.dontSend2TC = SPaT_config.SPaT_dontSend2TC;
     /* create a timer to send SPaT packet */
-    create_timer(&SPaT_packet_tx_timer_id, &SPaT_packet_tx_num, j2735_timer_event_handler);
+    create_timer(&SPaT_packet_tx_timer_id, NULL, SPaT_packet_tx);
     set_timer(SPaT_packet_tx_timer_id, 0, 1000000000 / SPaT_config.SPaT_packet_transfer_speed, 1, 0);
 }

@@ -17,7 +17,7 @@ extern SPAT *p_spat;
 static int spat_start_delay = 20;
 static int spat_update_delay = 0;
 
-void SPaT_packet_tx()
+void SPaT_packet_tx(__sigval_t value)
 {
     if(spat_start_delay > 0) { // dalay for the tcbox wrong value
         spat_start_delay--;

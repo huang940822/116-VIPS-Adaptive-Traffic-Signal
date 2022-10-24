@@ -14,13 +14,11 @@
 #include "com_packet_processing.h"
 #include "error_status.h"
 #include "config.h"
-#include "j2735_timer_event.h"
 #include "log.h"
 #include "timer_event.h"
 
 MapData *map;
 timer_t MAP_packet_tx_timer_id;
-uint8_t MAP_packet_tx_num = TIMER_EVENT_MAP_PACKET_TX;
 
 app_obj_t MAP = {
     .name = "MAP",
@@ -129,7 +127,7 @@ int MAP_on_registration(void *arg)
     map_msg_init(&map);
     MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
     /* create a timer to send map packet */
-    create_timer(&MAP_packet_tx_timer_id, &MAP_packet_tx_num, j2735_timer_event_handler);
+    create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);
     if(MAP_config.MAP_packet_transfer_speed == 1)
         set_timer(MAP_packet_tx_timer_id, MAP_config.MAP_packet_transfer_speed, 0, 1, 0);
     else

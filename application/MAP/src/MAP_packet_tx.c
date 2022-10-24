@@ -21,7 +21,7 @@ static uint8_t PhaseOrder = 255;
 static uint8_t prev_phase = 0;
 extern MapData *map;
 
-void MAP_packet_tx()
+void MAP_packet_tx(__sigval_t value)
 {   
     struct timeval start;
     struct timeval end;
