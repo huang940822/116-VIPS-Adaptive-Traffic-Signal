@@ -9,8 +9,15 @@
 #include "application_registration.h"
 #include "config.h"
 #include "error_status.h"
+#include "j2735_bsm.h"
+#include "j2735_msg.h"
+#include "j2735_srm.h"
 #include "log.h"
+#include "timer_event.h"
 #include "typedefine.h"
+#include "sys/time.h"
+
+timer_t OBU_list_garbage_collection_timer_id;
 
 OBU_object_t normal_OBU_list[HASH_TABLE_SIZE];
 OBU_object_t special_OBU_list[VEHICLE_TYPE_NUMBER];
@@ -290,13 +297,84 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
     }
 }
 
+static int yday2month_day(struct tm *timeinfo, int yday)
+{
+    int months_arr[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}, month = 0;
+    int year = timeinfo->tm_year + 1900;
+
+    if((year % 400 == 0 || year % 100 != 0) && (year % 4 == 0))
+        months_arr[1]++;
+
+    for(month; month < 12; month++) {
+        if (yday <= months_arr[month]) {
+            break;
+        }
+        yday -= months_arr[month];
+    }
+    if (month >= 12 || timeinfo->tm_mon != month)
+        return -1;
+    timeinfo->tm_mday = yday;
+    return 1;
+}
+
+int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
+{
+    switch (msgf->messageId) {
+    case BasicSafetyMessage_Id:
+        return -1;
+        break;
+    case SignalRequestMessage_Id: {
+        SignalRequestMessage *srm = msgf->u.data;
+        if (srm->requestor.id.choice != VehicleID_entityID || srm->requestor.type_option != TRUE ||
+            srm->requestor.type.hpmsType_option != TRUE || srm->requestor.type.hpmsType != VehicleType_car ||
+            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE) {
+            return -1;
+        }
+        RequestorDescription *requestor = &srm->requestor;
+        switch (srm->requestor.type.role) {
+        case BasicVehicleRole_ambulance:
+            strcpy(record->OBU_id, "amb_");
+            strncat(record->OBU_id, requestor->id.u.entityID.buf, 4);
+            record->vehicle_type = 1;
+            break;
+        default:
+            return -1;
+            break;
+        }
+
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        struct tm *timeinfo;
+        timeinfo = localtime(&tv.tv_sec);
+        
+        int yday = srm->timeStamp / 1440, dmin = srm->timeStamp % 1440;
+
+        if (yday2month_day(timeinfo, yday) == -1)
+            return -1;
+        timeinfo->tm_hour = dmin / 60;
+        timeinfo->tm_min = dmin % 60;
+        timeinfo->tm_sec = srm->second / 1000;
+        timeinfo->tm_isdst = -1;
+        record->time_second = mktime(timeinfo);
+
+        record->position_lat = requestor->position.position.lat / 10000000.0;
+        record->position_lon = requestor->position.position.Long / 10000000.0;
+        record->speed = requestor->position.speed.speed * 0.072;
+        record->direction = requestor->position.heading / 3600;
+        record->direction &= 0b111;
+    } break;
+    default:
+        return -1;
+        break;
+    }
+    return 1;
+}
+
 //把obu packet資料讀到obu object
 void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
 {
     strncpy(record->OBU_id, packet->OBU_id, OBU_ID_MAX_LEN);
-    strftime(packet->timestamp, sizeof(packet->timestamp), "%Y-%m-%d %H:%M:%S", &record->time_stamp);
-    /*Convert tm structure to time_t*/
-    record->time_second = mktime(&record->time_stamp);
+    record->time_second = mktime(&packet->timestamp);
     record->position_lon = packet->position_lon;
     record->position_lat = packet->position_lat;
     record->speed = packet->speed;
@@ -304,6 +382,25 @@ void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
     record->vehicle_type = packet->vehicle_type;
 }
 
+void OBU_object_garbage_collection_init()
+{
+    create_timer(&OBU_list_garbage_collection_timer_id, NULL, OBU_object_garbage_collection_timer);
+    set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
+}
+
+void OBU_object_garbage_collection_timer(__sigval_t value)
+{
+    char log_content[LOG_CONTENT_LEN + 1];
+    if (config.log_middleware_timer_event) {
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content), "%s",
+                 "timer event: OBU list garbage collection");
+        log_file_write(log_content);
+    }
+
+    OBU_object_garbage_collection();
+    OBU_object_print();
+}
 
 void OBU_object_garbage_collection()
 {

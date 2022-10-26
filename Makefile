@@ -73,3 +73,7 @@ clang-format:
 clean:
 	-@rm -rvf $(OBJ_DIR)/*
 	-@rm -rvf $(EXEC_DIR)/*
+
+recompile:
+	make clean
+	make

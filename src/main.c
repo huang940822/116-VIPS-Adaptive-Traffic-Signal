@@ -132,13 +132,7 @@ int main()
     }
 
     /* OBU list garbage collection timer event */  //清掉太久的obu object
-
-    timer_t OBU_list_garbage_collection_timer_id;
-    uint8_t OBU_list_garbage_collection_timer_num =
-        TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION;
-    create_timer(&OBU_list_garbage_collection_timer_id,
-                 &OBU_list_garbage_collection_timer_num, timer_event_handler);
-    set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
+    OBU_object_garbage_collection_init();
 
     // log application register event
     if (config.log_application_register_event) {

@@ -152,17 +152,6 @@ void timer_event_handler(__sigval_t value)
 
         // pthread_mutex_unlock(&mutex_rs232_write);
     } else if (*(uint8_t *) value.sival_ptr ==
-               TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION) {
-        if (config.log_middleware_timer_event) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s",
-                     "timer event: OBU list garbage collection");
-            log_file_write(log_content);
-        }
-
-        OBU_object_garbage_collection();
-        OBU_object_print();
-    } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_LOG_FILE_NAME_UPDATE) {
         if (config.log_middleware_timer_event) {
             snprintf(log_content + strlen(log_content),

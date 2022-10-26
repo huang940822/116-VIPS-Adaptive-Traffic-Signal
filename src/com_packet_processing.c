@@ -328,31 +328,20 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     return PACKET_PROCESSING_ACCEPT;
 }
 
-int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
+int OBU_packet_rx_bsm(V2R_common_field_t *common_field, MessageFrame *msgf)
 {
-    MessageFrame *msgf;
-    int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
-
-    if (ret < 0) {
-        return PACKET_NOT_J2735;
-    }
-
     if (msgf->messageId != BasicSafetyMessage_Id) {
-        J2735_FREE_MSG_FRAME(msgf);
-        return PACKET_IS_J2735_BUT_NOT_BSM;
+        return -1;
     }
     BasicSafetyMessage *bsm = msgf->u.data;
 
     if (!bsm->regional_option || bsm->regional.count != 1 ||
         bsm->regional.tab[0].regionId != 254 || !bsm->partII_option ||
         bsm->partII.count != 1) {
-        J2735_FREE_MSG_FRAME(msgf);
-        return PACKET_IS_J2735_BUT_NOT_BSM;
+        return -1;
     }
 
     OctetString *reg_bsm = &bsm->regional.tab[0].u.unknown;
-
-    common_field->packet_len = msg->msg_len;
 
     common_field->service_id = reg_bsm->buf[0];
     common_field->device_type = reg_bsm->buf[1];
@@ -360,7 +349,7 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
     common_field->position_lat = bsm->coreData.lat / 10000000.0;
     common_field->position_lon = bsm->coreData.Long / 10000000.0;
 
-    common_field->speed = bsm->coreData.speed / 50;
+    common_field->speed = bsm->coreData.speed * 0.072;
     common_field->direction = (u_int8_t)(bsm->coreData.heading / 3600);
 
     struct timeval tv;
@@ -371,10 +360,7 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
     if (second < secMark)
         tv.tv_sec -= 60;
     tv.tv_sec = tv.tv_sec - second + secMark;
-
-    char buffer[20];
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", localtime(&tv.tv_sec));
-    memcpy(common_field->timestamp, buffer, TIMESTAMP_LEN);
+    common_field->timestamp = *localtime(&tv.tv_sec);
 
     // strptime(common_field->timestamp, "%Y-%m-%d %H:%M:%S",
     // &record->time_stamp);
@@ -395,16 +381,13 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
 
     if (common_field->device_type < 0 ||
         common_field->device_type >= DEVICE_TYPE_NUMBER) {
-        J2735_FREE_MSG_FRAME(msgf);
         return PACKET_INVALID_DEVICE_TYPE;
     }
     if (common_field->vehicle_type < 0 ||
         common_field->vehicle_type >= VEHICLE_TYPE_NUMBER) {
-        J2735_FREE_MSG_FRAME(msgf);
         return PACKET_INVALID_VEHICLE_TYPE;
     }
     if (common_field->service_id < 0) {  // 0 is for middleware
-        J2735_FREE_MSG_FRAME(msgf);
         return PACKET_INVALID_SEVICE_ID;
     }
 
@@ -421,8 +404,21 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, msg_obj_t *msg)
                common_field->payload_len);
     }
 
-    J2735_FREE_MSG_FRAME(msgf);
-    return PACKET_IS_BSM;
+    return PACKET_PROCESSING_ACCEPT;
+}
+
+int OBU_packet_msg_common_field(V2R_common_field_t *common_field, MessageFrame *msgf)
+{
+    int ret = -1;
+    switch (msgf->messageId)
+    {
+    case BasicSafetyMessage_Id:
+        ret = OBU_packet_rx_bsm(common_field, msgf);
+        break;
+    default:
+        break;
+    }
+    return ret;
 }
 
 int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
@@ -451,7 +447,9 @@ int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
     // vehicle_type
     read_uint8_t(&common_field->vehicle_type, &read_buf);
     // timestamp
-    read_char(common_field->timestamp, &read_buf, TIMESTAMP_LEN);
+    char time_buf[TIMESTAMP_LEN];
+    read_char(time_buf, &read_buf, TIMESTAMP_LEN);
+    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", &common_field->timestamp);
     // position
     read_float(&common_field->position_lon, &read_buf);
     read_float(&common_field->position_lat, &read_buf);
@@ -525,40 +523,11 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         log_file_write(log_content);
     }
-
-    V2R_common_field_t common_field;
-
-    int ret = OBU_packet_rx_bsm(&common_field, msg);
-    if (ret < 0)
-        return ret;
-
-    if (ret != PACKET_IS_BSM) 
-        ret = OBU_packet_rx_raw_data(&common_field, msg);
-    if (ret < 0)
-        return ret;
-
-    if (common_field.device_type < 0 ||
-        common_field.device_type >= DEVICE_TYPE_NUMBER) {
-        return PACKET_INVALID_DEVICE_TYPE;
+    MessageFrame *msgf = NULL;
+    int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
+    if (ret < 0) {
+        return PACKET_NOT_J2735;
     }
-    if (common_field.vehicle_type < 0 ||
-        common_field.vehicle_type >= VEHICLE_TYPE_NUMBER) {
-        return PACKET_INVALID_VEHICLE_TYPE;
-    }
-    if (common_field.service_id < 0) {  // 0 is for middleware
-        return PACKET_INVALID_SEVICE_ID;
-    }
-
-    // 這裡是用來偵測dsrc是否還活著
-    //   if(common_field.service_id==0){ //dsrc heart beat packet
-    /*       printf("dsrc alive and postpone the timer handle execution\r\n");
-           log_file_write("dsrc alive and postpone the timer handle
-       execution\r\n"); set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
-           clear_dsrc_error();
-
-           return PACKET_PROCESSING_ACCEPT;
-       }*/
-
 
     OBU_record_t *record = (OBU_record_t *) malloc(sizeof(OBU_record_t));
     OBU_object_t *object = NULL;
@@ -572,10 +541,11 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         memset(record, 0, sizeof(OBU_record_t));
     }
 
-
-    // convert common field to OBU record
-    V2R_packet2OBU_record(&common_field, record);
-
+    // convert msgf to OBU record
+    if (V2R_msgf2OBU_record(msgf, record) == -1) {
+        free(record);
+        J2735_FREE_MSG_FRAME(msgf);
+    }
 
     // record和obu object都有obu id這樣才知道要把packet裡面節錄出來的record資料
     //放到obu list裡面的哪個obu object
@@ -602,21 +572,10 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     OBU_object_print();
 
     V2R_app_section_t app_section;
+    memset(&app_section, 0, sizeof(V2R_app_section_t));
 
-    app_section.payload_len = common_field.payload_len;
-
-    app_section.payload = (char *) malloc(app_section.payload_len);
-    if (app_section.payload == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("OBU_packet_rx_event_handler: malloc");
-        perror("OBU_packet_rx_event_handler: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memcpy(app_section.payload, &common_field.payload,
-               app_section.payload_len);
-        app_section.com_id = msg->handle_id;
-    }
+    app_section.msgID = msgf->messageId;
+    app_section.data = msgf->u.data;
 
     app_section.OBU_object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
     if (app_section.OBU_object == NULL) {
@@ -631,23 +590,19 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
-        if (common_field.service_id == current->next->app_id) {
+        if (msgf->messageId == current->next->app_id) {
             current->next->callback((void *) &app_section);
         }
         current = current->next;
     }
-
-
     // free resource just
-    if (common_field.payload != NULL) {
-        free(common_field.payload);
-    }
-    if (app_section.payload != NULL) {
+    if (app_section.payload != NULL)
         free(app_section.payload);
-    }
-    if (app_section.OBU_object != NULL) {
+    if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
-    }
+    if (msgf != NULL)
+        J2735_FREE_MSG_FRAME(msgf);
+
     return PACKET_PROCESSING_ACCEPT;
 }
 

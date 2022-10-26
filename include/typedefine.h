@@ -7,6 +7,7 @@
                      // ‘strptime’
 #include <time.h>
 #include "util.h"
+#include "j2735_msg.h"
 #include "j2735_map.h"
 #define FILE_PATH "./"
 #define OBU_ID_MAX_LEN 10
@@ -68,9 +69,8 @@ typedef enum event_type {
 typedef enum timer_event_type {
     TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT = 0,
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING = 1,
-    TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION = 2,
-    TIMER_EVENT_LOG_FILE_NAME_UPDATE = 3,
-    TIMER_EVENT_DSRC_SEND = 4,
+    TIMER_EVENT_LOG_FILE_NAME_UPDATE = 2,
+    TIMER_EVENT_DSRC_SEND = 3,
     // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
@@ -155,12 +155,10 @@ typedef struct event_callback {
 
 typedef struct OBU_record {
     char OBU_id[OBU_ID_MAX_LEN];
-    struct tm time_stamp;
     time_t time_second;
     float position_lon;
     float position_lat;
     uint8_t speed;
-    uint8_t acceleration;
     uint8_t direction;
     uint8_t vehicle_type;
 } OBU_record_t;
@@ -278,7 +276,7 @@ typedef struct V2R_common_field {
     uint8_t device_type;
     char OBU_id[OBU_ID_MAX_LEN];
     uint8_t vehicle_type;
-    char timestamp[TIMESTAMP_LEN];
+    struct tm timestamp;
     float position_lon;
     float position_lat;
     uint8_t speed;
@@ -299,6 +297,8 @@ typedef struct V2R_app_section {
     char *payload;
     uint8_t com_id;
     OBU_object_t *OBU_object;
+    DSRCmsgID msgID;
+    void *data;
 } V2R_app_section_t;
 
 typedef struct tsc_command {

@@ -2,6 +2,7 @@
 #define OBU_RECORD_PROCESSING_H
 
 #include <pthread.h>
+#include <signal.h>
 
 #include "typedefine.h"
 
@@ -23,9 +24,12 @@ OBU_object_t *OBU_object_search(OBU_object_t *, char *);
 OBU_object_t *normal_OBU_record_insert(OBU_record_t *);
 OBU_object_t *special_OBU_record_insert(OBU_record_t *);
 
+void OBU_object_garbage_collection_init();
+void OBU_object_garbage_collection_timer(__sigval_t value);
 void OBU_object_garbage_collection();
 void OBU_object_print();
 
+int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record);
 void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record);
 
 
