@@ -313,7 +313,8 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
 
     event_callback_t *current = &callback_list[EVENT_CLOUD_PACKET_RX];
     while (current->next != NULL) {
-        if (common_field.service_id == current->next->app_id) {
+        if (current->next->event_callback_id.choice == event_callback_id_app_id && 
+            common_field.service_id == current->next->event_callback_id.u.app_id) {
             current->next->callback((void *) &app_section);  // what com_id for?
         }
         current = current->next;
@@ -573,10 +574,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     V2R_app_section_t app_section;
     memset(&app_section, 0, sizeof(V2R_app_section_t));
-
     app_section.msgID = msgf->messageId;
     app_section.data = msgf->u.data;
-
     app_section.OBU_object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
     if (app_section.OBU_object == NULL) {
         set_memory_error();
@@ -590,7 +589,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
-        if (msgf->messageId == current->next->app_id) {
+        if (current->next->event_callback_id.choice == event_callback_id_msg_id &&
+            msgf->messageId == current->next->event_callback_id.u.msg_id) {
             current->next->callback((void *) &app_section);
         }
         current = current->next;
@@ -659,7 +659,8 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     }
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {
-        if (CPS_ID == current->next->app_id) {
+        if (current->next->event_callback_id.choice == event_callback_id_app_id && 
+            CPS_ID == current->next->event_callback_id.u.app_id) {
             // if(threadpool_add(pool, current->next->callback, obstaclelist, 0)
             // != 0){
             //     printf("threadpool adding error!\n");//ERROR

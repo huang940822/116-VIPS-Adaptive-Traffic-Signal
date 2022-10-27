@@ -23,12 +23,13 @@
 #include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "application_registration.h"
 
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = 1,
     .priority = 1,
-    .on_OBU_packet_rx = &EVSP_on_OBU_packet_rx,
+    .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
     .on_RSU_packet_tx = NULL,
@@ -166,7 +167,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
     EVSP_static_space_t static_space;
     memcpy(&static_space,
-           app_section->OBU_object->private_space[EVSP.id].static_space,
+           app_section->OBU_object->private_space->static_space,
            sizeof(EVSP_static_space_t));
     read_uint8_t(&static_space.on_duty_flag, &read_buf);
     read_uint8_t(&static_space.weight, &read_buf);
@@ -304,7 +305,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             app_section->OBU_object->record_ring.record[last_record_index]
                 .direction;
     }
-    memcpy(app_section->OBU_object->private_space[EVSP.id].static_space,
+    memcpy(app_section->OBU_object->private_space->static_space,
            &static_space, sizeof(EVSP_static_space_t));
     log_file_write(log_content);
 
@@ -720,5 +721,8 @@ int EVSP_on_registration(void *arg)
     fflush(stdout);
     closedir(dp);
     EVSP_touching_area_plan_print();
+
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
     return 0;
 }

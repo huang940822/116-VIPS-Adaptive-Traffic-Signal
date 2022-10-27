@@ -180,12 +180,6 @@ int TSP_on_OBU_packet_rx(void *arg)
                  LOG_CONTENT_LEN - strlen(log_content), "\n");
     }
 
-    TSP_static_space_t static_space;
-    read_uint8_t(&static_space.on_duty_flag, &read_buf);
-    read_uint8_t(&static_space.passenger_num, &read_buf);
-    memcpy(app_section->OBU_object->private_space[TSP.id].static_space,
-           &static_space, sizeof(TSP_static_space_t));
-
     uint8_t last_record_index =
         app_section->OBU_object->record_ring.last_record_pointer;
     uint16_t OBU_distance = (uint16_t) get_distance(

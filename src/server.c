@@ -318,7 +318,7 @@ void conn_accept_TCP_handler(struct ae_event_loop *event_loop,
     }
     client->el = event_loop;
     client->fd = cfd;
-    client->com_id = serv->dispatch_com_id++;
+    client->com_id = ++serv->dispatch_com_id;
     int retval =
         comm_dict_add(serv->broker->client_dict, client, client->com_id);
     if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
@@ -353,7 +353,7 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop,
         }
         client->el = event_loop;
         client->fd = cfd;
-        client->com_id = serv->dispatch_com_id++;
+        client->com_id = ++serv->dispatch_com_id;
         int retval =
             comm_dict_add(serv->broker->client_dict, client, client->com_id);
         if (Is_Heartbeat == 1) {
@@ -407,7 +407,7 @@ void conn_accept_Smart_AVI_handler(struct ae_event_loop *event_loop,
         }
         client->el = event_loop;
         client->fd = cfd;
-        client->com_id = serv->dispatch_com_id++;
+        client->com_id = ++serv->dispatch_com_id;
         int retval =
             comm_dict_add(serv->broker->client_dict, client, client->com_id);
         // comm_packet_enqueue(client, FROM_SMART_AVI);
@@ -577,7 +577,7 @@ int comm_create_OBU_client(struct ae_event_loop *event_loop,
         }
         client->el = event_loop;
         client->fd = cfd;
-        client->com_id = serv->dispatch_com_id++;
+        client->com_id = ++serv->dispatch_com_id;
         int retval =
             comm_dict_add(serv->broker->client_dict, client, client->com_id);
         comm_packet_enqueue(client, FROM_DSRC);

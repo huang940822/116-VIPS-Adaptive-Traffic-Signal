@@ -126,8 +126,7 @@ OBU_object_t *OBU_object_new(char *str, uint8_t type)
     object->record_ring.last_record_pointer = 0;
     object->record_ring.length = 0;
     object->private_space = (app_private_space_t *) malloc(
-        sizeof(app_private_space_t) *
-        (app_num + 1));  //看不懂這一段 為何要乘以app_num+1
+        sizeof(app_private_space_t));  //看不懂這一段 為何要乘以app_num+1
     if (object->private_space == NULL) {
         set_memory_error();
         log_file_write_fatal_error("OBU_object_new: malloc");
@@ -136,7 +135,7 @@ OBU_object_t *OBU_object_new(char *str, uint8_t type)
     } else {
         clear_memory_error();
         memset(object->private_space, 0,
-               sizeof(app_private_space_t) * (app_num + 1));
+               sizeof(app_private_space_t));
     }
     object->prev = NULL;
     object->next = NULL;

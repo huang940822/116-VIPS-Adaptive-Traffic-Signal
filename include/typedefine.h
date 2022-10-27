@@ -145,9 +145,25 @@ typedef struct application_object {
     struct application_object *next;
 } app_obj_t;
 
+typedef enum {
+    event_callback_id_app_id,
+    event_callback_id_msg_id,
+} event_callback_id_choice;
+
+typedef struct event_callback_id
+{
+    event_callback_id_choice choice;
+    union
+    {
+        int app_id;
+        DSRCmsgID msg_id;
+    } u;
+    
+}event_callback_id_t;
+
 typedef struct event_callback {
     char name[APP_NAME_MAX_LEN];
-    uint8_t app_id;
+    event_callback_id_t event_callback_id;
     uint8_t priority;
     int (*callback)(void *);
     struct event_callback *next;
