@@ -153,7 +153,7 @@ OBU_object_t *OBU_object_new(char *str, uint8_t type)
 OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
 {
     OBU_object_t *current = OBU_list_head->next;
-    while (current != NULL) {
+    while (current != OBU_list_head) {
         if (strncmp(current->OBU_id, str, OBU_ID_MAX_LEN) == 0) {
             return current;
         }
@@ -189,20 +189,12 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash ta
             OBU_record_ring_push(record, object);
         }
 
-        OBU_object_t *current = normal_OBU_list[hash_code].next;
-        if (current == NULL) { /* empty list */
-            normal_OBU_list[hash_code].next = object;
-            object->prev = &normal_OBU_list[hash_code];
-            pthread_mutex_unlock(&mutex_normal_OBU_list[hash_code]);
-            return object;
-        }
-        /* insert at head */  //為何要插在head的位置 而不釋放到最後面？
-        normal_OBU_list[hash_code].next->prev = object;
+        /* insert at head */
         object->next = normal_OBU_list[hash_code].next;
-        normal_OBU_list[hash_code].next = object;
         object->prev = &normal_OBU_list[hash_code];
-        pthread_mutex_unlock(&mutex_normal_OBU_list[hash_code]);
-        return object;
+
+        normal_OBU_list[hash_code].next->prev = object;
+        normal_OBU_list[hash_code].next = object;
 
     } else { /* OBU object exist */
         /* insert OBU record */
@@ -214,9 +206,9 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash ta
             OBU_record_ring_pop(object);
             OBU_record_ring_push(record, object);
         }
-        pthread_mutex_unlock(&mutex_normal_OBU_list[hash_code]);
-        return object;
     }
+    pthread_mutex_unlock(&mutex_normal_OBU_list[hash_code]);
+    return object;
 }
 
 /*****************************************************************************
@@ -232,7 +224,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_id);
 
-    if (object == NULL) { /* new OBU object */
+    if (object == NULL) { /* new OBU object */ 
         object = OBU_object_new(record->OBU_id, type);
 
         /* insert OBU record */
@@ -243,57 +235,34 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
             OBU_record_ring_pop(object);
             OBU_record_ring_push(record, object);
         }
-
-        OBU_object_t *current = special_OBU_list[type].next;
-        if (current == NULL) { /* empty list */
-            special_OBU_list[type].next = object;
-            object->prev = &special_OBU_list[type];
-            pthread_mutex_unlock(&mutex_special_OBU_list[type]);
-            return object;
-        }
         /* insert at head */
-        special_OBU_list[type].next->prev = object;
         object->next = special_OBU_list[type].next;
-        special_OBU_list[type].next = object;
         object->prev = &special_OBU_list[type];
-        pthread_mutex_unlock(&mutex_special_OBU_list[type]);
-        return object;
 
+        special_OBU_list[type].next->prev = object;
+        special_OBU_list[type].next = object;
     } else { /* OBU object exist */
         /* insert OBU record */
-        if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
+        if (OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
-            OBU_record_ring_push(record, object);
-        } else {
             OBU_record_ring_pop(object);
-            OBU_record_ring_push(record, object);
         }
-
-        /* remove target node */
-        /* If target node is head node */
-        if (object == special_OBU_list[type].next) {
-            pthread_mutex_unlock(&mutex_special_OBU_list[type]);
-            return object;
-        }
-
-        /* Change next only if target node is NOT the last node */
-        if (object->next != NULL) {
+        OBU_record_ring_push(record, object);
+        if (special_OBU_list[type].next != object) {
+            /* remove target */
             object->next->prev = object->prev;
-        }
-
-        /* Change prev only if target node is NOT the first node */
-        if (object->prev != NULL) {
             object->prev->next = object->next;
-        }
 
-        /* insert at head */
-        special_OBU_list[type].next->prev = object;
-        object->next = special_OBU_list[type].next;
-        special_OBU_list[type].next = object;
-        object->prev = &special_OBU_list[type];
-        pthread_mutex_unlock(&mutex_special_OBU_list[type]);
-        return object;
+            /* insert to head */
+            object->next = special_OBU_list[type].next;
+            object->prev = &special_OBU_list[type];
+
+            special_OBU_list[type].next->prev = object;
+            special_OBU_list[type].next = object;
+        }
     }
+    pthread_mutex_unlock(&mutex_special_OBU_list[type]);
+    return object;
 }
 
 static int yday2month_day(struct tm *timeinfo, int yday)
@@ -383,8 +352,16 @@ void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
 
 void OBU_object_garbage_collection_init()
 {
-    create_timer(&OBU_list_garbage_collection_timer_id, NULL, OBU_object_garbage_collection_timer);
-    set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
+    for (int i = 0;i < HASH_TABLE_SIZE;i++) {
+        normal_OBU_list[i].next = &normal_OBU_list[i];
+        normal_OBU_list[i].prev = &normal_OBU_list[i];
+    }
+    for (int i = 0;i < VEHICLE_TYPE_NUMBER;i++) {
+        special_OBU_list[i].next = &special_OBU_list[i];
+        special_OBU_list[i].prev = &special_OBU_list[i];
+    }
+    // create_timer(&OBU_list_garbage_collection_timer_id, NULL, OBU_object_garbage_collection_timer);
+    // set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
 }
 
 void OBU_object_garbage_collection_timer(__sigval_t value)
@@ -412,19 +389,15 @@ void OBU_object_garbage_collection()
         pthread_mutex_lock(&mutex_normal_OBU_list[i]);
         current = normal_OBU_list[i].next;
 
-        while (current != NULL) {
+        while (current != &normal_OBU_list[i]) {
             target = NULL;
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]
                      .time_second) > OBU_OBJECT_EXPIRE_TIME) {
-                /* remove target node */
-                /* Change next only if target node is NOT the last node */
-                if (current->next != NULL) {
-                    current->next->prev = current->prev;
-                }
-                current->prev->next = current->next;
                 target = current;
+                target->next->prev = target->prev;
+                target->prev->next = target->next;
             }
             current = current->next;
             if (target) {
@@ -438,19 +411,15 @@ void OBU_object_garbage_collection()
     for (int i = 0; i < VEHICLE_TYPE_NUMBER; i++) {
         pthread_mutex_lock(&mutex_special_OBU_list[i]);
         current = special_OBU_list[i].next;
-        while (current != NULL) {
+        while (current != &special_OBU_list[i]) {
             target = NULL;
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]
                      .time_second) > OBU_OBJECT_EXPIRE_TIME) {
-                /* remove target node */
-                /* Change next only if target node is NOT the last node */
-                if (current->next != NULL) {
-                    current->next->prev = current->prev;
-                }
-                current->prev->next = current->next;
                 target = current;
+                target->next->prev = target->prev;
+                target->prev->next = target->next;
             }
             current = current->next;
             if (target) {
@@ -481,7 +450,7 @@ void OBU_object_print()
 
         pthread_mutex_lock(&mutex_normal_OBU_list[i]);
         OBU_object_t *current = normal_OBU_list[i].next;
-        while (current != NULL) {
+        while (current != &normal_OBU_list[i]) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "%s(%ld)-> ",
                      current->OBU_id,
@@ -500,7 +469,7 @@ void OBU_object_print()
 
         pthread_mutex_lock(&mutex_special_OBU_list[i]);
         OBU_object_t *current = special_OBU_list[i].next;
-        while (current != NULL) {
+        while (current != &special_OBU_list[i]) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "%s(%ld)-> ",
                      current->OBU_id,
