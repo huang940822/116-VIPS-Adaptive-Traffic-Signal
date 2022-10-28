@@ -95,8 +95,8 @@ void OBU_packet_tx(uint16_t len,
     // device type
     write_uint8_t(DEVICE_RSU, &write_buf);
     // RSU id
-    write_char(config.RSU_id, &write_buf, sizeof(config.RSU_id) - 1,
-               RSU_ID_MAX_LEN);
+    write_char(config.RSU_name, &write_buf, sizeof(config.RSU_name) - 1,
+               RSU_NAME_MAX_LEN);
 
     // timestamp
     time_t rawtime;
@@ -167,8 +167,8 @@ void cloud_packet_tx(uint16_t len,
     // device type
     write_uint8_t(DEVICE_RSU, &write_buf);
     // RSU device id
-    write_char(config.RSU_id, &write_buf, sizeof(config.RSU_id) - 1,
-               RSU_ID_MAX_LEN);
+    write_char(config.RSU_name, &write_buf, sizeof(config.RSU_name) - 1,
+               RSU_NAME_MAX_LEN);
 
     // timestamp
     time_t rawtime;
@@ -262,7 +262,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     // device type
     read_uint8_t(&common_field.device_type, &read_buf);
     // RSU id
-    read_char(common_field.RSU_id, &read_buf, RSU_ID_MAX_LEN);
+    read_char(common_field.RSU_name, &read_buf, RSU_NAME_MAX_LEN);
     // timestamp
     read_char(common_field.timestamp, &read_buf, TIMESTAMP_LEN);
     // service id
@@ -282,11 +282,11 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         }
         return PACKET_INVALID_DEVICE_TYPE;
     }
-    if (strncmp(common_field.RSU_id, config.RSU_id, RSU_ID_MAX_LEN) != 0) {
+    if (strncmp(common_field.RSU_name, config.RSU_name, RSU_NAME_MAX_LEN) != 0) {
         if (read_buf.content != NULL) {
             free(read_buf.content);
         }
-        return PACKET_INVALID_RSU_ID;
+        return PACKET_INVALID_RSU_NAME;
     }
     if (common_field.service_id < 1) {
         if (read_buf.content != NULL) {

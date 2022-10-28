@@ -122,13 +122,6 @@ int MAP_config_init()
                     intersection_number = int_val;
             }
         }
-        if (strstr(buf, "intersection_id ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].id.id =
-                    int_val;
-                    // printf("id is %d\n",MAP_config.Mapconfig->intersections.tab[intersection_number].id.id);
-            }
-        }
         if (strstr(buf, "intersection_revision ")) {
             if (read_int_from_config_line(buf, &int_val)) {
                     MAP_config.Mapconfig->intersections.tab[intersection_number].revision =

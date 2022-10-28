@@ -28,7 +28,7 @@ typedef enum packet_processing_err {
     PACKET_PROCESSING_ACCEPT = 0,
     PACKET_INVALID_PACKET_LEN = -1,
     PACKET_INVALID_DEVICE_TYPE = -2,
-    PACKET_INVALID_RSU_ID = -3,
+    PACKET_INVALID_RSU_NAME = -3,
     PACKET_INVALID_SEVICE_ID = -4,
     PACKET_INVALID_VEHICLE_TYPE = -5
 } packet_processing_err_t;

@@ -226,15 +226,8 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
 
     if (object == NULL) { /* new OBU object */ 
         object = OBU_object_new(record->OBU_id, type);
-
         /* insert OBU record */
-        if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
-                                  object->record_ring.last_record_pointer)) {
-            OBU_record_ring_push(record, object);
-        } else {
-            OBU_record_ring_pop(object);
-            OBU_record_ring_push(record, object);
-        }
+        OBU_record_ring_push(record, object);
         /* insert at head */
         object->next = special_OBU_list[type].next;
         object->prev = &special_OBU_list[type];
@@ -248,6 +241,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
             OBU_record_ring_pop(object);
         }
         OBU_record_ring_push(record, object);
+        /* move target to head */
         if (special_OBU_list[type].next != object) {
             /* remove target */
             object->next->prev = object->prev;

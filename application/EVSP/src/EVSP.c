@@ -24,6 +24,8 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 #include "application_registration.h"
+#include "j2735_msg.h"
+#include "j2735_srm.h"
 
 app_obj_t EVSP = {
     .name = "EVSP",
@@ -136,6 +138,16 @@ int EVSP_on_OBU_packet_rx(void *arg)
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+
+    if (app_section->msgID == SignalRequestMessage_Id) {
+        SignalRequestMessage *srm = app_section->data;
+        if (srm->requests_option) {
+            
+        }
+        else {
+            return -1;
+        }
+    }
 
     msg_buf_t read_buf;
     read_buf.index = 0;
@@ -706,14 +718,14 @@ int EVSP_on_registration(void *arg)
         log_file_write(log_content);
     }
 
-    char rsu_id[RSU_ID_MAX_LEN];
+    char rsu_name[RSU_NAME_MAX_LEN];
     uint8_t plan_id;
     /* list all file */
     while ((dirp = readdir(dp)) != NULL) {
         if (dirp->d_type == 8) {
             /* parse file name */
-            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_id, &plan_id);
-            if (strncmp(rsu_id, config.RSU_id, RSU_ID_MAX_LEN) == 0) {
+            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_name, &plan_id);
+            if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
                 EVSP_touching_area_plan_insert(dirp->d_name, plan_id);
             }
         }

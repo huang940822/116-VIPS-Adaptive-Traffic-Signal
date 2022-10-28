@@ -5,7 +5,7 @@
 #include <time.h>
 #include "SPaT_utils.h"
 #include "log.h"
-
+#include "config.h"
 
 struct tc_now_time tc_store_time = {
     .Sec = 0,
@@ -48,7 +48,7 @@ int spat_msg_init(SPAT **pp_spat)
         (IntersectionState *) calloc(1, sizeof(IntersectionState));
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     /* set randomly  */
-    int_state->id.id = SPaT_config.intersection_id;
+    int_state->id.id = config.RSU_id;
     /* init. to 0 */
     int_state->revision = 0;
     asn1_bstr_alloc(&(int_state->status), IntersectionStatusObject_MAX_BITS);
@@ -119,6 +119,7 @@ int spat_msg_update(SPAT **pp_spat)
     if (get_current_phase() == 0 || get_current_step() == 0)
         return -1;
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
+    int_state->revision = (int_state->revision + 1) & 0b1111111;
 
     if( int_state->states.count != signal_status.SubPhaseCount) {
         int_state->states.count = signal_status.SubPhaseCount;

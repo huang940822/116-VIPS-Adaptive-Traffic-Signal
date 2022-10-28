@@ -40,7 +40,16 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
         return event_callback;
     }
 }
-
+/*****************************************************************************
+** Function:    event_callback_msg_id_insert
+** Description: Create a new event callback node.
+** Parameter:   event_type_t: event type for registration
+**              name: app name
+**              priority : app priority
+**              msg_id : msg id
+**              callback: callback function
+** Return:      event_callback: address of new event callback node
+******************************************************************************/
 void event_callback_msg_id_insert(event_type_t event_type,
                            char *name, int priority, DSRCmsgID msg_id,
                            int (*callback)(void *))

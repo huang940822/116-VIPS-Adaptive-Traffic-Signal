@@ -7,7 +7,8 @@
 #include "typedefine.h"
 
 config_object_t config = {
-    .RSU_id = "S428901   ",
+    .RSU_name = "S428901   ",
+    .RSU_id = 0,
     .RSU_lat = 22.996714,
     .RSU_lon = 120.237009,
     .signal_controller_manufacturer = 1,
@@ -50,11 +51,31 @@ static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
         return false;
     }
 }
+static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    *val = 0;
+    if (sscanf(config_line, "%s %u\n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
 static bool read_float_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     *val = 0;
     if (sscanf(config_line, "%s %f \n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
+static bool read_double_from_config_line(char *config_line, double *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    *val = 0;
+    if (sscanf(config_line, "%s %lf \n", prm_name, val) == 2) {
         return true;
     } else {
         return false;
@@ -83,17 +104,6 @@ static bool read_string_from_config_line(char *config_line, char *val)
     }
 }
 
-static bool read_id_from_config_line(char *config_line, char *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
-    if (sscanf(config_line, "%s \"%[^\"\n]\"\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 int config_init()
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -103,6 +113,7 @@ int config_init()
     fp = fopen(CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", CONFIG_FILE);
+        return CONFIG_INVALID_OPEN_FILE;
     } else {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
@@ -113,6 +124,8 @@ int config_init()
     char buf[CONFIG_LINE_BUFFER_SIZE];
 
     uint8_t uint8_t_val;
+    uint32_t uint32_t_val;
+    double double_val;
     float float_val;
     float float_val_array[PHASE_COUNT_MAX_NUM];
     char string_val[MAX_CONFIG_VARIABLE_LEN];
@@ -125,28 +138,44 @@ int config_init()
             continue;
         }
 
-        // RSU id
-        if (strstr(buf, "RSU_ID ")) {
-            if (read_id_from_config_line(buf, string_val)) {
-                if (strlen(string_val) == 10) {
-                    strncpy(config.RSU_id, string_val, 10);
+        // RSU name
+        if (strstr(buf, "RSU_NAME ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strlen(string_val) <= 10) {
+                    strncpy(config.RSU_name, string_val, 10);
                     snprintf(log_content + strlen(log_content),
                              LOG_CONTENT_LEN - strlen(log_content),
-                             "config: RSU_id = %s", config.RSU_id);
+                             "config: RSU_name = %s", config.RSU_name);
                     log_file_write(log_content);
                     continue;
                 } else {
-                    return CONFIG_INVALID_RSU_ID;
+                    return CONFIG_INVALID_RSU_NAME;
                 }
             } else {
-                return CONFIG_INVALID_RSU_ID;
+                return CONFIG_INVALID_RSU_NAME;
+            }
+        }
+        // RSU id
+        if (strstr(buf, "RSU_id ")) {
+            if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
+                if (0 <= uint32_t_val && uint32_t_val <= 65535) {
+                    config.RSU_id = uint32_t_val;
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "config: RSU_id = %d", config.RSU_id);
+                    log_file_write(log_content);
+                } else {
+                    return CONFIG_INVALID_RSU_NAME;
+                }
+            } else {
+                return CONFIG_INVALID_RSU_NAME;
             }
         }
         // rsu lat
         if (strstr(buf, "RSU_LAT ")) {
-            if (read_float_from_config_line(buf, &float_val)) {
-                if (float_val >= 0) {
-                    config.RSU_lat = float_val;
+            if (read_double_from_config_line(buf, &double_val)) {
+                if (-90 <= double_val && double_val <= 90) {
+                    config.RSU_lat = double_val;
                     snprintf(log_content + strlen(log_content),
                              LOG_CONTENT_LEN - strlen(log_content),
                              "config: RSU_lat = %f", config.RSU_lat);
@@ -161,9 +190,9 @@ int config_init()
         }
         // rsu lon
         if (strstr(buf, "RSU_LON ")) {
-            if (read_float_from_config_line(buf, &float_val)) {
-                if (float_val >= 0) {
-                    config.RSU_lon = float_val;
+            if (read_double_from_config_line(buf, &double_val)) {
+                if (-180 < double_val && double_val <= 180) {
+                    config.RSU_lon = double_val;
                     snprintf(log_content + strlen(log_content),
                              LOG_CONTENT_LEN - strlen(log_content),
                              "config: RSU_lon = %f", config.RSU_lon);

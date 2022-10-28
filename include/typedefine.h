@@ -11,7 +11,7 @@
 #include "j2735_map.h"
 #define FILE_PATH "./"
 #define OBU_ID_MAX_LEN 10
-#define RSU_ID_MAX_LEN 10
+#define RSU_NAME_MAX_LEN 10
 #define COMPENSATION_MAX_LEN 15
 #define ID_MAX_LEN 15
 #define APP_NAME_MAX_LEN 10
@@ -96,36 +96,6 @@ typedef enum signalstatus {
     PEDESTRIAN_GREEN = 64,
     PEDESTRIAN_RED = 128,
 } SignalStatus_t;
-
-typedef struct config_object {
-    char RSU_id[RSU_ID_MAX_LEN];
-    float RSU_lat;
-    float RSU_lon;
-    uint8_t signal_controller_manufacturer;
-
-    bool signal_status_report_active;
-    bool signal_adjust_upper_bound_active;
-    bool signal_adjust_lower_bound_active;
-    float signal_adjust_upper_bound_percentage;
-    float signal_adjust_lower_bound_percentage;
-    uint8_t traffic_compensation_method;
-    float phase_weight[PHASE_COUNT_MAX_NUM];
-
-    bool log_middleware_timer_event;
-    bool log_application_register_event;
-    bool log_command_buffer;  // what for??
-    bool log_signal_packet_rx;
-    bool log_signal_packet_tx;
-    bool log_signal_packet_info;
-    bool log_cloud_packet_rx;
-    bool log_cloud_packet_tx;
-    bool log_OBU_packet_rx;
-    bool log_OBU_packet_tx;
-    bool log_OBU_list;
-
-    bool SPaT_packet_tx;
-    bool MAP_packet_tx;
-} config_object_t;
 
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
@@ -273,14 +243,14 @@ typedef struct msg_buf {
 typedef struct C2R_common_field {
     uint32_t packet_len;
     uint8_t device_type;
-    char RSU_id[RSU_ID_MAX_LEN];
+    char RSU_name[RSU_NAME_MAX_LEN];
     char timestamp[TIMESTAMP_LEN];
     uint8_t service_id;
 } C2R_common_field_t;
 
 typedef struct R2C_common_field {
     uint32_t packet_len;
-    char RSU_id[RSU_ID_MAX_LEN];
+    char RSU_name[RSU_NAME_MAX_LEN];
     char timestamp[TIMESTAMP_LEN];
     float position_lon;
     float position_lat;
