@@ -120,7 +120,7 @@ OBU_object_t *OBU_object_new(char *str, uint8_t type)
         clear_memory_error();
         memset(object, 0, sizeof(OBU_object_t));
     }
-    strncpy(object->OBU_id, str, OBU_ID_MAX_LEN);
+    strncpy(object->OBU_name, str, OBU_NAME_MAX_LEN);
     object->vehicle_type = type;
     object->record_ring.first_record_pointer = 0;
     object->record_ring.last_record_pointer = 0;
@@ -154,7 +154,7 @@ OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
 {
     OBU_object_t *current = OBU_list_head->next;
     while (current != OBU_list_head) {
-        if (strncmp(current->OBU_id, str, OBU_ID_MAX_LEN) == 0) {
+        if (strncmp(current->OBU_name, str, OBU_NAME_MAX_LEN) == 0) {
             return current;
         }
         current = current->next;
@@ -171,13 +171,13 @@ OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
 OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash table
 {
     int hash_code = djb2_hash(
-        record->OBU_id);  // hash code is array index for having use mod
+        record->OBU_name);  // hash code is array index for having use mod
     pthread_mutex_lock(&mutex_normal_OBU_list[hash_code]);
     OBU_object_t *object =
-        OBU_object_search(&normal_OBU_list[hash_code], record->OBU_id);
+        OBU_object_search(&normal_OBU_list[hash_code], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */
-        object = OBU_object_new(record->OBU_id, VEHICLE_NORMAL);
+        object = OBU_object_new(record->OBU_name, VEHICLE_NORMAL);
 
         /* insert OBU record */  //如果世新的object 那record ring一定是空的
                                  //似乎沒有檢查的必要 直接push進去就好？
@@ -222,10 +222,10 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
     uint8_t type = record->vehicle_type;
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
-        OBU_object_search(&special_OBU_list[type], record->OBU_id);
+        OBU_object_search(&special_OBU_list[type], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */ 
-        object = OBU_object_new(record->OBU_id, type);
+        object = OBU_object_new(record->OBU_name, type);
         /* insert OBU record */
         OBU_record_ring_push(record, object);
         /* insert at head */
@@ -295,9 +295,9 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
         RequestorDescription *requestor = &srm->requestor;
         switch (srm->requestor.type.role) {
         case BasicVehicleRole_ambulance:
-            strcpy(record->OBU_id, "amb_");
-            strncat(record->OBU_id, requestor->id.u.entityID.buf, 4);
-            record->vehicle_type = 1;
+            strcpy(record->OBU_name, "amb_");
+            strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            record->vehicle_type = VEHICLE_AMBULANCE;
             break;
         default:
             return -1;
@@ -335,7 +335,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
 //把obu packet資料讀到obu object
 void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
 {
-    strncpy(record->OBU_id, packet->OBU_id, OBU_ID_MAX_LEN);
+    strncpy(record->OBU_name, packet->OBU_name, OBU_NAME_MAX_LEN);
     record->time_second = mktime(&packet->timestamp);
     record->position_lon = packet->position_lon;
     record->position_lat = packet->position_lat;
@@ -447,7 +447,7 @@ void OBU_object_print()
         while (current != &normal_OBU_list[i]) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "%s(%ld)-> ",
-                     current->OBU_id,
+                     current->OBU_name,
                      current->record_ring
                          .record[current->record_ring.last_record_pointer]
                          .time_second);
@@ -466,7 +466,7 @@ void OBU_object_print()
         while (current != &special_OBU_list[i]) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "%s(%ld)-> ",
-                     current->OBU_id,
+                     current->OBU_name,
                      current->record_ring
                          .record[current->record_ring.last_record_pointer]
                          .time_second);

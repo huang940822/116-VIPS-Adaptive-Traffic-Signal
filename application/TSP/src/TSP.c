@@ -118,7 +118,7 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
     command.app_id = TSP.id;
     command.app_priority = TSP.priority;
     command.target_phase = host_OBU->target_phase;
-    strncpy(command.host_OBU_id, host_OBU->OBU_id, OBU_ID_MAX_LEN);
+    strncpy(command.host_OBU_name, host_OBU->OBU_name, OBU_NAME_MAX_LEN);
 
     for (int i = 0; i < TSP_CYCLE_MAX; i++) {
         for (int j = 0; j < TSP_PHASE_MAX; j++) {
@@ -201,13 +201,13 @@ int TSP_on_OBU_packet_rx(void *arg)
                  .position_lon,
              OBU_distance);
     log_file_write(log_content);
-    printf("obu_id from obu is %s\r\n", app_section->OBU_object->OBU_id);
+    printf("OBU_name from obu is %s\r\n", app_section->OBU_object->OBU_name);
     TSP_host_OBU_obj_t *host_OBU =
-        TSP_host_OBU_obj_search(app_section->OBU_object->OBU_id);
+        TSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
     printf("obu distance is %d\r\n", OBU_distance);
     if (host_OBU != NULL) {
         printf("host obu id is %s and host obu targetphase is %d\r\n",
-               host_OBU->OBU_id, host_OBU->target_phase);
+               host_OBU->OBU_name, host_OBU->target_phase);
     }
 
 
@@ -220,7 +220,7 @@ int TSP_on_OBU_packet_rx(void *arg)
         // TSP_OBU_boardcast(host_OBU);
     } else {
         // testing
-        // TSP_OBU_boardcast_test(app_section->OBU_object->OBU_id);
+        // TSP_OBU_boardcast_test(app_section->OBU_object->OBU_name);
     }
     if (read_buf.content != NULL) {
         free(read_buf.content);
@@ -276,8 +276,8 @@ int TSP_on_cloud_packet_rx(void *arg)
         log_file_write(log_content);
     }
 
-    char host_OBU_id[OBU_ID_MAX_LEN + 1];
-    memset(host_OBU_id, 0, sizeof(host_OBU_id));
+    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    memset(host_OBU_name, 0, sizeof(host_OBU_name));
     uint8_t target_phase;
     uint16_t frequency;
     memset(log_content, 0, sizeof(log_content));
@@ -305,7 +305,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                 LOG_CONTENT_LEN - strlen(log_content),
                 "TSP group control\r\n");
         // read host OBU
-        read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
+        read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
@@ -329,7 +329,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                 command.cycle = cycle;
                 command.phase = phase;
                 command.adjustment = adjustment;
-                strncpy(command.host_OBU_id, host_OBU_id, OBU_ID_MAX_LEN);
+                strncpy(command.host_OBU_name, host_OBU_name, OBU_NAME_MAX_LEN);
                 ret = command_buf_insert_adjustment(&command);
 
 
@@ -343,24 +343,24 @@ int TSP_on_cloud_packet_rx(void *arg)
     case 4:
         /* intersection control */
         // read host OBU
-        read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
+        read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
-                 "\ninsert host OBU (%s)", host_OBU_id);
+                 "\ninsert host OBU (%s)", host_OBU_name);
         /* add to host OBU list */
-        TSP_host_OBU_obj_insert(host_OBU_id, target_phase);
+        TSP_host_OBU_obj_insert(host_OBU_name, target_phase);
         TSP_host_OBU_obj_print();
         break;
     case 5:  // for host obu delete?
         // read host OBU
-        read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
+        read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
-                 "\ndelete host OBU (%s)", host_OBU_id);
-        TSP_host_OBU_obj_delete(host_OBU_id);
+                 "\ndelete host OBU (%s)", host_OBU_name);
+        TSP_host_OBU_obj_delete(host_OBU_name);
         TSP_host_OBU_obj_print();
         for (int i = 0; i < SUBPHASEID_NUM; i++) {
             // printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
@@ -473,7 +473,7 @@ int TSP_on_traffic_signal_command_tx(void *arg)
         (traffic_signal_command_arg_t *) arg;
     // 1-2-T-2
     TSP_report_command(command->control_status, command->phase, command->step,
-                       command->effect_time, command->host_OBU_id);
+                       command->effect_time, command->host_OBU_name);
     return 0;
 }
 

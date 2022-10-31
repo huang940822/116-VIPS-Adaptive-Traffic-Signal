@@ -139,10 +139,17 @@ int EVSP_on_OBU_packet_rx(void *arg)
     memset(log_content, 0, sizeof(log_content));
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
 
+    /* If SRM checks whether this message is for self. */
     if (app_section->msgID == SignalRequestMessage_Id) {
         SignalRequestMessage *srm = app_section->data;
         if (srm->requests_option) {
-            
+            int i = 0;
+            for (i; i < srm->requests.count; i++) {
+                if (srm->requests.tab[i].request.id.id == config.RSU_id)
+                    break;
+            }
+            if (i == srm->requests.count)
+                return -1;
         }
         else {
             return -1;
@@ -214,8 +221,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         write_uint8_t(0, &write_buf);  // write cmd
         write_char(
             app_section->OBU_object->record_ring.record[last_record_index]
-                .OBU_id,
-            &write_buf, OBU_ID_MAX_LEN, OBU_ID_MAX_LEN);  // write OBU_id
+                .OBU_name,
+            &write_buf, OBU_NAME_MAX_LEN, OBU_NAME_MAX_LEN);  // write OBU_name
         write_uint8_t(
             app_section->OBU_object->record_ring.record[last_record_index]
                 .vehicle_type,
@@ -322,7 +329,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     log_file_write(log_content);
 
     EVSP_host_OBU_obj_t *host_OBU =
-        EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_id);
+        EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -356,16 +363,16 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: TERMINATE");
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                     app_section->OBU_object->OBU_id);
+                     app_section->OBU_object->OBU_name);
 
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
             command.app_id = EVSP.id;
             command.app_priority = EVSP.priority;
             command.target_phase = host_OBU->target_phase;
-            strncpy(command.host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN);
+            strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
 
-            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_id);
+            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
@@ -441,12 +448,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: ACTIVATE");
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                     app_section->OBU_object->OBU_id);
+                     app_section->OBU_object->OBU_name);
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "\ntarget phase: %d", target_phase);
 
-            EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_id,
+            EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
                                      target_phase, area_ptr);
             EVSP_host_OBU_obj_print();
             tsc_command_t command;
@@ -454,8 +461,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
             command.app_id = EVSP.id;
             command.app_priority = EVSP.priority;
             command.target_phase = target_phase;
-            strncpy(command.host_OBU_id, app_section->OBU_object->OBU_id,
-                    OBU_ID_MAX_LEN);
+            strncpy(command.host_OBU_name, app_section->OBU_object->OBU_name,
+                    OBU_NAME_MAX_LEN);
 
             uint8_t current_phase = signal_status.SubPhaseID;
             uint8_t current_step = signal_status.StepID;

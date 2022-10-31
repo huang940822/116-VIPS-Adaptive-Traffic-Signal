@@ -370,13 +370,13 @@ int OBU_packet_rx_bsm(V2R_common_field_t *common_field, MessageFrame *msgf)
         bsm->partII.tab[0].u.supplementalExt;
     if (sup_ext->classification == 50) {
         common_field->vehicle_type = 2;
-        strncpy(common_field->OBU_id, "bus_\0", 5);
-        strncat(common_field->OBU_id, bsm->coreData.id.buf,
+        strncpy(common_field->OBU_name, "bus_\0", 5);
+        strncat(common_field->OBU_name, bsm->coreData.id.buf,
                 bsm->coreData.id.len);
     } else if (sup_ext->classification == 60) {
         common_field->vehicle_type = 1;
-        strncpy(common_field->OBU_id, "amb_\0", 5);
-        strncat(common_field->OBU_id, bsm->coreData.id.buf,
+        strncpy(common_field->OBU_name, "amb_\0", 5);
+        strncat(common_field->OBU_name, bsm->coreData.id.buf,
                 bsm->coreData.id.len);
     }
 
@@ -444,7 +444,7 @@ int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
     // device type
     read_uint8_t(&common_field->device_type, &read_buf);
     // OBU id
-    read_char(common_field->OBU_id, &read_buf, OBU_ID_MAX_LEN);
+    read_char(common_field->OBU_name, &read_buf, OBU_NAME_MAX_LEN);
     // vehicle_type
     read_uint8_t(&common_field->vehicle_type, &read_buf);
     // timestamp

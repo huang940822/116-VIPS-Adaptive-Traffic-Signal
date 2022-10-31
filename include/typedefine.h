@@ -10,7 +10,7 @@
 #include "j2735_msg.h"
 #include "j2735_map.h"
 #define FILE_PATH "./"
-#define OBU_ID_MAX_LEN 10
+#define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
 #define COMPENSATION_MAX_LEN 15
 #define ID_MAX_LEN 15
@@ -140,7 +140,7 @@ typedef struct event_callback {
 } event_callback_t;
 
 typedef struct OBU_record {
-    char OBU_id[OBU_ID_MAX_LEN];
+    char OBU_name[OBU_NAME_MAX_LEN];
     time_t time_second;
     float position_lon;
     float position_lat;
@@ -163,13 +163,19 @@ typedef struct application_private_space {
 
 
 typedef struct OBU_object {
-    char OBU_id[OBU_ID_MAX_LEN + 1];  //+1 if for \0
+    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
     uint8_t vehicle_type;
+
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
     struct OBU_object *prev;
     struct OBU_object *next;
 } OBU_object_t;
+
+typedef struct OBU_object_info {
+    int OBU_name;  //+1 if for \0
+    uint8_t vehicle_type;
+}OBU_object_info_t;
 
 typedef struct traffic_signal_packet {
     uint8_t CKS;
@@ -260,7 +266,7 @@ typedef struct R2C_common_field {
 typedef struct V2R_common_field {
     uint32_t packet_len;
     uint8_t device_type;
-    char OBU_id[OBU_ID_MAX_LEN];
+    char OBU_name[OBU_NAME_MAX_LEN];
     uint8_t vehicle_type;
     struct tm timestamp;
     float position_lon;
@@ -300,7 +306,7 @@ typedef struct tsc_command {
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
     int8_t compensation_time;
-    char host_OBU_id[ID_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
@@ -313,7 +319,7 @@ typedef struct tsc_command_object {
     uint8_t adjusted_time;  // is the length of time that the traffic signal
                             // controller is adjusted to.
     int8_t compensation_time;
-    char host_OBU_id[ID_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
     bool send_flag;
 } tsc_command_object_t;
 
@@ -322,7 +328,7 @@ typedef struct traffic_signal_command_arg {
     uint8_t phase;
     uint8_t step;
     uint8_t effect_time;
-    char host_OBU_id[OBU_ID_MAX_LEN + 1];
+    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
 
 #endif

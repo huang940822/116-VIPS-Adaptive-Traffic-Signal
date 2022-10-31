@@ -6,16 +6,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "CPS.h"
 #include "EVSP.h"
-#include "EVSP_config.h"
-#include "MAP.h"
-#include "MAP_config.h"
-#include "OBU_record_processing.h"
-#include "SPaT.h"
-#include "SPaT_config.h"
 #include "TSP.h"
-#include "TSP_config.h"
+#include "CPS.h"
+#include "SPaT.h"
+#include "MAP.h"
+#include "SPM.h"
+
+#include "OBU_record_processing.h"
 #include "application_registration.h"
 #include "byte_processing.h"
 #include "config.h"
@@ -86,6 +84,7 @@ int main()
         &CPS,
         &SPaT,
         &MAP,
+        &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {

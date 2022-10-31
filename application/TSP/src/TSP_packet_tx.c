@@ -106,7 +106,7 @@ void TSP_report_command(uint8_t control_status,
                         uint8_t sub_phase_id,
                         uint8_t step_id,
                         uint8_t effect_time,
-                        char *obu_id)
+                        char *OBU_name)
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
@@ -128,7 +128,7 @@ void TSP_report_command(uint8_t control_status,
     write_uint8_t(sub_phase_id, &write_buf);
     write_uint8_t(step_id, &write_buf);
     write_uint8_t(effect_time, &write_buf);
-    write_char(obu_id, &write_buf, OBU_ID_MAX_LEN - 1, OBU_ID_MAX_LEN);
+    write_char(OBU_name, &write_buf, OBU_NAME_MAX_LEN - 1, OBU_NAME_MAX_LEN);
 
 
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
@@ -198,8 +198,8 @@ void TSP_OBU_boardcast(TSP_host_OBU_obj_t *host_OBU)
         memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
     }
 
-    // OBU_id
-    write_char(host_OBU->OBU_id, &write_buf, OBU_ID_MAX_LEN, OBU_ID_MAX_LEN);
+    // OBU_name
+    write_char(host_OBU->OBU_name, &write_buf, OBU_NAME_MAX_LEN, OBU_NAME_MAX_LEN);
     // passing rate
     uint8_t passing_rate = matrix
                                ->entry[distance_index][signal_phase_index]

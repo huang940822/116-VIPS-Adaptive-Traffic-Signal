@@ -28,8 +28,8 @@ void TSP_host_OBU_list_timeout_timer_handler(union sigval value)
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
              "TSP host OBU list timeout: %s",
-             ((TSP_host_OBU_obj_t *) value.sival_ptr)->OBU_id);
+             ((TSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
-    TSP_host_OBU_obj_delete(((TSP_host_OBU_obj_t *) value.sival_ptr)->OBU_id);
+    TSP_host_OBU_obj_delete(((TSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
     TSP_host_OBU_obj_print();
 }

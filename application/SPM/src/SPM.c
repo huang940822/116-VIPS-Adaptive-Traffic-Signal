@@ -1,8 +1,10 @@
 #include "SPM.h"
 #include "application_registration.h"
-
 #include "j2735_msg.h"
 #include "j2735_srm.h"
+#include "config.h"
+
+#include <stdio.h>
 
 app_obj_t SPM = {
     .name = "SPM",
@@ -19,7 +21,22 @@ int SPM_on_OBU_packet_rx(void *arg)
         return -1;
     SignalRequestMessage *srm = (SignalRequestMessage *)app_section->data;
 
-    
+    /* If SRM checks whether this message is for self. */
+    if (app_section->msgID == SignalRequestMessage_Id) {
+        SignalRequestMessage *srm = app_section->data;
+        if (srm->requests_option) {
+            int i = 0;
+            for (i; i < srm->requests.count; i++) {
+                if (srm->requests.tab[i].request.id.id == config.RSU_id)
+                    break;
+            }
+            if (i == srm->requests.count)
+                return -1;
+        }
+        else {
+            return -1;
+        }
+    }
 }
 
 int SPM_on_registration(void *arg)

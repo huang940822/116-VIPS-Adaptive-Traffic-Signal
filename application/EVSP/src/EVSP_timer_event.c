@@ -19,7 +19,7 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
              "EVSP host OBU packet timeout: %s",
-             ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_id);
+             ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -30,9 +30,9 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     command.app_priority = EVSP.priority;
     command.target_phase =
         ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
-    strncpy(command.host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN);
+    strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
 
-    EVSP_host_OBU_obj_delete(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_id);
+    EVSP_host_OBU_obj_delete(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
@@ -74,7 +74,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
              "EVSP host OBU list timeout: %s",
-             ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_id);
+             ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -85,9 +85,9 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     command.app_priority = EVSP.priority;
     command.target_phase =
         ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
-    strncpy(command.host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN);
+    strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
 
-    EVSP_host_OBU_obj_delete(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_id);
+    EVSP_host_OBU_obj_delete(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {

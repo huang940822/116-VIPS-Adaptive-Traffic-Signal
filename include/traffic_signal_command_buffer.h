@@ -27,7 +27,7 @@ typedef enum command_buf_err {
     INVALID_PHASE = -5,
     INVALID_EFFECT_TIME = -6,
     INVALID_ADJUSTMENT = -7,
-    INVALID_HOST_OBU_ID = -8,
+    OBU_nameINVALID_HOST_OBU_NAME = -8,
     IMPROPER_PRIORITY = -9,
     IMPROPER_EFFECT_TIME = -10,
 } command_buf_err_t;
