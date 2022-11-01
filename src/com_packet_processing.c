@@ -544,8 +544,10 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     // convert msgf to OBU record
     if (V2R_msgf2OBU_record(msgf, record) == -1) {
+        printf("V2R_msgf2OBU_record fail\n");
         free(record);
         J2735_FREE_MSG_FRAME(msgf);
+        return -1;
     }
 
     // record和obu object都有obu id這樣才知道要把packet裡面節錄出來的record資料
@@ -569,7 +571,6 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     if (record != NULL) {
         free(record);
     }
-
     OBU_object_print();
 
     V2R_app_section_t app_section;

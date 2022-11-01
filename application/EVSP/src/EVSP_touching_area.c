@@ -15,18 +15,9 @@ EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
-    EVSP_touching_area_plan_list_t *plan =
-        (EVSP_touching_area_plan_list_t *) malloc(
-            sizeof(EVSP_touching_area_plan_list_t));
-    if (plan == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_touching_area_plan_new: malloc");
-        perror("EVSP_touching_area_plan_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(plan, 0, sizeof(EVSP_touching_area_plan_list_t));
-    }
+    EVSP_touching_area_plan_list_t *plan;
+    Malloc(plan, sizeof(EVSP_touching_area_plan_list_t), "EVSP_touching_area_plan_new");
+    
     plan->plan_id = plan_id;
 
     /* Get file path */
@@ -172,17 +163,9 @@ EVSP_touching_area_t *EVSP_touching_area_new(float lon_high,
                                              float lat_high,
                                              float lat_low)
 {
-    EVSP_touching_area_t *area =
-        (EVSP_touching_area_t *) malloc(sizeof(EVSP_touching_area_t));
-    if (area == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_touching_area_new: malloc");
-        perror("EVSP_touching_area_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(area, 0, sizeof(EVSP_touching_area_t));
-    }
+    EVSP_touching_area_t *area;
+    Malloc(area, sizeof(EVSP_touching_area_t), "EVSP_touching_area_new");
+    
     area->lon_high = lon_high;
     area->lon_low = lon_low;
     area->lat_high = lat_high;

@@ -18,17 +18,9 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
                                            uint8_t target_phase,
                                            EVSP_touching_area_t *area_ptr)
 {
-    EVSP_host_OBU_obj_t *host_OBU =
-        (EVSP_host_OBU_obj_t *) malloc(sizeof(EVSP_host_OBU_obj_t));
-    if (host_OBU == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_host_OBU_obj_new: malloc");
-        perror("EVSP_host_OBU_obj_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(host_OBU, 0, sizeof(EVSP_host_OBU_obj_t));
-    }
+    EVSP_host_OBU_obj_t *host_OBU;
+    Malloc(host_OBU, sizeof(EVSP_host_OBU_obj_t), "EVSP_host_OBU_obj_new");
+
     memcpy(host_OBU->OBU_name, OBU_name, OBU_NAME_MAX_LEN);
     host_OBU->target_phase = target_phase;
     host_OBU->area_ptr = area_ptr;
@@ -47,7 +39,7 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
                                               uint8_t target_phase,
                                               EVSP_touching_area_t *area_ptr)
 {
-    EVSP_host_OBU_obj_t *current;
+    EVSP_host_OBU_obj_t *current, *previous;
     pthread_mutex_lock(&EVSP_host_OBU_list_mutex); 
     /* empty list */
     if (EVSP_host_OBU_list_head == NULL) {
@@ -55,15 +47,17 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
         current = EVSP_host_OBU_list_head;
     } else {
         current = EVSP_host_OBU_list_head;
-        while (current->next) {
-            if (strncmp(current->next->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
+        previous = current;
+        while (current) {
+            if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
                 pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
                 return NULL;
             }
+            previous = current;
             current = current->next;
         }
-        current->next = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
-        current = current->next;
+        previous->next = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
+        current = previous->next;
     }
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
     return current;

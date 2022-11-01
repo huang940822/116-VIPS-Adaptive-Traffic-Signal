@@ -163,6 +163,7 @@ typedef struct application_private_space {
 
 
 typedef struct OBU_object {
+    int OBU_id;
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
     uint8_t vehicle_type;
 
@@ -171,11 +172,6 @@ typedef struct OBU_object {
     struct OBU_object *prev;
     struct OBU_object *next;
 } OBU_object_t;
-
-typedef struct OBU_object_info {
-    int OBU_name;  //+1 if for \0
-    uint8_t vehicle_type;
-}OBU_object_info_t;
 
 typedef struct traffic_signal_packet {
     uint8_t CKS;

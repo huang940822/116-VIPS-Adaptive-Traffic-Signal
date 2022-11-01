@@ -264,15 +264,16 @@ static int yday2month_day(struct tm *timeinfo, int yday)
     int months_arr[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}, month = 0;
     int year = timeinfo->tm_year + 1900;
 
-    if((year % 400 == 0 || year % 100 != 0) && (year % 4 == 0))
+    if ((year % 400 == 0 || year % 100 != 0) && (year % 4 == 0))
         months_arr[1]++;
 
-    for(month; month < 12; month++) {
-        if (yday <= months_arr[month]) {
+    for (month; month < 12; month++) {
+        if (yday < months_arr[month]) {
             break;
         }
         yday -= months_arr[month];
     }
+    
     if (month >= 12 || timeinfo->tm_mon != month)
         return -1;
     timeinfo->tm_mday = yday;
@@ -311,8 +312,10 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
         
         int yday = srm->timeStamp / 1440, dmin = srm->timeStamp % 1440;
 
-        if (yday2month_day(timeinfo, yday) == -1)
+        if (yday2month_day(timeinfo, yday) == -1) {printf("rfrfrf\n");
             return -1;
+        }
+            
         timeinfo->tm_hour = dmin / 60;
         timeinfo->tm_min = dmin % 60;
         timeinfo->tm_sec = srm->second / 1000;

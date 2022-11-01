@@ -80,8 +80,8 @@ int main()
     /* application service registration */
     app_obj_t *app_arr[] = {
         &EVSP,
-        &TSP,
-        &CPS,
+        // &TSP,
+        // &CPS,
         &SPaT,
         &MAP,
         &SPM,

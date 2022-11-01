@@ -58,17 +58,7 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
 
     msg_buf_t read_buf;
     read_buf.index = 0;
-    read_buf.content = (unsigned char *) malloc(app_section->payload_len);
-    if (read_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_on_cloud_packet_rx: malloc");
-        perror("EVSP_on_cloud_packet_rx: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memcpy(read_buf.content, app_section->payload,
-               app_section->payload_len);
-    }
+    Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
 
     // needs a evsp sned ack function to send ack to cloud
     EVSP_send_ack();
@@ -138,7 +128,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
-
     /* If SRM checks whether this message is for self. */
     if (app_section->msgID == SignalRequestMessage_Id) {
         SignalRequestMessage *srm = app_section->data;
@@ -159,16 +148,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     msg_buf_t read_buf;
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
-    if (read_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_on_OBU_packet_rx: malloc");
-        perror("EVSP_on_OBU_packet_rx: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memcpy(read_buf.content, app_section->payload,
-               app_section->payload_len);
-    }
+    Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
 
     /* print packet */
     if (config.log_OBU_packet_rx) {
@@ -198,7 +178,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
             .last_record_pointer;  // back of queue; 最新推入的資料？
 
     //轉傳緊急封包到雲端
-
 
     {  // it's for evsp service's rx and try to get it's duty status and route
         // it to cloud
@@ -270,7 +249,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
         cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
         free(write_buf.content);
     }
-
 
     // obu與rsu的距離
     uint16_t OBU_distance = (uint16_t) get_distance(
