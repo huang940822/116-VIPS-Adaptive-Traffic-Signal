@@ -146,7 +146,7 @@ typedef struct OBU_record {
     float position_lat;
     uint8_t speed;
     uint8_t direction;
-    uint8_t vehicle_type;
+    vehicle_type_t vehicle_type;
 } OBU_record_t;
 
 typedef struct OBU_record_ring {
@@ -165,7 +165,7 @@ typedef struct application_private_space {
 typedef struct OBU_object {
     int OBU_id;
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
-    uint8_t vehicle_type;
+    vehicle_type_t vehicle_type;
 
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;

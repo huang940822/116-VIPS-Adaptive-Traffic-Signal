@@ -25,6 +25,7 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "application_registration.h"
 
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -34,7 +35,7 @@ app_obj_t TSP = {
     .name = "TSP",
     .id = 2,
     .priority = 2,
-    .on_OBU_packet_rx = &TSP_on_OBU_packet_rx,
+    .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
     .on_RSU_packet_tx = NULL,
@@ -147,11 +148,14 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
 
 int TSP_on_OBU_packet_rx(void *arg)
 {
+    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    if (app_section->OBU_object->vehicle_type != VEHICLE_BUS)
+        return 0;
+
     // printf("TSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
-
+    
     msg_buf_t read_buf;
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
@@ -546,5 +550,7 @@ int TSP_on_registration(void *arg)
     }
     fflush(stdout);
     closedir(dp);
+
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, TSP.name, TSP.priority, BasicSafetyMessage_Id, &TSP_on_OBU_packet_rx);
     return 0;
 }

@@ -124,10 +124,14 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
 
 int EVSP_on_OBU_packet_rx(void *arg)
 {
+    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
+        return 0;
+
     // printf("EVSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    memset(log_content, 0, sizeof(log_content));    
+
     /* If SRM checks whether this message is for self. */
     if (app_section->msgID == SignalRequestMessage_Id) {
         SignalRequestMessage *srm = app_section->data;

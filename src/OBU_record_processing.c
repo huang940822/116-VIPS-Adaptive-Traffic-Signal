@@ -285,8 +285,43 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
     switch (msgf->messageId) {
     case BasicSafetyMessage_Id: {
         BasicSafetyMessage *bsm = msgf->u.data;
+        if (bsm->partII_option != TRUE || bsm->partII.count != 1 || bsm->partII.tab[0].partII_Id != SupplementalVehicleExt) {
+            return -1;
+        }
+        SupplementalVehicleExtensions *sup_ext = bsm->partII.tab[0].u.supplementalExt;
+        if (sup_ext->classification_option != TRUE) {
+            return -1;
+        }
+        switch (sup_ext->classification) {
+        case 50:
+            strcpy(record->OBU_name, "bus_");
+            strncat(record->OBU_name, bsm->coreData.id.buf, 4);
+            record->vehicle_type = VEHICLE_BUS;
+            break;
+        case 60:
+            strcpy(record->OBU_name, "amb_");
+            strncat(record->OBU_name, bsm->coreData.id.buf, 4);
+            record->vehicle_type = VEHICLE_AMBULANCE;
+            break;
+        default:
+            break;
+        }
+
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        int second = tv.tv_sec % 60;
+        float secMark = bsm->coreData.secMark / 1000;
+        if (second < secMark)
+            tv.tv_sec -= 60;
+        tv.tv_sec = tv.tv_sec - second + secMark;
+        record->time_second = mktime(localtime(&tv.tv_sec));
+
+        record->position_lat = bsm->coreData.lat / 10000000.0;
+        record->position_lon = bsm->coreData.Long / 10000000.0;
         
-        return -1;
+        record->speed = bsm->coreData.speed * 0.072;
+        record->direction = bsm->coreData.heading / 3600;
+        record->direction &= 0b111;
     } break;
     case SignalRequestMessage_Id: {
         SignalRequestMessage *srm = msgf->u.data;

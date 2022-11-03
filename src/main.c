@@ -77,30 +77,6 @@ int main()
     printf("query tc firmware version\r\n");
     flag_query_firm_ver = true;
 
-    /* application service registration */
-    app_obj_t *app_arr[] = {
-        &EVSP,
-        // &TSP,
-        // &CPS,
-        &SPaT,
-        &MAP,
-        &SPM,
-    };
-    int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
-    for (int i = 0; i < app_arr_len; i++) {
-        ret = app_register(app_arr[i]);
-        if (ret != 0) {
-            log_file_write_fatal_error("error registering application: %d (%s)",
-                                    ret, app_arr[i]->name);
-        } else {
-            memset(log_content, 0, sizeof(log_content));
-            snprintf(log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "%s register successfully", app_arr[i]->name);
-            log_file_write(log_content);
-        }
-    }
-
     // /* taffic signal packet serial port init */
     traffic_signal_port_init();
 
@@ -128,6 +104,30 @@ int main()
                      &traffic_signal_status_report_timer_num,
                      timer_event_handler);
         set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
+    }
+
+    /* application service registration */
+    app_obj_t *app_arr[] = {
+        &EVSP,
+        &TSP,
+        // &CPS,
+        &SPaT,
+        &MAP,
+        &SPM,
+    };
+    int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
+    for (int i = 0; i < app_arr_len; i++) {
+        ret = app_register(app_arr[i]);
+        if (ret != 0) {
+            log_file_write_fatal_error("error registering application: %d (%s)",
+                                    ret, app_arr[i]->name);
+        } else {
+            memset(log_content, 0, sizeof(log_content));
+            snprintf(log_content + strlen(log_content),
+                    LOG_CONTENT_LEN - strlen(log_content),
+                    "%s register successfully", app_arr[i]->name);
+            log_file_write(log_content);
+        }
     }
 
     /* OBU list garbage collection timer event */  //清掉太久的obu object
