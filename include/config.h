@@ -35,9 +35,6 @@ typedef struct config_object {
     bool log_OBU_packet_rx;
     bool log_OBU_packet_tx;
     bool log_OBU_list;
-
-    bool SPaT_packet_tx;
-    bool MAP_packet_tx;
 } config_object_t;
 
 extern config_object_t config;
@@ -68,9 +65,7 @@ typedef enum config_err {
     CONFIG_INVALID_LOG_OBU_LIST = -21,
     CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD = -22,
     CONFIG_INVALID_PHASE_WEIGHT = -23,
-    CONFIG_INVALID_SPAT_PACKET_TX = -24,
-    CONFIG_INVALID_MAP_PACKET_TX = -25,
-    CONFIG_INVALID_OPEN_FILE = -26,
+    CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 
 #endif

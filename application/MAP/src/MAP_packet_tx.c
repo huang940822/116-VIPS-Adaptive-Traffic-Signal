@@ -54,37 +54,12 @@ void MAP_packet_tx(__sigval_t value)
             // update map
             printf("update map information\r\n");
             gettimeofday(&start,NULL);
-            // printf("start:%d\n",start.tv_usec);
             map_msg_update(&map);
             gettimeofday(&end,NULL);
-            // printf("update time:%d\n",end.tv_usec-start.tv_usec);
             PhaseOrder = get_PhaseOrder();
             prev_phase = get_current_phase();
         }
-        // map_print(map);
-        tx_buf_len = compose_map(&tx_buf,map);
-        
-        if (tx_buf_len <= 0) {
-            printf("failed to encode the msg\n");
-        } else {
-            // printf("encode successfully %d\n", tx_buf_len);
-        }
-        // fp = fopen("application/MAP/test/rsutest.txt","a+");
-        // if(fp!=NULL){
-            // char c[14]="\nrevision = ";
-            // fwrite(c,sizeof(char),sizeof(c),fp);
-            // char x[3];
-            // sprintf(x,"%d",MAP_config.Mapconfig -> msgIssueRevision);
-            // fwrite(x,sizeof(char),4,fp);
-            // if(MAP_config.Mapconfig -> msgIssueRevision==128)
-            //     MAP_config.Mapconfig -> msgIssueRevision=0;
-        // printf("%d\n",MAP_config.Mapconfig -> msgIssueRevision);
-        // MAP_config.Mapconfig -> msgIssueRevision++;
-        //     fwrite(tx_buf,sizeof(uint8_t),tx_buf_len,fp);
-        // }
-        // printf("MAP encoded data:\n");
-        // map_dump_mem(tx_buf, tx_buf_len);
-        OBU_j2735_tx(tx_buf_len, tx_buf);
+        OBU_j2735_tx(MapData_Id, map);
     }
 }
 

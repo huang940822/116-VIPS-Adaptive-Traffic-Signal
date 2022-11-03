@@ -258,40 +258,6 @@ void map_msg_update(MapData **map)
     }
 }
 
-int compose_map(uint8_t **map_buf, MapData *map)
-{
-    int buf_len;
-    J2735CodecErr err;
-
-    char log_content[LOG_CONTENT_LEN + 1];
-    char errmsg_buf[ERR_MSG_SZ];
-
-    MessageFrame msgf;
-    memset(&msgf, 0, sizeof(msgf));
-
-    memset(&err, 0, sizeof(J2735CodecErr));
-    err.msg_size = ERR_MSG_SZ;
-    err.msg = errmsg_buf;
-
-    msgf.messageId = MapData_Id;
-    msgf.u.data = map;
-    buf_len = j2735_msg_encode(map_buf, &msgf, &err);
-
-    if (buf_len <= 0) {
-        printf("failed to encode map msg\n");
-        printf("  [error msg] %s\n", err.msg);
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "failed to encode map msg\r\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "  [error msg] %s \r\n",
-                 err.msg);
-        log_file_write(log_content);
-    }
-    return buf_len;
-}
-
 void map_dump_mem(void *data, int len)
 {
     int count;

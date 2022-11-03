@@ -164,16 +164,13 @@ int CPS_on_camera_packet_rx(void *arg)
             &(obstaclelist->tab[i].elev), &(obstaclelist->tab[i].length),
             &(obstaclelist->tab[i].width));
         if (bsm_encode(&tx_buf, &len, &(obstaclelist->tab[i]))) {
-            buffer_t *bsm = malloc(sizeof(buffer_t));
-            bsm->buff = tx_buf;
-            bsm->size = len;
             // if (buff_ring_push(bsm, DSRC_send_buffer)){
             //     printf("push successed\n");
             //     usleep(50);
             // }
             // encode_cnt++;
             // printf("encode %d times\n", encode_cnt);
-            OBU_j2735_tx(len, tx_buf);
+            com_send(OBU_com_id, tx_buf, len);
             # if CPS_DEBUG_APPLI > 0 && !CPS_RX_MODE
                 double timestamp;
                 struct timeval tv;

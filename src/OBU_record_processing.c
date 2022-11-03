@@ -283,9 +283,11 @@ static int yday2month_day(struct tm *timeinfo, int yday)
 int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
 {
     switch (msgf->messageId) {
-    case BasicSafetyMessage_Id:
+    case BasicSafetyMessage_Id: {
+        BasicSafetyMessage *bsm = msgf->u.data;
+        
         return -1;
-        break;
+    } break;
     case SignalRequestMessage_Id: {
         SignalRequestMessage *srm = msgf->u.data;
         if (srm->requestor.id.choice != VehicleID_entityID || srm->requestor.type_option != TRUE ||

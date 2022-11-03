@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
 
 #include "SPaT.h"
 #include "SPaT_packet_tx.h"
@@ -11,36 +13,46 @@
 #include "error_status.h"
 #include "log.h"
 
-static uint8_t *tx_buf = NULL;
-static int tx_buf_len = 0;
 extern SPAT *p_spat;
 static int spat_start_delay = 20;
 static int spat_update_delay = 0;
 
-void SPaT_packet_tx(__sigval_t value)
+void *SPaT_packet_tx_loop()
 {
-    if(spat_start_delay > 0) { // dalay for the tcbox wrong value
-        spat_start_delay--;
-        return;
+    sleep(1);
+    int fd = timerfd_create(CLOCK_REALTIME, 0);
+
+    if (fd == -1) {
+        log_file_write_fatal_error("SPaT_packet_tx_loop timefd create error.");
     }
-    int update_result = spat_msg_update(&p_spat);
-    if (update_result < 0) {
-        return;
-    }
-    if (!spat_update_delay) {
-        tx_buf_len = compose_spat(&tx_buf, p_spat);
-        if (tx_buf_len <= 0) {
-            printf("failed to encode the msg\n");
-        } else {
-            // printf("encode successfully %d\n", tx_buf_len);
-        }
-        // printf("SPAT encoded data:\n");
-        // dump_mem(tx_buf, tx_buf_len);
-        // print_spat(&p_spat);
-    }
-    spat_update_delay = (spat_update_delay + 1) % 5;
+
+    struct itimerspec timerValue;
+    memset(&timerValue, 0, sizeof(struct itimerspec));
     
-    OBU_j2735_tx(tx_buf_len, tx_buf);
+    int t = 1000000000 / SPaT_config.SPaT_packet_transfer_speed;
+    timerValue.it_value.tv_sec = t / 1000000000;
+    timerValue.it_value.tv_nsec = t % 1000000000;
+    timerValue.it_interval.tv_sec = t / 1000000000;
+    timerValue.it_interval.tv_nsec = t % 1000000000;
+
+    if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+        log_file_write_fatal_error("SPaT_packet_tx_loop timerfd_settime");
+    }
+    uint64_t exp;
+    int update_result;
+    uint8_t *tx_buf = NULL;
+    int tx_buf_len = 0;
+    while (SPaT.dontSend2TC) {
+        int s = read(fd, &exp, sizeof(uint64_t));
+        if (s != sizeof(uint64_t))
+            log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
+        update_result = spat_msg_update(&p_spat);
+        if (update_result < 0) {
+            continue;
+        }
+        OBU_j2735_tx(SPAT_Id, p_spat);
+    }
+    close(fd);
 }
 
 void SPaT_send_ack()

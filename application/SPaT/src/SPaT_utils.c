@@ -57,40 +57,6 @@ int spat_msg_init(SPAT **pp_spat)
     return 0;
 }
 
-int compose_spat(uint8_t **pp_spat_buf, SPAT *p_spat)
-{
-    int buf_len;
-    J2735CodecErr err;
-
-    char log_content[LOG_CONTENT_LEN + 1];
-    char errmsg_buf[ERR_MSG_SZ];
-
-    MessageFrame msgf;
-    memset(&msgf, 0, sizeof(msgf));
-
-    memset(&err, 0, sizeof(J2735CodecErr));
-    err.msg_size = ERR_MSG_SZ;
-    err.msg = errmsg_buf;
-
-    msgf.messageId = SPAT_Id;
-    msgf.u.data = p_spat;
-    buf_len = j2735_msg_encode(pp_spat_buf, &msgf, &err);
-
-    if (buf_len <= 0) {
-        printf("failed to encode SPAT msg\n");
-        printf("  [error msg] %s\n", err.msg);
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "failed to encode SPAT msg\r\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "  [error msg] %s \r\n",
-                 err.msg);
-        log_file_write(log_content);
-    }
-    return buf_len;
-}
-
 bool compare_time(const traffic_signal_status_t * const signal_status)
 {
     if(signal_status->Sec != tc_store_time.Sec ||

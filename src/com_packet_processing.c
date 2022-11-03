@@ -26,7 +26,6 @@
 
 #define CPS_ID 3
 extern threadpool_t *pool;
-char log_content[LOG_CONTENT_LEN + 1];
 
 int DSRC_send_timer_handler(buffer_ring_t *buffer)
 {
@@ -41,34 +40,35 @@ int DSRC_send_timer_handler(buffer_ring_t *buffer)
         }
     }
 }
-void OBU_j2735_tx(uint16_t len, void *buf)
+void OBU_j2735_tx(DSRCmsgID magId, void *data)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    msg_buf_t write_buf;
-    write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(len);
-    if (write_buf.content == NULL) {
-        log_file_write_fatal_error("OBU_j2735_tx: malloc");
-        perror("OBU_j2735_tx: malloc");
-        exit(errno);
+    int buf_len;
+    uint8_t *buf;
+    J2735CodecErr err;
+    char errmsg_buf[ERR_MSG_SZ];
+
+    MessageFrame msgf;
+    memset(&msgf, 0, sizeof(msgf));
+    memset(&err, 0, sizeof(J2735CodecErr));
+
+    err.msg_size = ERR_MSG_SZ;
+    err.msg = errmsg_buf;
+
+    msgf.messageId = magId;
+    msgf.u.data = data;
+    buf_len = j2735_msg_encode(&buf, &msgf, &err);
+
+    if (buf_len <= 0) {
+        printf("failed to encode msg\n");
+        printf("  [error msg] %s\n", err.msg);
+        log_file_write("failed to encode msg\r\n  [error msg] %s");
     } else {
-        memset(write_buf.content, 0, len);
+        int ret = com_send(OBU_com_id, buf, buf_len);
+        if (ret == COM_IO_ERR) {
+            log_file_write_fatal_error("OBU_j2735_tx: com_send");
+        }
     }
-    if (memcpy(&write_buf.content[write_buf.index], (unsigned char *) buf,
-               len) == NULL) {
-        log_file_write_fatal_error("OBU_j2735_tx: memcpy");
-    }
-    // printf("obu com id:%d\n", OBU_com_id);
-    int ret = com_send(OBU_com_id, write_buf.content, len);
-    if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("OBU_j2735_tx: com_send");
-    }
-    if (write_buf.content != NULL) {
-        free(write_buf.content);
-    }
-    if (buf == NULL) {
-        free(buf);
-    }
+    j2735_buf_free(buf);
     return;
 }
 void OBU_packet_tx(uint16_t len,
