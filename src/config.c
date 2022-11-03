@@ -102,6 +102,17 @@ static bool read_string_from_config_line(char *config_line, char *val)
     }
 }
 
+static bool read_name_from_config_line(char *config_line, char *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
+    if (sscanf(config_line, "%s \"%[^\"\n]\"\n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 int config_init()
 {
     FILE *fp;
@@ -130,7 +141,7 @@ int config_init()
 
         // RSU name
         if (strstr(buf, "RSU_NAME ")) {
-            if (read_string_from_config_line(buf, string_val)) {
+            if (read_name_from_config_line(buf, string_val)) {
                 if (strlen(string_val) <= 10) {
                     strncpy(config.RSU_name, string_val, 10);
                     log_file_write("config: RSU_name = %s", config.RSU_name);
