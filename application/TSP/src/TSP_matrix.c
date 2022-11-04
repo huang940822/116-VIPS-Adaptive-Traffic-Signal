@@ -13,8 +13,6 @@ TSP_OBU_matrix_t TSP_OBU_matrix_list;
 
 TSP_RSU_matrix_t *TSP_RSU_matrix_new(char *file_name, uint8_t plan_id)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
     TSP_RSU_matrix_t *matrix =
         (TSP_RSU_matrix_t *) malloc(sizeof(TSP_RSU_matrix_t));
     if (matrix == NULL) {
@@ -40,10 +38,7 @@ TSP_RSU_matrix_t *TSP_RSU_matrix_new(char *file_name, uint8_t plan_id)
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", file_path);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", file_path);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", file_path);
     }
 
     char buf[255];
@@ -177,9 +172,6 @@ void TSP_RSU_matrix_print()
 
 TSP_OBU_matrix_t *TSP_OBU_matrix_new(char *file_name, uint8_t plan_id)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     TSP_OBU_matrix_t *matrix =
         (TSP_OBU_matrix_t *) malloc(sizeof(TSP_OBU_matrix_t));
     if (matrix == NULL) {
@@ -205,10 +197,7 @@ TSP_OBU_matrix_t *TSP_OBU_matrix_new(char *file_name, uint8_t plan_id)
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s\n", file_path);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", file_path);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", file_path);
     }
 
     char buf[255];

@@ -68,17 +68,12 @@ static bool read_int_array_from_config_line(char *config_line, int *val)
 
 int MAP_config_init()
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     FILE *fp;
     fp = fopen(MAP_CONFIG_FILE, "r");
     if(fp == NULL) {
         log_file_write_fatal_error("error opening %s", MAP_CONFIG_FILE);
     } else {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
-        strlen(log_content), "%s opened successfully", MAP_CONFIG_FILE);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", MAP_CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -105,8 +100,6 @@ int MAP_config_init()
     // MAP_config.intersections.tab->speedLimits.tab = (RegulatorySpeedLimit *) calloc(1, sizeof(RegulatorySpeedLimit));
     // MAP_config.intersections.tab->laneSet.tab = (GenericLane *) calloc(1, sizeof(GenericLane));
     while (!feof(fp)) {
-        memset(log_content, 0, sizeof(log_content));
-
         fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
         if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
             continue;
@@ -378,8 +371,7 @@ int MAP_config_init()
                 if (uint8_t_val >= 0) {
             
                     MAP_config.MAP_packet_transfer_speed = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),LOG_CONTENT_LEN - strlen(log_content), "config: MAP_packet_transfer_speed = %d",MAP_config.MAP_packet_transfer_speed);
-                    log_file_write(log_content);
+                    log_file_write("config: MAP_packet_transfer_speed = %d",MAP_config.MAP_packet_transfer_speed);
                     continue;
                 } else {
                     return CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
@@ -394,11 +386,8 @@ int MAP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     MAP_config.MAP_dontSend2TC = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: MAP_dontSend2TC = %d",
+                    log_file_write("config: MAP_dontSend2TC = %d",
                              MAP_config.MAP_dontSend2TC);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return -1;

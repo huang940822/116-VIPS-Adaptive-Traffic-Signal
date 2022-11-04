@@ -57,7 +57,6 @@ int main()
 
     /* Start server */
     int ret = 0;
-    char log_content[LOG_CONTENT_LEN + 1];
 
     /* log init */
     log_file_init();  //一個timer被created
@@ -122,11 +121,7 @@ int main()
             log_file_write_fatal_error("error registering application: %d (%s)",
                                     ret, app_arr[i]->name);
         } else {
-            memset(log_content, 0, sizeof(log_content));
-            snprintf(log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "%s register successfully", app_arr[i]->name);
-            log_file_write(log_content);
+            log_file_write("%s register successfully", app_arr[i]->name);
         }
     }
 

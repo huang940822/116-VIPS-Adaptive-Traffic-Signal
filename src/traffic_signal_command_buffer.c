@@ -64,15 +64,8 @@ void command_buf_clear()
 void command_buf_send(tsc_command_object_t *command_obj,
                       uint8_t current_SubPhaseID)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
     if (config.log_command_buffer) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "command_buf_send: ");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\neffect time: %d",
-                 command_obj->effect_time);
-        log_file_write(log_content);
+        log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }
 
     traffic_signal_status_t signal_status;
@@ -775,22 +768,9 @@ int command_buf_insert_adjustment(tsc_command_t *command)
         command->effect_time = max_green;
     }
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
     if (config.log_command_buffer) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "command_buf_insert_adjustment: ");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                 command->host_OBU_name);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nadjustment:  %d",
-                 command->adjustment);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\neffect time: %d",
-                 command->effect_time);
-        log_file_write(log_content);
+        log_file_write("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d", 
+                command->host_OBU_name, command->adjustment, command->effect_time);
     }
 
     int ret = 0;

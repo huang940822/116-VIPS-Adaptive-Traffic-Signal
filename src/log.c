@@ -34,18 +34,12 @@ void log_file_init()
     strncat(file_path, log_file_name, sizeof(file_path));
     strcat(file_path, ".log");
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     log_file_ptr = fopen(file_path, "a+");
 
     if (log_file_ptr == NULL) {
         log_file_write_fatal_error("error opening %s", file_path);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", file_path);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", file_path);
     }
 
     /* log file name update timer event */
@@ -72,9 +66,6 @@ void log_file_name_update()
         strncat(file_path, buffer, sizeof(file_path));
         strcat(file_path, ".log");
 
-        char log_content[LOG_CONTENT_LEN + 1];
-        memset(log_content, 0, sizeof(log_content));
-
         FILE *new_log_file_ptr;
         FILE *tmp_log_file_ptr;
 
@@ -83,10 +74,7 @@ void log_file_name_update()
         if (new_log_file_ptr == NULL) {
             log_file_write_fatal_error("error opening %s", file_path);
         } else {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "%s opened successfully", file_path);
-            log_file_write(log_content);
+            log_file_write("%s opened successfully", file_path);
 
             pthread_mutex_lock(&mutex_log_file_ptr);
             tmp_log_file_ptr = log_file_ptr;
@@ -100,10 +88,7 @@ void log_file_name_update()
             strcat(file_path, ".log");
 
             if (fclose(tmp_log_file_ptr) == 0) {
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "%s closed successfully", file_path);
-                log_file_write(log_content);
+                log_file_write("%s closed successfully", file_path);
             } else {
                 log_file_write_fatal_error("error closing %s", file_path);
             }

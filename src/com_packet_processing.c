@@ -202,12 +202,7 @@ void cloud_packet_tx(uint16_t len,
         }
         log_file_write(log_content);
     }
-
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "in cloud packet tx cloud_com_id is %d\n", cloud_com_id);
-    log_file_write(log_content);
+    log_file_write("in cloud packet tx cloud_com_id is %d\n", cloud_com_id);
     int ret = com_send(cloud_com_id, write_buf.content, write_buf.index);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("cloud_packet_tx: com_send");

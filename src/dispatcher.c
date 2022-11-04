@@ -21,7 +21,6 @@ void *dispatcher_handler()
     msg_queue_init();
     // pthread_mutex_init(&lock, NULL);
     int ret = 0;
-    char log_content[LOG_CONTENT_LEN + 1];
 
     struct msg_obj *msg;
     // assert((pool = threadpool_create(THREAD, THREADQUEUE, 0)) != NULL);
@@ -31,22 +30,14 @@ void *dispatcher_handler()
     //         THREAD, THREADQUEUE);
 
     for (;;) {
-        memset(log_content, 0, sizeof(log_content));
         msg = msg_queue_dequeue();
 
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "dispatcher: MSG(%d)",
-                 msg->device_id);
-        log_file_write(log_content);
+        log_file_write("dispatcher: MSG(%d)", msg->device_id);
         if (msg->device_id == FROM_CLOUD) {
             // printf("cloud_rx_event\n");
 
             cloud_com_id = msg->handle_id;
-            memset(log_content, 0, sizeof(log_content));
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "cloud_com_id in dispatcher is %d", cloud_com_id);
-            log_file_write(log_content);
+            log_file_write("cloud_com_id in dispatcher is %d", cloud_com_id);
             ret = cloud_packet_rx_event_handler(msg);
             if (ret < 0) {
                 log_file_write_fatal_error("invalid packet from cloud: %d\n",

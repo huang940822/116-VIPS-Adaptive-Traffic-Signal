@@ -12,8 +12,6 @@ EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_list_head = NULL;
 EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
                                                             uint8_t plan_id)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
 
     EVSP_touching_area_plan_list_t *plan;
     Malloc(plan, sizeof(EVSP_touching_area_plan_list_t), "EVSP_touching_area_plan_new");
@@ -32,10 +30,7 @@ EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", file_path);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", file_path);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", file_path);
     }
 
     uint8_t ret = 0;

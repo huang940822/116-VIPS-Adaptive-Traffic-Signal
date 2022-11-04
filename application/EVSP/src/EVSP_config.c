@@ -30,18 +30,12 @@ static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
 
 int EVSP_config_init()
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     FILE *fp;
     fp = fopen(EVSP_CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", EVSP_CONFIG_FILE);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", EVSP_CONFIG_FILE);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", EVSP_CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -51,8 +45,6 @@ int EVSP_config_init()
     char string_val[MAX_CONFIG_VARIABLE_LEN];
 
     while (!feof(fp)) {
-        memset(log_content, 0, sizeof(log_content));
-
         fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
         if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
             continue;
@@ -64,11 +56,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_packet_timeout = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: evsp_host_obu_packet_timeout = %d",
+                    log_file_write("config: evsp_host_obu_packet_timeout = %d",
                              EVSP_config.evsp_host_obu_packet_timeout);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
@@ -83,11 +72,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_list_timeout = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: evsp_host_obu_list_timeout = %d",
+                    log_file_write("config: evsp_host_obu_list_timeout = %d",
                              EVSP_config.evsp_host_obu_list_timeout);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
@@ -102,10 +88,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.min_green = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: min_green = %d", EVSP_config.min_green);
-                    log_file_write(log_content);
+                    log_file_write("config: min_green = %d", EVSP_config.min_green);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
@@ -120,10 +103,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.max_green = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: max_green = %d", EVSP_config.max_green);
-                    log_file_write(log_content);
+                    log_file_write("config: max_green = %d", EVSP_config.max_green);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
@@ -138,11 +118,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.valid_record_distance = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: valid_record_distance = %d",
+                    log_file_write("config: valid_record_distance = %d",
                              EVSP_config.valid_record_distance);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;

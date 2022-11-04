@@ -198,17 +198,17 @@ int config_init()
         if (strstr(buf, "SIGNAL_CONTROLLER_MANUFACTURER ")) {
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "cheng_long") == 0) {
-                    config.signal_controller_manufacturer = 0;
+                    config.signal_controller_manufacturer = CHENG_LONG;
                     log_file_write("config: signal_controller_manufacturer = %d",
                              config.signal_controller_manufacturer);
                     continue;
                 } else if (strcmp(string_val, "shan_zhu") == 0) {
-                    config.signal_controller_manufacturer = 1;
+                    config.signal_controller_manufacturer = SHAN_ZHU;
                     log_file_write("config: signal_controller_manufacturer = %d",
                              config.signal_controller_manufacturer);
                     continue;
                 } else if (strcmp(string_val, "shan_zhu_m") == 0) {
-                    config.signal_controller_manufacturer = 2;
+                    config.signal_controller_manufacturer = SHAN_ZHU_M;
                     log_file_write("config: signal_controller_manufacturer = %d",
                              config.signal_controller_manufacturer);
 

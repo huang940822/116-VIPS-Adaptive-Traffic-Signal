@@ -495,19 +495,13 @@ int TSP_on_registration(void *arg)
     create_timer(&TSP_report_plan_timer_id, NULL,
                  TSP_report_plan_timer_handler);
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     /* RSU_supermatrix */
     DIR *dp;
     struct dirent *dirp;
     if ((dp = opendir(RSU_SUPERMATRIX_DIR)) == NULL) {
         log_file_write_fatal_error("error opening %s", RSU_SUPERMATRIX_DIR);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", RSU_SUPERMATRIX_DIR);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", RSU_SUPERMATRIX_DIR);
     }
 
     char rsu_name[RSU_NAME_MAX_LEN];
@@ -526,16 +520,11 @@ int TSP_on_registration(void *arg)
     closedir(dp);
     TSP_RSU_matrix_print();
 
-    memset(log_content, 0, sizeof(log_content));
-
     /* OBU_supermatrix */
     if ((dp = opendir(OBU_SUPERMATRIX_DIR)) == NULL) {
         log_file_write_fatal_error("error opening %s", OBU_SUPERMATRIX_DIR);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", OBU_SUPERMATRIX_DIR);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", OBU_SUPERMATRIX_DIR);
     }
 
     /* list all file */

@@ -453,18 +453,12 @@ void set_serial_attribs()
         VMIN_LEN;                         /* Read at least 20 characters */
     serial_port_settings.c_cc[VTIME] = 0; /* Wait indefinetly            */
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     /* Set the attributes to the termios structure */
     if ((tcsetattr(serial_port_fd, TCSANOW, &serial_port_settings)) != 0) {
         log_file_write_fatal_error("error setting attributes of %s",
                                    SERIAL_PORT);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s set attributes successfully", SERIAL_PORT);
-        log_file_write(log_content);
+        log_file_write("%s set attributes successfully", SERIAL_PORT);
     }
     sleep(2); /* required to make flush work, for some reason */
     tcflush(serial_port_fd,
@@ -479,17 +473,11 @@ void traffic_signal_port_init()
     /* O_NOCTTY - No terminal will control the process   */
     /* Open in blocking mode,read will wait              */
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     /* Error Checking */
     if (serial_port_fd == -1) {
         log_file_write_fatal_error("error opening %s", SERIAL_PORT);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", SERIAL_PORT);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", SERIAL_PORT);
     }
     set_serial_attribs();
 }

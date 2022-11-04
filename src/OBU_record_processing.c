@@ -403,12 +403,8 @@ void OBU_object_garbage_collection_init()
 
 void OBU_object_garbage_collection_timer(__sigval_t value)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
     if (config.log_middleware_timer_event) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "%s",
-                 "timer event: OBU list garbage collection");
-        log_file_write(log_content);
+        log_file_write("timer event: OBU list garbage collection");
     }
 
     OBU_object_garbage_collection();
@@ -450,10 +446,6 @@ void OBU_object_garbage_collection()
         current = special_OBU_list[i].next;
         while (current != &special_OBU_list[i]) {
             target = NULL;
-            printf("time_second %ld\n", current_time -
-                 current->record_ring
-                     .record[current->record_ring.last_record_pointer]
-                     .time_second);
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]

@@ -32,26 +32,16 @@ extern buffer_ring_t *DSRC_send_buffer;
 static unsigned int count = 0;
 void timer_event_handler(__sigval_t value)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     if (*(uint8_t *) value.sival_ptr ==
         TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT) {
         if (config.log_middleware_timer_event) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s",
-                     "timer event: traffic signal status report");
-            log_file_write(log_content);
+            log_file_write("timer event: traffic signal status report");
         }
-
         // report_plan();  //對obu 廣播 plan
     } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING) {
         if (config.log_middleware_timer_event) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s",
-                     "timer event: traffic signal command buf polling");
-            log_file_write(log_content);
+            log_file_write("timer event: traffic signal command buf polling");
         }
 
         pthread_mutex_lock(&mutex_uart_comple_protect);
@@ -154,10 +144,7 @@ void timer_event_handler(__sigval_t value)
     } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_LOG_FILE_NAME_UPDATE) {
         if (config.log_middleware_timer_event) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s",
-                     "timer event: log file name update");
-            log_file_write(log_content);
+            log_file_write("timer event: log file name update");
         }
 
         log_file_name_update();
@@ -187,9 +174,6 @@ int create_timer(timer_t *timer_id,
                  void *signal_value,
                  void (*notify_function)(__sigval_t))
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     struct sigevent evp;
     memset(&evp, 0, sizeof(struct sigevent));
 
@@ -213,13 +197,7 @@ int create_timer(timer_t *timer_id,
         exit(errno);
     } else {
         if (signal_value != NULL && config.log_middleware_timer_event == 1) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "timer event: ");
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "create timer with signal value(%d)",
-                     *(uint8_t *) signal_value);
-            log_file_write(log_content);
+            log_file_write("timer event: create timer with signal value(%d)",  *(uint8_t *) signal_value);
         }
         return 0;
     }

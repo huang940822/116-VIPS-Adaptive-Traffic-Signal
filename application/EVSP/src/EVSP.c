@@ -686,9 +686,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
 int EVSP_on_registration(void *arg)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     /* read evsp confile file*/
     int ret = EVSP_config_init();
     if (ret != EVSP_CONFIG_ACCEPT) {
@@ -701,10 +698,7 @@ int EVSP_on_registration(void *arg)
     if ((dp = opendir(TOUCHING_AREA_DIR)) == NULL) {
         log_file_write_fatal_error("error opening %s", TOUCHING_AREA_DIR);
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", TOUCHING_AREA_DIR);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully", TOUCHING_AREA_DIR);
     }
 
     char rsu_name[RSU_NAME_MAX_LEN];
