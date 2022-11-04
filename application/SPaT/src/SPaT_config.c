@@ -9,11 +9,8 @@
 SPaT_config_object_t SPaT_config = {
     .SPaT_packet_transfer_speed = 10,
     .signalcount = 2,
-    .intersection_id = 1,
     .SPaT_dontSend2TC = 1,
 };
-
-
 
 static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
 {
@@ -56,26 +53,6 @@ int SPaT_config_init()
         if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
             continue;
         }
-
-        if (strstr(buf, "intersection_id ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                if (uint8_t_val >= 0) {
-                    SPaT_config.intersection_id= uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: intersection_id = %d",
-                             SPaT_config.intersection_id);
-                    log_file_write(log_content);
-                    continue;
-                } else {
-                    return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
-                }
-            } else {
-                return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
-            }
-        }
-
-
         // SPaT_packet_transfer_speed
         if (strstr(buf, "SPaT_packet_transfer_speed ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
@@ -88,10 +65,10 @@ int SPaT_config_init()
                     log_file_write(log_content);
                     continue;
                 } else {
-                    return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+                    return CONFIG_INVALID_SPAT_PACKET;
                 }
             } else {
-                return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+                return CONFIG_INVALID_SPAT_PACKET;
             }
         }
 
@@ -107,10 +84,10 @@ int SPaT_config_init()
                     log_file_write(log_content);
                     continue;
                 } else {
-                    return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+                    return CONFIG_INVALID_SPAT_PACKET;
                 }
             } else {
-                return CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+                return CONFIG_INVALID_SPAT_PACKET;
             }
         }
 

@@ -16,16 +16,8 @@ void EVSP_send_ack()
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_send_ack: malloc");
-        perror("EVSP_send_ack: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
+
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "EVSP_send_ack");
 
     // cmd
     write_uint8_t(0, &write_buf);

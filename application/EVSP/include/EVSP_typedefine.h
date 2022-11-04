@@ -35,7 +35,7 @@ typedef struct EVSP_touching_area_plan_list {
 
 
 typedef struct EVSP_host_OBU_obj {
-    char OBU_id[OBU_ID_MAX_LEN + 1];
+    char OBU_name[OBU_NAME_MAX_LEN + 1];
     uint8_t passenger;
     uint8_t target_phase;
     uint16_t distance;

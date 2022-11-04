@@ -7,7 +7,8 @@
 #include "typedefine.h"
 
 config_object_t config = {
-    .RSU_id = "S428901   ",
+    .RSU_name = "S428901   ",
+    .RSU_id = 0,
     .RSU_lat = 22.996714,
     .RSU_lon = 120.237009,
     .signal_controller_manufacturer = 1,
@@ -36,8 +37,6 @@ config_object_t config = {
     .log_OBU_packet_rx = 1,
     .log_OBU_packet_tx = 1,
     .log_OBU_list = 1,
-    .SPaT_packet_tx = 1,
-    .MAP_packet_tx = 1,
 };
 
 static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
@@ -50,11 +49,31 @@ static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
         return false;
     }
 }
+static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    *val = 0;
+    if (sscanf(config_line, "%s %u\n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
 static bool read_float_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     *val = 0;
     if (sscanf(config_line, "%s %f \n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
+static bool read_double_from_config_line(char *config_line, double *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    *val = 0;
+    if (sscanf(config_line, "%s %lf \n", prm_name, val) == 2) {
         return true;
     } else {
         return false;
@@ -83,7 +102,7 @@ static bool read_string_from_config_line(char *config_line, char *val)
     }
 }
 
-static bool read_id_from_config_line(char *config_line, char *val)
+static bool read_name_from_config_line(char *config_line, char *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
@@ -96,61 +115,63 @@ static bool read_id_from_config_line(char *config_line, char *val)
 
 int config_init()
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
     FILE *fp;
     fp = fopen(CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", CONFIG_FILE);
+        return CONFIG_INVALID_OPEN_FILE;
     } else {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "%s opened successfully", CONFIG_FILE);
-        log_file_write(log_content);
+        log_file_write("%s opened successfully %s", CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
 
     uint8_t uint8_t_val;
+    uint32_t uint32_t_val;
+    double double_val;
     float float_val;
     float float_val_array[PHASE_COUNT_MAX_NUM];
     char string_val[MAX_CONFIG_VARIABLE_LEN];
 
     while (!feof(fp)) {
-        memset(log_content, 0, sizeof(log_content));
-
         fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
         if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
             continue;
         }
 
-        // RSU id
-        if (strstr(buf, "RSU_ID ")) {
-            if (read_id_from_config_line(buf, string_val)) {
-                if (strlen(string_val) == 10) {
-                    strncpy(config.RSU_id, string_val, 10);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: RSU_id = %s", config.RSU_id);
-                    log_file_write(log_content);
+        // RSU name
+        if (strstr(buf, "RSU_NAME ")) {
+            if (read_name_from_config_line(buf, string_val)) {
+                if (strlen(string_val) <= 10) {
+                    strncpy(config.RSU_name, string_val, 10);
+                    log_file_write("config: RSU_name = %s", config.RSU_name);
                     continue;
                 } else {
-                    return CONFIG_INVALID_RSU_ID;
+                    return CONFIG_INVALID_RSU_NAME;
                 }
             } else {
-                return CONFIG_INVALID_RSU_ID;
+                return CONFIG_INVALID_RSU_NAME;
+            }
+        }
+        // RSU id
+        if (strstr(buf, "RSU_id ")) {
+            if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
+                if (0 <= uint32_t_val && uint32_t_val <= 65535) {
+                    config.RSU_id = uint32_t_val;
+                    log_file_write("config: RSU_id = %d", config.RSU_id);
+                } else {
+                    return CONFIG_INVALID_RSU_NAME;
+                }
+            } else {
+                return CONFIG_INVALID_RSU_NAME;
             }
         }
         // rsu lat
         if (strstr(buf, "RSU_LAT ")) {
-            if (read_float_from_config_line(buf, &float_val)) {
-                if (float_val >= 0) {
-                    config.RSU_lat = float_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: RSU_lat = %f", config.RSU_lat);
-                    log_file_write(log_content);
+            if (read_double_from_config_line(buf, &double_val)) {
+                if (-90 <= double_val && double_val <= 90) {
+                    config.RSU_lat = double_val;
+                    log_file_write("config: RSU_lat = %f", config.RSU_lat);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_LAT;
@@ -161,13 +182,10 @@ int config_init()
         }
         // rsu lon
         if (strstr(buf, "RSU_LON ")) {
-            if (read_float_from_config_line(buf, &float_val)) {
-                if (float_val >= 0) {
-                    config.RSU_lon = float_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: RSU_lon = %f", config.RSU_lon);
-                    log_file_write(log_content);
+            if (read_double_from_config_line(buf, &double_val)) {
+                if (-180 < double_val && double_val <= 180) {
+                    config.RSU_lon = double_val;
+                    log_file_write("config: RSU_lon = %f", config.RSU_lon);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_LON;
@@ -181,27 +199,18 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "cheng_long") == 0) {
                     config.signal_controller_manufacturer = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_controller_manufacturer = %d",
+                    log_file_write("config: signal_controller_manufacturer = %d",
                              config.signal_controller_manufacturer);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "shan_zhu") == 0) {
                     config.signal_controller_manufacturer = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_controller_manufacturer = %d",
+                    log_file_write("config: signal_controller_manufacturer = %d",
                              config.signal_controller_manufacturer);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "shan_zhu_m") == 0) {
                     config.signal_controller_manufacturer = 2;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_controller_manufacturer = %d",
+                    log_file_write("config: signal_controller_manufacturer = %d",
                              config.signal_controller_manufacturer);
-                    log_file_write(log_content);
 
                 } else {
                     return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;
@@ -215,19 +224,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.signal_status_report_active = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_status_report_active = %d",
+                    log_file_write("config: signal_status_report_active = %d",
                              config.signal_status_report_active);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.signal_status_report_active = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_status_report_active = %d",
+                    log_file_write("config: signal_status_report_active = %d",
                              config.signal_status_report_active);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_SIGNAL_STATUS_REPORT_ACTIVE;
@@ -241,19 +244,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.signal_adjust_upper_bound_active = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_adjust_upper_bound_active = %d",
+                    log_file_write("config: signal_adjust_upper_bound_active = %d",
                              config.signal_adjust_upper_bound_active);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.signal_adjust_upper_bound_active = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_adjust_upper_bound_active = %d",
+                    log_file_write("config: signal_adjust_upper_bound_active = %d",
                              config.signal_adjust_upper_bound_active);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_SIGNAL_ADJUST_UPPER_BOUND_ACTVE;
@@ -267,19 +264,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.signal_adjust_lower_bound_active = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_adjust_lower_bound_active = %d",
+                    log_file_write("config: signal_adjust_lower_bound_active = %d",
                              config.signal_adjust_lower_bound_active);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.signal_adjust_lower_bound_active = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: signal_adjust_lower_bound_active = %d",
+                    log_file_write("config: signal_adjust_lower_bound_active = %d",
                              config.signal_adjust_lower_bound_active);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_SIGNAL_ADJUST_LOWER_BOUND_ACTVE;
@@ -293,12 +284,8 @@ int config_init()
             if (read_float_from_config_line(buf, &float_val)) {
                 if (float_val >= 0) {
                     config.signal_adjust_upper_bound_percentage = float_val;
-                    snprintf(
-                        log_content + strlen(log_content),
-                        LOG_CONTENT_LEN - strlen(log_content),
-                        "config: signal_adjust_upper_bound_percentage = %f",
+                    log_file_write("config: signal_adjust_upper_bound_percentage = %f",
                         config.signal_adjust_upper_bound_percentage);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_SIGNAL_ADJUST_UPPER_BOUND_PERCENTAGE;
@@ -312,12 +299,8 @@ int config_init()
             if (read_float_from_config_line(buf, &float_val)) {
                 if (float_val >= 0) {
                     config.signal_adjust_lower_bound_percentage = float_val;
-                    snprintf(
-                        log_content + strlen(log_content),
-                        LOG_CONTENT_LEN - strlen(log_content),
-                        "config: signal_adjust_lower_bound_percentage = %f",
+                    log_file_write("config: signal_adjust_lower_bound_percentage = %f",
                         config.signal_adjust_lower_bound_percentage);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE;
@@ -331,11 +314,8 @@ int config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     config.traffic_compensation_method = uint8_t_val;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: traffic_compensation_method = %d",
+                    log_file_write("config: traffic_compensation_method = %d",
                              config.traffic_compensation_method);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
@@ -364,19 +344,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_middleware_timer_event = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_middleware_timer_event = %d",
+                    log_file_write("config: log_middleware_timer_event = %d",
                              config.log_middleware_timer_event);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_middleware_timer_event = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_middleware_timer_event = %d",
+                    log_file_write("config: log_middleware_timer_event = %d",
                              config.log_middleware_timer_event);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_MIDDLEWARE_TIMER_EVENT;
@@ -390,19 +364,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_application_register_event = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_application_register_event = %d",
+                    log_file_write("config: log_application_register_event = %d",
                              config.log_application_register_event);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_application_register_event = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_application_register_event = %d",
+                    log_file_write("config: log_application_register_event = %d",
                              config.log_application_register_event);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_APPLICATION_REGISTER_EVENT;
@@ -416,19 +384,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_command_buffer = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_command_buffer = %d",
+                    log_file_write("config: log_command_buffer = %d",
                              config.log_command_buffer);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_command_buffer = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_command_buffer = %d",
+                    log_file_write("config: log_command_buffer = %d",
                              config.log_command_buffer);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_COMMAND_BUFFER;
@@ -442,19 +404,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_signal_packet_rx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_signal_packet_rx = %d",
+                    log_file_write("config: log_signal_packet_rx = %d",
                              config.log_signal_packet_rx);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_signal_packet_rx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_signal_packet_rx = %d",
+                    log_file_write("config: log_signal_packet_rx = %d",
                              config.log_signal_packet_rx);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_SIGNAL_PACKET_RX;
@@ -468,19 +424,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_signal_packet_tx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_signal_packet_tx = %d",
+                    log_file_write("config: log_signal_packet_tx = %d",
                              config.log_signal_packet_tx);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_signal_packet_tx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_signal_packet_tx = %d",
+                    log_file_write("config: log_signal_packet_tx = %d",
                              config.log_signal_packet_tx);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_SIGNAL_PACKET_TX;
@@ -494,19 +444,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_signal_packet_info = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_signal_packet_info = %d",
+                    log_file_write("config: log_signal_packet_info = %d",
                              config.log_signal_packet_info);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_signal_packet_info = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_signal_packet_info = %d",
+                    log_file_write("config: log_signal_packet_info = %d",
                              config.log_signal_packet_info);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_SIGNAL_PACKET_INFO;
@@ -520,19 +464,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_cloud_packet_rx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_cloud_packet_rx = %d",
+                    log_file_write("config: log_cloud_packet_rx = %d",
                              config.log_cloud_packet_rx);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_cloud_packet_rx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_cloud_packet_rx = %d",
+                    log_file_write( "config: log_cloud_packet_rx = %d",
                              config.log_cloud_packet_rx);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_CLOUD_PACKET_RX;
@@ -546,19 +484,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_cloud_packet_tx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_cloud_packet_tx = %d",
+                    log_file_write("config: log_cloud_packet_tx = %d",
                              config.log_cloud_packet_tx);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_cloud_packet_tx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_cloud_packet_tx = %d",
+                    log_file_write("config: log_cloud_packet_tx = %d",
                              config.log_cloud_packet_tx);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_CLOUD_PACKET_TX;
@@ -572,19 +504,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_OBU_packet_rx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_OBU_packet_rx = %d",
+                    log_file_write("config: log_OBU_packet_rx = %d",
                              config.log_OBU_packet_rx);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_OBU_packet_rx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_OBU_packet_rx = %d",
+                    log_file_write("config: log_OBU_packet_rx = %d",
                              config.log_OBU_packet_rx);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_OBU_PACKET_RX;
@@ -598,19 +524,13 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_OBU_packet_tx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_OBU_packet_tx = %d",
+                    log_file_write("config: log_OBU_packet_tx = %d",
                              config.log_OBU_packet_tx);
-                    log_file_write(log_content);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_OBU_packet_tx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: log_OBU_packet_tx = %d",
+                    log_file_write("config: log_OBU_packet_tx = %d",
                              config.log_OBU_packet_tx);
-                    log_file_write(log_content);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_OBU_PACKET_TX;
@@ -624,75 +544,17 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_OBU_list = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: .log_OBU_list = %d", config.log_OBU_list);
-                    log_file_write(log_content);
+                    log_file_write("config: .log_OBU_list = %d", config.log_OBU_list);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_OBU_list = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: .log_OBU_list = %d", config.log_OBU_list);
-                    log_file_write(log_content);
+                    log_file_write("config: .log_OBU_list = %d", config.log_OBU_list);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_OBU_LIST;
                 }
             } else {
                 return CONFIG_INVALID_LOG_OBU_LIST;
-            }
-        }
-        // SPaT packet tx
-        if (strstr(buf, "SPAT_PACKET_TX ")) {
-            if (read_string_from_config_line(buf, string_val)) {
-                if (strcmp(string_val, "yes") == 0) {
-                    config.SPaT_packet_tx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: .SPaT_packet_tx = %d",
-                             config.SPaT_packet_tx);
-                    log_file_write(log_content);
-                    continue;
-                } else if (strcmp(string_val, "no") == 0) {
-                    config.SPaT_packet_tx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: .SPaT_packet_tx = %d",
-                             config.SPaT_packet_tx);
-                    log_file_write(log_content);
-                    continue;
-                } else {
-                    return CONFIG_INVALID_SPAT_PACKET_TX;
-                }
-            } else {
-                return CONFIG_INVALID_SPAT_PACKET_TX;
-            }
-        }
-        // MAP packet tx
-        if (strstr(buf, "MAP_PACKET_TX ")) {
-            if (read_string_from_config_line(buf, string_val)) {
-                if (strcmp(string_val, "yes") == 0) {
-                    config.MAP_packet_tx = 1;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: .MAP_packet_tx = %d",
-                             config.SPaT_packet_tx);
-                    log_file_write(log_content);
-                    continue;
-                } else if (strcmp(string_val, "no") == 0) {
-                    config.MAP_packet_tx = 0;
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "config: .MAP_packet_tx = %d",
-                             config.SPaT_packet_tx);
-                    log_file_write(log_content);
-                    continue;
-                } else {
-                    return CONFIG_INVALID_MAP_PACKET_TX;
-                }
-            } else {
-                return CONFIG_INVALID_MAP_PACKET_TX;
             }
         }
     }

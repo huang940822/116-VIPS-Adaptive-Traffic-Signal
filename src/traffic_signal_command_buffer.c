@@ -173,7 +173,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
 
         // compensation_buffer_initialization
         // EVSP or TSP in this `if` condition.
-        if (strncmp(command_obj->host_OBU_id, COMPENSATION_NAME, 15) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
             if (CompensationInitialFlag == true) {
                 // printf("first compensation buffer initialization\r\n");
                 get_compensation_buffer(compensation_buffer);
@@ -181,7 +181,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
             }
         }
 
-        if (strncmp(command_obj->host_OBU_id, COMPENSATION_NAME, 15) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
             // printf("EVSP or TSP control instruction\r\n");
             compensation_buffer[current_SubPhaseID - 1] += difference;
         }
@@ -249,14 +249,14 @@ void command_buf_send(tsc_command_object_t *command_obj,
         log_file_write(log_content);
 
         // compensation_buffer_initialization
-        if (strncmp(command_obj->host_OBU_id, COMPENSATION_NAME, 15) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
             if (CompensationInitialFlag == true) {
                 get_compensation_buffer(compensation_buffer);
                 CompensationInitialFlag = false;
             }
         }
 
-        if (strncmp(command_obj->host_OBU_id, COMPENSATION_NAME,
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME,
                     COMPENSATION_LEN) != 0) {
             compensation_buffer[current_SubPhaseID - 1] += difference;
         }
@@ -305,14 +305,14 @@ void command_buf_send(tsc_command_object_t *command_obj,
         log_file_write(log_content);
 
         // compensation_buffer_initialization
-        if (strncmp(command_obj->host_OBU_id, COMPENSATION_NAME, 15) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
             if (CompensationInitialFlag == true) {
                 get_compensation_buffer(compensation_buffer);
                 CompensationInitialFlag = false;
             }
         }
 
-        if (strncmp(command_obj->host_OBU_id, COMPENSATION_NAME, 15) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
             printf("Not compensation instruction\r\n");
             compensation_buffer[current_SubPhaseID - 1] += difference;
         }
@@ -339,7 +339,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     command.phase = current_SubPhaseID;
     command.step = 1;
     command.effect_time = command_obj->effect_time;
-    memcpy(command.host_OBU_id, command_obj->host_OBU_id, OBU_ID_MAX_LEN + 1);
+    memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
 
     //執行callback 完全不管app_id了 event signal packet tx
     // goto TSP_report_command()
@@ -405,7 +405,7 @@ void command_buf_polling()
     // This means that traffic signal has crossed to the next subphase.
     // Thus,the command buffer object of the previous subphase is cleared.
     if (prior_SubPhaseID != current_SubPhaseID) {
-        if (strncmp(command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_id,
+        if (strncmp(command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name,
                     COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
             if (command_buf[cycle_index][prior_SubPhaseID - 1].send_flag ==
                 true) {
@@ -414,7 +414,7 @@ void command_buf_polling()
                     LOG_CONTENT_LEN - strlen(log_content),
                     "\ncommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
                     cycle_index, prior_SubPhaseID,
-                    command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_id);
+                    command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
                 log_file_write(log_content);
                 memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0,
                        sizeof(tsc_command_object_t));
@@ -432,7 +432,7 @@ void command_buf_polling()
     // compensation_command不能清除，除非他已經送出了。
     if (prior_SubPhaseID > current_SubPhaseID) {
         for (int i = 0; i < SUBPHASEID_NUM; i++) {
-            if (strncmp(command_buf[cycle_index][i].host_OBU_id,
+            if (strncmp(command_buf[cycle_index][i].host_OBU_name,
                         COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
                 if (command_buf[cycle_index][i].send_flag == true) {
                     snprintf(log_content + strlen(log_content),
@@ -440,7 +440,7 @@ void command_buf_polling()
                              "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
                              cycle_index, prior_SubPhaseID,
                              command_buf[cycle_index][prior_SubPhaseID - 1]
-                                 .host_OBU_id);
+                                 .host_OBU_name);
                     log_file_write(log_content);
                     memset(&command_buf[cycle_index][i], 0,
                            sizeof(tsc_command_object_t));
@@ -499,8 +499,8 @@ void command_buf_polling()
     // only EVSP control instruction will goto `if`
     // ensure compensation buffer will be up-to-date after RESUME instruction
     // execute.
-    if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_id,
-                RESUME_ID, OBU_ID_MAX_LEN) == 0) {
+    if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name,
+                RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
         if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag ==
                 true &&
             CompensationFlag) {
@@ -555,8 +555,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     if (command->effect_time <= 0) {
         return INVALID_EFFECT_TIME;
     }
-    if (strlen(command->host_OBU_id) == 0) {
-        return INVALID_HOST_OBU_ID;
+    if (strlen(command->host_OBU_name) == 0) {
+        return OBU_nameINVALID_HOST_OBU_NAME;
     }
 
     traffic_signal_status_t signal_status;
@@ -597,14 +597,14 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         }
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, 15);
+        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, 15);
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
         return INSERT_ACCEPT;
     }
 
     // 如果target_command是補償指令的話，則覆蓋掉。
-    if (strncmp(target_command_obj->host_OBU_id, COMPENSATION_NAME,
+    if (strncmp(target_command_obj->host_OBU_name, COMPENSATION_NAME,
                 COMPENSATION_LEN) == 0) {
         // printf("cover compensation command\r\n");
         // 更新compensation_buffer
@@ -618,8 +618,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         target_command_obj->effect_time = command->effect_time;
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
-                OBU_ID_MAX_LEN);
+        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
+                OBU_NAME_MAX_LEN);
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
         return INSERT_ACCEPT;
@@ -629,28 +629,28 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // evsp裡面會使用obu resumeid
     // replace resume command
     //抓出來的目標cmd buff object其host obu id為resume id則優先取代？
-    if (strncmp(target_command_obj->host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN) ==
+    if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) ==
         0) {
         target_command_obj->app_id = command->app_id;
         target_command_obj->app_priority = command->app_priority;
         target_command_obj->effect_time = command->effect_time;
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
-                OBU_ID_MAX_LEN);
+        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
+                OBU_NAME_MAX_LEN);
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
         return INSERT_ACCEPT;
     }
 
     // resume command
-    if (strncmp(command->host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN) == 0) {
+    if (strncmp(command->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
         if (target_command_obj->app_id == command->app_id) {
             target_command_obj->effect_time = command->effect_time;
             target_command_obj->target_phase = command->target_phase;
             target_command_obj->send_flag = false;
-            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
-                    OBU_ID_MAX_LEN);
+            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
+                    OBU_NAME_MAX_LEN);
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
             return INSERT_ACCEPT;
@@ -662,8 +662,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // same OBU ID      appid的check看起來像是多餘的
     // 除非是一個obu有多個application This means that the application has made a
     // "new command for the serviced OBU". Replace the original command
-    if (strncmp(target_command_obj->host_OBU_id, command->host_OBU_id,
-                OBU_ID_MAX_LEN) == 0 &&
+    if (strncmp(target_command_obj->host_OBU_name, command->host_OBU_name,
+                OBU_NAME_MAX_LEN) == 0 &&
         target_command_obj->app_id == command->app_id) {
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->effect_time = command->effect_time;
@@ -684,8 +684,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
             target_command_obj->send_flag = false;
-            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
-                    OBU_ID_MAX_LEN);
+            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
+                    OBU_NAME_MAX_LEN);
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
             return INSERT_ACCEPT;
@@ -709,8 +709,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             target_command_obj->effect_time = command->effect_time;
             target_command_obj->target_phase = command->target_phase;
             target_command_obj->send_flag = false;
-            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
-                    OBU_ID_MAX_LEN);
+            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
+                    OBU_NAME_MAX_LEN);
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
             return INSERT_ACCEPT;
@@ -783,7 +783,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
                  "command_buf_insert_adjustment: ");
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                 command->host_OBU_id);
+                 command->host_OBU_name);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nadjustment:  %d",
                  command->adjustment);
@@ -820,7 +820,7 @@ void command_buf_print()
                 "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-15s, TP:%1d, AppID:%2d, "
                 "AppPri:%2d, ET:%3d, SF:%1d",
                 i, j + 1, command_buf[i][j].adjusted_time,
-                signal_status.plan[j].PreGreen, command_buf[i][j].host_OBU_id,
+                signal_status.plan[j].PreGreen, command_buf[i][j].host_OBU_name,
                 command_buf[i][j].target_phase, command_buf[i][j].app_id,
                 command_buf[i][j].app_priority, command_buf[i][j].effect_time,
                 command_buf[i][j].send_flag);

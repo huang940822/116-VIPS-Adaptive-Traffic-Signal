@@ -23,12 +23,15 @@
 #include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "application_registration.h"
+#include "j2735_msg.h"
+#include "j2735_srm.h"
 
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = 1,
     .priority = 1,
-    .on_OBU_packet_rx = &EVSP_on_OBU_packet_rx,
+    .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
     .on_RSU_packet_tx = NULL,
@@ -55,17 +58,7 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
 
     msg_buf_t read_buf;
     read_buf.index = 0;
-    read_buf.content = (unsigned char *) malloc(app_section->payload_len);
-    if (read_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_on_cloud_packet_rx: malloc");
-        perror("EVSP_on_cloud_packet_rx: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memcpy(read_buf.content, app_section->payload,
-               app_section->payload_len);
-    }
+    Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
 
     // needs a evsp sned ack function to send ack to cloud
     EVSP_send_ack();
@@ -129,66 +122,37 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
-//讀取到evsp obu的封包時
-
-// typedef struct V2R_app_section {
-//     uint32_t payload_len;
-//     char *payload;
-//     uint8_t com_id;
-//     OBU_object_t *OBU_object;
-// } V2R_app_section_t;
-
-// typedef struct OBU_object {
-//     char OBU_id[OBU_ID_MAX_LEN + 1];    //+1 if for \0
-//     uint8_t vehicle_type;
-//     OBU_record_ring_t record_ring;
-//     app_private_space_t *private_space;
-//     struct OBU_object *prev;
-//     struct OBU_object *next;
-// } OBU_object_t;
-
-// typedef struct OBU_record_ring {
-//     OBU_record_t record[OBU_RECORD_RING_CAPACITY];
-//     uint8_t first_record_pointer; // queue.front
-//     uint8_t last_record_pointer; // queue.back
-//     uint8_t length;
-// } OBU_record_ring_t;
-
-// typedef struct OBU_record {
-//     char OBU_id[OBU_ID_MAX_LEN];
-//     struct tm time_stamp;
-//     time_t time_second;
-//     float position_lon;
-//     float position_lat;
-//     uint8_t speed;
-//     uint8_t acceleration;
-//     uint8_t direction;
-//     uint8_t vehicle_type;
-// } OBU_record_t;
-// int length= strftime (buffer,80,"%Y-%m-%dT%H:%M:%SZ\n",timeinfo);
-//可用此函式把tm結構timestamp
-//變回去string
-
 int EVSP_on_OBU_packet_rx(void *arg)
 {
+    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
+        return 0;
+
     // printf("EVSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    memset(log_content, 0, sizeof(log_content));    
+
+    /* If SRM checks whether this message is for self. */
+    if (app_section->msgID == SignalRequestMessage_Id) {
+        SignalRequestMessage *srm = app_section->data;
+        if (srm->requests_option) {
+            int i = 0;
+            for (i; i < srm->requests.count; i++) {
+                if (srm->requests.tab[i].request.id.id == config.RSU_id)
+                    break;
+            }
+            if (i == srm->requests.count)
+                return -1;
+        }
+        else {
+            return -1;
+        }
+    }
 
     msg_buf_t read_buf;
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
-    if (read_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("EVSP_on_OBU_packet_rx: malloc");
-        perror("EVSP_on_OBU_packet_rx: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memcpy(read_buf.content, app_section->payload,
-               app_section->payload_len);
-    }
+    Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
 
     /* print packet */
     if (config.log_OBU_packet_rx) {
@@ -204,26 +168,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  LOG_CONTENT_LEN - strlen(log_content), "\n");
     }
 
-    // typedef struct EVSP_static_space
-    // {
-    //     uint8_t on_duty_flag;
-    //     uint8_t weight;
-    //     uint8_t last_direction;
-    //     float last_lon;
-    //     float last_lat;
-    // } EVSP_static_space_t;
-
     EVSP_static_space_t static_space;
     memcpy(&static_space,
-           app_section->OBU_object->private_space[EVSP.id].static_space,
+           app_section->OBU_object->private_space->static_space,
            sizeof(EVSP_static_space_t));
     read_uint8_t(&static_space.on_duty_flag, &read_buf);
     read_uint8_t(&static_space.weight, &read_buf);
     read_uint8_t(&static_space.error_code, &read_buf);
-
-    // printf("static_space.weight:%x\r\n",static_space.on_duty_flag);
-    // printf("static_space.weight:%x\r\n",static_space.weight);
-    // printf("static_space.weight:%x\r\n",static_space.error_code);
 
 
     uint8_t last_record_index =
@@ -231,7 +182,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
             .last_record_pointer;  // back of queue; 最新推入的資料？
 
     //轉傳緊急封包到雲端
-
 
     {  // it's for evsp service's rx and try to get it's duty status and route
         // it to cloud
@@ -254,19 +204,20 @@ int EVSP_on_OBU_packet_rx(void *arg)
         write_uint8_t(0, &write_buf);  // write cmd
         write_char(
             app_section->OBU_object->record_ring.record[last_record_index]
-                .OBU_id,
-            &write_buf, OBU_ID_MAX_LEN, OBU_ID_MAX_LEN);  // write OBU_id
+                .OBU_name,
+            &write_buf, OBU_NAME_MAX_LEN, OBU_NAME_MAX_LEN);  // write OBU_name
         write_uint8_t(
             app_section->OBU_object->record_ring.record[last_record_index]
                 .vehicle_type,
             &write_buf);  // write vehicle_type
 
         char timestamp_t[20];
-        int length =
-            strftime(timestamp_t, 20, "%Y-%m-%d %H:%M:%S\n",
-                     (struct tm *) &(app_section->OBU_object->record_ring
+        struct tm *timeinfo;
+        timeinfo = localtime(&app_section->OBU_object->record_ring
                                          .record[last_record_index]
-                                         .time_stamp));
+                                         .time_second);
+        int length =
+            strftime(timestamp_t, 20, "%Y-%m-%d %H:%M:%S\n", timeinfo);
         // printf("obu object timestamp string is %s\n\r",timestamp_t);
         write_char(timestamp_t, &write_buf, TIMESTAMP_LEN,
                    TIMESTAMP_LEN);  // write timestamp
@@ -302,7 +253,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
         cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
         free(write_buf.content);
     }
-
 
     // obu與rsu的距離
     uint16_t OBU_distance = (uint16_t) get_distance(
@@ -343,21 +293,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  "%hd\nlast OBU direction: %hhd",
                  static_space.last_lat, static_space.last_lon,
                  last_record_distance, static_space.last_direction);
-
-        if (last_record_distance >
-            EVSP_config
-                .valid_record_distance) {  //位移有超過閥值 才會紀錄下來？
-            static_space.last_lon =
-                app_section->OBU_object->record_ring.record[last_record_index]
-                    .position_lon;
-            static_space.last_lat =
-                app_section->OBU_object->record_ring.record[last_record_index]
-                    .position_lat;
-            static_space.last_direction =
-                app_section->OBU_object->record_ring.record[last_record_index]
-                    .direction;
-        }
-    } else {  //第一筆資料
+    } 
+    //位移有超過閥值 才會紀錄下來 or 第一筆資料
+    if (last_record_distance > EVSP_config.valid_record_distance || last_record_distance == 0) {  
         static_space.last_lon =
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lon;
@@ -368,12 +306,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
             app_section->OBU_object->record_ring.record[last_record_index]
                 .direction;
     }
-    memcpy(app_section->OBU_object->private_space[EVSP.id].static_space,
+    memcpy(app_section->OBU_object->private_space->static_space,
            &static_space, sizeof(EVSP_static_space_t));
     log_file_write(log_content);
 
     EVSP_host_OBU_obj_t *host_OBU =
-        EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_id);
+        EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -407,16 +345,16 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: TERMINATE");
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                     app_section->OBU_object->OBU_id);
+                     app_section->OBU_object->OBU_name);
 
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
             command.app_id = EVSP.id;
             command.app_priority = EVSP.priority;
             command.target_phase = host_OBU->target_phase;
-            strncpy(command.host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN);
+            strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
 
-            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_id);
+            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
@@ -492,12 +430,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: ACTIVATE");
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                     app_section->OBU_object->OBU_id);
+                     app_section->OBU_object->OBU_name);
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "\ntarget phase: %d", target_phase);
 
-            EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_id,
+            EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
                                      target_phase, area_ptr);
             EVSP_host_OBU_obj_print();
             tsc_command_t command;
@@ -505,8 +443,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
             command.app_id = EVSP.id;
             command.app_priority = EVSP.priority;
             command.target_phase = target_phase;
-            strncpy(command.host_OBU_id, app_section->OBU_object->OBU_id,
-                    OBU_ID_MAX_LEN);
+            strncpy(command.host_OBU_name, app_section->OBU_object->OBU_name,
+                    OBU_NAME_MAX_LEN);
 
             uint8_t current_phase = signal_status.SubPhaseID;
             uint8_t current_step = signal_status.StepID;
@@ -751,6 +689,12 @@ int EVSP_on_registration(void *arg)
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
+    /* read evsp confile file*/
+    int ret = EVSP_config_init();
+    if (ret != EVSP_CONFIG_ACCEPT) {
+        log_file_write_fatal_error("error evsp reading config file: %d", ret);
+    }
+
     /* touching area */
     DIR *dp;
     struct dirent *dirp;
@@ -763,14 +707,14 @@ int EVSP_on_registration(void *arg)
         log_file_write(log_content);
     }
 
-    char rsu_id[RSU_ID_MAX_LEN];
+    char rsu_name[RSU_NAME_MAX_LEN];
     uint8_t plan_id;
     /* list all file */
     while ((dirp = readdir(dp)) != NULL) {
         if (dirp->d_type == 8) {
             /* parse file name */
-            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_id, &plan_id);
-            if (strncmp(rsu_id, config.RSU_id, RSU_ID_MAX_LEN) == 0) {
+            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_name, &plan_id);
+            if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
                 EVSP_touching_area_plan_insert(dirp->d_name, plan_id);
             }
         }
@@ -778,5 +722,8 @@ int EVSP_on_registration(void *arg)
     fflush(stdout);
     closedir(dp);
     EVSP_touching_area_plan_print();
+
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
     return 0;
 }

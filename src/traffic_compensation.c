@@ -90,7 +90,7 @@ void traffic_compensation_method1()
     memset(&command, 0, sizeof(tsc_command_t));
     command.app_id = COMPENSATION_ID;
     command.app_priority = COMPENSATION_priority;
-    strncpy(command.host_OBU_id, COMPENSATION_NAME, COMPENSATION_LEN);
+    strncpy(command.host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN);
 
     for (int i = 0; i < SUBPHASEID_NUM; i++) {
         compensation_time = compensation_buffer[i] / COMPENSATION_CYCLE;
@@ -171,7 +171,7 @@ void traffic_compensation_method2()
     memset(&command, 0, sizeof(tsc_command_t));
     command.app_id = COMPENSATION_ID;
     command.app_priority = COMPENSATION_priority;
-    strncpy(command.host_OBU_id, COMPENSATION_NAME, COMPENSATION_LEN);
+    strncpy(command.host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN);
 
     int ret = 0;
 
@@ -263,7 +263,7 @@ void traffic_compensation_method3()
         } else {
             if (signal_status.plan[i].PreGreen >= branch) {
                 branch = signal_status.plan[i].PreGreen;
-                branch = i + 1;
+                branch_phase = i + 1;
             }
         }
     }
@@ -279,7 +279,7 @@ void traffic_compensation_method3()
             LOG_CONTENT_LEN - strlen(log_content),
             "Total compensation second:%d\r\n",
             T);
-            
+
     int16_t branch_pretime = signal_status.plan[branch_phase - 1].PreGreen;
     int16_t atrerial_pretime = signal_status.plan[atrerial_phase - 1].PreGreen;
     uint16_t branch_min_green = signal_status.plan[branch_phase - 1].MinGreen;
@@ -292,7 +292,7 @@ void traffic_compensation_method3()
     memset(&command, 0, sizeof(tsc_command_t));
     command.app_id = COMPENSATION_ID;
     command.app_priority = COMPENSATION_priority;
-    strncpy(command.host_OBU_id, COMPENSATION_NAME, COMPENSATION_LEN);
+    strncpy(command.host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN);
 
     // 補償周期數為、T為總調整秒數
     // 進行負補償

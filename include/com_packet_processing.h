@@ -20,17 +20,15 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg);
 int OBU_packet_rx_event_handler(msg_obj_t *msg);
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg);
 int DSRC_send_timer_handler(buffer_ring_t *buffer);
-void OBU_j2735_tx(uint16_t len, void *buf);
+void OBU_j2735_tx(DSRCmsgID magId, void *data);
 int Is_Heartbeat(msg_obj_t *msg);
 /* Return codes of packet processing */
 typedef enum packet_processing_err {
-    PACKET_IS_BSM = 3,
-    PACKET_IS_J2735_BUT_NOT_BSM = 2,
     PACKET_NOT_J2735 = 1,
     PACKET_PROCESSING_ACCEPT = 0,
     PACKET_INVALID_PACKET_LEN = -1,
     PACKET_INVALID_DEVICE_TYPE = -2,
-    PACKET_INVALID_RSU_ID = -3,
+    PACKET_INVALID_RSU_NAME = -3,
     PACKET_INVALID_SEVICE_ID = -4,
     PACKET_INVALID_VEHICLE_TYPE = -5
 } packet_processing_err_t;

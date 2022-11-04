@@ -7,7 +7,9 @@ extern event_callback_t callback_list[EVENT_TYPE_NUMBER];
 int app_register(app_obj_t *);
 void app_list_print();
 void event_callback_print();
-
+void event_callback_msg_id_insert(event_type_t event_type,
+                           char *name, int priority, DSRCmsgID msg_id,
+                           int (*callback)(void *));
 /* Return codes of application register */
 typedef enum app_register_err {
     APP_REGISTER_ACCEPT = 0,

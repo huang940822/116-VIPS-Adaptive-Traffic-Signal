@@ -19,7 +19,7 @@ event_callback_t callback_list[EVENT_TYPE_NUMBER];
 **              callback: callback function
 ** Return:      event_callback: address of new event callback node
 ******************************************************************************/
-event_callback_t *event_callback_new(app_obj_t *app, int (*callback)(void *))
+event_callback_t *event_callback_new(char *name, int priority, event_callback_id_choice id_chioce, int id, int (*callback)(void *))
 {
     event_callback_t *event_callback =
         (event_callback_t *) malloc(sizeof(event_callback_t));
@@ -30,15 +30,49 @@ event_callback_t *event_callback_new(app_obj_t *app, int (*callback)(void *))
         exit(errno);
     } else {
         clear_memory_error();
-        strncpy(event_callback->name, app->name, APP_NAME_MAX_LEN);
-        event_callback->app_id = app->id;
-        event_callback->priority = app->priority;
+        strncpy(event_callback->name, name, APP_NAME_MAX_LEN);
+
+        event_callback->event_callback_id.choice = id_chioce;
+        event_callback->event_callback_id.u.app_id = id;
+        event_callback->priority = priority;
         event_callback->callback = callback;
         event_callback->next = NULL;
         return event_callback;
     }
 }
+/*****************************************************************************
+** Function:    event_callback_msg_id_insert
+** Description: Create a new event callback node.
+** Parameter:   event_type_t: event type for registration
+**              name: app name
+**              priority : app priority
+**              msg_id : msg id
+**              callback: callback function
+** Return:      event_callback: address of new event callback node
+******************************************************************************/
+void event_callback_msg_id_insert(event_type_t event_type,
+                           char *name, int priority, DSRCmsgID msg_id,
+                           int (*callback)(void *))
+{
+    event_callback_t *previous = &callback_list[event_type];
+    event_callback_t *current = previous->next;
+    event_callback_t *event_callback = NULL;
 
+    /* traverse callback list */
+    while (current != NULL) {
+        /* priority higher than next node, insert callback here */
+        if (current->priority > priority) {
+            event_callback = event_callback_new(name, priority, event_callback_id_msg_id, msg_id, callback);
+            event_callback->next = current;
+            previous->next = event_callback;
+            // printf("insert callback\n");
+            return;
+        }
+        previous = current;
+        current = current->next;
+    }
+    previous->next = event_callback_new(name, priority, event_callback_id_msg_id, msg_id, callback);
+}
 /*****************************************************************************
 ** Function:    event_callback_insert
 ** Description: Insert callback function in callback list.
@@ -55,42 +89,26 @@ void event_callback_insert(event_callback_t *head,
     event_callback_t *current = head->next;
     event_callback_t *event_callback = NULL;
 
-    /* empty list */
-    if (current == NULL) {
-        // printf("callback list empty\n");
-        head->next = event_callback_new(app, callback);
-        return;
-    }
-
     /* traverse callback list */
     while (current != NULL) {
         /* callback with same app id already exist */
-        if (current->app_id == app->id) {
+        if (current->event_callback_id.choice == event_callback_id_app_id &&
+             current->event_callback_id.u.app_id == app->id) {
             // printf("callback with same app_id exist\n");
             return;
         }
-        /* last node */
-        if (current->next == NULL) {
-            current->next = event_callback_new(app, callback);
-            if (current->priority > app->priority) {
-                previous->next = current->next;
-                previous->next->next = current;
-                current->next = NULL;
-            }
-            // printf("insert callback at tail\n");
-            return;
-        }
         /* priority higher than next node, insert callback here */
-        if (current->next->priority > app->priority) {
-            event_callback = event_callback_new(app, callback);
-            event_callback->next = current->next;
-            current->next = event_callback;
+        if (current->priority > app->priority) {
+            event_callback = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
+            event_callback->next = current;
+            previous->next = event_callback;
             // printf("insert callback\n");
             return;
         }
         previous = current;
         current = current->next;
     }
+    previous->next = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
 }
 
 /*****************************************************************************
@@ -203,14 +221,7 @@ int app_register(app_obj_t *app)
         if (app->on_registration) {
             event_callback_insert(&callback_list[EVENT_REGISTRATION], app,
                                   app->on_registration);
-        }
-
-        event_callback_t *current = &callback_list[EVENT_REGISTRATION];
-        while (current->next != NULL) {
-            if (app->id == current->next->app_id) {
-                current->next->callback(NULL);
-            }
-            current = current->next;
+            app->on_registration(NULL);
         }
 
         return APP_REGISTER_ACCEPT;

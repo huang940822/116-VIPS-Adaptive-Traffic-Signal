@@ -53,7 +53,7 @@ typedef struct TSP_OBU_matrix {
 } TSP_OBU_matrix_t;
 
 typedef struct TSP_host_OBU_obj {
-    char OBU_id[OBU_ID_MAX_LEN];
+    char OBU_name[OBU_NAME_MAX_LEN];
     uint8_t passenger;
     uint8_t target_phase;
     uint16_t distance;

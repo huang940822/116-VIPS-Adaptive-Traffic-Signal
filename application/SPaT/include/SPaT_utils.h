@@ -10,7 +10,6 @@
 #include "traffic_signal_status_updating.h"
 
 #define MAX_NUM_SIGNAL_GROUP 2
-#define ERR_MSG_SZ 128
 #define to_TimeMark(tmark) \
     (((tmark).min * 60 * 10) + ((tmark).sec * 10) + ((tmark).ms / 100))
 
@@ -44,7 +43,6 @@ time_t compare_to_tc_time;
 bool compare_time(const traffic_signal_status_t * const signal_status);
 void dump_mem(void *data, int len);
 int spat_msg_init(SPAT **pp_spat);
-int compose_spat(uint8_t **pp_spat_buf, SPAT *p_spat);
 int spat_msg_update(SPAT **pp_spat);
 void print_spat(SPAT **pp_spat);
 int leapYear(int a);

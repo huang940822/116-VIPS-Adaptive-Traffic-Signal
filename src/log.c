@@ -114,7 +114,7 @@ void log_file_name_update()
     return;
 }
 
-void log_file_write(char *content)
+void log_file_write(const char *format, ...)
 {
     // timestamp
     time_t rawtime;
@@ -125,6 +125,13 @@ void log_file_write(char *content)
     info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
     strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
 
+    // content
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    va_list list;
+    va_start(list, format);
+    vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
+
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "\e[1;4;32m%s\n\e[m", buffer) < 0) {
         set_disk_error();
@@ -133,7 +140,7 @@ void log_file_write(char *content)
     } else {
         clear_disk_error();
     }
-    if (fprintf(log_file_ptr, "%s\n", content) < 0) {
+    if (fprintf(log_file_ptr, "%s\n", log_content) < 0) {
         set_disk_error();
         perror("log_file_write: fprintf");
         exit(errno);
@@ -145,8 +152,6 @@ void log_file_write(char *content)
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
-
-    return;
 }
 
 void log_file_write_fatal_error(const char *format, ...)
@@ -188,6 +193,4 @@ void log_file_write_fatal_error(const char *format, ...)
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
-
-    return;
 }

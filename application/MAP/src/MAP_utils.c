@@ -11,6 +11,7 @@
 #include "j2735_msg.h"
 #include "MAP_utils.h"
 #include "MAP_config.h"
+#include "config.h"
 
 extern MapData *map;
 
@@ -36,10 +37,10 @@ void map_msg_init(MapData **map)
 
     (*map)->intersections.tab->name_option = FALSE;
     (*map)->intersections.tab->id.region_option = FALSE;
-    (*map)->intersections.tab->id.id = MAP_config.Mapconfig->intersections.tab[0].id.id;
-    (*map)->intersections.tab->revision = MAP_config.Mapconfig->intersections.tab[0].revision;
-    (*map)->intersections.tab->refPoint.lat = MAP_config.Mapconfig->intersections.tab[0].refPoint.lat;
-    (*map)->intersections.tab->refPoint.Long = MAP_config.Mapconfig->intersections.tab[0].refPoint.Long;
+    (*map)->intersections.tab->id.id = config.RSU_id;
+    (*map)->intersections.tab->revision = 0;
+    (*map)->intersections.tab->refPoint.lat = config.RSU_lat * 10000000;
+    (*map)->intersections.tab->refPoint.Long = config.RSU_lon * 10000000;
     (*map)->intersections.tab->refPoint.elevation_option = TRUE;
     (*map)->intersections.tab->refPoint.elevation = MAP_config.Mapconfig->intersections.tab[0].refPoint.elevation;
     (*map)->intersections.tab->refPoint.regional_option = FALSE;
@@ -244,49 +245,17 @@ void map_msg_update(MapData **map)
     uint8_t SubPhaseCount = get_SubPhaseCount();
     uint8_t SignalCount = get_SignalCount();
     uint8_t current_phase = get_current_phase();
+    (*map)->intersections.tab->revision++;
+    (*map)->intersections.tab->revision &= 0b1111111;
     
     for(int i = SubPhaseCount;i > 0;i--) {
-        for(int j = 0;j<SignalCount;j++){
+        for(int j = 0;j < SignalCount;j++){
             map_signal_group(map, i, j);
         }
     }
-    for(int j = 0;j<SignalCount;j++){
+    for(int j = 0;j < SignalCount;j++){
         map_signal_group(map, current_phase, j);
     }
-}
-
-int compose_map(uint8_t **map_buf, MapData *map)
-{
-    int buf_len;
-    J2735CodecErr err;
-
-    char log_content[LOG_CONTENT_LEN + 1];
-    char errmsg_buf[ERR_MSG_SZ];
-
-    MessageFrame msgf;
-    memset(&msgf, 0, sizeof(msgf));
-
-    memset(&err, 0, sizeof(J2735CodecErr));
-    err.msg_size = ERR_MSG_SZ;
-    err.msg = errmsg_buf;
-
-    msgf.messageId = MapData_Id;
-    msgf.u.data = map;
-    buf_len = j2735_msg_encode(map_buf, &msgf, &err);
-
-    if (buf_len <= 0) {
-        printf("failed to encode map msg\n");
-        printf("  [error msg] %s\n", err.msg);
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "failed to encode map msg\r\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "  [error msg] %s \r\n",
-                 err.msg);
-        log_file_write(log_content);
-    }
-    return buf_len;
 }
 
 void map_dump_mem(void *data, int len)

@@ -7,10 +7,11 @@
                      // ‘strptime’
 #include <time.h>
 #include "util.h"
+#include "j2735_msg.h"
 #include "j2735_map.h"
 #define FILE_PATH "./"
-#define OBU_ID_MAX_LEN 10
-#define RSU_ID_MAX_LEN 10
+#define OBU_NAME_MAX_LEN 10
+#define RSU_NAME_MAX_LEN 10
 #define COMPENSATION_MAX_LEN 15
 #define ID_MAX_LEN 15
 #define APP_NAME_MAX_LEN 10
@@ -68,11 +69,8 @@ typedef enum event_type {
 typedef enum timer_event_type {
     TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT = 0,
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING = 1,
-    TIMER_EVENT_OBU_LIST_GARBAGE_COLLECTION = 2,
-    TIMER_EVENT_LOG_FILE_NAME_UPDATE = 3,
-    TIMER_EVENT_SPAT_PACKET_TX = 4,
-    TIMER_EVENT_MAP_PACKET_TX = 5,
-    TIMER_EVENT_DSRC_SEND = 6,
+    TIMER_EVENT_LOG_FILE_NAME_UPDATE = 2,
+    TIMER_EVENT_DSRC_SEND = 3,
     // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
@@ -99,36 +97,6 @@ typedef enum signalstatus {
     PEDESTRIAN_RED = 128,
 } SignalStatus_t;
 
-typedef struct config_object {
-    char RSU_id[RSU_ID_MAX_LEN];
-    float RSU_lat;
-    float RSU_lon;
-    uint8_t signal_controller_manufacturer;
-
-    bool signal_status_report_active;
-    bool signal_adjust_upper_bound_active;
-    bool signal_adjust_lower_bound_active;
-    float signal_adjust_upper_bound_percentage;
-    float signal_adjust_lower_bound_percentage;
-    uint8_t traffic_compensation_method;
-    float phase_weight[PHASE_COUNT_MAX_NUM];
-
-    bool log_middleware_timer_event;
-    bool log_application_register_event;
-    bool log_command_buffer;  // what for??
-    bool log_signal_packet_rx;
-    bool log_signal_packet_tx;
-    bool log_signal_packet_info;
-    bool log_cloud_packet_rx;
-    bool log_cloud_packet_tx;
-    bool log_OBU_packet_rx;
-    bool log_OBU_packet_tx;
-    bool log_OBU_list;
-
-    bool SPaT_packet_tx;
-    bool MAP_packet_tx;
-} config_object_t;
-
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
     uint8_t dontSend2TC;
@@ -147,24 +115,38 @@ typedef struct application_object {
     struct application_object *next;
 } app_obj_t;
 
+typedef enum {
+    event_callback_id_app_id,
+    event_callback_id_msg_id,
+} event_callback_id_choice;
+
+typedef struct event_callback_id
+{
+    event_callback_id_choice choice;
+    union
+    {
+        int app_id;
+        DSRCmsgID msg_id;
+    } u;
+    
+}event_callback_id_t;
+
 typedef struct event_callback {
     char name[APP_NAME_MAX_LEN];
-    uint8_t app_id;
+    event_callback_id_t event_callback_id;
     uint8_t priority;
     int (*callback)(void *);
     struct event_callback *next;
 } event_callback_t;
 
 typedef struct OBU_record {
-    char OBU_id[OBU_ID_MAX_LEN];
-    struct tm time_stamp;
+    char OBU_name[OBU_NAME_MAX_LEN];
     time_t time_second;
     float position_lon;
     float position_lat;
     uint8_t speed;
-    uint8_t acceleration;
     uint8_t direction;
-    uint8_t vehicle_type;
+    vehicle_type_t vehicle_type;
 } OBU_record_t;
 
 typedef struct OBU_record_ring {
@@ -181,8 +163,10 @@ typedef struct application_private_space {
 
 
 typedef struct OBU_object {
-    char OBU_id[OBU_ID_MAX_LEN + 1];  //+1 if for \0
-    uint8_t vehicle_type;
+    int OBU_id;
+    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
+    vehicle_type_t vehicle_type;
+
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
     struct OBU_object *prev;
@@ -261,14 +245,14 @@ typedef struct msg_buf {
 typedef struct C2R_common_field {
     uint32_t packet_len;
     uint8_t device_type;
-    char RSU_id[RSU_ID_MAX_LEN];
+    char RSU_name[RSU_NAME_MAX_LEN];
     char timestamp[TIMESTAMP_LEN];
     uint8_t service_id;
 } C2R_common_field_t;
 
 typedef struct R2C_common_field {
     uint32_t packet_len;
-    char RSU_id[RSU_ID_MAX_LEN];
+    char RSU_name[RSU_NAME_MAX_LEN];
     char timestamp[TIMESTAMP_LEN];
     float position_lon;
     float position_lat;
@@ -278,9 +262,9 @@ typedef struct R2C_common_field {
 typedef struct V2R_common_field {
     uint32_t packet_len;
     uint8_t device_type;
-    char OBU_id[OBU_ID_MAX_LEN];
+    char OBU_name[OBU_NAME_MAX_LEN];
     uint8_t vehicle_type;
-    char timestamp[TIMESTAMP_LEN];
+    struct tm timestamp;
     float position_lon;
     float position_lat;
     uint8_t speed;
@@ -301,6 +285,8 @@ typedef struct V2R_app_section {
     char *payload;
     uint8_t com_id;
     OBU_object_t *OBU_object;
+    DSRCmsgID msgID;
+    void *data;
 } V2R_app_section_t;
 
 typedef struct tsc_command {
@@ -316,7 +302,7 @@ typedef struct tsc_command {
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
     int8_t compensation_time;
-    char host_OBU_id[ID_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
@@ -329,7 +315,7 @@ typedef struct tsc_command_object {
     uint8_t adjusted_time;  // is the length of time that the traffic signal
                             // controller is adjusted to.
     int8_t compensation_time;
-    char host_OBU_id[ID_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
     bool send_flag;
 } tsc_command_object_t;
 
@@ -338,7 +324,7 @@ typedef struct traffic_signal_command_arg {
     uint8_t phase;
     uint8_t step;
     uint8_t effect_time;
-    char host_OBU_id[OBU_ID_MAX_LEN + 1];
+    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
 
 #endif

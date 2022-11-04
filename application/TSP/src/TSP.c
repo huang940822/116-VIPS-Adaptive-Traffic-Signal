@@ -25,6 +25,7 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "application_registration.h"
 
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -34,7 +35,7 @@ app_obj_t TSP = {
     .name = "TSP",
     .id = 2,
     .priority = 2,
-    .on_OBU_packet_rx = &TSP_on_OBU_packet_rx,
+    .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
     .on_RSU_packet_tx = NULL,
@@ -118,7 +119,7 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
     command.app_id = TSP.id;
     command.app_priority = TSP.priority;
     command.target_phase = host_OBU->target_phase;
-    strncpy(command.host_OBU_id, host_OBU->OBU_id, OBU_ID_MAX_LEN);
+    strncpy(command.host_OBU_name, host_OBU->OBU_name, OBU_NAME_MAX_LEN);
 
     for (int i = 0; i < TSP_CYCLE_MAX; i++) {
         for (int j = 0; j < TSP_PHASE_MAX; j++) {
@@ -147,11 +148,14 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
 
 int TSP_on_OBU_packet_rx(void *arg)
 {
+    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    if (app_section->OBU_object->vehicle_type != VEHICLE_BUS)
+        return 0;
+
     // printf("TSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
-
+    
     msg_buf_t read_buf;
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
@@ -180,12 +184,6 @@ int TSP_on_OBU_packet_rx(void *arg)
                  LOG_CONTENT_LEN - strlen(log_content), "\n");
     }
 
-    TSP_static_space_t static_space;
-    read_uint8_t(&static_space.on_duty_flag, &read_buf);
-    read_uint8_t(&static_space.passenger_num, &read_buf);
-    memcpy(app_section->OBU_object->private_space[TSP.id].static_space,
-           &static_space, sizeof(TSP_static_space_t));
-
     uint8_t last_record_index =
         app_section->OBU_object->record_ring.last_record_pointer;
     uint16_t OBU_distance = (uint16_t) get_distance(
@@ -207,13 +205,13 @@ int TSP_on_OBU_packet_rx(void *arg)
                  .position_lon,
              OBU_distance);
     log_file_write(log_content);
-    printf("obu_id from obu is %s\r\n", app_section->OBU_object->OBU_id);
+    printf("OBU_name from obu is %s\r\n", app_section->OBU_object->OBU_name);
     TSP_host_OBU_obj_t *host_OBU =
-        TSP_host_OBU_obj_search(app_section->OBU_object->OBU_id);
+        TSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
     printf("obu distance is %d\r\n", OBU_distance);
     if (host_OBU != NULL) {
         printf("host obu id is %s and host obu targetphase is %d\r\n",
-               host_OBU->OBU_id, host_OBU->target_phase);
+               host_OBU->OBU_name, host_OBU->target_phase);
     }
 
 
@@ -226,7 +224,7 @@ int TSP_on_OBU_packet_rx(void *arg)
         // TSP_OBU_boardcast(host_OBU);
     } else {
         // testing
-        // TSP_OBU_boardcast_test(app_section->OBU_object->OBU_id);
+        // TSP_OBU_boardcast_test(app_section->OBU_object->OBU_name);
     }
     if (read_buf.content != NULL) {
         free(read_buf.content);
@@ -282,8 +280,8 @@ int TSP_on_cloud_packet_rx(void *arg)
         log_file_write(log_content);
     }
 
-    char host_OBU_id[OBU_ID_MAX_LEN + 1];
-    memset(host_OBU_id, 0, sizeof(host_OBU_id));
+    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    memset(host_OBU_name, 0, sizeof(host_OBU_name));
     uint8_t target_phase;
     uint16_t frequency;
     memset(log_content, 0, sizeof(log_content));
@@ -311,7 +309,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                 LOG_CONTENT_LEN - strlen(log_content),
                 "TSP group control\r\n");
         // read host OBU
-        read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
+        read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
@@ -335,7 +333,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                 command.cycle = cycle;
                 command.phase = phase;
                 command.adjustment = adjustment;
-                strncpy(command.host_OBU_id, host_OBU_id, OBU_ID_MAX_LEN);
+                strncpy(command.host_OBU_name, host_OBU_name, OBU_NAME_MAX_LEN);
                 ret = command_buf_insert_adjustment(&command);
 
 
@@ -349,24 +347,24 @@ int TSP_on_cloud_packet_rx(void *arg)
     case 4:
         /* intersection control */
         // read host OBU
-        read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
+        read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
-                 "\ninsert host OBU (%s)", host_OBU_id);
+                 "\ninsert host OBU (%s)", host_OBU_name);
         /* add to host OBU list */
-        TSP_host_OBU_obj_insert(host_OBU_id, target_phase);
+        TSP_host_OBU_obj_insert(host_OBU_name, target_phase);
         TSP_host_OBU_obj_print();
         break;
     case 5:  // for host obu delete?
         // read host OBU
-        read_char(host_OBU_id, &read_buf, OBU_ID_MAX_LEN);
+        read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
-                 "\ndelete host OBU (%s)", host_OBU_id);
-        TSP_host_OBU_obj_delete(host_OBU_id);
+                 "\ndelete host OBU (%s)", host_OBU_name);
+        TSP_host_OBU_obj_delete(host_OBU_name);
         TSP_host_OBU_obj_print();
         for (int i = 0; i < SUBPHASEID_NUM; i++) {
             // printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
@@ -479,12 +477,18 @@ int TSP_on_traffic_signal_command_tx(void *arg)
         (traffic_signal_command_arg_t *) arg;
     // 1-2-T-2
     TSP_report_command(command->control_status, command->phase, command->step,
-                       command->effect_time, command->host_OBU_id);
+                       command->effect_time, command->host_OBU_name);
     return 0;
 }
 
 int TSP_on_registration(void *arg)
 {
+    /* read tsp confile file*/
+    int ret = TSP_config_init();
+    if (ret != 0) {
+        log_file_write_fatal_error("error tsp reading config file: %d", ret);
+    }
+
     // printf("TSP_on_registration function\n");
 
     /* report plan timer event */
@@ -506,14 +510,14 @@ int TSP_on_registration(void *arg)
         log_file_write(log_content);
     }
 
-    char rsu_id[RSU_ID_MAX_LEN];
+    char rsu_name[RSU_NAME_MAX_LEN];
     uint8_t plan_id;
     /* list all file */
     while ((dirp = readdir(dp)) != NULL) {
         if (dirp->d_type == 8) {
             /* parse file name */
-            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_id, &plan_id);
-            if (strncmp(rsu_id, config.RSU_id, RSU_ID_MAX_LEN) == 0) {
+            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_name, &plan_id);
+            if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
                 TSP_RSU_matrix_insert(dirp->d_name, plan_id);
             }
         }
@@ -538,13 +542,15 @@ int TSP_on_registration(void *arg)
     while ((dirp = readdir(dp)) != NULL) {
         if (dirp->d_type == 8) {
             /* parse file name */
-            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_id, &plan_id);
-            if (strncmp(rsu_id, config.RSU_id, RSU_ID_MAX_LEN) == 0) {
+            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_name, &plan_id);
+            if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
                 TSP_OBU_matrix_insert(dirp->d_name, plan_id);
             }
         }
     }
     fflush(stdout);
     closedir(dp);
+
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, TSP.name, TSP.priority, BasicSafetyMessage_Id, &TSP_on_OBU_packet_rx);
     return 0;
 }
