@@ -489,6 +489,23 @@ int OBU_packet_rx_raw_data(V2R_common_field_t *common_field, msg_obj_t *msg)
     return PACKET_NOT_J2735;
 }
 
+void get_payload(V2R_app_section_t *app_section, MessageFrame *msgf)
+{
+    switch (msgf->messageId)
+    {
+    case BasicSafetyMessage_Id: {
+        BasicSafetyMessage *bsm = msgf->u.data;
+        if (bsm->regional_option != TRUE || bsm->regional.count != 1 ||
+                bsm->regional.tab[0].regionId != 254)
+            return;
+        app_section->payload = bsm->regional.tab[0].u.unknown.buf;
+        app_section->payload_len = bsm->regional.tab[0].u.unknown.len;
+    } break;
+    default:
+        break;
+    }
+}
+
 int OBU_packet_rx_event_handler(msg_obj_t *msg)
 {
     printf("get in obu rx handler\n\r");
@@ -583,6 +600,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         memcpy(app_section.OBU_object, object, sizeof(OBU_object_t));
     }
 
+    get_payload(&app_section, msgf);
+    
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id &&
@@ -592,8 +611,6 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         current = current->next;
     }
     // free resource just
-    if (app_section.payload != NULL)
-        free(app_section.payload);
     if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
     if (msgf != NULL)

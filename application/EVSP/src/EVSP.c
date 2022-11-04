@@ -59,6 +59,9 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     msg_buf_t read_buf;
     read_buf.index = 0;
     Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
+    if (read_buf.content == NULL)
+        return -1;
+    memcpy(read_buf.content, app_section->payload, app_section->payload_len);
 
     // needs a evsp sned ack function to send ack to cloud
     EVSP_send_ack();
@@ -153,6 +156,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
+    if (read_buf.content == NULL) {
+        return -1;
+    }
+    memcpy(read_buf.content, app_section->payload, app_section->payload_len);
 
     /* print packet */
     if (config.log_OBU_packet_rx) {
