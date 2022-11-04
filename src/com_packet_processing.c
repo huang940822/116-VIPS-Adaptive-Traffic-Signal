@@ -700,8 +700,8 @@ int Is_Heartbeat(msg_obj_t *msg)
         printf("dsrc alive and postpone the timer handle execution\r\n");
         log_file_write(
             "dsrc alive and postpone the timer handle execution\r\n");
-        // set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
-        // clear_dsrc_error();
+        set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
+        clear_dsrc_error();
         if (read_buf.content != NULL) {
             free(read_buf.content);
         }

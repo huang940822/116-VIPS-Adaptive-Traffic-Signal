@@ -84,6 +84,9 @@ void OBU_record_ring_push(OBU_record_t *record, OBU_object_t *object)
         (object->record_ring.last_record_pointer + 1) %
         OBU_RECORD_RING_CAPACITY;
     object->record_ring.length = object->record_ring.length + 1;
+    object->record_ring.last_record_pointer =
+        (object->record_ring.last_record_pointer + 1) %
+        OBU_RECORD_RING_CAPACITY;
     memcpy(&object->record_ring.record[object->record_ring.last_record_pointer],
            record, sizeof(OBU_record_t));
 }
@@ -310,8 +313,8 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
         struct timeval tv;
         gettimeofday(&tv, NULL);
         int second = tv.tv_sec % 60;
-        float secMark = bsm->coreData.secMark / 1000;
-        if (second < secMark)
+        int secMark = bsm->coreData.secMark / 1000;
+        if (second > secMark && (second - secMark) > 30)
             tv.tv_sec -= 60;
         tv.tv_sec = tv.tv_sec - second + secMark;
         record->time_second = mktime(localtime(&tv.tv_sec));
@@ -394,8 +397,8 @@ void OBU_object_garbage_collection_init()
         special_OBU_list[i].next = &special_OBU_list[i];
         special_OBU_list[i].prev = &special_OBU_list[i];
     }
-    // create_timer(&OBU_list_garbage_collection_timer_id, NULL, OBU_object_garbage_collection_timer);
-    // set_timer(OBU_list_garbage_collection_timer_id, 1, 0, 1, 0);
+    create_timer(&OBU_list_garbage_collection_timer_id, NULL, OBU_object_garbage_collection_timer);
+    set_timer(OBU_list_garbage_collection_timer_id, 10, 0, 10, 0);
 }
 
 void OBU_object_garbage_collection_timer(__sigval_t value)
@@ -447,6 +450,10 @@ void OBU_object_garbage_collection()
         current = special_OBU_list[i].next;
         while (current != &special_OBU_list[i]) {
             target = NULL;
+            printf("time_second %ld\n", current_time -
+                 current->record_ring
+                     .record[current->record_ring.last_record_pointer]
+                     .time_second);
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]
