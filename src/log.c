@@ -116,6 +116,7 @@ void log_file_write(const char *format, ...)
     va_list list;
     va_start(list, format);
     vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
+    va_end(list);
 
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "\e[1;4;32m%s\n\e[m", buffer) < 0) {
@@ -156,8 +157,8 @@ void log_file_write_fatal_error(const char *format, ...)
     va_list list;
     va_start(list, format);
     vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
-
     va_end(list);
+    
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "%s\n", buffer) < 0) {
         set_disk_error();
