@@ -37,6 +37,8 @@ int SPM_on_OBU_packet_rx(void *arg)
             return -1;
         }
     }
+
+    
 }
 
 int SPM_on_registration(void *arg)

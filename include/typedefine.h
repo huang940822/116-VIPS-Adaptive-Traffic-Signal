@@ -139,15 +139,30 @@ typedef struct event_callback {
     struct event_callback *next;
 } event_callback_t;
 
-typedef struct OBU_record {
-    char OBU_name[OBU_NAME_MAX_LEN];
+typedef struct OBU_record_common_field {
     time_t time_second;
     float position_lon;
     float position_lat;
     uint8_t speed;
     uint8_t direction;
+    int OBU_id;
+    char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
+} OBU_record_common_field_t;
+
+typedef struct OBU_record {
+    time_t time_second;
+    float position_lon;
+    float position_lat;
+    uint8_t speed;
+    uint8_t direction;
 } OBU_record_t;
+
+typedef struct OBU_object_header {
+    int OBU_id;
+    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
+    vehicle_type_t vehicle_type;
+} OBU_object_header_t;
 
 typedef struct OBU_record_ring {
     OBU_record_t record[OBU_RECORD_RING_CAPACITY];
@@ -160,7 +175,6 @@ typedef struct application_private_space {
     uint8_t static_space[STATIC_APP_PRIVATE_SPACE_CAPACITY];
     uint8_t *dynamic_space;
 } app_private_space_t;
-
 
 typedef struct OBU_object {
     int OBU_id;

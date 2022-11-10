@@ -19,6 +19,7 @@ SPM_OBU_obj_t *SPM_OBU_obj_new(OBU_object_t *OBU_obj)
     strcpy(SPM_OBU_obj->OBU_name, OBU_obj->OBU_name);
     return SPM_OBU_obj;
 }
+
 void SPM_OBU_obj_insert(OBU_object_t *OBU_obj)
 {
     pthread_mutex_lock(&SPM_OBU_obj_mutex);

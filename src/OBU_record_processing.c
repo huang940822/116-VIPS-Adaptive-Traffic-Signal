@@ -111,7 +111,7 @@ void OBU_record_ring_pop(OBU_object_t *object)
 ** Parameter:   str: OBU id of new OBU obj
 ** Return:      object: address of new OBU obj
 ******************************************************************************/
-OBU_object_t *OBU_object_new(char *str, uint8_t type)
+OBU_object_t *OBU_object_new(OBU_object_header_t *header)
 {
     OBU_object_t *object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
     if (object == NULL) {
@@ -123,13 +123,10 @@ OBU_object_t *OBU_object_new(char *str, uint8_t type)
         clear_memory_error();
         memset(object, 0, sizeof(OBU_object_t));
     }
-    strncpy(object->OBU_name, str, OBU_NAME_MAX_LEN);
-    object->vehicle_type = type;
-    object->record_ring.first_record_pointer = 0;
-    object->record_ring.last_record_pointer = 0;
-    object->record_ring.length = 0;
+    memcpy(object, header, sizeof(OBU_object_header_t));
+
     object->private_space = (app_private_space_t *) malloc(
-        sizeof(app_private_space_t));  //看不懂這一段 為何要乘以app_num+1
+        sizeof(app_private_space_t));
     if (object->private_space == NULL) {
         set_memory_error();
         log_file_write_fatal_error("OBU_object_new: malloc");
@@ -171,7 +168,7 @@ OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
 ** Parameter:   record: OBU record to insert
 ** Return:      object: address of OBU obj where record insert
 ******************************************************************************/
-OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash table
+OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這裡用hash table
 {
     int hash_code = djb2_hash(
         record->OBU_name);  // hash code is array index for having use mod
@@ -180,16 +177,16 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash ta
         OBU_object_search(&normal_OBU_list[hash_code], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */
-        object = OBU_object_new(record->OBU_name, VEHICLE_NORMAL);
+        object = OBU_object_new((OBU_object_header_t *)&record->OBU_id);
 
         /* insert OBU record */  //如果世新的object 那record ring一定是空的
                                  //似乎沒有檢查的必要 直接push進去就好？
         if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
-            OBU_record_ring_push(record, object);
+            OBU_record_ring_push((OBU_record_t *)record, object);
         } else {
             OBU_record_ring_pop(object);  /// pop純粹就是丟掉嗎？
-            OBU_record_ring_push(record, object);
+            OBU_record_ring_push((OBU_record_t *)record, object);
         }
 
         /* insert at head */
@@ -203,11 +200,11 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash ta
         /* insert OBU record */
         if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
-            OBU_record_ring_push(record, object);
+            OBU_record_ring_push((OBU_record_t *)record, object);
         } else {
             //滿了 要先pop再push
             OBU_record_ring_pop(object);
-            OBU_record_ring_push(record, object);
+            OBU_record_ring_push((OBU_record_t *)record, object);
         }
     }
     pthread_mutex_unlock(&mutex_normal_OBU_list[hash_code]);
@@ -220,7 +217,7 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_t *record)  //這裡用hash ta
 ** Parameter:   record: OBU record to insert
 ** Return:      object: address of OBU obj where record insert
 ******************************************************************************/
-OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
+OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 {
     uint8_t type = record->vehicle_type;
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
@@ -228,9 +225,9 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */ 
-        object = OBU_object_new(record->OBU_name, type);
+        object = OBU_object_new((OBU_object_header_t *)&record->OBU_id);
         /* insert OBU record */
-        OBU_record_ring_push(record, object);
+        OBU_record_ring_push((OBU_record_t *)record, object);
         /* insert at head */
         object->next = special_OBU_list[type].next;
         object->prev = &special_OBU_list[type];
@@ -243,7 +240,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_t *record)
                                   object->record_ring.last_record_pointer)) {
             OBU_record_ring_pop(object);
         }
-        OBU_record_ring_push(record, object);
+        OBU_record_ring_push((OBU_record_t *)record, object);
         /* move target to head */
         if (special_OBU_list[type].next != object) {
             /* remove target */
@@ -283,7 +280,7 @@ static int yday2month_day(struct tm *timeinfo, int yday)
     return 1;
 }
 
-int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
+int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 {
     switch (msgf->messageId) {
     case BasicSafetyMessage_Id: {
@@ -373,18 +370,6 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record)
         break;
     }
     return 1;
-}
-
-//把obu packet資料讀到obu object
-void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record)
-{
-    strncpy(record->OBU_name, packet->OBU_name, OBU_NAME_MAX_LEN);
-    record->time_second = mktime(&packet->timestamp);
-    record->position_lon = packet->position_lon;
-    record->position_lat = packet->position_lat;
-    record->speed = packet->speed;
-    record->direction = packet->direction;
-    record->vehicle_type = packet->vehicle_type;
 }
 
 void OBU_object_garbage_collection_init()

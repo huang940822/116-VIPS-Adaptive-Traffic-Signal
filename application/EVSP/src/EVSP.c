@@ -210,12 +210,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
         write_uint8_t(0, &write_buf);  // write cmd
         write_char(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .OBU_name,
+            app_section->OBU_object->OBU_name,
             &write_buf, OBU_NAME_MAX_LEN, OBU_NAME_MAX_LEN);  // write OBU_name
         write_uint8_t(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .vehicle_type,
+            app_section->OBU_object->vehicle_type,
             &write_buf);  // write vehicle_type
 
         char timestamp_t[20];
