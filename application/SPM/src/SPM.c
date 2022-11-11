@@ -3,6 +3,8 @@
 #include "j2735_msg.h"
 #include "j2735_srm.h"
 #include "config.h"
+#include "SPM_OBU_list.h"
+#include "SPM_repeater.h"
 
 #include <stdio.h>
 
@@ -27,8 +29,13 @@ int SPM_on_OBU_packet_rx(void *arg)
         if (srm->requests_option) {
             int i = 0;
             for (i; i < srm->requests.count; i++) {
-                if (srm->requests.tab[i].request.id.id == config.RSU_id)
-                    break;
+                if (srm->requests.tab[i].request.id.id == config.RSU_id) {
+                    if (srm->requests.tab[i].request.id.region_option) {
+                        if (srm->requests.tab[i].request.id.region == config.RSU_region)
+                            break;
+                    } else
+                        break;
+                } 
             }
             if (i == srm->requests.count)
                 return -1;
@@ -37,8 +44,9 @@ int SPM_on_OBU_packet_rx(void *arg)
             return -1;
         }
     }
-
     
+    SPM_OBU_obj_insert(app_section->OBU_object, srm);
+    SPM_repeater_start();
 }
 
 int SPM_on_registration(void *arg)

@@ -177,7 +177,7 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這
         OBU_object_search(&normal_OBU_list[hash_code], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */
-        object = OBU_object_new((OBU_object_header_t *)&record->OBU_id);
+        object = OBU_object_new((OBU_object_header_t *)&record->OBU_name);
 
         /* insert OBU record */  //如果世新的object 那record ring一定是空的
                                  //似乎沒有檢查的必要 直接push進去就好？
@@ -225,7 +225,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */ 
-        object = OBU_object_new((OBU_object_header_t *)&record->OBU_id);
+        object = OBU_object_new((OBU_object_header_t *)&record->OBU_name);
         /* insert OBU record */
         OBU_record_ring_push((OBU_record_t *)record, object);
         /* insert at head */

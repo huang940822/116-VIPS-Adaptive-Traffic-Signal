@@ -166,6 +166,19 @@ int config_init()
                 return CONFIG_INVALID_RSU_NAME;
             }
         }
+        // RSU id
+        if (strstr(buf, "RSU_region ")) {
+            if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
+                if (0 <= uint32_t_val && uint32_t_val <= 65535) {
+                    config.RSU_region = uint32_t_val;
+                    log_file_write("config: RSU_region = %d", config.RSU_region);
+                } else {
+                    return CONFIG_INVALID_RSU_NAME;
+                }
+            } else {
+                return CONFIG_INVALID_RSU_NAME;
+            }
+        }
         // rsu lat
         if (strstr(buf, "RSU_LAT ")) {
             if (read_double_from_config_line(buf, &double_val)) {

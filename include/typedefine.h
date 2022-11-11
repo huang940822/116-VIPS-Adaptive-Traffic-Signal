@@ -145,7 +145,6 @@ typedef struct OBU_record_common_field {
     float position_lat;
     uint8_t speed;
     uint8_t direction;
-    int OBU_id;
     char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
 } OBU_record_common_field_t;
@@ -159,7 +158,6 @@ typedef struct OBU_record {
 } OBU_record_t;
 
 typedef struct OBU_object_header {
-    int OBU_id;
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
     vehicle_type_t vehicle_type;
 } OBU_object_header_t;
@@ -176,11 +174,16 @@ typedef struct application_private_space {
     uint8_t *dynamic_space;
 } app_private_space_t;
 
+typedef enum {
+    processing = 0,
+    granted = 1,
+    rejected = 2,
+} OBU_object_status;
+
 typedef struct OBU_object {
-    int OBU_id;
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
     vehicle_type_t vehicle_type;
-
+    OBU_object_status status;
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
     struct OBU_object *prev;

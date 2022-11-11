@@ -12,6 +12,7 @@ int config_init();
 typedef struct config_object {
     char RSU_name[RSU_NAME_MAX_LEN];
     uint32_t RSU_id;
+    uint32_t RSU_region;
     double RSU_lat;
     double RSU_lon;
     uint8_t signal_controller_manufacturer;
