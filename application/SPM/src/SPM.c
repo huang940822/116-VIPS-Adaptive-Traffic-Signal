@@ -5,6 +5,8 @@
 #include "config.h"
 #include "SPM_OBU_list.h"
 #include "SPM_repeater.h"
+#include "SPM_config.h"
+#include "log.h"
 
 #include <stdio.h>
 
@@ -44,6 +46,8 @@ int SPM_on_OBU_packet_rx(void *arg)
             return -1;
         }
     }
+    if (SPM.dontSend2TC)
+        return 1;
     
     SPM_OBU_obj_insert(app_section->OBU_object, srm);
     SPM_repeater_start();
@@ -51,6 +55,11 @@ int SPM_on_OBU_packet_rx(void *arg)
 
 int SPM_on_registration(void *arg)
 {
+    int ret = SPM_config_init();
+    if (ret != 0) {
+        log_file_write_fatal_error("error SPM reading config file: %d", ret);
+    }
+    SPM.dontSend2TC = SPM_config.SPM_dontSend2TC;
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, SPM.name, SPM.priority, SignalRequestMessage_Id, &SPM_on_OBU_packet_rx);
     return 1;
 }

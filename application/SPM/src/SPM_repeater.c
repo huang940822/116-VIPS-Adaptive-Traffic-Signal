@@ -64,13 +64,15 @@ void *SPM_repeater()
     }
 
 
-    while (SPM.dontSend2TC) {
+    while (!SPM.dontSend2TC) {
         s = read(fd, &exp, sizeof(uint64_t));
 
         int i = 0;
         pthread_mutex_lock(&SPM_OBU_obj_mutex);
         SPM_OBU_obj_t *current = SPM_OBU_obj_head;
-        while (current) {
+        while (current != NULL && i < SignalStatusList_MAX_SIZE) {
+            
+
             ssm->status.tab[i].sequenceNumber = current->sequenceNumber;
             ssm->status.tab[i].sigStatus.count = current->sigRequest_count;
             for (int j = 0; j < current->sigRequest_count; j++) {
@@ -113,8 +115,8 @@ void *SPM_repeater()
         }
         pthread_mutex_unlock(&SPM_OBU_obj_mutex);
         ssm->status.count = i;
-
-        OBU_j2735_tx(SignalStatusMessage_Id, ssm);
+        if (ssm->status.count > 0)
+            OBU_j2735_tx(SignalStatusMessage_Id, ssm);
     }
     SPM_repeater_thread = 0;
 }
