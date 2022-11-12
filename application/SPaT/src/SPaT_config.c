@@ -61,22 +61,6 @@ int SPaT_config_init()
             }
         }
 
-        // SPaT_packet_transfer_speed
-        if (strstr(buf, "SPaT_packet_transfer_speed ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                if (uint8_t_val >= 0) {
-                    SPaT_config.SPaT_packet_transfer_speed = uint8_t_val;
-                    log_file_write("config: SPaT_packet_transfer_speed = %d",
-                             SPaT_config.SPaT_packet_transfer_speed);
-                    continue;
-                } else {
-                    return CONFIG_INVALID_SPAT_PACKET;
-                }
-            } else {
-                return CONFIG_INVALID_SPAT_PACKET;
-            }
-        }
-
         // SPaT_dontSend2TC
         if (strstr(buf, "SPaT_dontSend2TC ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {

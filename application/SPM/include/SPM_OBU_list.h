@@ -28,4 +28,5 @@ extern SPM_OBU_obj_t *SPM_OBU_obj_head;
 extern pthread_mutex_t SPM_OBU_obj_mutex;
 
 void SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage* srm);
+void SPM_OBU_obj_delete(char *OBU_name);
 #endif

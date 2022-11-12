@@ -7,8 +7,9 @@
 #include "typedefine.h"
 #include "config.h"
 
-
 SPM_config_object_t SPM_config = {
+    .spm_host_obu_packet_timeout = 20,
+    .SPM_packet_transfer_speed = 10,
     .SPM_dontSend2TC = 1,
 };
 
@@ -44,6 +45,36 @@ int SPM_config_init()
         fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
         if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
             continue;
+        }
+        // spm_host_obu_packet_timeout
+        if (strstr(buf, "spm_host_obu_packet_timeout ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    SPM_config.spm_host_obu_packet_timeout = uint8_t_val;
+                    log_file_write("config: spm_host_obu_packet_timeout = %d",
+                             SPM_config.spm_host_obu_packet_timeout);
+                    continue;
+                } else {
+                    return -1;
+                }
+            } else {
+                return -1;
+            }
+        }
+        // SPM_packet_transfer_speed
+        if (strstr(buf, "SPM_packet_transfer_speed ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    SPM_config.SPM_packet_transfer_speed = uint8_t_val;
+                    log_file_write("config: SPM_packet_transfer_speed = %d",
+                             SPM_config.SPM_packet_transfer_speed);
+                    continue;
+                } else {
+                    return -1;
+                }
+            } else {
+                return -1;
+            }
         }
         // SPM_dontSend2TC
         if (strstr(buf, "SPM_dontSend2TC ")) {

@@ -131,6 +131,6 @@ int MAP_on_registration(void *arg)
     if(MAP_config.MAP_packet_transfer_speed == 1)
         set_timer(MAP_packet_tx_timer_id, MAP_config.MAP_packet_transfer_speed, 0, 1, 0);
     else
-        set_timer(MAP_packet_tx_timer_id, 0, 1000000000 / MAP_config.MAP_packet_transfer_speed, 1, 0);
+        set_timer(MAP_packet_tx_timer_id, 0, 1000000000 / MAP_config.MAP_packet_transfer_speed, 0, 1000000000 / MAP_config.MAP_packet_transfer_speed);
 
 }

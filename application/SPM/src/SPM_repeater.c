@@ -5,6 +5,7 @@
 #include "config.h"
 #include "j2735_codec.h"
 #include "com_packet_processing.h"
+#include "SPM_config.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -13,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "sys/time.h"
 
 pthread_t SPM_repeater_thread = 0;
 pthread_mutex_t SPM_repeater_run_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -39,15 +41,14 @@ void *SPM_repeater()
     struct itimerspec timerValue;
     memset(&timerValue, 0, sizeof(struct itimerspec));
 
-    timerValue.it_value.tv_sec = 0;
-    timerValue.it_value.tv_nsec = 100000000;
-    timerValue.it_interval.tv_sec = 0;
-    timerValue.it_interval.tv_nsec = 100000000;
+    timerValue.it_value.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
+    timerValue.it_value.tv_nsec = 1000000000 / SPM_config.SPM_packet_transfer_speed;
+    timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
+    timerValue.it_interval.tv_nsec = 1000000000 / SPM_config.SPM_packet_transfer_speed;
 
     if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
         log_file_write_fatal_error("SPM_repeater timerfd_settime");
-        SPM_repeater_thread = 0;
-        return NULL;
+        goto SPM_repeater_end;
     }
 
     SignalStatusMessage *ssm;
@@ -62,16 +63,26 @@ void *SPM_repeater()
         ssm->status.tab[i].id.region_option = TRUE;
         ssm->status.tab[i].id.region = config.RSU_region;
     }
+    int delete_OBU_num = 0, i = 1;
+    char delete_OBU_names[SignalStatusList_MAX_SIZE][OBU_NAME_MAX_LEN + 1] = {0};
 
-
-    while (!SPM.dontSend2TC) {
+    while (!SPM.dontSend2TC && i != 0) {
         s = read(fd, &exp, sizeof(uint64_t));
 
-        int i = 0;
+        i = 0;
+        delete_OBU_num = 0;
         pthread_mutex_lock(&SPM_OBU_obj_mutex);
         SPM_OBU_obj_t *current = SPM_OBU_obj_head;
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        time_t now = (time_t)tv.tv_sec;
         while (current != NULL && i < SignalStatusList_MAX_SIZE) {
-            
+            if (now - current->time_second > SPM_config.spm_host_obu_packet_timeout) {
+                memcpy(delete_OBU_names[delete_OBU_num], current->OBU_name, OBU_NAME_MAX_LEN + 1);
+                delete_OBU_num++;
+                current = current->next;
+                continue;
+            }
 
             ssm->status.tab[i].sequenceNumber = current->sequenceNumber;
             ssm->status.tab[i].sigStatus.count = current->sigRequest_count;
@@ -117,6 +128,12 @@ void *SPM_repeater()
         ssm->status.count = i;
         if (ssm->status.count > 0)
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
+        
+        for (int j = 0; j < delete_OBU_num; j++) {
+            SPM_OBU_obj_delete(delete_OBU_names[j]);
+        }
     }
+SPM_repeater_end:
     SPM_repeater_thread = 0;
+    close(fd);
 }

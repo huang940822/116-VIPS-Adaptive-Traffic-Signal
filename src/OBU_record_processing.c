@@ -347,7 +347,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         struct tm *timeinfo;
         timeinfo = localtime(&tv.tv_sec);
         
-        int yday = srm->timeStamp / 1440, dmin = srm->timeStamp % 1440;
+        int yday = (srm->timeStamp / 1440) + 1, dmin = srm->timeStamp % 1440;
 
         if (yday2month_day(timeinfo, yday) == -1) {printf("rfrfrf\n");
             return -1;
