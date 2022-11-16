@@ -76,6 +76,11 @@ void *SPM_repeater()
         struct timeval tv;
         gettimeofday(&tv, NULL);
         time_t now = (time_t)tv.tv_sec;
+
+        struct tm *timeinfo = localtime(&tv.tv_sec);
+        ssm->timeStamp = (((timeinfo->tm_yday * 24) + timeinfo->tm_hour) * 60) + timeinfo->tm_min;
+        ssm->second = (timeinfo->tm_sec * 1000) + (tv.tv_usec / 1000);
+
         while (current != NULL && i < SignalStatusList_MAX_SIZE) {
             if (now - current->time_second > SPM_config.spm_host_obu_packet_timeout) {
                 memcpy(delete_OBU_names[delete_OBU_num], current->OBU_name, OBU_NAME_MAX_LEN + 1);
@@ -85,11 +90,25 @@ void *SPM_repeater()
             }
 
             ssm->status.tab[i].sequenceNumber = current->sequenceNumber;
-            ssm->status.tab[i].sigStatus.count = current->sigRequest_count;
+            int k = 0;
             for (int j = 0; j < current->sigRequest_count; j++) {
-                SignalStatusPackage *ssp = &ssm->status.tab[i].sigStatus.tab[j];
+                SignalStatusPackage *ssp = &ssm->status.tab[i].sigStatus.tab[k++];
                 memset(ssp, 0, sizeof(SignalStatusPackage));
-
+                
+                switch (current->sigRequestList[j].request.requestType) {
+                    case PriorityRequestType_priorityRequest:
+                        ssp->status = PrioritizationResponseStatus_requested;
+                    break;
+                    case PriorityRequestType_priorityRequestUpdate:
+                        ssp->status = PrioritizationResponseStatus_requested;
+                    break;
+                    case PriorityRequestType_priorityRequestTypeReserved:
+                    case PriorityRequestType_priorityCancellation:
+                        k--;
+                        continue;
+                    break;
+                }
+                
                 ssp->requester_option = TRUE;
                 ssp->requester.id.choice = current->id.choice;
                 if (current->id.choice == VehicleID_entityID)
@@ -99,28 +118,28 @@ void *SPM_repeater()
                 ssp->requester.role_option = TRUE;
                 ssp->requester.role = current->role;
 
-                memcpy(&ssp->inboundOn, &current->sigRequestList[i].request.inBoundLane, sizeof(IntersectionAccessPoint));
-                if (current->sigRequestList[i].request.outBoundLane_option) {
+                memcpy(&ssp->inboundOn, &current->sigRequestList[j].request.inBoundLane, sizeof(IntersectionAccessPoint));
+                if (current->sigRequestList[j].request.outBoundLane_option) {
                     ssp->outboundOn_option = TRUE;
-                    memcpy(&ssp->outboundOn, &current->sigRequestList[i].request.outBoundLane, sizeof(IntersectionAccessPoint));
+                    memcpy(&ssp->outboundOn, &current->sigRequestList[j].request.outBoundLane, sizeof(IntersectionAccessPoint));
                 }
                 
-                if (current->sigRequestList[i].minute_option) {
+                if (current->sigRequestList[j].minute_option) {
                     ssp->minute_option = TRUE;
-                    ssp->minute = current->sigRequestList[i].minute;
+                    ssp->minute = current->sigRequestList[j].minute;
                 }
 
-                if (current->sigRequestList[i].second_option) {
+                if (current->sigRequestList[j].second_option) {
                     ssp->second_option = TRUE;
-                    ssp->second = current->sigRequestList[i].second;
+                    ssp->second = current->sigRequestList[j].second;
                 }
 
-                if (current->sigRequestList[i].duration_option) {
+                if (current->sigRequestList[j].duration_option) {
                     ssp->duration_option = TRUE;
-                    ssp->duration = current->sigRequestList[i].duration;
+                    ssp->duration = current->sigRequestList[j].duration;
                 }
             }
-
+            ssm->status.tab[i].sigStatus.count = k;
             i++;
             current = current->next;
         }
