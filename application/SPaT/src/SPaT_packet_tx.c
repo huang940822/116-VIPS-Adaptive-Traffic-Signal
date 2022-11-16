@@ -42,8 +42,10 @@ void *SPaT_packet_tx_loop()
     int update_result;
     uint8_t *tx_buf = NULL;
     int tx_buf_len = 0;
-    while (SPaT.dontSend2TC) {
+    while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
+        if (SPaT.dontSend2TC)
+            continue;
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
         update_result = spat_msg_update(&p_spat);

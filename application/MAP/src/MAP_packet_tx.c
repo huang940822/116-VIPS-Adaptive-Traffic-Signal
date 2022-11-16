@@ -23,6 +23,8 @@ extern MapData *map;
 
 void MAP_packet_tx(__sigval_t value)
 {   
+    if (MAP.dontSend2TC)
+        return;
     struct timeval start;
     struct timeval end;
     // FILE *fp;
