@@ -46,7 +46,6 @@ void SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage *p_srm)
     current->role = p_srm->requestor.type.role;
 SPM_OBU_obj_insert_end:
     current->time_second = OBU_obj->record_ring.record[OBU_obj->record_ring.last_record_pointer].time_second;
-    current->sequenceNumber;
     current->sigRequest_count = 0;
     for (int i = 0; i < p_srm->requests.count; i++) {
         /* Only record for the specific intersection, filter the request by intersection id. */

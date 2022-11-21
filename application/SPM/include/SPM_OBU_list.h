@@ -18,7 +18,6 @@ typedef struct SPM_OBU_obj {
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
     uint8_t vehicle_type;
     time_t time_second;
-    uint32_t sequenceNumber;
     SignalRequestPackage sigRequestList[SignalRequestList_MAX_SIZE];
     int sigRequest_count;
     struct SPM_OBU_obj *next;

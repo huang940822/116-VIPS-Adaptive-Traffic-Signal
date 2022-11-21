@@ -36,8 +36,9 @@ void map_msg_init(MapData **map)
     (*map)->intersections.tab = calloc(1,sizeof(IntersectionGeometry));
 
     (*map)->intersections.tab->name_option = FALSE;
-    (*map)->intersections.tab->id.region_option = FALSE;
     (*map)->intersections.tab->id.id = config.RSU_id;
+    (*map)->intersections.tab->id.region_option = TRUE;
+    (*map)->intersections.tab->id.region = config.RSU_region;
     (*map)->intersections.tab->revision = 0;
     (*map)->intersections.tab->refPoint.lat = config.RSU_lat * 10000000;
     (*map)->intersections.tab->refPoint.Long = config.RSU_lon * 10000000;

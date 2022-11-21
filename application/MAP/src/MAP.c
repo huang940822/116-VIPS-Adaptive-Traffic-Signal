@@ -128,9 +128,9 @@ int MAP_on_registration(void *arg)
     MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);
-    set_timer(MAP_packet_tx_timer_id, 1 / MAP_config.MAP_packet_transfer_speed,
-                1000000000 / MAP_config.MAP_packet_transfer_speed, 
-                1 / MAP_config.MAP_packet_transfer_speed, 
-                1000000000 / MAP_config.MAP_packet_transfer_speed);
+    set_timer(MAP_packet_tx_timer_id, (int)(1 / MAP_config.MAP_packet_transfer_speed),
+                (int)((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000), 
+                (int)(1 / MAP_config.MAP_packet_transfer_speed), 
+                (int)((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000));
 
 }
