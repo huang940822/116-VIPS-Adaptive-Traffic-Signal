@@ -18,6 +18,7 @@ SPM_OBU_obj_t *SPM_OBU_obj_new(OBU_object_t *OBU_obj)
     Malloc(SPM_OBU_obj, sizeof(SPM_OBU_obj_t), "SPM_OBU_obj_new");
 
     strncpy(SPM_OBU_obj->OBU_name, OBU_obj->OBU_name, OBU_NAME_MAX_LEN);
+    SPM_OBU_obj->vehicle_type = OBU_obj->vehicle_type;
     return SPM_OBU_obj;
 }
 
@@ -44,6 +45,7 @@ void SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage *p_srm)
     else
         current->id.u.stationID = p_srm->requestor.id.u.stationID;
     current->role = p_srm->requestor.type.role;
+
 SPM_OBU_obj_insert_end:
     current->time_second = OBU_obj->record_ring.record[OBU_obj->record_ring.last_record_pointer].time_second;
     current->sigRequest_count = 0;

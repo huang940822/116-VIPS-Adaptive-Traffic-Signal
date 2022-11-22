@@ -157,11 +157,6 @@ typedef struct OBU_record {
     uint8_t direction;
 } OBU_record_t;
 
-typedef struct OBU_object_header {
-    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
-    vehicle_type_t vehicle_type;
-} OBU_object_header_t;
-
 typedef struct OBU_record_ring {
     OBU_record_t record[OBU_RECORD_RING_CAPACITY];
     uint8_t first_record_pointer;  // queue.front
@@ -175,9 +170,10 @@ typedef struct application_private_space {
 } app_private_space_t;
 
 typedef enum {
-    processing = 0,
-    granted = 1,
-    rejected = 2,
+    OBU_object_unknown = -1,
+    OBU_object_processing = 0,
+    OBU_object_granted = 1,
+    OBU_object_rejected = 2,
 } OBU_object_status;
 
 typedef struct OBU_object {

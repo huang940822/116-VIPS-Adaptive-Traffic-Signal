@@ -111,7 +111,7 @@ void OBU_record_ring_pop(OBU_object_t *object)
 ** Parameter:   str: OBU id of new OBU obj
 ** Return:      object: address of new OBU obj
 ******************************************************************************/
-OBU_object_t *OBU_object_new(OBU_object_header_t *header)
+OBU_object_t *OBU_object_new(OBU_record_common_field_t *record_common)
 {
     OBU_object_t *object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
     if (object == NULL) {
@@ -123,7 +123,9 @@ OBU_object_t *OBU_object_new(OBU_object_header_t *header)
         clear_memory_error();
         memset(object, 0, sizeof(OBU_object_t));
     }
-    memcpy(object, header, sizeof(OBU_object_header_t));
+    strncpy(object->OBU_name, record_common->OBU_name, OBU_NAME_MAX_LEN);
+    object->vehicle_type = record_common->vehicle_type;
+    object->status = OBU_object_processing;
 
     object->private_space = (app_private_space_t *) malloc(
         sizeof(app_private_space_t));
@@ -150,16 +152,29 @@ OBU_object_t *OBU_object_new(OBU_object_header_t *header)
 ** Return:      object: address of OBU obj
 **              NULL: OBU obj not found
 ******************************************************************************/
-OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
+inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
 {
     OBU_object_t *current = OBU_list_head->next;
     while (current != OBU_list_head) {
-        if (strncmp(current->OBU_name, str, OBU_NAME_MAX_LEN) == 0) {
+        if (strcmp(current->OBU_name, str) == 0) {
             return current;
         }
         current = current->next;
     }
     return NULL;
+}
+
+OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name)
+{
+    OBU_object_status status = OBU_object_unknown;
+    pthread_mutex_lock(&mutex_special_OBU_list[type]);
+    OBU_object_t *object = OBU_object_search(&special_OBU_list[type], name);
+    if (object != NULL) {
+status = object->status;
+    }
+        
+    pthread_mutex_unlock(&mutex_special_OBU_list[type]);
+    return status;
 }
 
 /*****************************************************************************
@@ -177,7 +192,7 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這
         OBU_object_search(&normal_OBU_list[hash_code], record->OBU_name);
 
     if (object == NULL) { /* new OBU object */
-        object = OBU_object_new((OBU_object_header_t *)&record->OBU_name);
+        object = OBU_object_new(record);
 
         /* insert OBU record */  //如果世新的object 那record ring一定是空的
                                  //似乎沒有檢查的必要 直接push進去就好？
@@ -223,9 +238,9 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
-
+    
     if (object == NULL) { /* new OBU object */ 
-        object = OBU_object_new((OBU_object_header_t *)&record->OBU_name);
+        object = OBU_object_new(record);
         /* insert OBU record */
         OBU_record_ring_push((OBU_record_t *)record, object);
         /* insert at head */
@@ -261,8 +276,8 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 
 static int yday2month_day(struct tm *timeinfo, int yday)
 {
-    int months_arr[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}, month = 0;
-    int year = timeinfo->tm_year + 1900;
+    int months_arr[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int year = timeinfo->tm_year + 1900, month = 0;
 
     if ((year % 400 == 0 || year % 100 != 0) && (year % 4 == 0))
         months_arr[1]++;

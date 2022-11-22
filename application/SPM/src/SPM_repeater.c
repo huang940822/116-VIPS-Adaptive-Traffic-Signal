@@ -6,6 +6,7 @@
 #include "config.h"
 #include "j2735_codec.h"
 #include "log.h"
+#include "OBU_record_processing.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -102,9 +103,24 @@ void *SPM_repeater()
                 case PriorityRequestType_priorityRequest: 
                     ssp->status = PrioritizationResponseStatus_requested;
                     break;
-                case PriorityRequestType_priorityRequestUpdate:
-                    ssp->status = PrioritizationResponseStatus_granted;
-                    break;
+                case PriorityRequestType_priorityRequestUpdate: {
+                    switch (special_OBU_list_search_status(current->vehicle_type, current->OBU_name))
+                    {
+                    case OBU_object_processing:
+                        ssp->status = PrioritizationResponseStatus_processing;
+                        break;
+                    case OBU_object_granted:
+                        ssp->status = PrioritizationResponseStatus_granted;
+                        break;
+                    case OBU_object_rejected:
+                        ssp->status = PrioritizationResponseStatus_rejected;
+                        break;
+                    default:
+                        i--;
+                        continue;
+                        break;
+                    } 
+                } break;
                 case PriorityRequestType_priorityRequestTypeReserved:
                 case PriorityRequestType_priorityCancellation:
                     i--;
