@@ -211,7 +211,7 @@ int spat_msg_update(SPAT **pp_spat)
         Red[phase] = second - signal_status.plan[phase].AllRed;
     }
     // other phase
-    if (signal_status.SubPhaseCount == 0)
+    if (signal_status.SubPhaseCount == 0 || phase >= signal_status.SubPhaseCount)
         return -1;
     for (int i = (phase + 1) % signal_status.SubPhaseCount, j = phase; 
          i != phase; i = (i + 1) % signal_status.SubPhaseCount, 
