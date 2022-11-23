@@ -64,17 +64,17 @@ void map_msg_init(MapData **map)
         GeLane[i].laneID = MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].laneID;
         GeLane[i].name_option = FALSE;
         if(MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].ingressApproach==0 && MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].egressApproach==1){
-            GeLane[i].ingressApproach_option = TRUE;
-            GeLane[i].ingressApproach = 1;
-            GeLane[i].egressApproach_option = FALSE;
+            GeLane[i].egressApproach_option = TRUE;
+            GeLane[i].egressApproach = 1;
+            GeLane[i].ingressApproach_option = FALSE;
             asn1_bstr_alloc(&(GeLane[i].laneAttributes.directionalUse),
                             LaneDirection_MAX_BITS);
             asn1_bstr_set_bit(&(GeLane[i].laneAttributes.directionalUse),
                             LaneDirection_ingressPath);
         } else if (MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].egressApproach==0 && MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].ingressApproach==1) {
-            GeLane[i].egressApproach_option = TRUE;
-            GeLane[i].egressApproach = 1;
-            GeLane[i].ingressApproach_option = FALSE;
+            GeLane[i].ingressApproach_option = TRUE;
+            GeLane[i].ingressApproach = 1;
+            GeLane[i].egressApproach_option = FALSE;
             asn1_bstr_alloc(&(GeLane[i].laneAttributes.directionalUse),
                             LaneDirection_MAX_BITS);
             asn1_bstr_set_bit(&(GeLane[i].laneAttributes.directionalUse),
@@ -300,6 +300,8 @@ void map_print(MapData *map)
                 if (NodeListXY_nodes == map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice) {
                     /* The function only show nodes type */
                     printf("  node list count: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count);
+                    printf("  node list ingressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].ingressApproach);
+                    printf("  node list egressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].egressApproach);
                     for (node_index = 0; node_index < map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count; node_index++) {
                         switch (map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice) {
                             case NodeOffsetPointXY_node_XY1:

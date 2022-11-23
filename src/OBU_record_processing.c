@@ -170,9 +170,8 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object = OBU_object_search(&special_OBU_list[type], name);
     if (object != NULL) {
-status = object->status;
+        status = object->status;
     }
-        
     pthread_mutex_unlock(&mutex_special_OBU_list[type]);
     return status;
 }

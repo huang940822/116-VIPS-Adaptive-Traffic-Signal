@@ -104,22 +104,14 @@ void *SPM_repeater()
                     ssp->status = PrioritizationResponseStatus_requested;
                     break;
                 case PriorityRequestType_priorityRequestUpdate: {
-                    switch (special_OBU_list_search_status(current->vehicle_type, current->OBU_name))
-                    {
-                    case OBU_object_processing:
-                        ssp->status = PrioritizationResponseStatus_processing;
-                        break;
-                    case OBU_object_granted:
-                        ssp->status = PrioritizationResponseStatus_granted;
-                        break;
-                    case OBU_object_rejected:
-                        ssp->status = PrioritizationResponseStatus_rejected;
-                        break;
-                    default:
+                    static int OBU_object_status[] = {PrioritizationResponseStatus_processing, PrioritizationResponseStatus_granted, 
+                        PrioritizationResponseStatus_rejected};
+                    int status = special_OBU_list_search_status(current->vehicle_type, current->OBU_name);
+                    if (status == OBU_object_unknown) {
                         i--;
                         continue;
-                        break;
-                    } 
+                    }
+                    ssp->status = OBU_object_status[status];
                 } break;
                 case PriorityRequestType_priorityRequestTypeReserved:
                 case PriorityRequestType_priorityCancellation:
