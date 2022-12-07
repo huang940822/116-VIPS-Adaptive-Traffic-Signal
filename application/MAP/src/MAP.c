@@ -17,6 +17,9 @@
 #include "log.h"
 #include "timer_event.h"
 
+#include "j2735_codec.h"
+#include "j2735_map.h"
+
 MapData *map;
 timer_t MAP_packet_tx_timer_id;
 
@@ -123,8 +126,13 @@ int MAP_on_registration(void *arg)
     if(ret != 0) {
         log_file_write_fatal_error("error map reading config file: %d", ret);
     }
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    print_config_map(log_content, LOG_CONTENT_LEN);
+    printf("%s\n", log_content);
     /* MAP msg init */
-    map_msg_init(&map);
+    map = (MapData *) j2735_msg_prealloc(MapData_Id);
+    map_msg_init(map);
     MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);

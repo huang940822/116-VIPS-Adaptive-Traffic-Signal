@@ -11,6 +11,7 @@ config_object_t config = {
     .RSU_id = 0,
     .RSU_lat = 22.996714,
     .RSU_lon = 120.237009,
+    .RSU_elev = 0,
     .signal_controller_manufacturer = 1,
     .signal_status_report_active = 0,
     .signal_adjust_upper_bound_active = 1,

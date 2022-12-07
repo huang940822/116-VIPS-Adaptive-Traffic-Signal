@@ -1,5 +1,10 @@
 #ifndef UTIL_H
 #define UTIL_H
+
+#include <errno.h>
+#include "error_status.h"
+#include "log.h"
+
 #if !(defined(__CHAR_BIT__) && defined(__SIZEOF_LONG__))
 #error Missing required predefined macros for BITS_PER_LONG calculation
 #endif

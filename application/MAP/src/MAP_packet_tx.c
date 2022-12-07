@@ -54,7 +54,7 @@ void MAP_packet_tx(__sigval_t value)
             // update map
             printf("update map information\r\n");
             gettimeofday(&start,NULL);
-            map_msg_update(&map);
+            map_msg_update(map);
             gettimeofday(&end,NULL);
             PhaseOrder = get_PhaseOrder();
             prev_phase = get_current_phase();

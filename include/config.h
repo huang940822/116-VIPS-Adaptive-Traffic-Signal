@@ -15,6 +15,7 @@ typedef struct config_object {
     uint32_t RSU_region;
     double RSU_lat;
     double RSU_lon;
+    double RSU_elev;
     uint8_t signal_controller_manufacturer;
 
     bool signal_status_report_active;

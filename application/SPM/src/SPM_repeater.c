@@ -166,4 +166,5 @@ void *SPM_repeater()
 SPM_repeater_end:
     SPM_repeater_thread = 0;
     close(fd);
+    pthread_detach(pthread_self());
 }

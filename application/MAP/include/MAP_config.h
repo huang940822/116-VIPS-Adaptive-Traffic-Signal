@@ -15,7 +15,9 @@ int MAP_config_init();
 /* Return codes of config */
 typedef enum MAP_config_err {
     MAP_CONFIG_ACCEPT = 0,
-    CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED = -1,
+    MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED = -1,
+    MAP_CONFIG_INVALID = -2,
+    MAP_CONFIG_INVALID_OPEN_FILE = -3,
 } MAP_config_err_t;
 
 typedef struct LaneID_connectingLane {
@@ -43,4 +45,5 @@ typedef struct MAP_config_object {
 
 extern MAP_config_object_t MAP_config;
 
+void print_config_map(char *buf, int buf_len);
 #endif

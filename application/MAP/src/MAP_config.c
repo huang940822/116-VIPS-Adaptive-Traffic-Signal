@@ -66,268 +66,208 @@ static bool read_int_array_from_config_line(char *config_line, int *val)
     }
 }
 
+static char *trim_space(char *buf)
+{
+    while (buf != NULL && *buf != '\0') {
+        if (*buf != ' ' || *buf != '\t')
+            return buf;
+        buf++;
+    }
+    return NULL;
+}
+
+static char *read_line(char *read_buf, int read_buf_len, FILE *fp)
+{
+    while (!feof(fp)) {
+        memset(read_buf, 0, read_buf_len);
+        fgets(read_buf, read_buf_len, fp);
+
+        char *buf = trim_space(read_buf);
+        if (buf == NULL || *buf == '#' || *buf == '\n') {
+            continue;
+        }
+        return buf;
+    }
+    return NULL;
+}
+
 int MAP_config_init()
 {
     FILE *fp;
     fp = fopen(MAP_CONFIG_FILE, "r");
-    if(fp == NULL) {
+    if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", MAP_CONFIG_FILE);
+        return MAP_CONFIG_INVALID_OPEN_FILE;
     } else {
         log_file_write("%s opened successfully", MAP_CONFIG_FILE);
     }
 
-    char buf[CONFIG_LINE_BUFFER_SIZE];
+    char read_buf[CONFIG_LINE_BUFFER_SIZE];
     int int_val;
     uint8_t uint8_t_val;
     float float_val;
+    double double_val;
     char string_val[MAX_CONFIG_VARIABLE_LEN];
     int int_val_array[LANE_MAX_NUMBER];
-    int intersection_number=0;
-    int intersection_count=1;
-    int intersection_laneSet_number=0;
-    int intersection_laneSet_count=1;
-    int intersection_speedLimits_count=1;
-    int intersection_speedLimits_number=0;
-    int intersection_laneSet_NodeXY_count=1;
-    int intersection_laneSet_NodeXY_number=0;
-    int intersection_connectsTo_number=0;
+    int intersection_n = 0;
+
+    int intersection_number;
+    int intersection_count = 1;
+    int intersection_laneSet_number = 0;
+    int intersection_laneSet_count = 1;
+    int intersection_speedLimits_count = 1;
+    int intersection_speedLimits_number = 0;
+    int intersection_laneSet_NodeXY_count = 1;
+    int intersection_laneSet_NodeXY_number = 0;
+    int intersection_connectsTo_number = 0;
     int intersection_connectsTo_n = 0;
     int direction_index = 0;
     int Lane_index = 0;
     MAP_config.Mapconfig = (MapData *) j2735_msg_prealloc(MapData_Id);
-    MAP_config.Mapconfig -> msgIssueRevision = 0 ;
+    MAP_config.Mapconfig->msgIssueRevision = 0;
     // MAP_config.intersections.tab = (IntersectionGeometry *) calloc(1, sizeof(IntersectionGeometry));
     // MAP_config.intersections.tab->speedLimits.tab = (RegulatorySpeedLimit *) calloc(1, sizeof(RegulatorySpeedLimit));
     // MAP_config.intersections.tab->laneSet.tab = (GenericLane *) calloc(1, sizeof(GenericLane));
     while (!feof(fp)) {
-        fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
-        if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
-            continue;
-        }
-        if (strstr(buf, "intersection_count ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.count = int_val;
-                    // printf("count is %d\n",MAP_config.intersections.count);
-            }
-        }
-        if (strstr(buf, "intersection_n ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    intersection_number = int_val;
-            }
-        }
-        if (strstr(buf, "intersection_revision ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].revision =
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_lat ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].refPoint.lat
-                    = int_val;
-            }
-        }
-        if (strstr(buf, "intersection_long ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].refPoint.Long
-                    = int_val;
-            }
-        }
-        if (strstr(buf, "intersection_elevation ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].refPoint.elevation=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneWidth ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneWidth=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_speedLimits_count ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].speedLimits.count=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_speedLimits_n ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    intersection_speedLimits_number= int_val;
-            }
-        }
-        if (strstr(buf, "IntersectionGeometry_speedLimits_type ")) {
-            if (read_string_from_config_line(buf, string_val)) {
+        char *buf = read_line(read_buf, CONFIG_LINE_BUFFER_SIZE, fp);
 
-                // strcpy(MAP_config.Mapconfig->intersections.tab[intersection_number].speedLimits.tab[intersection_speedLimits_number].type, string_val);
-            }
-        }
-        if (strstr(buf, "intersection_speedLimits_speed ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].speedLimits.tab[intersection_speedLimits_number].speed = int_val;
-                    // printf("speed = %d\n",MAP_config.Mapconfig->intersections.tab[intersection_number].speedLimits.tab[intersection_speedLimits_number].speed);
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_count ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.count = int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_n ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    intersection_laneSet_number= int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_id ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneID = int_val;
-                    // printf("laneid=%d\n",MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneID);
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_ingressApproach ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].ingressApproach=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_egressApproach ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].egressApproach=
-                    int_val;
-            }
-        }
-        // ?
-        if (strstr(buf, "intersection_laneSet_laneAttributes_directionalUse")) {
-            if (read_string_from_config_line(buf, string_val)) {
-                    asn1_bstr_alloc(&(MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.directionalUse),
-                    LaneDirection_MAX_BITS); 
-                    for(int i=0;i<LaneDirection_MAX_BITS;i++){
-                        if(string_val[i]=='1')
-                            asn1_bstr_set_bit(&(MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.directionalUse),
-                            i);
-                     
-                    }
-            }
-        }
-        // ?
-        if (strstr(buf, "intersection_laneSet_laneAttributes_sharedWith ")) {
-            if (read_string_from_config_line(buf, string_val)) {
-                    asn1_bstr_alloc(&(MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.sharedWith),
-                    LaneSharing_MAX_BITS); for(int
-                    i=0;i<LaneSharing_MAX_BITS;i++){
-                        if(string_val[i]=='1')
-                            asn1_bstr_set_bit(&(MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.sharedWith),
-                            i);
-                    }
-            }
-        }
-        // ?
-        if (strstr(buf, "intersection_laneSet_laneAttributes_laneType ")) {
-        //VEHICLE ONLY NOW
-            if (read_string_from_config_line(buf, string_val)) {
-                    asn1_bstr_alloc(&(MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.laneType.u.vehicle),
-                    LaneAttributes_Vehicle_MAX_BITS); for(int
-                    i=0;i<LaneAttributes_Vehicle_MAX_BITS;i++){
-                        if(string_val[i]=='1')
-                            asn1_bstr_set_bit(&(MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].laneAttributes.laneType.u.vehicle),
-                            i);
-                    }
-            }
-        }
-        // ?
-        if (strstr(buf, "intersection_laneSet_NodeXY_count ")) {
-            //CHOICE SHOULD ADD
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.choice = NodeListXY_nodes;
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.count = int_val;
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab
-                    = (NodeXY *)calloc(sizeof(int_val), sizeof(NodeXY));
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_NodeXY_n ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    intersection_laneSet_NodeXY_number= int_val;
-                    // MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.choice
-                    // = NodeOffsetPointXY_node_XY6;
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.choice
-                    = NodeOffsetPointXY_node_LatLon;
-            }
-        }
-        // if (strstr(buf, "intersection_laneSet_NodeXY_X ")) {
-        //     if (read_int_from_config_line(buf, &int_val)) {
-        //             MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_XY6.x=
-        //             int_val;
-        //     }
-        // }
-        // if (strstr(buf, "intersection_laneSet_NodeXY_Y ")) {
-        //     if (read_int_from_config_line(buf, &int_val)) {
-        //             MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_XY6.y=
-        //             int_val;
-        //     }
-        // }
-        if (strstr(buf, "intersection_laneSet_NodeXY_lon ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_LatLon.lon=
-                    int_val;
-            }
-        }
-        if (strstr(buf, "intersection_laneSet_NodeXY_lat ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].nodeList.u.nodes.tab[intersection_laneSet_NodeXY_number].delta.u.node_LatLon.lat=
-                    int_val;
+        // MAP_packet_transfer_speed
+        if (strstr(buf, "MAP_packet_transfer_speed ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    MAP_config.MAP_packet_transfer_speed = uint8_t_val;
+                    log_file_write("config: MAP_packet_transfer_speed = %d", MAP_config.MAP_packet_transfer_speed);
+                    continue;
+                } else {
+                    return MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
+                }
+            } else {
+                return MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
             }
         }
 
-        if (strstr(buf, "intersection_connectsTo_count ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].connectsTo.count = int_val;
+        // LaneSet_table
+        if (strstr(buf, "LaneSet_table_start")) {
+            IntersectionGeometry *intersection = &MAP_config.Mapconfig->intersections.tab[0];
+
+            const char const delim[] = ",";
+            while (true) {
+                buf = read_line(read_buf, CONFIG_LINE_BUFFER_SIZE, fp);
+                if (buf == NULL)
+                    return MAP_CONFIG_INVALID;
+
+                if (strstr(buf, "LaneSet_table_end")) {
+                    break;
+                }
+
+                // laneId
+                char *substr = trim_space(strtok(buf, delim));
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    return MAP_CONFIG_INVALID;
+                if (int_val != intersection->laneSet.count)
+                    return MAP_CONFIG_INVALID;
+
+                GenericLane *lane = &intersection->laneSet.tab[intersection->laneSet.count];
+
+                // Approach
+                substr = trim_space(strtok(NULL, delim));
+                int32_t *ApproachId;
+
+                if (strstr(substr, "egress")) {
+                    lane->ingressApproach_option = FALSE;
+                    lane->egressApproach_option = TRUE;
+                    ApproachId = &lane->egressApproach;
+                    asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_egressPath);
+                } else if (strstr(substr, "ingress")) {
+                    lane->ingressApproach_option = TRUE;
+                    lane->egressApproach_option = FALSE;
+                    ApproachId = &lane->ingressApproach;
+                    asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath);
+                } else {
+                    return MAP_CONFIG_INVALID;
+                }
+
+                // Approach
+                substr = trim_space(strtok(NULL, delim));
+                if (substr == NULL || sscanf(substr, "%d", ApproachId) != 1)
+                    return MAP_CONFIG_INVALID;
+
+                // lane_index
+                substr = trim_space(strtok(NULL, delim));
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    return MAP_CONFIG_INVALID;
+
+                // bit 5-8 為 Approach
+                lane->laneID = ((*ApproachId << 5) & 0b11100000);
+
+                // ingress 設 bit 4 為 0, egress 為 0
+                if (asn1_bstr_is_bit_set(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath)) {
+                    lane->laneID |= 0b00010000;
+                }
+
+                lane->laneID |= (0b00001111 & int_val);
+
+                // node_count
+                int node_count;
+                substr = trim_space(strtok(NULL, delim));
+                if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
+                    return MAP_CONFIG_INVALID;
+
+                lane->nodeList.choice = NodeListXY_nodes;
+
+                Malloc(lane->nodeList.u.nodes.tab, sizeof(NodeXY) * node_count, "MAP_config_NodeXY_new");
+
+                for (int i = 0; i < node_count; i++, lane->nodeList.u.nodes.count++) {
+                    lane->nodeList.u.nodes.tab[i].delta.choice = NodeOffsetPointXY_node_LatLon;
+
+                    substr = trim_space(strtok(NULL, delim));
+                    if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
+                        return MAP_CONFIG_INVALID;
+                    lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lat = double_val * 10000000;
+
+                    substr = trim_space(strtok(NULL, delim));
+
+                    if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
+                        return MAP_CONFIG_INVALID;
+                    lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lon = double_val * 10000000;
+                }
+                
+                intersection->laneSet.count++;
             }
+            MAP_config.Mapconfig->intersections.count = 1;
+        } else {
+            return MAP_CONFIG_INVALID;
         }
-        if (strstr(buf, "intersection_connectsTo_n ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    intersection_connectsTo_number = int_val;
-            }
-        }
-        if (strstr(buf, "intersection_connectsTo_connectingLane_lane ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-                    MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].connectsTo.tab[intersection_connectsTo_number].connectingLane.lane = int_val;
-            }
-        }
+
         if (strstr(buf, "intersection_connectsTo_connectingLane_maneuver ")) {
             if (read_int_from_config_line(buf, &int_val)) {
-                   
             }
         }
-        // if (strstr(buf, "intersection_connectsTo_signalGroup ")) {
-        //     if (read_int_from_config_line(buf, &int_val)) {
-        //             MAP_config.Mapconfig->intersections.tab[intersection_number].laneSet.tab[intersection_laneSet_number].connectsTo.tab[intersection_connectsTo_number].signalGroup = int_val;
-        //     }
-        // }
-        
+
         // Direction
         if (strstr(buf, "Direction ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)){
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 direction_index = uint8_t_val;
             }
         }
 
         // Lane_count
         if (strstr(buf, "Lane_count ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)){
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 MAP_config.map_lane2connecting.Direction[direction_index].Lane_count = uint8_t_val;
             }
         }
 
         // Lane_Index
         if (strstr(buf, "Lane_Index ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)){
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 Lane_index = uint8_t_val;
             }
         }
 
         // LaneID
         if (strstr(buf, "LaneID ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)){
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].LaneID = uint8_t_val;
             }
         }
@@ -338,8 +278,8 @@ int MAP_config_init()
                 for (int i = 0; i < LANE_MAX_NUMBER; i++) {
                     if (int_val_array[i] > 0) {
                         MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].LeftconnectingLane[i] = int_val_array[i];
-                    } 
-                } 
+                    }
+                }
             }
         }
 
@@ -349,8 +289,8 @@ int MAP_config_init()
                 for (int i = 0; i < LANE_MAX_NUMBER; i++) {
                     if (int_val_array[i] > 0) {
                         MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].StrightconnectingLane[i] = int_val_array[i];
-                    } 
-                } 
+                    }
+                }
             }
         }
 
@@ -360,26 +300,12 @@ int MAP_config_init()
                 for (int i = 0; i < LANE_MAX_NUMBER; i++) {
                     if (int_val_array[i] > 0) {
                         MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].RightconnectingLane[i] = int_val_array[i];
-                    } 
-                } 
+                    }
+                }
             }
         }
 
-        //MAP_packet_transfer_speed
-        if (strstr(buf, "MAP_packet_transfer_speed ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                if (uint8_t_val >= 0) {
-            
-                    MAP_config.MAP_packet_transfer_speed = uint8_t_val;
-                    log_file_write("config: MAP_packet_transfer_speed = %d",MAP_config.MAP_packet_transfer_speed);
-                    continue;
-                } else {
-                    return CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
-                }
-            } else {
-                return CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
-            }
-        }
+
 
         // MAP_dontSend2TC
         if (strstr(buf, "MAP_dontSend2TC ")) {
@@ -387,7 +313,7 @@ int MAP_config_init()
                 if (uint8_t_val >= 0) {
                     MAP_config.MAP_dontSend2TC = uint8_t_val;
                     log_file_write("config: MAP_dontSend2TC = %d",
-                             MAP_config.MAP_dontSend2TC);
+                                   MAP_config.MAP_dontSend2TC);
                     continue;
                 } else {
                     return -1;
@@ -400,5 +326,24 @@ int MAP_config_init()
 
     fclose(fp);
     return MAP_CONFIG_ACCEPT;
+}
+
+void print_config_map(char *buf, int buf_len)
+{
+    if (MAP_config.Mapconfig->intersections.count != 1) {
+        snprintf(buf, buf_len, "intersections.count only can be 1, but is %d", MAP_config.Mapconfig->intersections.count);
+        return;
+    }
+    LaneList *laneSet = &MAP_config.Mapconfig->intersections.tab[0].laneSet;
+    snprintf(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
     
+    for (int i = 0; i < laneSet->count; i++) {
+        for ( int j = 0 ;j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", laneSet->tab[i].laneID);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", j);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
+        }
+    }
 }
