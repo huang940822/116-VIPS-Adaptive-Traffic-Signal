@@ -186,6 +186,7 @@ void map_msg_update(MapData *map)
     uint8_t SubPhaseCount = get_SubPhaseCount();
     uint8_t SignalCount = get_SignalCount();
     uint8_t current_phase = get_current_phase();
+    
     map->intersections.tab->revision++;
     map->intersections.tab->revision &= 0b1111111;
     

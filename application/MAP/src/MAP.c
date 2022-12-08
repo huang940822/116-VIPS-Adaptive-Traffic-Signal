@@ -20,7 +20,6 @@
 #include "j2735_codec.h"
 #include "j2735_map.h"
 
-MapData *map;
 timer_t MAP_packet_tx_timer_id;
 
 app_obj_t MAP = {
