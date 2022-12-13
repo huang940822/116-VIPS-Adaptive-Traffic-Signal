@@ -13,19 +13,19 @@
 #include "EVSP_timer_event.h"
 #include "EVSP_touching_area.h"
 #include "EVSP_typedefine.h"
+#include "application_registration.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"
 #include "error_status.h"
 #include "gps_information.h"
+#include "j2735_msg.h"
+#include "j2735_srm.h"
 #include "log.h"
 #include "timer_event.h"
 #include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
-#include "application_registration.h"
-#include "j2735_msg.h"
-#include "j2735_srm.h"
 
 app_obj_t EVSP = {
     .name = "EVSP",
@@ -133,7 +133,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
     // printf("EVSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));    
+    memset(log_content, 0, sizeof(log_content));
 
     /* If SRM checks whether this message is for self. */
     if (app_section->msgID == SignalRequestMessage_Id) {
@@ -146,8 +146,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
             if (i == srm->requests.count)
                 return -1;
-        }
-        else {
+        } else {
             return -1;
         }
     }
@@ -188,7 +187,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         app_section->OBU_object->record_ring
             .last_record_pointer;  // back of queue; 最新推入的資料？
 
-    //轉傳緊急封包到雲端
+    // 轉傳緊急封包到雲端
 
     {  // it's for evsp service's rx and try to get it's duty status and route
         // it to cloud
@@ -219,8 +218,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         char timestamp_t[20];
         struct tm *timeinfo;
         timeinfo = localtime(&app_section->OBU_object->record_ring
-                                         .record[last_record_index]
-                                         .time_second);
+                                  .record[last_record_index]
+                                  .time_second);
         int length =
             strftime(timestamp_t, 20, "%Y-%m-%d %H:%M:%S\n", timeinfo);
         // printf("obu object timestamp string is %s\n\r",timestamp_t);
@@ -284,7 +283,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
     uint16_t last_record_distance = 0;
 
-    //有舊資料
+    // 有舊資料
     if (static_space.last_lon != 0 && static_space.last_lat != 0) {
         last_record_distance = (uint16_t) get_distance(
             static_space.last_lat, static_space.last_lon,
@@ -298,9 +297,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  "%hd\nlast OBU direction: %hhd",
                  static_space.last_lat, static_space.last_lon,
                  last_record_distance, static_space.last_direction);
-    } 
-    //位移有超過閥值 才會紀錄下來 or 第一筆資料
-    if (last_record_distance > EVSP_config.valid_record_distance || last_record_distance == 0) {  
+    }
+    // 位移有超過閥值 才會紀錄下來 or 第一筆資料
+    if (last_record_distance > EVSP_config.valid_record_distance || last_record_distance == 0) {
         static_space.last_lon =
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lon;
@@ -476,210 +475,50 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
             EVSP_adjust_time += 20;  // Gmx += 20 ，緩衝誤差值調最大
             printf("new EVSP_adjust_time:%d\n", EVSP_adjust_time);
-            /* target_phase == current_phase */
-            if (target_phase == current_phase && current_step == 1) {
-                command.cycle = 0;
-                command.phase = current_phase;
-                command.effect_time = EVSP_adjust_time + current_second;
-                ret = command_buf_insert_effect_time(&command);
-                // printf("cycle: %d, phase: %d, effect time: %d
-                // (%d)\r\n",command.cycle, command.phase, command.effect_time,
-                // ret);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         ret);
-            }
-            if (target_phase == current_phase && current_step != 1) {
-                for (int i = current_phase + 1;
-                     i <= signal_status.SubPhaseCount; i++) {
-                    command.cycle = 0;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
-                for (int i = 1; i < target_phase; i++) {
-                    command.cycle = 1;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
-                command.cycle = 1;
-                command.phase = target_phase;
-                command.effect_time = pretime + EVSP_adjust_time;
-                ret = command_buf_insert_effect_time(&command);
-                // printf("cycle: %d, phase: %d, effect time: %d
-                // (%d)\r\n",command.cycle, command.phase, command.effect_time,
-                // ret);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         ret);
+
+            // 因為只有 step 1 綠燈可以動態控制 所以不是在綠燈的時候就當作到下個時相了
+            if (current_step != 1)
+                current_phase++;
+
+            #define insert_command_and_log \
+                do { \
+                ret = command_buf_insert_effect_time(&command); \
+                snprintf(log_content + strlen(log_content), \
+                         LOG_CONTENT_LEN - strlen(log_content), \
+                         "\ncycle: %d, phase: %d, effect time: %d (%d)", \
+                         command.cycle, command.phase, command.effect_time, \
+                         ret); \
+                } while (0);
+
+            command.cycle = 0; // 0 代表線在這個 cycle
+
+            command.effect_time = EVSP_config.min_green; // 縮短到最小綠
+
+            // 如果 current_phase >= target_phase，i 就會加到 target_phase
+            // target_phase < current_phase，的話就會停在 SubPhaseCount 把現在的 cycle 都換成最小綠
+            for (int i = current_phase; i <= signal_status.SubPhaseCount && i != target_phase; i++) {
+                command.phase = i;
+                insert_command_and_log;
             }
 
-            /* target_phase > current_phase */
-            if (target_phase > current_phase && current_step == 1) {
-                for (int i = current_phase; i < target_phase; i++) {
-                    command.cycle = 0;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
-                command.cycle = 0;
+            /* target_phase >= current_phase */
+            if (target_phase >= current_phase) {
                 command.phase = target_phase;
                 command.effect_time = pretime + EVSP_adjust_time;
-                ret = command_buf_insert_effect_time(&command);
-                // printf("cycle: %d, phase: %d, effect time: %d
-                // (%d)\r\n",command.cycle, command.phase, command.effect_time,
-                // ret);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         ret);
-            }
-            if (target_phase > current_phase && current_step != 1) {
-                for (int i = current_phase + 1; i < target_phase; i++) {
-                    command.cycle = 0;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
-                command.cycle = 0;
-                command.phase = target_phase;
-                command.effect_time = pretime + EVSP_adjust_time;
-                ret = command_buf_insert_effect_time(&command);
-                // printf("cycle: %d, phase: %d, effect time: %d
-                // (%d)\r\n",command.cycle, command.phase, command.effect_time,
-                // ret);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         ret);
-            }
-
-            /* target_phase < current_phase */
-            if (target_phase < current_phase && current_step == 1) {
-                for (int i = current_phase; i <= signal_status.SubPhaseCount;
-                     i++) {
-                    command.cycle = 0;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
+                insert_command_and_log;
+            } else { /* target_phase < current_phase */
+                command.cycle = 1; // 下一個 cycle
+                command.effect_time = EVSP_config.min_green;
                 for (int i = 1; i < target_phase; i++) {
-                    command.cycle = 1;
                     command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
+                    insert_command_and_log;
                 }
-                command.cycle = 1;
+                
                 command.phase = target_phase;
                 command.effect_time = pretime + EVSP_adjust_time;
-                ret = command_buf_insert_effect_time(&command);
-                // printf("cycle: %d, phase: %d, effect time: %d
-                // (%d)\r\n",command.cycle, command.phase, command.effect_time,
-                // ret);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         ret);
+                insert_command_and_log;
             }
-            if (target_phase < current_phase && current_step != 1) {
-                for (int i = current_phase + 1;
-                     i <= signal_status.SubPhaseCount; i++) {
-                    command.cycle = 0;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
-                for (int i = 1; i < target_phase; i++) {
-                    command.cycle = 1;
-                    command.phase = i;
-                    command.effect_time = EVSP_config.min_green;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
-                }
-                command.cycle = 1;
-                command.phase = target_phase;
-                command.effect_time = pretime + EVSP_adjust_time;
-                ret = command_buf_insert_effect_time(&command);
-                // printf("cycle: %d, phase: %d, effect time: %d
-                // (%d)\r\n",command.cycle, command.phase, command.effect_time,
-                // ret);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         ret);
-            }
+            #undef insert_command_and_log
         }
     }
     log_file_write(log_content);
