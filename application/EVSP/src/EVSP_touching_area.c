@@ -6,6 +6,7 @@
 #include "EVSP_touching_area.h"
 #include "error_status.h"
 #include "log.h"
+#include "config.h"
 
 EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_list_head = NULL;
 
@@ -29,9 +30,12 @@ EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
     fp = fopen(file_path, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", file_path);
+        return NULL;
     } else {
         log_file_write("%s opened successfully", file_path);
     }
+
+
 
     uint8_t ret = 0;
     uint8_t activate_num;

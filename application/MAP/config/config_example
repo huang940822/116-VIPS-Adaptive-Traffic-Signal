@@ -9,10 +9,11 @@ MAP_packet_transfer_speed 1
 # egress 是離開, ingress 是進入,ApproachId 0 代表為北 順時針遞增
 # ApproachId 從北開始順時針遞增 從 0 開始
 # lane_index 從內車道開始遞增, 從 1 開始
+# node_count 表示後面有幾個 node
 # node 車道的路線點, 從停止線開始往外畫 緯度, 經度
 
 LaneSet_table_start
-# laneId, LaneDirection, Approach, lane_index , node_count, node_n
+# laneId, LaneDirection, Approach, lane_index , node_count, node_lat, node_lon, ...
 0,  egress,  0, 1, 2, 22.92458, 120.29077,  22.925588,  120.290339
 1,  ingress, 0, 1, 2, 22.92457,   120.29076,   22.9254, 120.29037
 2,  egress,  1, 1, 2, 22.924479,  120.290994,  22.924479,  120.290994

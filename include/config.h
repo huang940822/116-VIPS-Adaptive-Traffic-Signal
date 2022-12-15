@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <stdio.h>
 #include "typedefine.h"
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
@@ -70,4 +71,10 @@ typedef enum config_err {
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 
+
+char *trim_space(char *buf);
+
+char *read_line(char *read_buf, int read_buf_len, FILE *fp);
+
+bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
 #endif

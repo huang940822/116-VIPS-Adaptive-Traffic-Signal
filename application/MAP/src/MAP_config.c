@@ -7,22 +7,13 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
+#include "config.h"
 
 MAP_config_object_t MAP_config = {
     .MAP_packet_transfer_speed = 1,
     .MAP_dontSend2TC = 1,
 };
 
-static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %hhd\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
 static bool read_float_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -66,31 +57,6 @@ static bool read_int_array_from_config_line(char *config_line, int *val)
     }
 }
 
-static char *trim_space(char *buf)
-{
-    while (buf != NULL && *buf != '\0') {
-        if (*buf != ' ' || *buf != '\t')
-            return buf;
-        buf++;
-    }
-    return NULL;
-}
-
-static char *read_line(char *read_buf, int read_buf_len, FILE *fp)
-{
-    while (!feof(fp)) {
-        memset(read_buf, 0, read_buf_len);
-        fgets(read_buf, read_buf_len, fp);
-
-        char *buf = trim_space(read_buf);
-        if (buf == NULL || *buf == '#' || *buf == '\n') {
-            continue;
-        }
-        return buf;
-    }
-    return NULL;
-}
-
 int MAP_config_init()
 {
     FILE *fp;
@@ -129,7 +95,7 @@ int MAP_config_init()
     // MAP_config.intersections.tab->speedLimits.tab = (RegulatorySpeedLimit *) calloc(1, sizeof(RegulatorySpeedLimit));
     // MAP_config.intersections.tab->laneSet.tab = (GenericLane *) calloc(1, sizeof(GenericLane));
     while (!feof(fp)) {
-        char *buf = read_line(read_buf, CONFIG_LINE_BUFFER_SIZE, fp);
+        char *buf = read_line(read_buf, sizeof(read_buf), fp);
 
         // MAP_packet_transfer_speed
         if (strstr(buf, "MAP_packet_transfer_speed ")) {
@@ -152,7 +118,7 @@ int MAP_config_init()
 
             const char const delim[] = ",";
             while (true) {
-                buf = read_line(read_buf, CONFIG_LINE_BUFFER_SIZE, fp);
+                buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
                     return MAP_CONFIG_INVALID;
 

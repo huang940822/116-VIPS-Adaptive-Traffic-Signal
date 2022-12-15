@@ -214,6 +214,7 @@ typedef struct static_plan {
     uint16_t PreTimeCompensated;
 } static_plan_t;
 
+// 是一個 bitString 要對照 enum SignalStatus_t 來看做 flag
 typedef struct phaseorder_plan {
     uint8_t SignalStatus;
 } phaseorder_plan_t;

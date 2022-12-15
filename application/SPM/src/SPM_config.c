@@ -13,17 +13,6 @@ SPM_config_object_t SPM_config = {
     .SPM_dontSend2TC = 1,
 };
 
-static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %hhd\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 int SPM_config_init()
 {
     FILE *fp;

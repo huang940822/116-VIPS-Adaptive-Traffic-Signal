@@ -400,7 +400,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
 
     } else { /* not in host OBU list */
-
         // search plan
         uint8_t plan_id = get_plan_id();
         EVSP_touching_area_plan_list_t *plan =
@@ -426,18 +425,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
             static_space.last_direction, &target_phase, plan);
         // enter activate area
         if (target_phase >= 0 && target_phase < EVSP_PHASE_MAX) {
-            // printf("EVSP OBU packet rx: ACTIVATE\r\n");
-            target_phase += 1;  // why +1  ??因為phase的值會在0~7但實際上會是1~8
-            // printf("max green is %d\r\n", EVSP_config.max_green);
+
+            target_phase += 1;  // 因為 phase 的值會在 0~7 但實際上會是 1~8
+
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
-                     "EVSP OBU packet rx: ACTIVATE");
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                     app_section->OBU_object->OBU_name);
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "\ntarget phase: %d", target_phase);
+                     "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d",
+                     app_section->OBU_object->OBU_name, target_phase);
 
             EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
                                      target_phase, area_ptr);
