@@ -12,10 +12,8 @@
 #define TC_655XX_ERR 32
 
 uint8_t get_error_status();
-uint8_t get_original_tc_hstatus();
 extern timer_t dsrc_heartbeat_timer_id;
 
-void set_original_tc_hstatus(uint8_t);
 
 void set_tsc_error();
 void clear_tsc_error();
