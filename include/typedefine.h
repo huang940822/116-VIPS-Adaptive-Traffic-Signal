@@ -235,6 +235,8 @@ typedef struct traffic_signal_status {
     phaseorder_plan_t phaseorder_plan[PHASE_COUNT_MAX_NUM][SIGNAL_COUNT_MAX_NUM];
 
     uint8_t control_status;
+    uint16_t original_tc_status;
+
 } traffic_signal_status_t;
 
 typedef struct msg_buf {
