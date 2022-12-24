@@ -425,9 +425,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
             static_space.last_direction, plan, &area_ptr);
         // enter activate area
         if (target_phase >= 0 && target_phase < EVSP_PHASE_MAX) {
-
-            target_phase += 1;  // 因為 phase 的值會在 0~7 但實際上會是 1~8
-
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d",
@@ -474,19 +471,19 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (current_step != 1)
                 current_phase++;
 
-            #define insert_command_and_log \
-                do { \
-                ret = command_buf_insert_effect_time(&command); \
-                snprintf(log_content + strlen(log_content), \
-                         LOG_CONTENT_LEN - strlen(log_content), \
-                         "\ncycle: %d, phase: %d, effect time: %d (%d)", \
-                         command.cycle, command.phase, command.effect_time, \
-                         ret); \
-                } while (0);
+#define insert_command_and_log                                      \
+    do {                                                            \
+        ret = command_buf_insert_effect_time(&command);             \
+        snprintf(log_content + strlen(log_content),                 \
+                 LOG_CONTENT_LEN - strlen(log_content),             \
+                 "\ncycle: %d, phase: %d, effect time: %d (%d)",    \
+                 command.cycle, command.phase, command.effect_time, \
+                 ret);                                              \
+    } while (0);
 
-            command.cycle = 0; // 0 代表線在這個 cycle
+            command.cycle = 0;  // 0 代表線在這個 cycle
 
-            command.effect_time = EVSP_config.min_green; // 縮短到最小綠
+            command.effect_time = EVSP_config.min_green;  // 縮短到最小綠
 
             // 如果 current_phase >= target_phase，i 就會加到 target_phase
             // target_phase < current_phase，的話就會停在 SubPhaseCount 把現在的 cycle 都換成最小綠
@@ -500,19 +497,19 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 command.phase = target_phase;
                 command.effect_time = pretime + EVSP_adjust_time;
                 insert_command_and_log;
-            } else { /* target_phase < current_phase */
-                command.cycle = 1; // 下一個 cycle
+            } else {                /* target_phase < current_phase */
+                command.cycle = 1;  // 下一個 cycle
                 command.effect_time = EVSP_config.min_green;
                 for (int i = 1; i < target_phase; i++) {
                     command.phase = i;
                     insert_command_and_log;
                 }
-                
+
                 command.phase = target_phase;
                 command.effect_time = pretime + EVSP_adjust_time;
                 insert_command_and_log;
             }
-            #undef insert_command_and_log
+#undef insert_command_and_log
         }
     }
     log_file_write(log_content);
@@ -553,7 +550,7 @@ int EVSP_on_registration(void *arg)
     // }
 
     EVSP_plan_list_read();
-    
+
     fflush(stdout);
     closedir(dp);
     EVSP_plan_list_print();

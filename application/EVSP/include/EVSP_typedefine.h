@@ -10,8 +10,14 @@
 #define MAX_NODE_COUNT 100
 
 typedef struct EVSP_Node {
-    double lon;
-    double lat;
+    union {
+        double lon;
+        double x;
+    };
+    union {
+        double lat;
+        double y;
+    };
 } EVSP_Node_t;
 
 typedef struct EVSP_static_space {

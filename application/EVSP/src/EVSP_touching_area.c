@@ -407,34 +407,71 @@ void EVSP_plan_list_print()
                      EVSP_plan_list.touching_area[i].node->lon, EVSP_plan_list.touching_area[i].node->lat);
         }
     }
-    // EVSP_touching_area_plan_list_t *current = EVSP_touching_area_plan_list_head;
 
-    // /* empty list */
-    // if (current == NULL) {
-    //     snprintf(log_content + strlen(log_content),
-    //              LOG_CONTENT_LEN - strlen(log_content), "\nempty");
-    //     log_file_write(log_content);
-    //     return;
-    // }
-
-    // /* traverse touching area plan list */
-    // while (current != NULL) {
-    //     snprintf(log_content + strlen(log_content),
-    //              LOG_CONTENT_LEN - strlen(log_content), "\nplan ID: %d",
-    //              current->plan_id);
-    //     EVSP_touching_area_print(current);
-    //     current = current->next;
-    // }
     printf("%s\n", log_content);
     log_file_write(log_content);
     return;
 }
 
+bool PointInPolygon(EVSP_Node_t *nodes, int node_count, int x, int y)
+{
+    bool flag = false;
+
+    for (int i = 0, j = node_count - 1; i < node_count; j = i, i++) {
+        int x1 = nodes[i].x;
+        int y1 = nodes[i].y;
+        int x2 = nodes[j].x;
+        int y2 = nodes[j].y;
+
+        // 點與多邊形頂點重合
+        if ((x1 == x && y1 == y) || (x2 == x && y2 == y)) {
+            //return 'on'; // 點在輪廓上
+            return true;
+        }
+
+        // 判斷線段兩端點是否在射線兩側
+        // 只有一邊取等號，當射線經過多邊形頂點時，只計一次
+        if ((y1 < y && y2 >= y) || (y1 >= y && y2 < y)) {
+            // 線段上與射線 Y 座標相同的點的 X 座標
+            double crossX = (y - y1) * (x2 - x1) / (y2 - y1) + x1;  // y=kx+b變換成x=(y-b)/k 其中k=(y2-y1)/(x2-x1)
+
+            // 點在多邊形的邊上
+            if (crossX == x) {
+                //return 'on'; // 點在輪廓上
+                return true;
+            }
+
+            // 右射線穿過多邊形的邊界，每穿過一次flag的值變換一次
+            if (crossX > x) {
+                flag = !flag;  // 穿過奇數次爲true，偶數次爲false
+            }
+        }
+    }
+
+    // 射線穿過多邊形邊界的次數爲奇數時點在多邊形內
+    //return flag ? 'in' : 'out'; // 點在輪廓內或外
+    return flag ? true : false;
+}
+
+
+
 int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *plan, EVSP_touching_area_t **area_ptr)
 {
     for (int i = 0; i < plan->plan_subPhase_count; ++i) {
         for (int j = 0; j < plan->plan_subPhase[i].touching_area_count; ++j) {
-            EVSP_plan_list.touching_area[plan->plan_subPhase[i].touching_area_Id[j]];
+            EVSP_touching_area_t *touching_area = &EVSP_plan_list.touching_area[plan->plan_subPhase[i].touching_area_Id[j]];
+            int k = touching_area->direciton_start;
+            bool flag = false;
+            do {
+                if (k == direction) {
+                    flag = true;
+                    break;
+                }
+                k = (k + 1) % 8;
+            }while(k != touching_area->direciton_start);
+
+            if (!flag && PointInPolygon(touching_area->node, touching_area->node_count, lon, lat))
+                return plan->plan_subPhase[i].SubPhaseID;
         }
     }
     return -1;
@@ -442,21 +479,10 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
 
 bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
 {
-    // EVSP_touching_area_t *current;
-    // current = area_ptr->terminate;
-    // /* empty list */
-    // if (current == NULL) {
-    //     log_file_write_fatal_error("terminate list should not be empty");
-    //     return false;
-    // }
-
-    // /* traverse touching area list */
-    // while (current != NULL) {
-    //     if (lon < current->lon_high && lon > current->lon_low &&
-    //         lat < current->lat_high && lat > current->lat_low) {
-    //         return true;
-    //     }
-    //     current = current->next;
-    // }
+    for (int i = 0; i < area_ptr->terminate_area_count; i++) {
+        if (PointInPolygon(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
+            EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, lon, lat))
+                return true;
+    }
     return false;
 }
