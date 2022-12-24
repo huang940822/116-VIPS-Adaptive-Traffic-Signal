@@ -117,7 +117,7 @@ int MAP_config_init()
             IntersectionGeometry *intersection = &MAP_config.Mapconfig->intersections.tab[0];
 
             const char const delim[] = ",";
-            while (true) {
+            while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
                     return MAP_CONFIG_INVALID;
@@ -201,8 +201,6 @@ int MAP_config_init()
                 intersection->laneSet.count++;
             }
             MAP_config.Mapconfig->intersections.count = 1;
-        } else {
-            return MAP_CONFIG_INVALID;
         }
 
         if (strstr(buf, "intersection_connectsTo_connectingLane_maneuver ")) {

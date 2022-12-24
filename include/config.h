@@ -5,7 +5,7 @@
 #include "typedefine.h"
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
-#define CONFIG_LINE_BUFFER_SIZE 100
+#define CONFIG_LINE_BUFFER_SIZE 256
 #define MAX_CONFIG_VARIABLE_LEN 100
 
 int config_init();

@@ -402,8 +402,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     } else { /* not in host OBU list */
         // search plan
         uint8_t plan_id = get_plan_id();
-        EVSP_touching_area_plan_list_t *plan =
-            EVSP_touching_area_plan_search(plan_id);
+        EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
 
         if (plan == NULL) {
             snprintf(log_content + strlen(log_content),
@@ -417,12 +416,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
 
         uint8_t target_phase = 0;
-        EVSP_touching_area_t *area_ptr = EVSP_activate(
+        EVSP_touching_area_t *area_ptr = NULL;
+        target_phase = EVSP_activate(
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lon,
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lat,
-            static_space.last_direction, &target_phase, plan);
+            static_space.last_direction, plan, &area_ptr);
         // enter activate area
         if (target_phase >= 0 && target_phase < EVSP_PHASE_MAX) {
 
@@ -542,18 +542,21 @@ int EVSP_on_registration(void *arg)
     char rsu_name[RSU_NAME_MAX_LEN];
     uint8_t plan_id;
     /* list all file */
-    while ((dirp = readdir(dp)) != NULL) {
-        if (dirp->d_type == 8) {
-            /* parse file name */
-            sscanf(dirp->d_name, "%[^_]_%hhd", rsu_name, &plan_id);
-            if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
-                EVSP_touching_area_plan_insert(dirp->d_name, plan_id);
-            }
-        }
-    }
+    // while ((dirp = readdir(dp)) != NULL) {
+    //     if (dirp->d_type == 8) {
+    //         /* parse file name */
+    //         sscanf(dirp->d_name, "%[^_]_touching_area.txt", rsu_name);
+    //         if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
+    //             EVSP_plan_list_read(dirp->d_name);
+    //         }
+    //     }
+    // }
+
+    EVSP_plan_list_read("./application/EVSP/config/touching_area_example");
+    
     fflush(stdout);
     closedir(dp);
-    EVSP_touching_area_plan_print();
+    EVSP_plan_list_print();
 
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);

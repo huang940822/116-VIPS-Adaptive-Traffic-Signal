@@ -113,15 +113,22 @@ static bool read_name_from_config_line(char *config_line, char *val)
         return false;
     }
 }
-
+/* 去除前面空白跟後面註解 */
 char *trim_space(char *buf)
-{
+{//printf("bufs:%s\n",buf);
     while (buf != NULL && *buf != '\0') {
-        if (*buf != ' ' || *buf != '\t')
-            return buf;
+        if (*buf != ' ' && *buf != '\t')
+            break;
         buf++;
     }
-    return NULL;
+    char *tmp = buf;
+    while (tmp != NULL && *tmp != '\0') {
+        if (*tmp == '#')
+            *tmp = '\0';
+        else
+            tmp++;
+    }
+    return (*buf) ? buf : NULL;
 }
 
 char *read_line(char *read_buf, int read_buf_len, FILE *fp)
