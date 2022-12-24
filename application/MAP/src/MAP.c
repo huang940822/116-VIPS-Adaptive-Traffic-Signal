@@ -119,9 +119,9 @@ int MAP_on_CLOUD_packet_rx(void *arg)
 }
 
 int MAP_on_registration(void *arg)
-{
+{printf("fffff\n");
     /* read map confile file*/
-    int ret = MAP_config_init();
+    int ret = MAP_config_init();printf("fffff\n");
     if(ret != 0) {
         log_file_write_fatal_error("error map reading config file: %d", ret);
     }
