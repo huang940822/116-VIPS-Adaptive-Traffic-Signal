@@ -115,7 +115,7 @@ static bool read_name_from_config_line(char *config_line, char *val)
 }
 /* 去除前面空白跟後面註解 */
 char *trim_space(char *buf)
-{//printf("bufs:%s\n",buf);
+{
     while (buf != NULL && *buf != '\0') {
         if (*buf != ' ' && *buf != '\t')
             break;
@@ -123,11 +123,19 @@ char *trim_space(char *buf)
     }
     char *tmp = buf;
     while (tmp != NULL && *tmp != '\0') {
-        if (*tmp == '#')
+        if (*tmp == '#') {
             *tmp = '\0';
-        else
-            tmp++;
+            break;
+        }
+        tmp++;
     }
+    while (buf != tmp) {
+        if (*tmp != ' ' && *tmp != '\t' && *tmp != '\0')
+            break;
+        *tmp = '\0';
+        tmp--;
+    }
+    
     return (*buf) ? buf : NULL;
 }
 

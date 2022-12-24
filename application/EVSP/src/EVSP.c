@@ -552,7 +552,7 @@ int EVSP_on_registration(void *arg)
     //     }
     // }
 
-    EVSP_plan_list_read("./application/EVSP/config/touching_area_example");
+    EVSP_plan_list_read();
     
     fflush(stdout);
     closedir(dp);

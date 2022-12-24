@@ -40,14 +40,24 @@ bool static inline read_node(char *buf, EVSP_Node_t *node)
         }                                                                                             \
     } while (0)
 
-int EVSP_plan_list_read(char *file_name)
+int EVSP_plan_list_read()
 {
     memset(&EVSP_plan_list, 0, sizeof(EVSP_plan_list_t));
 
     /* Get file path */
     char file_path[255];
+    char rsu_name[RSU_NAME_MAX_LEN + 1];
+    strncpy(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN);
+    char *name = trim_space(rsu_name);
+    if (rsu_name == NULL) {
+        log_file_write_fatal_error("error name %s", config.RSU_name);
+    }
+
     memset(file_path, 0, sizeof(file_path));
-    strncat(file_path, file_name, sizeof(file_path));
+    strcat(file_path, EVSP_CONFIG_DIR);
+    strcat(file_path, rsu_name);
+    strcat(file_path, TOUCHING_AREA_FILE);
+    printf("%s\n", file_path);
 
     FILE *fp;
     fp = fopen(file_path, "r");
@@ -278,8 +288,9 @@ int EVSP_plan_list_read(char *file_name)
             }
         }
     }
-
-
+    if (!EVSP_plan_list_check()) {
+        goto EVSP_plan_list_read_error;
+    }
     return 1;
 EVSP_plan_list_read_error:
     EVSP_plan_list_clean();
@@ -289,6 +300,31 @@ EVSP_plan_list_read_error:
 
 bool EVSP_plan_list_check()
 {
+    for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
+        for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
+            if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] >= EVSP_plan_list.terminate_area_count) {
+                return false;
+            }
+        }
+    }
+    /* plan_id 是唯一的 */
+    uint8_t hash_table[256] = {0};
+    for (int i = 0; i < EVSP_plan_list.plan_table_count; i++) {
+        for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_id_count; j++) {
+            if (hash_table[EVSP_plan_list.plan_table[i].plan_id[j]] != 0) {
+                return false;
+            }
+            hash_table[EVSP_plan_list.plan_table[i].plan_id[j]]++;
+        }
+        for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_subPhase_count; j++) {
+            for (int k = 0; k < EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_count; k++) {
+                if (EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k] >= EVSP_plan_list.touching_area_count) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
 }
 
 /* 清除 EVSP_plan_list */
@@ -318,8 +354,8 @@ void EVSP_plan_list_clean()
             if (EVSP_plan_list.plan_table[i].plan_subPhase_count != 0 &&
                 EVSP_plan_list.plan_table[i].plan_subPhase != NULL) {
                 for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_subPhase_count; j++) {
-                    if (EVSP_plan_list.plan_table[i].plan_subPhase->touching_area_Id != NULL) {
-                        free(EVSP_plan_list.plan_table[i].plan_subPhase->touching_area_Id);
+                    if (EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id != NULL) {
+                        free(EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id);
                     }
                 }
                 free(EVSP_plan_list.plan_table[i].plan_subPhase);
@@ -329,109 +365,6 @@ void EVSP_plan_list_clean()
     }
     memset(&EVSP_plan_list, 0, sizeof(EVSP_plan_list_t));
 }
-
-// EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
-//                                                             uint8_t plan_id)
-// {
-
-//     EVSP_touching_area_plan_list_t *plan;
-//     Malloc(plan, sizeof(EVSP_touching_area_plan_list_t), "EVSP_touching_area_plan_new");
-
-//     plan->plan_id = plan_id;
-
-//     /* Get file path */
-//     char file_path[255];
-//     memset(file_path, 0, sizeof(file_path));
-//     strncpy(file_path, TOUCHING_AREA_DIR, sizeof(TOUCHING_AREA_DIR));
-//     strncat(file_path, file_name, sizeof(file_path));
-
-//     /* Open file */
-//     FILE *fp;
-//     fp = fopen(file_path, "r");
-//     if (fp == NULL) {
-//         log_file_write_fatal_error("error opening %s", file_path);
-//         return NULL;
-//     } else {
-//         log_file_write("%s opened successfully", file_path);
-//     }
-
-
-
-//     uint8_t ret = 0;
-//     uint8_t activate_num;
-//     uint8_t terminate_num;
-//     float lon_high;
-//     float lon_low;
-//     float lat_high;
-//     float lat_low;
-//     uint8_t direction;
-//     EVSP_touching_area_t *activate_area;
-//     for (int i = 0; i < EVSP_PHASE_MAX; i++) {
-//         ret = fscanf(fp, "%hhd", &activate_num);
-//         /* Check return value of fscanf */
-//         if (ret != 1) {
-//             log_file_write_fatal_error("EVSP_touching_area_plan_new: fscanf");
-//             perror("EVSP_touching_area_plan_new: fscanf");
-//             exit(errno);
-//         }
-//         for (int j = 0; j < activate_num; j++) {
-//             ret = fscanf(fp, "%f,%f,%f,%f %hhd", &lon_high, &lon_low, &lat_high,
-//                          &lat_low, &direction);
-//             /* Check return value of fscanf */
-//             if (ret != 5) {
-//                 log_file_write_fatal_error(
-//                     "EVSP_touching_area_plan_new: fscanf");
-//                 perror("EVSP_touching_area_plan_new: fscanf");
-//                 exit(errno);
-//             }
-//             activate_area = EVSP_activate_touching_area_insert(
-//                 &plan->list[i], lon_high, lon_low, lat_high, lat_low,
-//                 direction);
-//             ret = fscanf(fp, "%hhd", &terminate_num);
-//             if (ret != 1) {
-//                 log_file_write_fatal_error(
-//                     "EVSP_touching_area_plan_new: fscanf");
-//                 perror("EVSP_touching_area_plan_new: fscanf");
-//                 exit(errno);
-//             }
-//             for (int k = 0; k < terminate_num; k++) {
-//                 ret = fscanf(fp, "%f,%f,%f,%f", &lon_high, &lon_low, &lat_high,
-//                              &lat_low);
-//                 /* Check return value of fscanf */
-//                 if (ret != 4) {
-//                     log_file_write_fatal_error(
-//                         "EVSP_touching_area_plan_new: fscanf");
-//                     perror("EVSP_touching_area_plan_new: fscanf");
-//                     exit(errno);
-//                 }
-//                 EVSP_terminate_touching_area_insert(activate_area, lon_high,
-//                                                     lon_low, lat_high, lat_low);
-//             }
-//         }
-//     }
-//     fclose(fp);
-//     return plan;
-// }
-
-// void EVSP_touching_area_plan_insert(char *file_name, uint8_t plan_id)
-// {
-//     EVSP_touching_area_plan_list_t *current;
-//     /* empty list */
-//     if (EVSP_touching_area_plan_list_head == NULL) {
-//         EVSP_touching_area_plan_list_head =
-//             EVSP_touching_area_plan_new(file_name, plan_id);
-//     } else {
-//         current = EVSP_touching_area_plan_list_head;
-//         /* traverse touching area plan list */
-//         while (current->next != NULL) {
-//             if (current->plan_id == plan_id) {
-//                 return;
-//             }
-//             current = current->next;
-//         }
-//         current->next = EVSP_touching_area_plan_new(file_name, plan_id);
-//     }
-// }
 
 /* 使用 plan id 尋找相應的 plan table */
 EVSP_plan_table_t *EVSP_plan_table_search(uint8_t plan_id)
@@ -496,132 +429,6 @@ void EVSP_plan_list_print()
     log_file_write(log_content);
     return;
 }
-
-// EVSP_touching_area_t *EVSP_touching_area_new(float lon_high,
-//                                              float lon_low,
-//                                              float lat_high,
-//                                              float lat_low)
-// {
-//     EVSP_touching_area_t *area;
-//     Malloc(area, sizeof(EVSP_touching_area_t), "EVSP_touching_area_new");
-
-//     area->lon_high = lon_high;
-//     area->lon_low = lon_low;
-//     area->lat_high = lat_high;
-//     area->lat_low = lat_low;
-//     area->terminate = NULL;
-//     area->next = NULL;
-//     return area;
-// }
-
-// EVSP_touching_area_t *EVSP_activate_touching_area_insert(
-//     EVSP_touching_area_t *list_head,
-//     float lon_high,
-//     float lon_low,
-//     float lat_high,
-//     float lat_low,
-//     uint8_t direction)
-// {
-//     EVSP_touching_area_t *current = list_head->next;
-//     /* empty list */
-//     if (current == NULL) {
-//         list_head->next =
-//             EVSP_touching_area_new(lon_high, lon_low, lat_high, lat_low);
-//         list_head->next->direciton = direction;
-//         return list_head->next;
-//     }
-
-//     /* traverse touching area list */
-//     while (current != NULL) {
-//         /* last node */
-//         if (current->next == NULL) {
-//             current->next =
-//                 EVSP_touching_area_new(lon_high, lon_low, lat_high, lat_low);
-//             current->next->direciton = direction;
-//             return current->next;
-//         }
-//         current = current->next;
-//     }
-//     log_file_write_fatal_error("error inserting activate touching area");
-//     return NULL;
-// }
-
-// void EVSP_terminate_touching_area_insert(EVSP_touching_area_t *list_head,
-//                                          float lon_high,
-//                                          float lon_low,
-//                                          float lat_high,
-//                                          float lat_low)
-// {
-//     EVSP_touching_area_t *current = list_head->terminate;
-//     /* empty list */
-//     if (current == NULL) {
-//         list_head->terminate =
-//             EVSP_touching_area_new(lon_high, lon_low, lat_high, lat_low);
-//         return;
-//     }
-
-//     /* traverse touching area list */
-//     while (current != NULL) {
-//         /* last node */
-//         if (current->next == NULL) {
-//             current->next =
-//                 EVSP_touching_area_new(lon_high, lon_low, lat_high, lat_low);
-//             return;
-//         }
-//         current = current->next;
-//     }
-// }
-
-// void EVSP_touching_area_print(EVSP_touching_area_plan_list_t *plan)
-// {
-//     char log_content[LOG_CONTENT_LEN + 1];
-//     memset(log_content, 0, sizeof(log_content));
-//     snprintf(log_content + strlen(log_content),
-//              LOG_CONTENT_LEN - strlen(log_content),
-//              "EVSP touching area: PLAN (%d)", plan->plan_id);
-
-//     EVSP_touching_area_t *current;
-//     EVSP_touching_area_t *terminate;
-//     for (int i = 0; i < EVSP_PHASE_MAX; i++) {
-//         snprintf(log_content + strlen(log_content),
-//                  LOG_CONTENT_LEN - strlen(log_content),
-//                  "\nEVSP_touching_area_list[%d]:", i);
-//         current = plan->list[i].next;
-//         /* empty list */
-//         if (current == NULL) {
-//             continue;
-//         }
-
-//         /* traverse touching area list */
-//         while (current != NULL) {
-//             snprintf(log_content + strlen(log_content),
-//                      LOG_CONTENT_LEN - strlen(log_content),
-//                      "\n\t%f %f %f %f %d", current->lon_high, current->lon_low,
-//                      current->lat_high, current->lat_low, current->direciton);
-//             terminate = current->terminate;
-//             while (terminate != NULL) {
-//                 snprintf(log_content + strlen(log_content),
-//                          LOG_CONTENT_LEN - strlen(log_content),
-//                          "\n\t\t%f %f %f %f", terminate->lon_high,
-//                          terminate->lon_low, terminate->lat_high,
-//                          terminate->lat_low);
-//                 /* last node */
-//                 if (terminate->next == NULL) {
-//                     break;
-//                 }
-//                 terminate = terminate->next;
-//             }
-//             /* last node */
-//             if (current->next == NULL) {
-//                 break;
-//             }
-//             current = current->next;
-//         }
-//     }
-//     log_file_write(log_content);
-//     return;
-// }
-
 
 int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *plan, EVSP_touching_area_t **area_ptr)
 {

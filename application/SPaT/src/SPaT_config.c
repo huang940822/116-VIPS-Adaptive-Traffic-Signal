@@ -5,23 +5,13 @@
 #include "SPaT_config.h"
 #include "log.h"
 #include "typedefine.h"
+#include "config.h"
 
 SPaT_config_object_t SPaT_config = {
     .SPaT_packet_transfer_speed = 10,
     .signalcount = 2,
     .SPaT_dontSend2TC = 1,
 };
-
-static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %hhd\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 int SPaT_config_init()
 {

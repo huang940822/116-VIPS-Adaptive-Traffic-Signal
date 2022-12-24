@@ -4,10 +4,12 @@
 #include "EVSP_typedefine.h"
 
 #define TOUCHING_AREA_DIR FILE_PATH "application/EVSP/config/touching_area/"
+#define EVSP_CONFIG_DIR "application/EVSP/config/"
+#define TOUCHING_AREA_FILE "_touching_area.txt"
 
 extern EVSP_plan_list_t EVSP_plan_list;
 
-int EVSP_plan_list_read(char *file_name);
+int EVSP_plan_list_read();
 // EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
 //                                                             uint8_t plan_id);
 EVSP_plan_table_t *EVSP_plan_table_search(uint8_t plan_id);

@@ -4,8 +4,6 @@
 #include "typedefine.h"
 
 #define MAP_CONFIG_FILE FILE_PATH "application/MAP/config/config.txt"
-#define CONFIG_LINE_BUFFER_SIZE 100
-#define MAX_CONFIG_VARIABLE_LEN 100
 
 #define LANE_MAX_NUMBER 5
 #define DIRECTION_MAX_NUMBER 8
