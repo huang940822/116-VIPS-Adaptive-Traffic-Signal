@@ -482,7 +482,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
     } while (0);
 
             command.cycle = 0;  // 0 代表線在這個 cycle
-
             command.effect_time = EVSP_config.min_green;  // 縮短到最小綠
 
             // 如果 current_phase >= target_phase，i 就會加到 target_phase
@@ -493,22 +492,19 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
 
             /* target_phase >= current_phase */
-            if (target_phase >= current_phase) {
-                command.phase = target_phase;
-                command.effect_time = pretime + EVSP_adjust_time;
-                insert_command_and_log;
-            } else {                /* target_phase < current_phase */
-                command.cycle = 1;  // 下一個 cycle
+            if (target_phase < current_phase) {                /* target_phase < current_phase */
+                // 如果 target_phase < current_phase 就代表在下一個 cycle
+                command.cycle = 1; // 所以這裡 cycle = 1 並下面再插入目標時向的時候舊式下一個 cycle
                 command.effect_time = EVSP_config.min_green;
                 for (int i = 1; i < target_phase; i++) {
                     command.phase = i;
                     insert_command_and_log;
                 }
-
-                command.phase = target_phase;
-                command.effect_time = pretime + EVSP_adjust_time;
-                insert_command_and_log;
             }
+            
+            command.phase = target_phase;
+            command.effect_time = pretime + EVSP_adjust_time;
+            insert_command_and_log;
 #undef insert_command_and_log
         }
     }
