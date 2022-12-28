@@ -403,7 +403,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         // search plan
         uint8_t plan_id = get_plan_id();
         EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
-        printf("plan_id %d", plan_id);
+
         if (plan == NULL) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),

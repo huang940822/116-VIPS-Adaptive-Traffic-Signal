@@ -1,0 +1,7 @@
+# any line started with '#' '\n' ' ' will be ignored
+
+evsp_host_obu_packet_timeout 20
+evsp_host_obu_list_timeout 120
+min_green 5
+max_green 120
+valid_record_distance 5
