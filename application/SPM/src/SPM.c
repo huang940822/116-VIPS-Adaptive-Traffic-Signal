@@ -43,7 +43,7 @@ int SPM_on_OBU_packet_rx(void *arg)
     }
     if (SPM.dontSend2TC)
         return 1;
-    printf("ededede-----\n");
+    printf("SPM recv-----\n");
     SPM_OBU_obj_insert(app_section->OBU_object, srm);
     SPM_repeater_start();
 }

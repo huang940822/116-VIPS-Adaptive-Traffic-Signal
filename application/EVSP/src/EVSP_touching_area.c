@@ -16,7 +16,7 @@ bool static inline read_node(char *buf, EVSP_Node_t *node)
     buf = strsep(&tmp, " ");
     buf = trim_space(buf);
     tmp = trim_space(tmp);
-    
+
     if (buf == NULL || tmp == NULL)
         return false;
     if (sscanf(buf, "%lf", &node->lon) != 1 || sscanf(tmp, "%lf", &node->lat) != 1)
@@ -119,7 +119,6 @@ int EVSP_plan_list_read()
                 Malloc(term_area->node, sizeof(EVSP_Node_t) * uint8_t_val, "EVSP_Node_new");
 
                 for (int i = 0; i < term_area->node_count; ++i) {
-                    
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
                     substr = trim_space(strsep(&sepstr, ","));
@@ -177,6 +176,7 @@ int EVSP_plan_list_read()
                     return false;
                 if (touch_area->direciton_start > 7 || touch_area->direciton_end > 7)
                     goto EVSP_plan_list_read_error;
+                touch_area->direciton_end = (touch_area->direciton_end + 1) % 8; // + 1 不包含
 
                 /* node_count */
                 substr = trim_space(strsep(&sepstr, ","));
@@ -387,8 +387,8 @@ void EVSP_plan_list_print()
              "EVSP touching area plan list:");
 
     snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nterminate_area_count %d\n",
-                 EVSP_plan_list.terminate_area_count);
+             LOG_CONTENT_LEN - strlen(log_content), "\nterminate_area_count %d\n",
+             EVSP_plan_list.terminate_area_count);
     for (int i = 0; i < EVSP_plan_list.terminate_area_count; i++) {
         for (int j = 0; j < EVSP_plan_list.terminate_area[i].node_count; j++) {
             snprintf(log_content + strlen(log_content),
@@ -397,10 +397,9 @@ void EVSP_plan_list_print()
         }
     }
     snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\ntouching_area_count %d\n",
-                 EVSP_plan_list.touching_area_count);
+             LOG_CONTENT_LEN - strlen(log_content), "\ntouching_area_count %d\n",
+             EVSP_plan_list.touching_area_count);
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
-        
         for (int j = 0; j < EVSP_plan_list.touching_area[i].node_count; j++) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), " %lf %lf,",
@@ -413,53 +412,94 @@ void EVSP_plan_list_print()
     return;
 }
 
-bool PointInPolygon(EVSP_Node_t *nodes, int node_count, int x, int y)
+bool onLine(const EVSP_Line_t *l1, const EVSP_Node_t *p)
 {
-    bool flag = false;
-
-    for (int i = 0, j = node_count - 1; i < node_count; j = i, i++) {
-        int x1 = nodes[i].x;
-        int y1 = nodes[i].y;
-        int x2 = nodes[j].x;
-        int y2 = nodes[j].y;
-
-        // 點與多邊形頂點重合
-        if ((x1 == x && y1 == y) || (x2 == x && y2 == y)) {
-            //return 'on'; // 點在輪廓上
-            return true;
-        }
-
-        // 判斷線段兩端點是否在射線兩側
-        // 只有一邊取等號，當射線經過多邊形頂點時，只計一次
-        if ((y1 < y && y2 >= y) || (y1 >= y && y2 < y)) {
-            // 線段上與射線 Y 座標相同的點的 X 座標
-            double crossX = (y - y1) * (x2 - x1) / (y2 - y1) + x1;  // y=kx+b變換成x=(y-b)/k 其中k=(y2-y1)/(x2-x1)
-
-            // 點在多邊形的邊上
-            if (crossX == x) {
-                //return 'on'; // 點在輪廓上
-                return true;
-            }
-
-            // 右射線穿過多邊形的邊界，每穿過一次flag的值變換一次
-            if (crossX > x) {
-                flag = !flag;  // 穿過奇數次爲true，偶數次爲false
-            }
-        }
-    }
-
-    // 射線穿過多邊形邊界的次數爲奇數時點在多邊形內
-    //return flag ? 'in' : 'out'; // 點在輪廓內或外
-    return flag ? true : false;
+    // Check whether p is on the line or not
+    if (p->x <= MAX(l1->p1->x, l1->p2->x) && p->x <= MIN(l1->p1->x, l1->p2->x) &&
+        (p->y <= MAX(l1->p1->y, l1->p2->y) && p->y <= MIN(l1->p1->y, l1->p2->y)))
+        return true;
+    return false;
 }
 
+int direction(const EVSP_Node_t *a, const EVSP_Node_t *b, const EVSP_Node_t *c)
+{
+    double val = (b->y - a->y) * (c->x - b->x) - (b->x - a->x) * (c->y - b->y);
 
+    if (val == 0)
+        // Colinear
+        return 0;
+    else if (val < 0)
+        // Anti-clockwise direction
+        return 2;
+    // Clockwise direction
+    return 1;
+}
+
+bool isIntersect(const EVSP_Line_t *l1, const EVSP_Line_t *l2)
+{
+    // Four direction for two lines and points of other line
+    int dir1 = direction(l1->p1, l1->p2, l2->p1);
+    int dir2 = direction(l1->p1, l1->p2, l2->p2);
+    int dir3 = direction(l2->p1, l2->p2, l1->p1);
+    int dir4 = direction(l2->p1, l2->p2, l1->p2);
+
+    // When intersecting
+    if (dir1 != dir2 && dir3 != dir4)
+        return true;
+
+    // When p2 of line2 are on the line1
+    if (dir1 == 0 && onLine(l1, l2->p1))
+        return true;
+
+    // When p1 of line2 are on the line1
+    if (dir2 == 0 && onLine(l1, l2->p2))
+        return true;
+
+    // When p2 of line1 are on the line2
+    if (dir3 == 0 && onLine(l2, l1->p1))
+        return true;
+
+    // When p1 of line1 are on the line2
+    if (dir4 == 0 && onLine(l2, l1->p2))
+        return true;
+
+    return false;
+}
+
+bool checkInside(EVSP_Node_t poly[], int n, EVSP_Node_t *p)
+{
+    // When polygon has less than 3 edge, it is not polygon
+    if (n < 3)
+        return false;
+
+    // Create a point at infinity, y is same as point p
+    EVSP_Line_t exline = (EVSP_Line_t){p, &(EVSP_Node_t){9999, p->y}};
+    int count = 0;
+    int i = 0;
+    do {
+        // Forming a line from two consecutive points of
+        // poly
+        EVSP_Line_t side = {&poly[i], &poly[(i + 1) % n]};
+        if (isIntersect(&side, &exline)) {
+            // If side is intersects exline
+            if (direction(side.p1, p, side.p2) == 0)
+                return onLine(&side, p);
+            count++;
+        }
+        i = (i + 1) % n;
+    } while (i != 0);
+
+    // When count is odd
+    return count & 1;
+}
 
 int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *plan, EVSP_touching_area_t **area_ptr)
 {
     for (int i = 0; i < plan->plan_subPhase_count; ++i) {
         for (int j = 0; j < plan->plan_subPhase[i].touching_area_count; ++j) {
             EVSP_touching_area_t *touching_area = &EVSP_plan_list.touching_area[plan->plan_subPhase[i].touching_area_Id[j]];
+
+            /* 判斷方向是否正確 */
             int k = touching_area->direciton_start;
             bool flag = false;
             do {
@@ -468,10 +508,13 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
                     break;
                 }
                 k = (k + 1) % 8;
-            }while(k != touching_area->direciton_start);
+            } while (k != touching_area->direciton_end);
 
-            if (!flag && PointInPolygon(touching_area->node, touching_area->node_count, lon, lat))
+            if (!flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
+                printf("EVSP_activate SubPhaseID %d\n", plan->plan_subPhase[i].SubPhaseID);
+                *area_ptr = touching_area;
                 return plan->plan_subPhase[i].SubPhaseID;
+            }
         }
     }
     return -1;
@@ -480,9 +523,11 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
 bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
 {
     for (int i = 0; i < area_ptr->terminate_area_count; i++) {
-        if (PointInPolygon(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
-            EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, lon, lat))
-                return true;
+        if (checkInside(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
+                EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, &(EVSP_Node_t){lon, lat})) {
+            printf("EVSP_terminate------------\n");
+            return true;                                    
+        }
     }
     return false;
 }

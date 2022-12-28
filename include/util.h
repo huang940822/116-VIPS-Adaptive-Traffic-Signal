@@ -24,6 +24,9 @@
 
 #define CLEAR_BIT(var, bit) (WRITE_BIT(var, bit, 0UL))
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #define Malloc(obj, size, error_log)                          \
     do {                                                      \
         obj = malloc(size);                                   \

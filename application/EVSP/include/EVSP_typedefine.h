@@ -20,6 +20,12 @@ typedef struct EVSP_Node {
     };
 } EVSP_Node_t;
 
+// 因為只有把 EVSP_Node 合併成 line 所以使用指標
+typedef struct EVSP_Line {
+    EVSP_Node_t *p1;
+    EVSP_Node_t *p2;
+} EVSP_Line_t;
+
 typedef struct EVSP_static_space {
     uint8_t on_duty_flag;
     uint8_t weight;

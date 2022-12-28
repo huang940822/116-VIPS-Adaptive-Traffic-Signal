@@ -341,7 +341,8 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         SignalRequestMessage *srm = msgf->u.data;
         if (srm->requestor.id.choice != VehicleID_entityID || srm->requestor.type_option != TRUE ||
             srm->requestor.type.hpmsType_option != TRUE || srm->requestor.type.hpmsType != VehicleType_car ||
-            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE) {
+            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE || 
+            srm->requestor.position.heading_option != TRUE) {
             return -1;
         }
         RequestorDescription *requestor = &srm->requestor;
