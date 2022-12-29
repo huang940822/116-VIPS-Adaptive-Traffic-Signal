@@ -10,29 +10,10 @@
 extern EVSP_plan_list_t EVSP_plan_list;
 
 int EVSP_plan_list_read();
-// EVSP_touching_area_plan_list_t *EVSP_touching_area_plan_new(char *file_name,
-//                                                             uint8_t plan_id);
-EVSP_plan_table_t *EVSP_plan_table_search(uint8_t plan_id);
-// void EVSP_touching_area_plan_insert(char *file_name, uint8_t plan_id);
-void EVSP_plan_list_print();
 
-// EVSP_touching_area_t *EVSP_touching_area_new(float lon_high,
-//                                              float lon_low,
-//                                              float lat_high,
-//                                              float lat_low);
-// EVSP_touching_area_t *EVSP_activate_touching_area_insert(
-//     EVSP_touching_area_t *list_head,
-//     float lon_high,
-//     float lon_low,
-//     float lat_high,
-//     float lat_low,
-//     uint8_t direction);
-// void EVSP_terminate_touching_area_insert(EVSP_touching_area_t *list_head,
-//                                          float lon_high,
-//                                          float lon_low,
-//                                          float lat_high,
-//                                          float lat_low);
-// void EVSP_touching_area_print();
+EVSP_plan_table_t *EVSP_plan_table_search(uint8_t plan_id);
+
+void EVSP_plan_list_print();
 
 int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *plan, EVSP_touching_area_t **area_ptr);
 

@@ -3,6 +3,7 @@
 # MAP packet tranfer speed
 # default 1 Hz
 MAP_packet_transfer_speed 1
+MAP_dontSend2TC 1
 
 # 從北開始順時針 先離開路口再進入路口 從內車道到外車道
 # laneId 一個路口中唯一個 id, 從 0 開始
