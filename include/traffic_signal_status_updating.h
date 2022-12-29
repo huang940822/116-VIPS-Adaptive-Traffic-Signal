@@ -28,6 +28,7 @@ uint8_t get_current_step();
 uint16_t get_current_second();
 uint8_t get_SubPhaseCount();
 uint8_t get_SignalCount();
+uint16_t get_original_tc_health_status();
 
 uint8_t get_plan_id();
 uint8_t get_control_status();
