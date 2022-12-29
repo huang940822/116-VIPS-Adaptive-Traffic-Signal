@@ -12,3 +12,4 @@ application/EVSP/config/*.txt
 .vscode/
 *.txt
 .VSCodeCounter/
+tmp/

@@ -6,6 +6,7 @@
 #include "EVSP_config.h"
 #include "log.h"
 #include "typedefine.h"
+#include "config.h"
 
 // EVSP_config_object_t EVSP_config;
 
@@ -16,17 +17,6 @@ EVSP_config_object_t EVSP_config = {
     .max_green = 120,
     .valid_record_distance = 5,
 };
-
-static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %hhd\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 int EVSP_config_init()
 {

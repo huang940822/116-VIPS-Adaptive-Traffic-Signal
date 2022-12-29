@@ -19,7 +19,7 @@ static int spat_update_delay = 0;
 
 void *SPaT_packet_tx_loop()
 {
-    sleep(1);
+    // sleep(1);
     int fd = timerfd_create(CLOCK_REALTIME, 0);
 
     if (fd == -1) {
@@ -37,9 +37,9 @@ void *SPaT_packet_tx_loop()
 
     if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
         log_file_write_fatal_error("SPaT_packet_tx_loop timerfd_settime");
+        exit(errno);
     }
     uint64_t exp;
-    int update_result;
     uint8_t *tx_buf = NULL;
     int tx_buf_len = 0;
     while (1) {
@@ -48,8 +48,7 @@ void *SPaT_packet_tx_loop()
             continue;
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
-        update_result = spat_msg_update(&p_spat);
-        if (update_result < 0) {
+        if (spat_msg_update(&p_spat) < 0) {
             continue;
         }
         OBU_j2735_tx(SPAT_Id, p_spat);

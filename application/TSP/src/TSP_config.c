@@ -6,22 +6,12 @@
 #include "TSP_config.h"
 #include "TSP_typedefine.h"
 #include "log.h"
+#include "config.h"
 
 TSP_config_object_t TSP_config = {
     .tsp_host_obu_list_timeout = 120,
     .tsp_remaining_distance_max = 500,
 };
-
-static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %hhd\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 static bool read_uint16_t_from_config_line(char *config_line, uint16_t *val)
 {

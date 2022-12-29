@@ -1,0 +1,87 @@
+# any line started with '#' '\n' ' ' will be ignored
+# 高發二路
+# MAP packet tranfer speed
+# default 1 Hz
+MAP_packet_transfer_speed 1
+
+# 從北開始順時針 先離開路口再進入路口 從內車道到外車道
+# laneId 一個路口中唯一個 id, 從 0 開始
+# egress 是離開, ingress 是進入,ApproachId 0 代表為北 順時針遞增
+# ApproachId 從北開始順時針遞增 從 0 開始
+# lane_index 從內車道開始遞增, 從 1 開始
+# node_count 表示後面有幾個 node
+# node 車道的路線點, 從停止線開始往外畫 緯度, 經度
+
+LaneSet_table_start
+# laneId, LaneDirection, Approach, lane_index , node_count, node_lat, node_lon, ...
+0,  egress,  0, 1, 2, 22.92458, 120.29077,  22.925588,  120.290339
+1,  ingress, 0, 1, 2, 22.92457,   120.29076,   22.9254, 120.29037
+2,  egress,  1, 1, 2, 22.924479,  120.290994,  22.924479,  120.290994
+3,  egress,  1, 2, 2, 22.9245516, 120.2909701, 22.9246616, 120.2912517
+4,  egress,  1, 3, 2, 22.9244230, 120.2910190, 22.9244230, 120.2910190
+5,  ingress, 1, 1, 2, 22.92451, 120.29097,  22.92488, 120.29186
+6,  ingress, 1, 2, 2, 22.92454, 120.29096, 22.92491, 120.29184
+7,  ingress, 1, 3, 2, 22.92456, 120.29095, 22.92493, 120.29183
+8,  egress,  2, 1, 2, 22.924322,  120.290976,  22.9239873, 120.291141
+9,  ingress, 2, 1, 2, 22.92431, 120.29097,  22.92349, 120.29138
+10, egress,  3, 1, 2, 22.9244680, 120.290718,  22.924468,  120.2907180
+11, egress,  3, 2, 2, 22.9244450, 120.2907290, 22.9244450, 120.2907290
+12, egress,  3, 3, 2, 22.9244180, 120.2907420, 22.9244180, 120.2907420
+13, ingress, 3, 1, 2, 22.92437, 120.29076, 22.92401, 120.28987
+14, ingress, 3, 2, 2, 22.92434, 120.29077, 22.92398, 120.28988
+15, ingress, 3, 3, 2, 22.92432, 120.29078, 22.92396, 120.28989
+LaneSet_table_end
+
+# LaneID 0 ~ 255
+# NORTH : 0
+Direction 0
+Lane_count 1
+Lane_Index 0
+LaneID 17
+LeftconnectingLane 33 34 35 0 0
+StrightconnectingLane 65 0 0 0 0
+RightconnectingLane 97 98 99 0 0
+
+# EAST : 1
+Direction 1
+Lane_count 3
+Lane_Index 0
+LaneID 51
+StrightconnectingLane 97 98 99 0 0
+RightconnectingLane 1 0 0 0 0
+
+Lane_Index 1
+LaneID 50
+StrightconnectingLane 97 98 99 0 0
+
+Lane_Index 2
+LaneID 49
+StrightconnectingLane 97 98 99 0 0
+LeftconnectingLane 65 0 0 0 0 
+
+# SOUTH : 2
+Direction 2
+Lane_count 1
+Lane_Index 0
+LaneID 81
+LeftconnectingLane 97 98 99 0 0
+StrightconnectingLane 1 0 0 0 0
+RightconnectingLane 33 34 35 0 0
+
+# WEST : 3
+Direction 3
+Lane_count 3
+Lane_Index 0
+LaneID 113
+LeftconnectingLane 1 0 0 0 0
+StrightconnectingLane 33 34 35 0 0
+
+Lane_Index 1
+LaneID 114
+StrightconnectingLane 33 34 35 0 0
+
+Lane_Index 2
+LaneID 115
+StrightconnectingLane 33 34 35 0 0
+RightconnectingLane 65 0 0 0 0
+

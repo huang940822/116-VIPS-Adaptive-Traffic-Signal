@@ -11,6 +11,7 @@ config_object_t config = {
     .RSU_id = 0,
     .RSU_lat = 22.996714,
     .RSU_lon = 120.237009,
+    .RSU_elev = 0,
     .signal_controller_manufacturer = 1,
     .signal_status_report_active = 0,
     .signal_adjust_upper_bound_active = 1,
@@ -39,7 +40,7 @@ config_object_t config = {
     .log_OBU_list = 1,
 };
 
-static bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
+bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     *val = 0;
@@ -112,6 +113,46 @@ static bool read_name_from_config_line(char *config_line, char *val)
         return false;
     }
 }
+/* 去除前面空白跟後面註解 */
+char *trim_space(char *buf)
+{
+    while (buf != NULL && *buf != '\0') {
+        if (*buf != ' ' && *buf != '\t')
+            break;
+        buf++;
+    }
+    char *tmp = buf;
+    while (tmp != NULL && *tmp != '\0') {
+        if (*tmp == '#') {
+            *tmp = '\0';
+            break;
+        }
+        tmp++;
+    }
+    while (buf != tmp) {
+        if (*tmp != ' ' && *tmp != '\t' && *tmp != '\0')
+            break;
+        *tmp = '\0';
+        tmp--;
+    }
+    
+    return buf ? ((*buf) ? buf : NULL) : buf;
+}
+
+char *read_line(char *read_buf, int read_buf_len, FILE *fp)
+{
+    while (!feof(fp)) {
+        memset(read_buf, 0, read_buf_len);
+        fgets(read_buf, read_buf_len, fp);
+
+        char *buf = trim_space(read_buf);
+        if (buf == NULL || *buf == '#' || *buf == '\n') {
+            continue;
+        }
+        return buf;
+    }
+    return NULL;
+}
 
 int config_init()
 {
@@ -159,6 +200,19 @@ int config_init()
                 if (0 <= uint32_t_val && uint32_t_val <= 65535) {
                     config.RSU_id = uint32_t_val;
                     log_file_write("config: RSU_id = %d", config.RSU_id);
+                } else {
+                    return CONFIG_INVALID_RSU_NAME;
+                }
+            } else {
+                return CONFIG_INVALID_RSU_NAME;
+            }
+        }
+        // RSU id
+        if (strstr(buf, "RSU_region ")) {
+            if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
+                if (0 <= uint32_t_val && uint32_t_val <= 65535) {
+                    config.RSU_region = uint32_t_val;
+                    log_file_write("config: RSU_region = %d", config.RSU_region);
                 } else {
                     return CONFIG_INVALID_RSU_NAME;
                 }

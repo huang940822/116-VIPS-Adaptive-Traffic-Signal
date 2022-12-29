@@ -8,10 +8,10 @@
 #include "server.h"
 #include "threadpool.h"
 
-uint8_t cloud_com_id;
-uint8_t OBU_com_id;
-uint8_t Heartbeat_com_id;
-uint8_t AVI_com_id;
+uint8_t cloud_com_id = 0;
+uint8_t OBU_com_id = 0;
+uint8_t Heartbeat_com_id = 0;
+uint8_t AVI_com_id = 0;
 threadpool_t *pool;
 pthread_mutex_t lock;
 // int f_flag = 0;

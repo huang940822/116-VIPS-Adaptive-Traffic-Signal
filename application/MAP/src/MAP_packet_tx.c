@@ -19,45 +19,19 @@ static uint8_t *tx_buf = NULL;
 static int tx_buf_len = 0;
 static uint8_t PhaseOrder = 255;
 static uint8_t prev_phase = 0;
-extern MapData *map;
 
 void MAP_packet_tx(__sigval_t value)
-{   
+{
     if (MAP.dontSend2TC)
         return;
-    struct timeval start;
-    struct timeval end;
+
     // FILE *fp;
     uint8_t SubPhaseCount = get_SubPhaseCount();
     if(SubPhaseCount > 0){
-        // uint8_t current = get_current_phase();
-        // uint8_t prev = get_prev_SubPhaseID();
-        // uint8_t next = get_next_SubPhaseID();
-        // uint8_t SignalCount = get_SignalCount();
-        // for(int i = 0;i < SignalCount;i++) {
-        //     uint8_t current_status = get_SignalStatus(current-1, i);
-        //     uint8_t prev_status = get_SignalStatus(prev-1, i);
-        //     uint8_t next_status = get_SignalStatus(next-1, i);
-        //     if(current_status & GREEN) {
-        //         current_status = LEFT_GREEN | STRAIGHT_GREEN | RIGHT_GREEN;
-        //     }
-        //     if(prev_status & GREEN) {
-        //         prev_status = LEFT_GREEN | STRAIGHT_GREEN | RIGHT_GREEN;
-        //     }
-        //     if(next_status & GREEN) {
-        //         next_status = LEFT_GREEN | STRAIGHT_GREEN | RIGHT_GREEN;
-        //     }
-        //     if(current_status & prev_status)
-        //         update_flag = 1;
-        //     if(current_status & next_status)
-        //         update_flag = 1;
-        // }
         if (PhaseOrder != get_PhaseOrder() || prev_phase != get_current_phase()) {
             // update map
             printf("update map information\r\n");
-            gettimeofday(&start,NULL);
-            map_msg_update(&map);
-            gettimeofday(&end,NULL);
+            map_msg_update(map);
             PhaseOrder = get_PhaseOrder();
             prev_phase = get_current_phase();
         }

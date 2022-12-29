@@ -1,0 +1,92 @@
+ # any line started with '#' '\n' ' ' will be ignored
+
+# rsu name
+# "S429001   " pad to 10 characters with space & add double quotes as leading and trailing characters 
+RSU_NAME "S429001   "   
+RSU_id 29001
+RSU_region 164
+
+# rsu lat
+# float number
+# 22.99674 22.9236390
+RSU_LAT 22.9244379
+
+
+# rsu lon
+# float number
+# 120.23704 120.2890910
+RSU_LON 120.2908709
+
+# signal controller manufacturer
+# cheng_long / shan_zhu
+SIGNAL_CONTROLLER_MANUFACTURER cheng_long
+
+# signal status report active 
+# yes / no
+SIGNAL_STATUS_REPORT_ACTIVE yes
+
+# signal adjust upper bound active 
+# yes / no
+SIGNAL_ADJUST_UPPER_BOUND_ACTVE yes
+
+# signal adjust lower bound active 
+# yes / no
+SIGNAL_ADJUST_LOWER_BOUND_ACTVE yes
+
+# signal adjust upper bound percentage 
+# float number
+SIGNAL_ADJUST_UPPER_BOUND_PERCENTAGE 100
+
+# signal adjust lower bound percentage 
+# float number
+SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE 100
+
+# traffic compensation method
+# int number
+TRAFFIC_COMPENSATION_METHOD 3
+
+PHASE_WEIGHT 50 50 0 0 0 0 0 0
+
+# log middleware timer event
+# yes / no
+LOG_MIDDLEWARE_TIMER_EVENT yes
+
+# log applicatoin register event
+# yes / no
+LOG_APPLICATION_REGISTER_EVENT yes
+
+# log command buffer
+# yes / no
+LOG_COMMAND_BUFFER yes
+
+# log signal packet rx
+# yes / no
+LOG_SIGNAL_PACKET_RX yes
+
+# log signal packet tx
+# yes / no
+LOG_SIGNAL_PACKET_TX yes
+
+# log signal packet info
+# yes / no
+LOG_SIGNAL_PACKET_INFO yes
+
+# log cloud packet rx
+# yes / no
+LOG_CLOUD_PACKET_RX yes
+
+# log cloud packet tx
+# yes / no
+LOG_CLOUD_PACKET_TX yes
+
+# log OBU packet rx
+# yes / no
+LOG_OBU_PACKET_RX yes
+
+# log OBU packet tx
+# yes / no
+LOG_OBU_PACKET_TX yes
+
+# log OBU list
+# yes / no
+LOG_OBU_LIST yes

@@ -19,18 +19,18 @@ unsigned long djb2_hash(char *);
 
 void OBU_record_ring_pop(OBU_object_t *);
 
-OBU_object_t *OBU_object_new(char *, uint8_t);
+OBU_object_t *OBU_object_new(OBU_record_common_field_t *);
 OBU_object_t *OBU_object_search(OBU_object_t *, char *);
-OBU_object_t *normal_OBU_record_insert(OBU_record_t *);
-OBU_object_t *special_OBU_record_insert(OBU_record_t *);
+OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *);
+OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *);
+OBU_object_status special_OBU_list_search_status(vehicle_type_t , char *);
 
 void OBU_object_garbage_collection_init();
 void OBU_object_garbage_collection_timer(__sigval_t value);
 void OBU_object_garbage_collection();
 void OBU_object_print();
 
-int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_t *record);
-void V2R_packet2OBU_record(V2R_common_field_t *packet, OBU_record_t *record);
+int V2R_msgf2OBU_record(MessageFrame *, OBU_record_common_field_t *);
 
 
 #endif

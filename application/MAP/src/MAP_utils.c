@@ -15,131 +15,72 @@
 
 extern MapData *map;
 
-void map_msg_init(MapData **map)
+void map_msg_init(MapData *map)
 {
-    (*map) = (MapData *) calloc(1,sizeof(MapData));
-    if((*map) == NULL) {
-        printf("MapData calloc failed\r\n");
-    }
-    (*map)->timeStamp_option = FALSE;
-    (*map)->msgIssueRevision = MAP_config.Mapconfig -> msgIssueRevision;
-    // printf("revision=%d\n", (*map)->msgIssueRevision);
-    (*map)->layerType_option = TRUE;
-    (*map)->layerType = LayerType_intersectionData;
-    (*map)->layerID_option = FALSE;
-    (*map)->intersections_option = TRUE;
-    (*map)->intersections.count = 1;
-    (*map)->roadSegments_option = FALSE;
-    (*map)->dataParameters_option = FALSE;
-    (*map)->restrictionList_option = FALSE;
-    (*map)->regional_option = FALSE;
-    (*map)->intersections.tab = calloc(1,sizeof(IntersectionGeometry));
+    map->timeStamp_option = FALSE;
+    map->msgIssueRevision = 0;
 
-    (*map)->intersections.tab->name_option = FALSE;
-    (*map)->intersections.tab->id.region_option = FALSE;
-    (*map)->intersections.tab->id.id = config.RSU_id;
-    (*map)->intersections.tab->revision = 0;
-    (*map)->intersections.tab->refPoint.lat = config.RSU_lat * 10000000;
-    (*map)->intersections.tab->refPoint.Long = config.RSU_lon * 10000000;
-    (*map)->intersections.tab->refPoint.elevation_option = TRUE;
-    (*map)->intersections.tab->refPoint.elevation = MAP_config.Mapconfig->intersections.tab[0].refPoint.elevation;
-    (*map)->intersections.tab->refPoint.regional_option = FALSE;
-    (*map)->intersections.tab->laneWidth_option = TRUE;
-    (*map)->intersections.tab->laneWidth = MAP_config.Mapconfig->intersections.tab[0].laneWidth;
-    (*map)->intersections.tab->speedLimits_option = TRUE;
-    (*map)->intersections.tab->speedLimits.count = 1;
-    (*map)->intersections.tab->speedLimits.tab = calloc((*map)->intersections.tab->speedLimits.count,
-                                                        sizeof(RegulatorySpeedLimit));
-    (*map)->intersections.tab->speedLimits.tab->type = SpeedLimitType_vehicleMaxSpeed;   
-    (*map)->intersections.tab->speedLimits.tab->speed = MAP_config.Mapconfig->intersections.tab[0].speedLimits.tab[0].speed;
-    (*map)->intersections.tab->preemptPriorityData_option = FALSE;
-    (*map)->intersections.tab->regional_option = FALSE;
+    map->intersections_option = TRUE;
+    map->intersections.count = 1;
 
-    (*map)->intersections.tab->laneSet.count = MAP_config.Mapconfig->intersections.tab[0].laneSet.count;
-    (*map)->intersections.tab->laneSet.tab = (GenericLane *) calloc((*map)->intersections.tab->laneSet.count,sizeof(GenericLane));
-    GenericLane *GeLane = (*map)->intersections.tab->laneSet.tab;
+    map->intersections.tab->id.id = config.RSU_id;
+    map->intersections.tab->id.region_option = TRUE;
+    map->intersections.tab->id.region = config.RSU_region;
 
-    for(int i = 0;i < (*map)->intersections.tab[0].laneSet.count ;i++) {
-        GeLane[i].laneID = MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].laneID;
-        GeLane[i].name_option = FALSE;
-        if(MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].ingressApproach==0 && MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].egressApproach==1){
-            GeLane[i].ingressApproach_option = TRUE;
-            GeLane[i].ingressApproach = 1;
-            GeLane[i].egressApproach_option = FALSE;
-            asn1_bstr_alloc(&(GeLane[i].laneAttributes.directionalUse),
-                            LaneDirection_MAX_BITS);
-            asn1_bstr_set_bit(&(GeLane[i].laneAttributes.directionalUse),
-                            LaneDirection_ingressPath);
-        } else if (MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].egressApproach==0 && MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].ingressApproach==1) {
+    map->intersections.tab->revision = 0;
+
+    map->intersections.tab->refPoint.lat = config.RSU_lat * 10000000;
+    map->intersections.tab->refPoint.Long = config.RSU_lon * 10000000;
+    map->intersections.tab->refPoint.elevation_option = TRUE;
+    map->intersections.tab->refPoint.elevation = config.RSU_elev * 10000000;
+
+    map->intersections.tab->laneSet.count = MAP_config.Mapconfig->intersections.tab[0].laneSet.count;
+
+    GenericLane *GeLane = map->intersections.tab->laneSet.tab;
+
+    for(int i = 0;i < map->intersections.tab[0].laneSet.count ;i++) {
+        GenericLane *config_lane = &MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i];
+        
+        GeLane[i].laneID = config_lane->laneID;
+        
+        if (config_lane->egressApproach_option) {
             GeLane[i].egressApproach_option = TRUE;
-            GeLane[i].egressApproach = 1;
-            GeLane[i].ingressApproach_option = FALSE;
-            asn1_bstr_alloc(&(GeLane[i].laneAttributes.directionalUse),
-                            LaneDirection_MAX_BITS);
-            asn1_bstr_set_bit(&(GeLane[i].laneAttributes.directionalUse),
-                            LaneDirection_egressPath);
+            GeLane[i].egressApproach = config_lane->egressApproach;
+            asn1_bstr_set_bit(&GeLane[i].laneAttributes.directionalUse, LaneDirection_egressPath);
         }
-        asn1_bstr_alloc(&(GeLane[i].laneAttributes.sharedWith),
-                            LaneSharing_MAX_BITS);
-        GeLane[i].laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
-        asn1_bstr_alloc(&(GeLane[i].laneAttributes.laneType.u.vehicle),
-                            LaneAttributes_Vehicle_MAX_BITS);
-        GeLane[i].laneAttributes.regional_option = FALSE;
-        GeLane[i].maneuvers_option = FALSE;
-        
-        GeLane[i].nodeList.choice = NodeListXY_nodes;
-        GeLane[i].nodeList.u.nodes.count = MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].nodeList.u.nodes.count;
-        GeLane[i].nodeList.u.nodes.tab = (NodeXY *) calloc (GeLane[i].nodeList.u.nodes.count,
-                                                                sizeof(NodeXY));
-        for(int j = 0 ;j < GeLane[i].nodeList.u.nodes.count;j++) {
-            GeLane[i].nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
-            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = 
-                MAP_config.Mapconfig->intersections.tab[0].laneSet
-                .tab[i].nodeList.u.nodes
-                .tab[j].delta.u.node_LatLon.lat;
-            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = 
-                MAP_config.Mapconfig->intersections.tab[0].laneSet
-                .tab[i].nodeList.u.nodes
-                .tab[j].delta.u.node_LatLon.lon;
+        if (config_lane->ingressApproach_option) {
+            GeLane[i].ingressApproach_option = TRUE;
+            GeLane[i].ingressApproach = config_lane->ingressApproach;
+            asn1_bstr_set_bit(&GeLane[i].laneAttributes.directionalUse, LaneDirection_ingressPath);
         }
-        if(MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].connectsTo.count > 0){
-            GeLane[i].connectsTo_option = TRUE;
-            GeLane[i].connectsTo.count = 
-                MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].connectsTo.count;
-        
-            GeLane[i].connectsTo.tab = (Connection *) calloc(GeLane[i].connectsTo.count,
-                                                                sizeof(Connection));
-            for(int j = 0;j < GeLane[i].connectsTo.count;j++) {
-                GeLane[i]
-                .connectsTo.tab[j]
-                .connectingLane.lane =  MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i].connectsTo.tab[j].connectingLane.lane;
-                // 尚需確認
-                GeLane[i].connectsTo.tab[j].connectingLane.maneuver_option = FALSE;
-                GeLane[i].connectsTo.tab[j].remoteIntersection_option = FALSE;
-                // 要改成 TRUE
-                GeLane[i].connectsTo.tab[j].signalGroup_option = TRUE;
 
-                GeLane[i].connectsTo.tab[j].userClass_option = FALSE;
-                GeLane[i].connectsTo.tab[i].connectionID_option = FALSE;
-            }
+        GeLane[i].laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
+
+        GeLane[i].nodeList.choice = NodeListXY_nodes;
+        GeLane[i].nodeList.u.nodes.count = config_lane->nodeList.u.nodes.count;
+
+        Malloc(GeLane[i].nodeList.u.nodes.tab, sizeof(NodeXY) * GeLane[i].nodeList.u.nodes.count, "MAP_init_NodeXY_new");
+
+        for(int j = 0 ; j < GeLane[i].nodeList.u.nodes.count; j++) {
+            GeLane[i].nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
+            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = config_lane->nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat;
+            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = config_lane->nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon;
         }
-        GeLane[i].overlays_option = FALSE;
-        GeLane[i].regional_option = FALSE;
     }
     return ;
 }
 
 
-void map_signal_group(MapData **map, int SubPhaseCount_index, int SignalCount_index) {
-    GenericLane *GeLane = (*map)->intersections.tab->laneSet.tab;
+void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_index) {
+    GenericLane *GeLane = map->intersections.tab->laneSet.tab;
     int j = SignalCount_index;
-    uint8_t SignalStatus = get_SignalStatus(SubPhaseCount_index-1,SignalCount_index);
+    uint8_t SignalStatus = get_SignalStatus(SubPhaseCount_index - 1, SignalCount_index);
     
     // 去 and SignalStatus_t
     if(SignalStatus & GREEN) {
-        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+        for(int i = 0; i < MAP_config.map_lane2connecting.Direction[j].Lane_count; i++) {
             int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+            for(int k = 0; k < map->intersections.tab[0].laneSet.count; k++) {
                 if(GeLane[k].laneID == LANEID) {
                     for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
                         int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
@@ -181,7 +122,7 @@ void map_signal_group(MapData **map, int SubPhaseCount_index, int SignalCount_in
     if(SignalStatus & LEFT_GREEN) {
         for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
             int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+            for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
                 if(GeLane[k].laneID == LANEID) {
                     for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
                         int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
@@ -201,7 +142,7 @@ void map_signal_group(MapData **map, int SubPhaseCount_index, int SignalCount_in
     if(SignalStatus & STRAIGHT_GREEN) {
         for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
             int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+            for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
                 if(GeLane[k].laneID == LANEID) {
                     for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
                         int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
@@ -221,7 +162,7 @@ void map_signal_group(MapData **map, int SubPhaseCount_index, int SignalCount_in
     if(SignalStatus & RIGHT_GREEN) {
         for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
             int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < (*map)->intersections.tab[0].laneSet.count ;k++) {
+            for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
                 if(GeLane[k].laneID == LANEID) {
                     for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
                         int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
@@ -240,13 +181,14 @@ void map_signal_group(MapData **map, int SubPhaseCount_index, int SignalCount_in
     }
 }
 
-void map_msg_update(MapData **map)
+void map_msg_update(MapData *map)
 {
     uint8_t SubPhaseCount = get_SubPhaseCount();
     uint8_t SignalCount = get_SignalCount();
     uint8_t current_phase = get_current_phase();
-    (*map)->intersections.tab->revision++;
-    (*map)->intersections.tab->revision &= 0b1111111;
+    
+    map->intersections.tab->revision++;
+    map->intersections.tab->revision &= 0b1111111;
     
     for(int i = SubPhaseCount;i > 0;i--) {
         for(int j = 0;j < SignalCount;j++){
@@ -299,6 +241,8 @@ void map_print(MapData *map)
                 if (NodeListXY_nodes == map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice) {
                     /* The function only show nodes type */
                     printf("  node list count: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count);
+                    printf("  node list ingressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].ingressApproach);
+                    printf("  node list egressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].egressApproach);
                     for (node_index = 0; node_index < map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count; node_index++) {
                         switch (map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice) {
                             case NodeOffsetPointXY_node_XY1:

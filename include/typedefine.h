@@ -139,14 +139,22 @@ typedef struct event_callback {
     struct event_callback *next;
 } event_callback_t;
 
-typedef struct OBU_record {
-    char OBU_name[OBU_NAME_MAX_LEN];
+typedef struct OBU_record_common_field {
     time_t time_second;
     float position_lon;
     float position_lat;
     uint8_t speed;
     uint8_t direction;
+    char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
+} OBU_record_common_field_t;
+
+typedef struct OBU_record {
+    time_t time_second;
+    float position_lon;
+    float position_lat;
+    uint8_t speed;
+    uint8_t direction;
 } OBU_record_t;
 
 typedef struct OBU_record_ring {
@@ -161,12 +169,17 @@ typedef struct application_private_space {
     uint8_t *dynamic_space;
 } app_private_space_t;
 
+typedef enum {
+    OBU_object_unknown = -1,
+    OBU_object_processing = 0,
+    OBU_object_granted = 1,
+    OBU_object_rejected = 2,
+} OBU_object_status;
 
 typedef struct OBU_object {
-    int OBU_id;
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
     vehicle_type_t vehicle_type;
-
+    OBU_object_status status;
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
     struct OBU_object *prev;
@@ -201,6 +214,7 @@ typedef struct static_plan {
     uint16_t PreTimeCompensated;
 } static_plan_t;
 
+// 是一個 bitString 要對照 enum SignalStatus_t 來看做 flag
 typedef struct phaseorder_plan {
     uint8_t SignalStatus;
 } phaseorder_plan_t;

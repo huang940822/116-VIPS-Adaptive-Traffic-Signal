@@ -17,7 +17,9 @@
 #include "log.h"
 #include "timer_event.h"
 
-MapData *map;
+#include "j2735_codec.h"
+#include "j2735_map.h"
+
 timer_t MAP_packet_tx_timer_id;
 
 app_obj_t MAP = {
@@ -123,14 +125,19 @@ int MAP_on_registration(void *arg)
     if(ret != 0) {
         log_file_write_fatal_error("error map reading config file: %d", ret);
     }
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    // print_config_map(log_content, LOG_CONTENT_LEN);
+    printf("%s\n", log_content);
     /* MAP msg init */
-    map_msg_init(&map);
+    map = (MapData *) j2735_msg_prealloc(MapData_Id);
+    map_msg_init(map);
     MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);
-    if(MAP_config.MAP_packet_transfer_speed == 1)
-        set_timer(MAP_packet_tx_timer_id, MAP_config.MAP_packet_transfer_speed, 0, 1, 0);
-    else
-        set_timer(MAP_packet_tx_timer_id, 0, 1000000000 / MAP_config.MAP_packet_transfer_speed, 1, 0);
+    set_timer(MAP_packet_tx_timer_id, (int)(1 / MAP_config.MAP_packet_transfer_speed),
+                (int)((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000), 
+                (int)(1 / MAP_config.MAP_packet_transfer_speed), 
+                (int)((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000));
 
 }
