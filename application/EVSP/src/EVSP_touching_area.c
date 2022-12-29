@@ -57,7 +57,6 @@ int EVSP_plan_list_read()
     strcat(file_path, EVSP_CONFIG_DIR);
     strcat(file_path, rsu_name);
     strcat(file_path, TOUCHING_AREA_FILE);
-    printf("%s\n", file_path);
 
     FILE *fp;
     fp = fopen(file_path, "r");
@@ -170,10 +169,10 @@ int EVSP_plan_list_read()
                 char *tmp = substr;
                 substr = strsep(&tmp, " ");
                 if (substr == NULL || tmp == NULL)
-                    return false;
+                    goto EVSP_plan_list_read_error;
                 if (sscanf(substr, "%hhd", &touch_area->direciton_start) != 1 ||
                     sscanf(tmp, "%hhd", &touch_area->direciton_end) != 1)
-                    return false;
+                    goto EVSP_plan_list_read_error;
                 if (touch_area->direciton_start > 7 || touch_area->direciton_end > 7)
                     goto EVSP_plan_list_read_error;
                 touch_area->direciton_end = (touch_area->direciton_end + 1) % 8; // + 1 不包含
@@ -291,9 +290,11 @@ int EVSP_plan_list_read()
     if (!EVSP_plan_list_check()) {
         goto EVSP_plan_list_read_error;
     }
+    printf("EVSP plan list read complete.\n");
     return 1;
 EVSP_plan_list_read_error:
     EVSP_plan_list_clean();
+    printf("EVSP plan list read fail.\n");
     return -1;
 }
 #undef EVSP_touching_area_Vector_Increase
@@ -511,7 +512,7 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
             } while (k != touching_area->direciton_end);
 
             if (!flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
-                printf("EVSP_activate SubPhaseID %d\n", plan->plan_subPhase[i].SubPhaseID);
+                printf("EVSP_activate SubPhaseID %d------------\n", plan->plan_subPhase[i].SubPhaseID);
                 *area_ptr = touching_area;
                 return plan->plan_subPhase[i].SubPhaseID;
             }

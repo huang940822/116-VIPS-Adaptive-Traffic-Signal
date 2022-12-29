@@ -136,7 +136,7 @@ char *trim_space(char *buf)
         tmp--;
     }
     
-    return (*buf) ? buf : NULL;
+    return buf ? ((*buf) ? buf : NULL) : buf;
 }
 
 char *read_line(char *read_buf, int read_buf_len, FILE *fp)

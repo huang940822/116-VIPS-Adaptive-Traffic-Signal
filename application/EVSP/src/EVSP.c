@@ -549,7 +549,7 @@ int EVSP_on_registration(void *arg)
 
     fflush(stdout);
     closedir(dp);
-    EVSP_plan_list_print();
+    // EVSP_plan_list_print();
 
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);

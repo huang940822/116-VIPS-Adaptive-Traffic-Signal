@@ -49,6 +49,6 @@ plan_table_end
 
 plan_table 4, 5
 # SubphaseId, touching_area_num, touching_areaId, ...
-1, 2, 0, 1, 2
+1, 3, 0, 1, 2
 2, 1, 3
 plan_table_end
