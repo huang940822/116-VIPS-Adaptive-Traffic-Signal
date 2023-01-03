@@ -152,7 +152,7 @@ OBU_object_t *OBU_object_new(OBU_record_common_field_t *record_common)
 ** Return:      object: address of OBU obj
 **              NULL: OBU obj not found
 ******************************************************************************/
-inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
+inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head,const char *str)
 {
     OBU_object_t *current = OBU_list_head->next;
     while (current != OBU_list_head) {
@@ -176,6 +176,22 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
     return status;
 }
 
+int special_OBU_list_update_status(const char* name, vehicle_type_t type, OBU_object_status status)
+{
+    if (type == VEHICLE_NORMAL)
+        return -1;
+    pthread_mutex_lock(&mutex_special_OBU_list[type]);
+    OBU_object_t *object = OBU_object_search(&special_OBU_list[type], name);
+    // 只可以 granted 跟 rejected
+    if (status != OBU_object_granted && status != OBU_object_rejected) {
+        pthread_mutex_unlock(&mutex_special_OBU_list[type]);
+        return -1;
+    }
+    object->status = status;
+    pthread_mutex_unlock(&mutex_special_OBU_list[type]);
+    return 1;
+}
+
 /*****************************************************************************
 ** Function:    normal_OBU_record_insert
 ** Description: Insert a normal OBU record in normal OBU list.
@@ -184,6 +200,9 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
 ******************************************************************************/
 OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這裡用hash table
 {
+    if (record->vehicle_type != VEHICLE_NORMAL)
+        return NULL;
+
     int hash_code = djb2_hash(
         record->OBU_name);  // hash code is array index for having use mod
     pthread_mutex_lock(&mutex_normal_OBU_list[hash_code]);
@@ -192,6 +211,7 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這
 
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
+        object->hash_code = hash_code;
 
         /* insert OBU record */  //如果世新的object 那record ring一定是空的
                                  //似乎沒有檢查的必要 直接push進去就好？
@@ -233,7 +253,11 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這
 ******************************************************************************/
 OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 {
+    if (record->vehicle_type == VEHICLE_NORMAL)
+        return NULL;
+
     uint8_t type = record->vehicle_type;
+
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
@@ -307,12 +331,12 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
             return -1;
         }
         switch (sup_ext->classification) {
-        case 50:
+        case 50: // j2735 classification  transit-TypeUnknown -- default type
             strcpy(record->OBU_name, "bus_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_BUS;
             break;
-        case 60:
+        case 60: // j2735 classification  emergency-TypeUnknown -- default type
             strcpy(record->OBU_name, "amb_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;

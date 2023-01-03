@@ -39,11 +39,11 @@ typedef enum device_type {
 } device_type_t;
 
 typedef enum vehicle_type {
-    VEHICLE_NORMAL = 0,
-    VEHICLE_AMBULANCE = 1,
-    VEHICLE_BUS = 2,
-    VEHICLE_FIRE_TRUCK = 3,
-    VEHICLE_POLICE_CAR = 4,
+    VEHICLE_NORMAL = -1,
+    VEHICLE_AMBULANCE = 0,
+    VEHICLE_BUS = 1,
+    VEHICLE_FIRE_TRUCK = 2,
+    VEHICLE_POLICE_CAR = 3,
     VEHICLE_TYPE_NUMBER
 } vehicle_type_t;
 
@@ -178,6 +178,7 @@ typedef enum {
 
 typedef struct OBU_object {
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
+    uint8_t hash_code; // 當 vehicle_type 是 VEHICLE_NORMAL 的時候使用
     vehicle_type_t vehicle_type;
     OBU_object_status status;
     OBU_record_ring_t record_ring;
@@ -313,12 +314,13 @@ typedef struct tsc_command {
     // buffer object".
     uint8_t cycle;
     uint8_t phase;
-    int16_t effect_time;  // is the length of time that the application requests
-                          // to be adjusted to.
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
+    int16_t effect_time;  // is the length of time that the application requests
+                          // to be adjusted to.
     int8_t compensation_time;
     char host_OBU_name[ID_MAX_LEN + 1];
+    vehicle_type_t vehicle_type;
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
@@ -332,6 +334,7 @@ typedef struct tsc_command_object {
                             // controller is adjusted to.
     int8_t compensation_time;
     char host_OBU_name[ID_MAX_LEN + 1];
+    vehicle_type_t vehicle_type;
     bool send_flag;
 } tsc_command_object_t;
 

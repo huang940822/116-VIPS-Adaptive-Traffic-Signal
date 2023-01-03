@@ -153,12 +153,6 @@ bool EVSP_host_OBU_obj_resume(uint8_t target_phase)
             pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
             return false;
         }
-
-        /* last node */
-        if (current->next == NULL) {
-            pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-            return true;
-        }
         current = current->next;
     }
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);

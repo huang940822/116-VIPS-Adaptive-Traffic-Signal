@@ -440,6 +440,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             command.target_phase = target_phase;
             strncpy(command.host_OBU_name, app_section->OBU_object->OBU_name,
                     OBU_NAME_MAX_LEN);
+            command.vehicle_type = app_section->OBU_object->vehicle_type;
 
             uint8_t current_phase = signal_status.SubPhaseID;
             uint8_t current_step = signal_status.StepID;

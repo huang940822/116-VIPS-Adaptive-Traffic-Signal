@@ -16,6 +16,7 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "OBU_record_processing.h"
 // todo: both above should be removed!
 #define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
@@ -23,17 +24,13 @@
 tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM];
 pthread_mutex_t mutex_command_buf = PTHREAD_MUTEX_INITIALIZER;
 
-uint8_t cycle_index = 0;
-uint8_t prior_SubPhaseID = 0;
-uint8_t prior_StepID = 0;
-uint16_t prior_StepSec = 0;
+uint8_t cycle_index = 0; // 表示 command buf 的 CYCLE_NUM 是第幾個
 
 timer_t traffic_signal_command_buf_polling_timer_id;
 uint8_t traffic_signal_command_buf_polling_num =
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING;
 static uint8_t CompensationInitialFlag = true;
-static uint8_t CompensationFlag = false;
-static uint8_t count = 0;
+
 // extern pthread_mutex_t mutex_rs232_write;
 // extern int16_t ack_seq;
 
@@ -346,6 +343,12 @@ void command_buf_send(tsc_command_object_t *command_obj,
 // traffic signal controller at an appropriate time.
 void command_buf_polling()
 {
+    static uint8_t prior_SubPhaseID = 0;
+    static uint8_t prior_StepID = 0;
+    static uint16_t prior_StepSec = 0;
+
+    static uint8_t CompensationFlag = false;
+
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
@@ -590,9 +593,14 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         }
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, 15);
+        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, sizeof(command->host_OBU_name));
+        target_command_obj->vehicle_type = command->vehicle_type;
+
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
+        
+        // granted host OBU
+        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
         return INSERT_ACCEPT;
     }
 
@@ -613,8 +621,13 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         target_command_obj->send_flag = false;
         strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
                 OBU_NAME_MAX_LEN);
+        target_command_obj->vehicle_type = command->vehicle_type;
+
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
+
+        // granted host OBU
+        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
         return INSERT_ACCEPT;
     }
 
@@ -631,8 +644,13 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         target_command_obj->send_flag = false;
         strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
                 OBU_NAME_MAX_LEN);
+        target_command_obj->vehicle_type = command->vehicle_type;
+
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
+
+        // granted host OBU
+        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
         return INSERT_ACCEPT;
     }
 
@@ -644,10 +662,16 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             target_command_obj->send_flag = false;
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
                     OBU_NAME_MAX_LEN);
+            target_command_obj->vehicle_type = command->vehicle_type;
+
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
+
+            // granted host OBU
+            special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
             return INSERT_ACCEPT;
         } else {
+            pthread_mutex_unlock(&mutex_command_buf);
             return IMPROPER_PRIORITY;
         }
     }
@@ -679,8 +703,13 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             target_command_obj->send_flag = false;
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
                     OBU_NAME_MAX_LEN);
+            target_command_obj->vehicle_type = command->vehicle_type;
+
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
+
+            // granted host OBU
+            special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
             return INSERT_ACCEPT;
         } else {
             command_buf_print();
@@ -697,6 +726,10 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         // priority higher than original command 數值越小priority越高
         if (target_command_obj->app_priority >
             command->app_priority) {  //優先權較小 tsp被evsp取代
+            char OBU_name[OBU_NAME_MAX_LEN + 1] = {0};
+            memcpy(OBU_name, target_command_obj->host_OBU_name, OBU_NAME_MAX_LEN);
+            vehicle_type_t vehicle_type = target_command_obj->vehicle_type;
+
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
@@ -704,8 +737,16 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             target_command_obj->send_flag = false;
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
                     OBU_NAME_MAX_LEN);
+            target_command_obj->vehicle_type = command->vehicle_type;
+
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
+
+            // 因為衝突所以被拒絕
+            special_OBU_list_update_status(OBU_name, vehicle_type, OBU_object_rejected);
+
+            // granted host OBU
+            special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
             return INSERT_ACCEPT;
         } else {
             command_buf_print();
@@ -715,7 +756,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     }
 }
 
-//調整要送到command_buf_insert_effect_time的command結構的值
+// 插入 command 到 command buffer
 int command_buf_insert_adjustment(tsc_command_t *command)
 {
     /* command value valid */
