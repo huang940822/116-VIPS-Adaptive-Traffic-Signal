@@ -1,4 +1,5 @@
 #include "SPM_repeater.h"
+#include "OBU_record_processing.h"
 #include "SPM.h"
 #include "SPM_OBU_list.h"
 #include "SPM_config.h"
@@ -6,7 +7,6 @@
 #include "config.h"
 #include "j2735_codec.h"
 #include "log.h"
-#include "OBU_record_processing.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -43,10 +43,11 @@ void *SPM_repeater()
     memset(&timerValue, 0, sizeof(struct itimerspec));
 
     timerValue.it_value.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
-    timerValue.it_value.tv_nsec = 1000000000 / SPM_config.SPM_packet_transfer_speed;
+    timerValue.it_value.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
     timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
-    timerValue.it_interval.tv_nsec = 1000000000 / SPM_config.SPM_packet_transfer_speed;
+    timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
 
+    printf("SPM_repeater timerfd_settime %ld %ld\n", timerValue.it_interval.tv_sec, timerValue.it_interval.tv_nsec);
     if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
         log_file_write_fatal_error("SPM_repeater timerfd_settime");
         goto SPM_repeater_end;
@@ -88,30 +89,48 @@ void *SPM_repeater()
         sequenceNumber &= 0b1111111;
 
         while (current != NULL && i <= SignalStatusList_MAX_SIZE) {
-            if (now - current->time_second > SPM_config.spm_host_obu_packet_timeout) {
+            if (now - current->time_second > SPM_config.spm_host_obu_packet_timeout && delete_OBU_num < SignalStatusList_MAX_SIZE) {
                 memcpy(delete_OBU_names[delete_OBU_num], current->OBU_name, OBU_NAME_MAX_LEN + 1);
                 delete_OBU_num++;
                 current = current->next;
                 continue;
             }
 
-            for (int j = 0; j <= current->sigRequest_count && i <= SignalStatusList_MAX_SIZE ; j++) {
+            for (int j = 0; j <= current->sigRequest_count && i <= SignalStatusList_MAX_SIZE; j++) {
                 SignalStatusPackage *ssp = &ssm->status.tab[0].sigStatus.tab[i++];
                 memset(ssp, 0, sizeof(SignalStatusPackage));
 
                 switch (current->sigRequestList[j].request.requestType) {
-                case PriorityRequestType_priorityRequest: 
+                case PriorityRequestType_priorityRequest:
                     ssp->status = PrioritizationResponseStatus_requested;
                     break;
                 case PriorityRequestType_priorityRequestUpdate: {
-                    static int OBU_object_status[] = {PrioritizationResponseStatus_processing, PrioritizationResponseStatus_granted, 
-                        PrioritizationResponseStatus_rejected};
                     int status = special_OBU_list_search_status(current->vehicle_type, current->OBU_name);
-                    if (status == OBU_object_unknown) {
+                    switch (status) {
+                    case OBU_object_unknown:
                         i--;
                         continue;
+                        break;
+                    case OBU_object_processing:
+                        ssp->status = PrioritizationResponseStatus_processing;
+                        break;
+                    case OBU_object_granted: {
+                        ssp->status = PrioritizationResponseStatus_granted;
+                        // 如果同方向都是 granted 第二個會是 reserviceLocked
+                        for (int k = 0; k < i - 1; k++) {
+                            if (ssm->status.tab[0].sigStatus.tab[k].status == PrioritizationResponseStatus_granted) {
+                                ssp->status = PrioritizationResponseStatus_reserviceLocked;
+                                break;
+                            }
+                        }
+                    } break;
+                    case OBU_object_rejected:
+                        ssp->status = PrioritizationResponseStatus_rejected;
+
+                        break;
+                    default:
+                        break;
                     }
-                    ssp->status = OBU_object_status[status];
                 } break;
                 case PriorityRequestType_priorityRequestTypeReserved:
                 case PriorityRequestType_priorityCancellation:
@@ -155,6 +174,7 @@ void *SPM_repeater()
             current = current->next;
         }
         pthread_mutex_unlock(&SPM_OBU_obj_mutex);
+
         ssm->status.tab[0].sigStatus.count = i;
         if (ssm->status.tab[0].sigStatus.count > 0)
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
@@ -164,6 +184,7 @@ void *SPM_repeater()
         }
     }
 SPM_repeater_end:
+    printf("SPM_repeater_thread end\n");
     SPM_repeater_thread = 0;
     close(fd);
     pthread_detach(pthread_self());
