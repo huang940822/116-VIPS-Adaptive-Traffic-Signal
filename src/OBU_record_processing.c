@@ -183,7 +183,7 @@ int special_OBU_list_update_status(const char* name, vehicle_type_t type, OBU_ob
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object = OBU_object_search(&special_OBU_list[type], name);
     // 只可以 granted 跟 rejected
-    if (status != OBU_object_granted && status != OBU_object_rejected) {
+    if (object == NULL || (status != OBU_object_granted && status != OBU_object_rejected)) {
         pthread_mutex_unlock(&mutex_special_OBU_list[type]);
         return -1;
     }

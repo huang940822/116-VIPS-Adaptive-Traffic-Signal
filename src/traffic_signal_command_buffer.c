@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "EVSP.h"
+#include "OBU_record_processing.h"
 #include "TSP.h"
 #include "application_registration.h"
 #include "config.h"
@@ -16,7 +17,6 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
-#include "OBU_record_processing.h"
 // todo: both above should be removed!
 #define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
@@ -24,7 +24,7 @@
 tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM];
 pthread_mutex_t mutex_command_buf = PTHREAD_MUTEX_INITIALIZER;
 
-uint8_t cycle_index = 0; // 表示 command buf 的 CYCLE_NUM 是第幾個
+uint8_t cycle_index = 0;  // 表示 command buf 的 CYCLE_NUM 是第幾個
 
 timer_t traffic_signal_command_buf_polling_timer_id;
 uint8_t traffic_signal_command_buf_polling_num =
@@ -57,7 +57,7 @@ void command_buf_clear()
     log_file_write("command buff is cleared\r\n");
 }
 
-//要送command到tc箱 被polling呼叫
+// 要送command到tc箱 被polling呼叫
 void command_buf_send(tsc_command_object_t *command_obj,
                       uint8_t current_SubPhaseID)
 {
@@ -70,7 +70,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     //????等待某些東西？
     sem_timedwait_millsecs(
         &sem_signal_status,
-        SEM_SIGNAL_STATUS_TIMEOUT);  //有timeout的號誌等待 但是 對應的post在那？
+        SEM_SIGNAL_STATUS_TIMEOUT);  // 有timeout的號誌等待 但是 對應的post在那？
 
     uint16_t pretime =
         signal_status.plan[current_SubPhaseID - 1].PreTimeCompensated;
@@ -88,8 +88,8 @@ void command_buf_send(tsc_command_object_t *command_obj,
     switch (config.signal_controller_manufacturer) {
     case CHENG_LONG:
         if (command_obj->app_id ==
-            TSP.id) {  //這裡就算要核對app_id也應該要從app_list裡面去撈
-                       //而不是這樣直接assign!!
+            TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈
+                       // 而不是這樣直接assign!!
             if (TSP.dontSend2TC == 1) {
                 printf(
                     "TSP cmd isn't sent to TC machine for dontSend2TC "
@@ -137,7 +137,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
         if (((int) current_sec_residual + difference) < TIME_DEFENSE &&
             current_sec_residual >= TIME_DEFENSE) {
             difference =
-                TIME_DEFENSE - current_sec_residual;  //能夠忍受的砍的值
+                TIME_DEFENSE - current_sec_residual;  // 能夠忍受的砍的值
             printf("difference has been changed from %d to %d(cheng_long)\r\n",
                    original_difference, difference);
             snprintf(log_content + strlen(log_content),
@@ -187,12 +187,12 @@ void command_buf_send(tsc_command_object_t *command_obj,
         while (time < 0) {
             temp_ack_seq = tsc_dynamic();
             WAIT_ACK_LOOP
-            //不能下0 否則step會立刻結束
+            // 不能下0 否則step會立刻結束
             temp_ack_seq =
-                tsc_extend(current_SubPhaseID, 1, 1);  //每次就是pretime-4去扣
+                tsc_extend(current_SubPhaseID, 1, 1);  // 每次就是pretime-4去扣
             WAIT_ACK_LOOP
             // time += pretime;
-            time += (pretime - 4);  //要想一下 -4是因為機器限制的關係
+            time += (pretime - 4);  // 要想一下 -4是因為機器限制的關係
         }
 
         temp_ack_seq = tsc_dynamic();
@@ -331,8 +331,8 @@ void command_buf_send(tsc_command_object_t *command_obj,
     command.effect_time = command_obj->effect_time;
     memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
 
-    //執行callback 完全不管app_id了 event signal packet tx
-    // goto TSP_report_command()
+    // 執行callback 完全不管app_id了 event signal packet tx
+    //  goto TSP_report_command()
     event_callback_t *current = &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     while (current->next != NULL) {
         current->next->callback((void *) &command);
@@ -386,7 +386,7 @@ void command_buf_polling()
         log_file_write(log_content);
     }
 
-    //何時phase會是0 人為設定的？？
+    // 何時phase會是0 人為設定的？？
     if (prior_SubPhaseID == 0 || current_SubPhaseID == 0) {
         prior_SubPhaseID = current_SubPhaseID;
         prior_StepID = current_StepID;
@@ -419,7 +419,7 @@ void command_buf_polling()
             memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0,
                    sizeof(tsc_command_object_t));
         }
-        //設定為0代表不控制？
+        // 設定為0代表不控制？
         set_control_status(0);
     }
     /* cross to next cycle */
@@ -455,7 +455,7 @@ void command_buf_polling()
     if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0 &&
         prior_SubPhaseID != current_SubPhaseID) {
         command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
-            current_StepSec;  //換相了 更新adjusted time讓他變成現在的倒數秒數
+            current_StepSec;  // 換相了 更新adjusted time讓他變成現在的倒數秒數
     }
 
     /* command ready to send in current phase */
@@ -468,11 +468,11 @@ void command_buf_polling()
         command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1],
                          current_SubPhaseID);
         set_control_status(command_buf[cycle_index][current_SubPhaseID - 1]
-                               .app_id);  //判斷是evsp還是tsp
+                               .app_id);  // 判斷是evsp還是tsp
         command_buf[cycle_index][current_SubPhaseID - 1].send_flag =
             true;  // 已送出TC箱
         CompensationFlag = true;
-        //更新步階一要倒數的時間
+        // 更新步階一要倒數的時間
         command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
             command_buf[cycle_index][current_SubPhaseID - 1].effect_time;
     }
@@ -529,7 +529,7 @@ void command_buf_polling()
     return;
 }
 
-//被command_buf_insert_adjustment和evsp呼叫
+// 被command_buf_insert_adjustment和evsp呼叫
 int command_buf_insert_effect_time(tsc_command_t *command)
 {
     /* command value valid */
@@ -563,45 +563,27 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     uint16_t min_green = signal_status.plan[command->phase - 1].MinGreen;
     uint16_t max_green = signal_status.plan[command->phase - 1].MaxGreen;
 
-    if (command->effect_time < min_green) {
-        command->effect_time = min_green;
-    }
-
-    if (command->effect_time > max_green) {
-        command->effect_time = max_green;
-    }
+    command->effect_time = (command->effect_time < min_green) ? min_green : command->effect_time;
+    command->effect_time = (command->effect_time > max_green) ? max_green : command->effect_time;
 
     pthread_mutex_lock(&mutex_command_buf);
-    //抓出要處理的cmd buff object
-    // comman->cycle and phase are used to "indicate the index of the
-    // target_command buffer object".
+    // 抓出要處理的cmd buff object
+    //  comman->cycle and phase are used to "indicate the index of the
+    //  target_command buffer object".
     tsc_command_object_t *target_command_obj =
         &command_buf[(cycle_index + command->cycle) % CYCLE_NUM]
                     [command->phase - 1];
 
     // command object first insert
     if (target_command_obj->app_id == 0) {
-        target_command_obj->app_id = command->app_id;
-        target_command_obj->app_priority = command->app_priority;
-        target_command_obj->effect_time = command->effect_time;
         target_command_obj->compensation_time = command->compensation_time;
         // adjusted_time is the length of time that the "traffic signal
         // controller" is adjusted to.
         if (target_command_obj->adjusted_time == 0) {
             target_command_obj->adjusted_time =
-                pretime;  //因為此步階預設倒數時間為pretime
+                pretime;  // 因為此步階預設倒數時間為pretime
         }
-        target_command_obj->target_phase = command->target_phase;
-        target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, sizeof(command->host_OBU_name));
-        target_command_obj->vehicle_type = command->vehicle_type;
-
-        command_buf_print();
-        pthread_mutex_unlock(&mutex_command_buf);
-        
-        // granted host OBU
-        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
-        return INSERT_ACCEPT;
+        goto COMMAND_BUF_INSERT_ACCEPT_APP_ID;
     }
 
     // 如果target_command是補償指令的話，則覆蓋掉。
@@ -614,62 +596,22 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         // for(int i = 0;i<SUBPHASEID_NUM;i++){
         //     printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
         // }
-        target_command_obj->app_id = command->app_id;
-        target_command_obj->app_priority = command->app_priority;
-        target_command_obj->effect_time = command->effect_time;
-        target_command_obj->target_phase = command->target_phase;
-        target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                OBU_NAME_MAX_LEN);
-        target_command_obj->vehicle_type = command->vehicle_type;
-
-        command_buf_print();
-        pthread_mutex_unlock(&mutex_command_buf);
-
-        // granted host OBU
-        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
-        return INSERT_ACCEPT;
+        goto COMMAND_BUF_INSERT_ACCEPT_APP_ID;
     }
 
-    // resume是為了強制回到pretime 怎麼作到？
     // evsp裡面會使用obu resumeid
     // replace resume command
-    //抓出來的目標cmd buff object其host obu id為resume id則優先取代？
     if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) ==
         0) {
-        target_command_obj->app_id = command->app_id;
-        target_command_obj->app_priority = command->app_priority;
-        target_command_obj->effect_time = command->effect_time;
-        target_command_obj->target_phase = command->target_phase;
-        target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                OBU_NAME_MAX_LEN);
-        target_command_obj->vehicle_type = command->vehicle_type;
-
-        command_buf_print();
-        pthread_mutex_unlock(&mutex_command_buf);
-
-        // granted host OBU
-        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
-        return INSERT_ACCEPT;
+        goto COMMAND_BUF_INSERT_ACCEPT_APP_ID;
     }
 
     // resume command
     if (strncmp(command->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
         if (target_command_obj->app_id == command->app_id) {
-            target_command_obj->effect_time = command->effect_time;
-            target_command_obj->target_phase = command->target_phase;
-            target_command_obj->send_flag = false;
-            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                    OBU_NAME_MAX_LEN);
-            target_command_obj->vehicle_type = command->vehicle_type;
-
-            command_buf_print();
-            pthread_mutex_unlock(&mutex_command_buf);
-
-            // granted host OBU
-            special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
-            return INSERT_ACCEPT;
+            // 還是會使用 special_OBU_list_update_status
+            // 但是會在 OBU_object_search 的時候沒有找到
+            goto COMMAND_BUF_INSERT_ACCEPT_OBU_NAME;
         } else {
             pthread_mutex_unlock(&mutex_command_buf);
             return IMPROPER_PRIORITY;
@@ -682,21 +624,16 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     if (strncmp(target_command_obj->host_OBU_name, command->host_OBU_name,
                 OBU_NAME_MAX_LEN) == 0 &&
         target_command_obj->app_id == command->app_id) {
-        target_command_obj->target_phase = command->target_phase;
-        target_command_obj->effect_time = command->effect_time;
-        target_command_obj->send_flag = false;
-        command_buf_print();
-        pthread_mutex_unlock(&mutex_command_buf);
-        return INSERT_ACCEPT;
+        goto COMMAND_BUF_INSERT_ACCEPT_EFFECT_TIME;
     }
+
     // same target phase
     // Consider the effect_time of two commands and attempt to determine which
     // command can "serve two OBUs at the same time".
     if (target_command_obj->target_phase == command->target_phase) {
         // time difference between effect time & pretime increase
         if (abs(target_command_obj->effect_time - pretime) <=
-            abs(command->effect_time -
-                pretime)) {  //變化差異要大於上一次的改變？不能縮短
+            abs(command->effect_time - pretime)) {  // 不能縮短
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
@@ -708,16 +645,17 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
 
-            // granted host OBU
             special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
             return INSERT_ACCEPT;
         } else {
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
+
+            special_OBU_list_update_status(command->host_OBU_name,
+                                           command->vehicle_type, OBU_object_rejected); // 因為衝突 而且是縮短 所以被拒絕
             return IMPROPER_EFFECT_TIME;
         }
     } else {
-        // 為甚麼會有不一樣target_phase問題？？？
         // TSP的target_phase不一定是目前的phase
         // 但EVSP的target_phase是目前的phase
         // 所以要判斷優先權大小來取代
@@ -725,7 +663,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         // different target phase
         // priority higher than original command 數值越小priority越高
         if (target_command_obj->app_priority >
-            command->app_priority) {  //優先權較小 tsp被evsp取代
+            command->app_priority) {  // 優先權較小 tsp被evsp取代
             char OBU_name[OBU_NAME_MAX_LEN + 1] = {0};
             memcpy(OBU_name, target_command_obj->host_OBU_name, OBU_NAME_MAX_LEN);
             vehicle_type_t vehicle_type = target_command_obj->vehicle_type;
@@ -742,11 +680,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
 
-            // 因為衝突所以被拒絕
-            special_OBU_list_update_status(OBU_name, vehicle_type, OBU_object_rejected);
-
-            // granted host OBU
-            special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
+            // 沒有 OBU_object_granted 是因為 這裡不是 target_phase
+            special_OBU_list_update_status(OBU_name, vehicle_type, OBU_object_rejected);  // 因為衝突所以被拒絕
             return INSERT_ACCEPT;
         } else {
             command_buf_print();
@@ -754,6 +689,27 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             return IMPROPER_PRIORITY;
         }
     }
+
+COMMAND_BUF_INSERT_ACCEPT_APP_ID:
+    target_command_obj->app_id = command->app_id;
+    target_command_obj->app_priority = command->app_priority;
+COMMAND_BUF_INSERT_ACCEPT_OBU_NAME:
+    strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, ID_MAX_LEN + 1);
+    target_command_obj->host_OBU_name[ID_MAX_LEN] = '\0';
+    target_command_obj->vehicle_type = command->vehicle_type;
+COMMAND_BUF_INSERT_ACCEPT_EFFECT_TIME:
+    target_command_obj->effect_time = command->effect_time;
+    target_command_obj->target_phase = command->target_phase;
+    target_command_obj->send_flag = false;
+COMMAND_BUF_INSERT_ACCEPT:
+    command_buf_print();
+    if (target_command_obj->target_phase == command->target_phase) {
+        pthread_mutex_unlock(&mutex_command_buf);
+        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
+        return INSERT_ACCEPT;
+    }
+    pthread_mutex_unlock(&mutex_command_buf);
+    return INSERT_ACCEPT;
 }
 
 // 插入 command 到 command buffer
@@ -787,13 +743,13 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     }
 
     pthread_mutex_lock(&mutex_command_buf);
-    //抓出target phase的原始資料
+    // 抓出target phase的原始資料
     tsc_command_object_t *target_command_obj =
         &command_buf[(cycle_index + command->cycle) % CYCLE_NUM]
                     [command->phase - 1];
 
     // This means that this subphase has never been adjusted
-    if (target_command_obj->adjusted_time == 0) {  //第一次被調整？
+    if (target_command_obj->adjusted_time == 0) {  // 第一次被調整？
         command->effect_time = pretime + command->adjustment;
     } else {
         command->effect_time =
@@ -810,8 +766,8 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     }
 
     if (config.log_command_buffer) {
-        log_file_write("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d", 
-                command->host_OBU_name, command->adjustment, command->effect_time);
+        log_file_write("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d",
+                       command->host_OBU_name, command->adjustment, command->effect_time);
     }
 
     int ret = 0;
@@ -820,7 +776,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
 }
 
 void command_buf_print()
-{  //就要不要log command buffer的開關
+{  // 就要不要log command buffer的開關
     if (config.log_command_buffer == 0) {
         return;
     }

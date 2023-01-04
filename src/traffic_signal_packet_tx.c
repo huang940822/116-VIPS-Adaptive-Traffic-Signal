@@ -112,6 +112,7 @@ uint8_t tsc_dynamic()
     return packet->SEQ;
 }
 
+// 下 5F10 啟動自動控制
 uint8_t tsc_pretime()
 {
     char log_content[LOG_CONTENT_LEN + 1];
