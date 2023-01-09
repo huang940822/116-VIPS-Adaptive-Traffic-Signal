@@ -56,6 +56,10 @@ SPM_OBU_obj_insert_end:
                 continue;
             memcpy(&current->sigRequestList[current->sigRequest_count], &p_srm->requests.tab[i], sizeof(SignalRequestPackage));
             current->sigRequest_count += 1;
+
+            if (p_srm->requests.tab[i].request.requestType == PriorityRequestType_priorityRequest) {
+                SPM_repeater_send_flag = 1;
+            }
         }
     }
     pthread_mutex_unlock(&SPM_OBU_obj_mutex);

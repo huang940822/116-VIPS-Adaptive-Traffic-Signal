@@ -19,6 +19,7 @@
 
 pthread_t SPM_repeater_thread = 0;
 pthread_mutex_t SPM_repeater_run_mutex = PTHREAD_MUTEX_INITIALIZER;
+int SPM_reoeater_fd = 0;
 
 void SPM_repeater_start()
 {
@@ -31,12 +32,27 @@ void SPM_repeater_start()
             exit(errno);
         }
     }
+    else if (SPM_repeater_send_flag){
+        struct itimerspec timerValue;
+        memset(&timerValue, 0, sizeof(struct itimerspec));
+
+        timerValue.it_value.tv_sec = 0;
+        timerValue.it_value.tv_nsec = 1;
+        timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
+        timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
+
+        if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+            log_file_write_fatal_error("SPM_repeater timerfd_settime");
+        }
+        SPM_repeater_send_flag = 0;
+    }
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
 }
 
 void *SPM_repeater()
 {
-    int fd = timerfd_create(CLOCK_REALTIME, 0), s;
+    SPM_reoeater_fd = timerfd_create(CLOCK_REALTIME, 0);
+    int s;
     uint64_t exp;
 
     struct itimerspec timerValue;
@@ -48,7 +64,7 @@ void *SPM_repeater()
     timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
 
     printf("SPM_repeater timerfd_settime %ld %ld\n", timerValue.it_interval.tv_sec, timerValue.it_interval.tv_nsec);
-    if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+    if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
         log_file_write_fatal_error("SPM_repeater timerfd_settime");
         goto SPM_repeater_end;
     }
@@ -70,8 +86,8 @@ void *SPM_repeater()
 
     ssm->status.count = 1;
 
-    while (!SPM.dontSend2TC && i != 0) {
-        s = read(fd, &exp, sizeof(uint64_t));
+    while (!SPM.dontSend2TC) {
+        s = read(SPM_reoeater_fd, &exp, sizeof(uint64_t));
 
         i = 0;
         delete_OBU_num = 0;
@@ -186,6 +202,6 @@ void *SPM_repeater()
 SPM_repeater_end:
     printf("SPM_repeater_thread end\n");
     SPM_repeater_thread = 0;
-    close(fd);
+    close(SPM_reoeater_fd);
     pthread_detach(pthread_self());
 }
