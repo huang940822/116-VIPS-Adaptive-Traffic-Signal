@@ -16,6 +16,7 @@ EVSP_config_object_t EVSP_config = {
     .min_green = 5,
     .max_green = 120,
     .valid_record_distance = 5,
+    .touching_area_config_type = EVSP_touching_area_DEFAULT,
 };
 
 int EVSP_config_init()
@@ -114,6 +115,24 @@ int EVSP_config_init()
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
                 }
+            } else {
+                return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+            }
+        }
+
+        // touching_area_config
+        if (strstr(buf, "touching_area_config_type ")) {
+            char val[MAX_CONFIG_VARIABLE_LEN];
+            if (read_string_from_config_line(buf, val)) {
+                if (strncmp(val, "default", sizeof("default") - 1) == 0) {
+                    EVSP_config.touching_area_config_type = EVSP_touching_area_DEFAULT;
+                } else if (strncmp(val, "table", sizeof("table") - 1) == 0) {
+                    EVSP_config.touching_area_config_type = EVSP_touching_area_TABLE;
+                } else {
+                    return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                }
+                log_file_write("config: touching_area_config_type = %s", val);
+                continue;
             } else {
                 return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
             }

@@ -18,12 +18,19 @@ typedef enum EVSP_config_err {
     CONFIG_INVALID_EVSP_OPEN_FILE = -6
 } EVSP_config_err_t;
 
+typedef enum EVSP_touching_area_config_type {
+    EVSP_touching_area_DEFAULT = 0, // 原本的格式
+    EVSP_touching_area_TABLE = 1, // 新的格式
+} EVSP_touching_area_config_type_t;
+
 typedef struct EVSP_config_object {
     uint8_t evsp_host_obu_packet_timeout;
     uint8_t evsp_host_obu_list_timeout;
     uint8_t min_green;
     uint8_t max_green;
     uint8_t valid_record_distance;
+    EVSP_touching_area_config_type_t touching_area_config_type;
+
 } EVSP_config_object_t;
 
 extern EVSP_config_object_t EVSP_config;

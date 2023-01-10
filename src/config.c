@@ -50,6 +50,7 @@ bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
         return false;
     }
 }
+
 static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -60,6 +61,7 @@ static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
         return false;
     }
 }
+
 static bool read_float_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -70,6 +72,7 @@ static bool read_float_from_config_line(char *config_line, float *val)
         return false;
     }
 }
+
 static bool read_double_from_config_line(char *config_line, double *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -80,6 +83,7 @@ static bool read_double_from_config_line(char *config_line, double *val)
         return false;
     }
 }
+
 static bool read_float_array_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -92,7 +96,8 @@ static bool read_float_array_from_config_line(char *config_line, float *val)
         return false;
     }
 }
-static bool read_string_from_config_line(char *config_line, char *val)
+
+bool read_string_from_config_line(char *config_line, char *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
