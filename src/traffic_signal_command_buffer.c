@@ -703,7 +703,7 @@ COMMAND_BUF_INSERT_ACCEPT_EFFECT_TIME:
     target_command_obj->send_flag = false;
 COMMAND_BUF_INSERT_ACCEPT:
     command_buf_print();
-    if (target_command_obj->target_phase == command->target_phase) {
+    if (command->phase == command->target_phase) {
         pthread_mutex_unlock(&mutex_command_buf);
         special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
         return INSERT_ACCEPT;
