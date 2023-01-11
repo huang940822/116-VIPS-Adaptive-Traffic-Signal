@@ -34,16 +34,6 @@ static bool read_int_from_config_line(char *config_line, int *val)
         return false;
     }
 }
-static bool read_string_from_config_line(char *config_line, char *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
-    if (sscanf(config_line, "%s %s\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 static bool read_int_array_from_config_line(char *config_line, int *val)
 {
