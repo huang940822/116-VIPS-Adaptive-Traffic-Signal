@@ -97,7 +97,13 @@ void TSP_report_plan()
     // error status
     write_uint8_t(error_status, &write_buf);
     write_uint16_t(original_tc_health_status,&write_buf);
-    // printf("test\r\n");
+    write_uint8_t(config.traffic_compensation_method,&write_buf);
+    write_uint8_t(config.traffic_compensation_cycle_number,&write_buf);
+    for(int i = 0 ; i < PHASE_COUNT_MAX_NUM ; i++) {
+        float temp = config.phase_weight[i];
+        int tmp = (int)temp;
+        write_uint8_t(tmp,&write_buf);
+    }
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
     return;
