@@ -117,46 +117,6 @@ int EVSP_on_CLOUD_packet_rx(void *arg){
 
 }
 
-//讀取到evsp obu的封包時
-
-// typedef struct V2R_app_section {
-//     uint32_t payload_len;
-//     char *payload;
-//     uint8_t com_id;
-//     OBU_object_t *OBU_object;
-// } V2R_app_section_t;
-
-// typedef struct OBU_object {
-//     char OBU_id[OBU_ID_MAX_LEN + 1];    //+1 if for \0
-//     uint8_t vehicle_type;
-//     OBU_record_ring_t record_ring;
-//     app_private_space_t *private_space;
-//     struct OBU_object *prev;
-//     struct OBU_object *next;
-// } OBU_object_t;
-
-// typedef struct OBU_record_ring {
-//     OBU_record_t record[OBU_RECORD_RING_CAPACITY];
-//     uint8_t first_record_pointer; // queue.front
-//     uint8_t last_record_pointer; // queue.back
-//     uint8_t length;
-// } OBU_record_ring_t;
-
-// typedef struct OBU_record {
-//     char OBU_id[OBU_ID_MAX_LEN];
-//     struct tm time_stamp;
-//     time_t time_second;
-//     float position_lon;
-//     float position_lat;
-//     uint8_t speed;
-//     uint8_t acceleration;
-//     uint8_t direction;
-//     uint8_t vehicle_type;
-// } OBU_record_t;
-//int length= strftime (buffer,80,"%Y-%m-%dT%H:%M:%SZ\n",timeinfo); 
-//可用此函式把tm結構timestamp
-//變回去string
-
 int EVSP_on_OBU_packet_rx(void *arg)
 {
     // printf("EVSP_on_OBU_packet_rx function\n");
