@@ -422,7 +422,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (target_phase == current_phase && current_step == 1) {
                 command.cycle = 0;
                 command.phase = current_phase;
-                command.effect_time = EVSP_adjust_time+current_second;
+                command.effect_time = EVSP_adjust_time+pretime;
                 ret = command_buf_insert_effect_time(&command);
                 // printf("cycle: %d, phase: %d, effect time: %d (%d)\r\n",command.cycle, command.phase, command.effect_time, ret);
                 snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ncycle: %d, phase: %d, effect time: %d (%d)", 
