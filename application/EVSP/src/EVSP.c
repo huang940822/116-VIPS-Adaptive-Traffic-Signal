@@ -525,7 +525,7 @@ int EVSP_on_registration(void *arg)
 
     if (EVSP_config.touching_area_config_type == EVSP_touching_area_DEFAULT)
         EVSP_default_config();
-    else
+    else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE)
         EVSP_table_config();
 
     fflush(stdout);

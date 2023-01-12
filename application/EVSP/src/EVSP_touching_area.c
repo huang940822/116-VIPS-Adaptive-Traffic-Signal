@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "EVSP_config.h"
 #include "EVSP_touching_area.h"
 #include "config.h"
 #include "error_status.h"
@@ -718,10 +719,20 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
                 k = (k + 1) % 8;
             } while (k != touching_area->direciton_end);
 
-            if (!flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
-                printf("EVSP_activate SubPhaseID %d------------\n", plan->plan_subPhase[i].SubPhaseID);
-                *area_ptr = touching_area;
-                return plan->plan_subPhase[i].SubPhaseID;
+            if (EVSP_config.touching_area_config_type == EVSP_touching_area_DEFAULT) {
+                if (!flag && touching_area->node_count == 2 &&
+                    (touching_area->node[1].lat <= lat && lat <= touching_area->node[0].lat) &&
+                    (touching_area->node[0].lon <= lon && lon <= touching_area->node[1].lon)) {
+                    printf("EVSP_activate SubPhaseID %d------------\n", plan->plan_subPhase[i].SubPhaseID);
+                    *area_ptr = touching_area;
+                    return plan->plan_subPhase[i].SubPhaseID;
+                }
+            } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
+                if (!flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
+                    printf("EVSP_activate SubPhaseID %d------------\n", plan->plan_subPhase[i].SubPhaseID);
+                    *area_ptr = touching_area;
+                    return plan->plan_subPhase[i].SubPhaseID;
+                }
             }
         }
     }
@@ -731,10 +742,19 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
 bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
 {
     for (int i = 0; i < area_ptr->terminate_area_count; i++) {
-        if (checkInside(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
-                        EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, &(EVSP_Node_t){lon, lat})) {
-            printf("EVSP_terminate------------\n");
-            return true;
+        if (EVSP_config.touching_area_config_type == EVSP_touching_area_DEFAULT) {
+            if (EVSP_plan_list.terminate_area->node_count == 2 &&
+                (EVSP_plan_list.terminate_area->node[1].lat <= lat && lat <= EVSP_plan_list.terminate_area->node[0].lat) &&
+                (EVSP_plan_list.terminate_area->node[0].lon <= lon && lon <= EVSP_plan_list.terminate_area->node[1].lon)) {
+                printf("EVSP_terminate------------\n");
+                return true;
+            }
+        } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
+            if (checkInside(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
+                            EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, &(EVSP_Node_t){lon, lat})) {
+                printf("EVSP_terminate------------\n");
+                return true;
+            }
         }
     }
     return false;
