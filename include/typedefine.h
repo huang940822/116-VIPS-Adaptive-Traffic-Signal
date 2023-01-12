@@ -74,6 +74,7 @@ typedef struct config_object {
     float signal_adjust_upper_bound_percentage;
     float signal_adjust_lower_bound_percentage;
     uint8_t traffic_compensation_method;
+    uint8_t traffic_compensation_cycle_number;
     float phase_weight[PHASE_COUNT_MAX_NUM];
 
     bool log_middleware_timer_event;

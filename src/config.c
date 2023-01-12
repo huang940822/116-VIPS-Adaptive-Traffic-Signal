@@ -17,6 +17,7 @@ config_object_t config = {
     .signal_adjust_upper_bound_percentage = 60,
     .signal_adjust_lower_bound_percentage = 60,
     .traffic_compensation_method = 1,
+    .traffic_compensation_cycle_number = 1,
     .phase_weight = 0,0,0,0,0,0,0,0,
     .log_middleware_timer_event = 1,
     .log_application_register_event = 1,
@@ -289,6 +290,21 @@ int config_init()
                 }
             } else {
                 return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
+            }
+        }
+        // traffic compensation cycle number 
+        if (strstr(buf, "TRAFFIC_COMPENSATION_CYCLE_NUMBER ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    config.traffic_compensation_cycle_number = uint8_t_val;
+                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "config: traffic_compensation_cycle_number = %d", config.traffic_compensation_cycle_number);
+                    log_file_write(log_content);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
+                }
+            } else {
+                return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
             }
         }
         // phase weight
