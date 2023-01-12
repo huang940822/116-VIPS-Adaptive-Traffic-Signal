@@ -205,6 +205,9 @@ typedef struct traffic_signal_status {
     uint16_t CycleTime;
     uint16_t Offset;
 
+    // 0F 04
+    uint16_t original_tc_health_status;
+
     static_plan_t plan[PHASE_COUNT_MAX_NUM];
 
     uint8_t control_status;

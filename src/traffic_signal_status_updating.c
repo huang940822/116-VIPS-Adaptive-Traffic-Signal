@@ -263,9 +263,10 @@ void packet_0F04(traffic_signal_packet_t *packet)
 {   
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    // printf("tc status info: ");
+    pthread_mutex_lock(&mutex_signal_status);
     
     uint16_t original_tc_hstatus=packet->INFO[2]<<8|packet->INFO[3];
+    signal_status.original_tc_health_status = original_tc_hstatus;
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"original_tc_health_status is %04X\n\r",original_tc_hstatus);
     log_file_write(log_content);
     //dont show bit 14, 8, 9 for they seprately means controller ready, cabinated opened, communication connect
@@ -286,6 +287,7 @@ void packet_0F04(traffic_signal_packet_t *packet)
     }else{
         clear_tsc_error();
     }
+    pthread_mutex_unlock(&mutex_signal_status);
 }
 
 //裡面有些部份看不太懂 為何要用號誌加上mutex保護
@@ -432,6 +434,14 @@ void set_control_status(uint8_t control_status)
     signal_status.control_status = control_status;
     pthread_mutex_unlock(&mutex_signal_status);
     return;
+}
+
+uint16_t get_original_tc_health_status()
+{
+    pthread_mutex_lock(&mutex_signal_status);
+    uint16_t original_tc_health_status = signal_status.original_tc_health_status;
+    pthread_mutex_unlock(&mutex_signal_status);
+    return original_tc_health_status;
 }
 
 //這個函式在幹麻？？ 要廣播給obu現在tc箱的狀況
