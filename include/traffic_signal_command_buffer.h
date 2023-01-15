@@ -30,4 +30,5 @@ typedef enum command_buf_err {
     INVALID_HOST_OBU_ID = -8,
     IMPROPER_PRIORITY = -9,
     IMPROPER_EFFECT_TIME = -10,
+    INCOMP_TSPDONOTHING=-11,
 } command_buf_err_t;
