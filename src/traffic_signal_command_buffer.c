@@ -148,7 +148,6 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }
 
             if(strncmp(command_obj->host_OBU_id,COMPENSATION_NAME,15) != 0){
-                printf("command name:%s\r\n",command_obj->host_OBU_id);
                 if ( current_sec_residual + difference < 0) {
                     int16_t residual = difference + current_sec_residual;
                     printf("residual:%d\r\n",residual);
@@ -216,7 +215,6 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }
 
             if(strncmp(command_obj->host_OBU_id,COMPENSATION_NAME,COMPENSATION_LEN) != 0){
-                printf("command name:%s\r\n",command_obj->host_OBU_id);
                 if ( current_sec_residual + difference < 0) {
                     int16_t residual = difference + current_sec_residual;
                     printf("residual:%d\r\n",residual);
@@ -266,7 +264,6 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             }
 
             if(strncmp(command_obj->host_OBU_id,COMPENSATION_NAME,15) != 0){
-                printf("command name:%s\r\n",command_obj->host_OBU_id);
                 if ( current_sec_residual + difference < 0) {
                     int16_t residual = difference + current_sec_residual;
                     printf("residual:%d\r\n",residual);
@@ -380,6 +377,12 @@ void command_buf_polling()
                     memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
                 } else continue;
             } else{
+                snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                             cycle_index, prior_SubPhaseID,
+                             command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_id);
+                log_file_write(log_content);
                 memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
             }
         }
@@ -398,8 +401,12 @@ void command_buf_polling()
         prior_SubPhaseID == current_SubPhaseID) {
         
         // 將目前phase的 command buffer object 送到TC箱
-        printf("command_buf_send(command_buf[%d][%d])\r\n",cycle_index,current_SubPhaseID);
         command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
+        memset(log_content, 0, sizeof(log_content));
+        snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "command_buf_send(command_buf[%d][%d])\r\n",cycle_index,current_SubPhaseID);
+        log_file_write(log_content);
         set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);    //判斷是evsp還是tsp
         command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;// 已送出TC箱
         CompensationFlag = true;
@@ -536,12 +543,35 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // replace resume command
     //抓出來的目標cmd buff object其host obu id為resume id則優先取代？
     if (strncmp(target_command_obj->host_OBU_id, RESUME_ID, OBU_ID_MAX_LEN) == 0) {
+        if (strncmp(command->host_OBU_id , COMPENSATION_NAME , COMPENSATION_MAX_LEN) == 0) {
+            if ( command->compensation_cycle == 1) {
+                tsc_command_object_t *target_compensation_command_obj =
+                    &command_buf[(cycle_index+1 + command->cycle) % CYCLE_NUM]
+                                [command->phase - 1];
+                target_compensation_command_obj->app_id = command->app_id;
+                target_compensation_command_obj->app_priority = command->app_priority;
+                target_compensation_command_obj->effect_time = command->effect_time;
+                target_compensation_command_obj->target_phase = command->target_phase;
+                target_compensation_command_obj->send_flag = false;
+                strncpy(target_compensation_command_obj->host_OBU_id, command->host_OBU_id,
+                        COMPENSATION_MAX_LEN);
+                command_buf_print();
+                pthread_mutex_unlock(&mutex_command_buf);
+                return INSERT_ACCEPT;
+            } 
+        } 
         target_command_obj->app_id = command->app_id;
         target_command_obj->app_priority = command->app_priority;
         target_command_obj->effect_time = command->effect_time;
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        strncpy(target_command_obj->host_OBU_id, command->host_OBU_id, OBU_ID_MAX_LEN);
+        if (strncmp(command->host_OBU_id , COMPENSATION_NAME , COMPENSATION_MAX_LEN) == 0) {
+            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
+                COMPENSATION_MAX_LEN);
+        } else {
+            strncpy(target_command_obj->host_OBU_id, command->host_OBU_id,
+                OBU_ID_MAX_LEN);
+        }
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
         return INSERT_ACCEPT;
