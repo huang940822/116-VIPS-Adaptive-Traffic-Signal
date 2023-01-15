@@ -307,20 +307,19 @@ int TSP_on_cloud_packet_rx(void *arg)
         TSP_host_OBU_obj_delete(host_OBU_id);
         TSP_host_OBU_obj_print();
         // 進行補償
-        switch (config.traffic_compensation_method)
-        {
+        switch (config.traffic_compensation_method) {
             case 1:
-                traffic_compensation_method1();
+                traffic_compensation_method1(config.traffic_compensation_cycle_number);
                 break;
             case 2:
-                traffic_compensation_method2();
+                traffic_compensation_method2(config.traffic_compensation_cycle_number,config.phase_weight);
                 break;
             case 3:
-                traffic_compensation_method3();
+                traffic_compensation_method3(config.traffic_compensation_cycle_number);
                 break;
             default:
                 break;
-        }
+            }
         break;
     case 6: //disable tsp's command to tc machine
         {   
