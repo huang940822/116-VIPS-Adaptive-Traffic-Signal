@@ -162,8 +162,11 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
     int16_t compensation_time[SUBPHASEID_NUM];
     bool flag[SUBPHASEID_NUM];  // 是否要重新計算
     int16_t t[Comp_cyclenum] ;
-    for(int i=0; i < Comp_cyclenum; i++){
-        t[i]=T / Comp_cyclenum;
+    if(Comp_cyclenum==1){
+        t[0]=T;
+    }else{
+        t[0]=T/2;
+        t[1]=T-T/2;
     }
     
     snprintf(log_content + strlen(log_content),
