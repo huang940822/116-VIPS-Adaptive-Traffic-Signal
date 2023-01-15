@@ -33,7 +33,7 @@ app_obj_t SPaT = {
     .on_camera_packet_rx = NULL,
     .on_traffic_signal_command_tx = NULL,
     .on_registration = &SPaT_on_registration,
-    .dontSend2TC = 1,
+    .dontSend2TC = 0,
     .next = NULL,
 };
 

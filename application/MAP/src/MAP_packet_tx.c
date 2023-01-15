@@ -34,6 +34,7 @@ void MAP_packet_tx(__sigval_t value)
             map_msg_update(map);
             PhaseOrder = get_PhaseOrder();
             prev_phase = get_current_phase();
+            printf("123\n");
         }
         OBU_j2735_tx(MapData_Id, map);
     }

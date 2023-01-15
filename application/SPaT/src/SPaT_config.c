@@ -10,7 +10,7 @@
 SPaT_config_object_t SPaT_config = {
     .SPaT_packet_transfer_speed = 10,
     .signalcount = 2,
-    .SPaT_dontSend2TC = 1,
+    .SPaT_dontSend2TC = 0,
 };
 
 int SPaT_config_init()

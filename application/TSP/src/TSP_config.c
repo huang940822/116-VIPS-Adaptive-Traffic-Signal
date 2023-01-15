@@ -30,6 +30,7 @@ int TSP_config_init()
     fp = fopen(TSP_CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", TSP_CONFIG_FILE);
+        return -1;
     } else {
         log_file_write("%s opened successfully", TSP_CONFIG_FILE);
     }

@@ -83,6 +83,7 @@ int spat_msg_update(SPAT **pp_spat)
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
     if (get_current_phase() == 0 || get_current_step() == 0)
+        printf("GG\n");
         return -1;
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     int_state->revision = (int_state->revision + 1) & 0b1111111;

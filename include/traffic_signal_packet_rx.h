@@ -5,7 +5,7 @@
 #include "typedefine.h"
 
 #define BAUDRATE B9600
-#define SERIAL_PORT "/dev/ttyS0"
+#define SERIAL_PORT "/dev/ttyS1"
 #define DLE_VAL 0xAA
 #define STX_VAL 0xBB
 #define ETX_VAL 0xCC

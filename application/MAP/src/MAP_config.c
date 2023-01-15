@@ -11,7 +11,7 @@
 
 MAP_config_object_t MAP_config = {
     .MAP_packet_transfer_speed = 1,
-    .MAP_dontSend2TC = 1,
+    .MAP_dontSend2TC = 0,
 };
 
 static bool read_float_from_config_line(char *config_line, float *val)

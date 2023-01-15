@@ -151,6 +151,8 @@ int main()
     com_layer_init(NULL);
 
     while (1) {
+        uint8_t current_phase = get_current_phase();
+        printf("current phase : %d\n", current_phase);
         sleep(1);
     }
     pthread_exit(0);
