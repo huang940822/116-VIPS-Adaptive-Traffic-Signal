@@ -5,3 +5,5 @@ evsp_host_obu_list_timeout 120
 min_green 5
 max_green 120
 valid_record_distance 5
+# default / table
+touching_area_config_type default
