@@ -401,6 +401,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         
             if(strategy<4){
                 if(0<cyclenumber&&cyclenumber<3){
+                    clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
                     config.traffic_compensation_cycle_number = cyclenumber;
                     config.traffic_compensation_method = strategy;
                     pthread_mutex_lock(&file_writer);
@@ -411,7 +412,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                             LOG_CONTENT_LEN - strlen(log_content),
                             "\nWarning: error opening ./config/config.txt ");
                     } else{
-                        clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
+                        
                         fprintf(outfile,"RSU_ID \"%s\"\n",config.RSU_id);
                         fprintf(outfile,"RSU_LAT %f\n",config.RSU_lat);
                         fprintf(outfile,"RSU_LON %f\n",config.RSU_lon);
