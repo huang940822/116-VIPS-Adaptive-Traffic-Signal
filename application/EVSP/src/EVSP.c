@@ -377,7 +377,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     EVSP_adjust_time += signal_status.plan[i-1].MinGreen+signal_status.plan[i-1].Yellow+signal_status.plan[i-1].AllRed;  
             }
             EVSP_adjust_time += 20;// Gmx += 20 ，緩衝誤差值調最大
-            printf("new EVSP_adjust_time:%d\n",EVSP_adjust_time);
+            printf("New EVSP_adjust_time:%d\n",EVSP_adjust_time);
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "New EVSP_adjust_time:%d\r\n",EVSP_adjust_time);
             /* target_phase == current_phase */
             if (target_phase == current_phase && current_step == 1) {
                 command.cycle = 0;
