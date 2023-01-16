@@ -133,12 +133,7 @@ void TSP_report_command(uint8_t control_status, uint8_t sub_phase_id, uint8_t st
     write_uint8_t(effect_time, &write_buf);
     write_char(obu_id, &write_buf, OBU_ID_MAX_LEN-1, OBU_ID_MAX_LEN);
     write_uint8_t(config.traffic_compensation_method,&write_buf);
-    write_uint8_t(config.traffic_compensation_cycle_number,&write_buf);
-    for(int i=0;i<PHASE_COUNT_MAX_NUM;i++){
-        float temp=config.phase_weight[i];
-        int tmp=(int)temp;
-        write_uint8_t(tmp,&write_buf);
-    }
+
 
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
