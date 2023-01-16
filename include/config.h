@@ -25,6 +25,7 @@ typedef struct config_object {
     float signal_adjust_upper_bound_percentage;
     float signal_adjust_lower_bound_percentage;
     uint8_t traffic_compensation_method;
+    uint8_t traffic_compensation_cycle_number;
     float phase_weight[PHASE_COUNT_MAX_NUM];
 
     bool log_middleware_timer_event;
@@ -68,6 +69,7 @@ typedef enum config_err {
     CONFIG_INVALID_LOG_OBU_LIST = -21,
     CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD = -22,
     CONFIG_INVALID_PHASE_WEIGHT = -23,
+    CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER = -24,
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 

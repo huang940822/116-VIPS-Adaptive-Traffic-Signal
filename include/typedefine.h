@@ -241,6 +241,8 @@ typedef struct traffic_signal_status {
     uint8_t Hour;   // (00~23)
     uint8_t Min;    // (00~59)
     uint8_t Sec;    // (00~59)
+    // 0F 04
+    uint16_t original_tc_health_status;
 
     static_plan_t plan[PHASE_COUNT_MAX_NUM];
 
@@ -249,7 +251,6 @@ typedef struct traffic_signal_status {
     phaseorder_plan_t phaseorder_plan[PHASE_COUNT_MAX_NUM][SIGNAL_COUNT_MAX_NUM];
 
     uint8_t control_status;
-    uint16_t original_tc_status;
 
 } traffic_signal_status_t;
 
@@ -318,6 +319,8 @@ typedef struct tsc_command {
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
     int8_t compensation_time;
+    uint8_t compensation_cycle;
+
     char host_OBU_name[ID_MAX_LEN + 1];
 } tsc_command_t;
 

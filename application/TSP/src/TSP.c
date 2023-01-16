@@ -30,6 +30,7 @@
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
+pthread_mutex_t file_writer = PTHREAD_MUTEX_INITIALIZER;
 
 app_obj_t TSP = {
     .name = "TSP",
@@ -376,18 +377,18 @@ int TSP_on_cloud_packet_rx(void *arg)
         log_file_write(log_content);
         // 進行補償
         switch (config.traffic_compensation_method) {
-        case 1:
-            traffic_compensation_method1();
-            break;
-        case 2:
-            traffic_compensation_method2();
-            break;
-        case 3:
-            traffic_compensation_method3();
-            break;
-        default:
-            break;
-        }
+            case 1:
+                traffic_compensation_method1(config.traffic_compensation_cycle_number);
+                break;
+            case 2:
+                traffic_compensation_method2(config.traffic_compensation_cycle_number,config.phase_weight);
+                break;
+            case 3:
+                traffic_compensation_method3(config.traffic_compensation_cycle_number);
+                break;
+            default:
+                break;
+            }
         break;
     case 6:  // disable tsp's command to tc machine
     {
@@ -440,18 +441,188 @@ int TSP_on_cloud_packet_rx(void *arg)
         } else {
             printf("Illegal command of tsc_countdown\r\n");
         }
-    } break;
-    case 99:  // restart daemon
-    {
-        char token_packet[TOKEN_LEN];
-        char token[TOKEN_LEN + 1] = RESTART_TOKEN;
-        read_char(token_packet, &read_buf, TOKEN_LEN);
-        printf("the token recv is %s\r\n", token_packet);
+        break;
+    case 8:
+        {
+            uint8_t strategy = 0;
+            uint8_t cyclenumber=0;
+            uint8_t temp_weightpi;
+            read_int8_t(&strategy, &read_buf);
+            read_int8_t(&cyclenumber, &read_buf);
+            int temp_weightci=0;
+            int total_weight=0;
+            float phase_weight[PHASE_COUNT_MAX_NUM];
+            
+            if(strategy==2){
+                for(int i=0;i<PHASE_COUNT_MAX_NUM;i++){
+                    read_int8_t(&temp_weightpi, &read_buf);
+                    temp_weightci=temp_weightpi;
+                    if(strategy==2){
+                        total_weight=total_weight+temp_weightci;
+                        phase_weight[i]=temp_weightci*1.0;
+                    }
+                }
+                if(total_weight==100){
+                    clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
+                    for(int i=0;i<PHASE_COUNT_MAX_NUM;i++){
+                    {
+                            config.phase_weight[i]=phase_weight[i];
+                            snprintf(log_content + strlen(log_content),
+                            LOG_CONTENT_LEN - strlen(log_content),
+                            "\nChange phase weight in config");
+                        }
+                    }
+                }else{
+                    printf("warning : total phase weight is not 100\n");
+                    set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
+                    return(0);
+                }
+            }
+        
+            if(strategy<4){
+                if(0<cyclenumber&&cyclenumber<3){
+                    clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
+                    config.traffic_compensation_cycle_number = cyclenumber;
+                    config.traffic_compensation_method = strategy;
+                    pthread_mutex_lock(&file_writer);
+                    FILE *outfile;
+                    outfile = fopen("config/config.txt", "w");
+                    if(outfile == NULL) {
+                        snprintf(log_content + strlen(log_content),
+                            LOG_CONTENT_LEN - strlen(log_content),
+                            "\nWarning: error opening ./config/config.txt ");
+                    } else{
+                        
+                        fprintf(outfile,"RSU_NAME \"%s\"\n",config.RSU_name);
+                        fprintf(outfile,"RSU_id \"%d\"\n",config.RSU_id);
+                        fprintf(outfile,"RSU_region \"%d\"\n",config.RSU_region);
+                        fprintf(outfile,"RSU_LAT %f\n",config.RSU_lat);
+                        fprintf(outfile,"RSU_LON %f\n",config.RSU_lon);
+                        
+                        if(config.signal_controller_manufacturer==0){
+                            fprintf(outfile,"SIGNAL_CONTROLLER_MANUFACTURER cheng_long\n");
+                        }else if(config.signal_controller_manufacturer==1){
+                            fprintf(outfile,"SIGNAL_CONTROLLER_MANUFACTURER shan_zhu\n");
+                        }else{
+                            fprintf(outfile,"SIGNAL_CONTROLLER_MANUFACTURER shan_zhu_m\n");
+                        }
 
-        if (strncmp(token_packet, token, TOKEN_LEN) == 0) {
-            log_file_write("daemon get into kill self\r\n");
-            printf("daemon get into kill self\r\n");
-            kill(getpid(), SIGINT);
+                        if(config.signal_status_report_active==true){
+                            fprintf(outfile,"SIGNAL_STATUS_REPORT_ACTIVE yes\n");
+                        }else{
+                            fprintf(outfile,"SIGNAL_STATUS_REPORT_ACTIVE no\n");
+                        }
+
+                        if(config.signal_adjust_upper_bound_active==true){
+                            fprintf(outfile,"SIGNAL_ADJUST_UPPER_BOUND_ACTVE yes\n");
+                        }else{
+                            fprintf(outfile,"SIGNAL_ADJUST_UPPER_BOUND_ACTVE no\n");
+                        }
+
+                        if(config.signal_adjust_lower_bound_active==true){
+                            fprintf(outfile,"SIGNAL_ADJUST_LOWER_BOUND_ACTVE yes\n");
+                        }else{
+                            fprintf(outfile,"SIGNAL_ADJUST_LOWER_BOUND_ACTVE no\n");
+                        }   
+
+                        fprintf(outfile,"SIGNAL_ADJUST_UPPER_BOUND_PERCENTAGE %.0f\n",config.signal_adjust_upper_bound_percentage);
+                        fprintf(outfile,"SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE %.0f\n",config.signal_adjust_lower_bound_percentage);
+                        fprintf(outfile,"TRAFFIC_COMPENSATION_METHOD %d\n",config.traffic_compensation_method);
+                        if(config.traffic_compensation_cycle_number==1){
+                            fprintf(outfile,"TRAFFIC_COMPENSATION_CYCLE_NUMBER 1\n");
+                        }else{
+                            fprintf(outfile,"TRAFFIC_COMPENSATION_CYCLE_NUMBER 2\n");
+                        }
+                        fprintf(outfile,"PHASE_WEIGHT %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f\n",config.phase_weight[0],config.phase_weight[1],config.phase_weight[2],
+                        config.phase_weight[3],config.phase_weight[4],config.phase_weight[5],config.phase_weight[6],config.phase_weight[7]);
+                        if(config.log_middleware_timer_event==true){
+                            fprintf(outfile,"LOG_MIDDLEWARE_TIMER_EVENT yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_MIDDLEWARE_TIMER_EVENT no\n");
+                        }   
+                        if(config.log_application_register_event==true){
+                            fprintf(outfile,"LOG_APPLICATION_REGISTER_EVENT yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_APPLICATION_REGISTER_EVENT no\n");
+                        }   
+                        if(config.log_command_buffer==true){
+                            fprintf(outfile,"LOG_COMMAND_BUFFER yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_COMMAND_BUFFER no\n");
+                        }   
+                        if(config.log_signal_packet_rx==true){
+                            fprintf(outfile,"LOG_SIGNAL_PACKET_RX yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_SIGNAL_PACKET_RX no\n");
+                        }   
+                        if(config.log_signal_packet_tx==true){
+                            fprintf(outfile,"LOG_SIGNAL_PACKET_TX yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_SIGNAL_PACKET_TX no\n");
+                        } 
+                        if(config.log_signal_packet_info==true){
+                            fprintf(outfile,"LOG_SIGNAL_PACKET_INFO yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_SIGNAL_PACKET_INFO no\n");
+                        } 
+                        if(config.log_cloud_packet_rx==true){
+                            fprintf(outfile,"LOG_CLOUD_PACKET_RXA yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_CLOUD_PACKET_RXA no\n");
+                        } 
+                        if(config.log_cloud_packet_tx==true){
+                            fprintf(outfile,"LOG_CLOUD_PACKET_TX yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_CLOUD_PACKET_TX no\n");
+                        } 
+                        if(config.log_OBU_packet_rx==true){
+                            fprintf(outfile,"LOG_OBU_PACKET_RX yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_OBU_PACKET_RX no\n");
+                        } 
+                        if(config.log_OBU_packet_tx==true){
+                            fprintf(outfile,"LOG_OBU_PACKET_TX yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_OBU_PACKET_TX no\n");
+                        }
+                        if(config.log_OBU_list==true){
+                            fprintf(outfile,"LOG_OBU_LIST yes\n");
+                        }else{
+                            fprintf(outfile,"LOG_OBU_LIST no\n");
+                        }
+
+                    }
+                    fclose(outfile);
+                    pthread_mutex_unlock(&file_writer);
+                }else{
+                    snprintf(log_content + strlen(log_content),
+                        LOG_CONTENT_LEN - strlen(log_content),
+                        "\ninvalid cloud packet strategy tsp packet to tc "
+                        "machine of invalid cyclenum: %d",cyclenumber);
+                }
+            }else{
+                snprintf(log_content + strlen(log_content),
+                        LOG_CONTENT_LEN - strlen(log_content),
+                        "\ninvalid cloud packet strategy tsp packet to tc "
+                        "machine of invalid strategy: %d",strategy);
+            }
+            log_file_write(log_content);
+        }
+        break;
+    case 99:    //restart daemon
+        {
+            
+            char token_packet[TOKEN_LEN];
+            char token[TOKEN_LEN+1]=RESTART_TOKEN;
+            read_char(token_packet, &read_buf, TOKEN_LEN);
+            printf("the token recv is %s\r\n", token_packet);
+            
+            if(strncmp(token_packet, token, TOKEN_LEN) == 0 ){
+                log_file_write("daemon get into kill self\r\n");
+                printf("daemon get into kill self\r\n");
+                kill(getpid(),SIGINT);
+            }
+            
         }
 
     } break;

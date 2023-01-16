@@ -405,16 +405,10 @@ void packet_0FC2(traffic_signal_packet_t *packet)
 void packet_0F04(traffic_signal_packet_t *packet)
 {
     // printf("tc status info: ");
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
     pthread_mutex_lock(&mutex_signal_status);
-
-    uint16_t original_tc_hstatus = packet->INFO[2] << 8 | packet->INFO[3];
-    signal_status.original_tc_status = original_tc_hstatus;
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"original_tc_health_status is %04X\n\r",original_tc_hstatus);
-
-    log_file_write(log_content);
-
+    
+    uint16_t original_tc_hstatus=packet->INFO[2]<<8|packet->INFO[3];
+    signal_status.original_tc_health_status = original_tc_hstatus;
     log_file_write("original_tc_health_status is %04X\n\r", original_tc_hstatus);
     // dont show bit 14, 8, 9 for they seprately means controller ready,
     // cabinated opened, communication connect
@@ -429,11 +423,6 @@ void packet_0F04(traffic_signal_packet_t *packet)
     printf("%04X\n\r", original_tc_hstatus);
     
     log_file_write("tc_health_status after mask is %04X\n\r", original_tc_hstatus);
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"original_tc_health_status is %04x\r\n",signal_status.original_tc_status);
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"tc_health_status after mask is %04X\n\r",original_tc_hstatus);
-    log_file_write(log_content);
-
 
     if (original_tc_hstatus != 0) {
         set_tsc_error();
@@ -441,7 +430,6 @@ void packet_0F04(traffic_signal_packet_t *packet)
         clear_tsc_error();
     }
     pthread_mutex_unlock(&mutex_signal_status);
-
 }
 
 //裡面有些部份看不太懂 為何要用號誌加上mutex保護
@@ -461,7 +449,6 @@ void get_traffic_signal_status(traffic_signal_status_t *traffic_signal_status)
     if (sem_value == 0) {
         sem_post(&sem_signal_status);
     }
-
     return;
 }
 
@@ -533,7 +520,7 @@ uint8_t get_control_status()
 uint16_t get_original_tc_health_status()
 {
     pthread_mutex_lock(&mutex_signal_status);
-    uint16_t original_tc_health_status = signal_status.original_tc_status;
+    uint16_t original_tc_health_status = signal_status.original_tc_health_status;
     pthread_mutex_unlock(&mutex_signal_status);
     return original_tc_health_status;
 }

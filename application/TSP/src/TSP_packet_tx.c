@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "log.h"
+#include "config.h"
 #include "TSP.h"
 #include "TSP_matrix.h"
 #include "TSP_packet_tx.h"
@@ -96,8 +98,8 @@ void TSP_report_plan()
     // error status
     write_uint8_t(error_status, &write_buf);
     write_uint16_t(original_tc_health_status,&write_buf);
-
-    // printf("test\r\n");
+    write_uint8_t(config.traffic_compensation_method,&write_buf);
+    
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
     return;
@@ -130,6 +132,7 @@ void TSP_report_command(uint8_t control_status,
     write_uint8_t(step_id, &write_buf);
     write_uint8_t(effect_time, &write_buf);
     write_char(OBU_name, &write_buf, OBU_NAME_MAX_LEN - 1, OBU_NAME_MAX_LEN);
+    write_uint8_t(config.traffic_compensation_method,&write_buf);
 
 
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
