@@ -147,12 +147,17 @@ int main()
         printf("Fail to init J2735\n");
         return -1;
     }
+
+    vms_handler_init();
+
     /* Start server */
     com_layer_init(NULL);
 
     while (1) {
         uint8_t current_phase = get_current_phase();
-        printf("current phase : %d\n", current_phase);
+        uint8_t current_step = get_current_step();
+        uint8_t current_second = get_current_second();
+        printf("current phase : %d, current step : %d, current second : %d\n", current_phase, current_step, current_second);
         sleep(1);
     }
     pthread_exit(0);
