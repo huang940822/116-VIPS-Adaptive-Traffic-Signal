@@ -30,6 +30,7 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "vms.h"
 #include "typedefine.h"
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -148,7 +149,7 @@ int main()
         return -1;
     }
 
-    vms_handler_init();
+    // vms_handler_init();
 
     /* Start server */
     com_layer_init(NULL);

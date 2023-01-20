@@ -6,6 +6,8 @@
 #include <pthread.h>
 #include <stdint.h>
 
+#define VMS_BAUDRATE B115200
+#define VMS_SERIAL_PORT "/dev/ttyS0"
 #define POLLING_INTERVAL 0.5
 #define RTM_MAX 6
 #define TM_MAX 6 
