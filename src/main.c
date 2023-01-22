@@ -91,6 +91,15 @@ int main()
         exit(errno);
     }
 
+    pthread_t vms_thread;
+    ret = pthread_create(&vms_thread, NULL, vms_handler, NULL);
+    if(ret != 0) {
+        log_file_write_fatal_error(
+            "error creating vms_thread: %d", ret);
+        perror("main: pthread_create");
+        exit(errno);
+    }
+
     /* command buffer init & command buffer polling timer event*/
     command_buf_init();  //這裡面又一個timer被created
 
@@ -155,10 +164,6 @@ int main()
     com_layer_init(NULL);
 
     while (1) {
-        uint8_t current_phase = get_current_phase();
-        uint8_t current_step = get_current_step();
-        uint8_t current_second = get_current_second();
-        printf("current phase : %d, current step : %d, current second : %d\n", current_phase, current_step, current_second);
         sleep(1);
     }
     pthread_exit(0);

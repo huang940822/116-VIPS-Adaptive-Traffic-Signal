@@ -11,6 +11,7 @@
 #define POLLING_INTERVAL 0.5
 #define RTM_MAX 6
 #define TM_MAX 6 
+#define VMIN_LEN 20
 #define NO_SHOW 0xFFFF
 #define TM_NO_SHOW 0xFF
 
@@ -19,5 +20,7 @@ uint16_t n_rtm_sec[RTM_MAX];
 uint8_t n_tm_sec[TM_MAX];
 
 void vms_handler_init();
+void vms_set_serial_attribs();
+void *vms_handler();
 
 #endif
