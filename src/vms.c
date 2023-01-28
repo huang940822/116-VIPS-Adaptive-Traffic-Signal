@@ -18,7 +18,24 @@ uint8_t controller_polling_value = 0;
 
 int port_fd;
 
+int program_carousel[CAROUSEL_NUM];
+int carousel_time[CAROUSEL_NUM];
+int current_program;
+int remain_time;
+int request_number; // 初始值為預設輪播，應用層用extern的方式來改，注意mutex
+int service_number; // 初始值為預設輪播，表示為當前正在服務的對象
+
+
+void carousel_update(){  // 雲端下了更新輪播，就要執行這個函數來更新config和輪播陣列
+    // update config
+    // update program_carousel[] and carousel_time[]
+    // reset current_program to 0
+}
+
 void control_loop(){
+    // 比較request_number有沒有比service_number小，有的話則服務該請求，
+    // 並把service_number設為它
+    // 如果request_number為-1則直接執行預設輪播
     printf("Hello!\n");
 }
 

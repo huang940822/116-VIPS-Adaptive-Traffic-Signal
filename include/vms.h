@@ -14,6 +14,7 @@
 #define VMIN_LEN 20
 #define NO_SHOW 0xFFFF
 #define TM_NO_SHOW 0xFF
+#define CAROUSEL_NUM 255 
 
 extern pthread_mutex_t sec_mutex;
 uint16_t n_rtm_sec[RTM_MAX];
