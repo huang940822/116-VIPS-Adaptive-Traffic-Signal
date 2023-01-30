@@ -12,6 +12,7 @@
 MAP_config_object_t MAP_config = {
     .MAP_packet_transfer_speed = 1,
     .MAP_dontSend2TC = 1,
+    .Mapconfig = NULL,
 };
 
 static bool read_float_from_config_line(char *config_line, float *val)
@@ -49,6 +50,10 @@ static bool read_int_array_from_config_line(char *config_line, int *val)
 
 int MAP_config_init()
 {
+    if (MAP_config.Mapconfig)
+        j2735_msg_dealloc(MapData_Id, MAP_config.Mapconfig);
+    MAP_config.Mapconfig = (MapData *) j2735_msg_prealloc(MapData_Id);
+
     FILE *fp;
     fp = fopen(MAP_CONFIG_FILE, "r");
     if (fp == NULL) {
@@ -79,7 +84,7 @@ int MAP_config_init()
     int intersection_connectsTo_n = 0;
     int direction_index = 0;
     int Lane_index = 0;
-    MAP_config.Mapconfig = (MapData *) j2735_msg_prealloc(MapData_Id);
+
     MAP_config.Mapconfig->msgIssueRevision = 0;
     // MAP_config.intersections.tab = (IntersectionGeometry *) calloc(1, sizeof(IntersectionGeometry));
     // MAP_config.intersections.tab->speedLimits.tab = (RegulatorySpeedLimit *) calloc(1, sizeof(RegulatorySpeedLimit));
