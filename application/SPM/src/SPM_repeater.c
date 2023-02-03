@@ -104,6 +104,11 @@ void *SPM_repeater()
         ssm->status.tab[0].sequenceNumber = sequenceNumber++;
         sequenceNumber &= 0b1111111;
 
+        ssm->regional_option = true;
+        ssm->regional.count = 1;
+        ssm->regional.tab->u.unknown.buf = &tv;
+        ssm->regional.tab->u.unknown.len = sizeof(struct timeval);
+
         while (current != NULL && i <= SignalStatusList_MAX_SIZE) {
             if (now - current->time_second > SPM_config.spm_host_obu_packet_timeout && delete_OBU_num < SignalStatusList_MAX_SIZE) {
                 memcpy(delete_OBU_names[delete_OBU_num], current->OBU_name, OBU_NAME_MAX_LEN + 1);

@@ -397,6 +397,8 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         timeinfo->tm_sec = srm->second / 1000;
         timeinfo->tm_isdst = -1;
         record->time_second = mktime(timeinfo);
+        struct timeval *stv =(struct timeval *)(srm->regional.tab->u.unknown.buf);
+        record->time_nsec = stv->tv_usec;
 
         record->position_lat = requestor->position.position.lat / 10000000.0;
         record->position_lon = requestor->position.position.Long / 10000000.0;

@@ -141,6 +141,7 @@ typedef struct event_callback {
 
 typedef struct OBU_record_common_field {
     time_t time_second;
+    time_t time_nsec;
     float position_lon;
     float position_lat;
     uint8_t speed;
@@ -151,6 +152,7 @@ typedef struct OBU_record_common_field {
 
 typedef struct OBU_record {
     time_t time_second;
+    time_t time_nsec;
     float position_lon;
     float position_lat;
     uint8_t speed;
