@@ -40,6 +40,27 @@ config_object_t config = {
     .log_OBU_list = 1,
 };
 
+// vms config
+vms_config_object_t vms_config = {
+    .vms_active = 1,
+    .program_ids_green = 0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    .program_ids_not_green = 0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -85,6 +106,18 @@ static bool read_float_array_from_config_line(char *config_line, float *val)
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     memset(val, 0, sizeof(uint8_t) * 8);
     if (sscanf(config_line, "%s %f %f %f %f %f %f %f %f \n", prm_name, &val[0],
+               &val[1], &val[2], &val[3], &val[4], &val[5], &val[6],
+               &val[7]) == 9) {
+        return true;
+    } else {
+        return false;
+    }
+}
+static bool read_uint8_t_array_from_config_line(char *config_line, uint8_t *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    memset(val, 0, sizeof(uint8_t) * 8);
+    if (sscanf(config_line, "%s %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd \n", prm_name, &val[0],
                &val[1], &val[2], &val[3], &val[4], &val[5], &val[6],
                &val[7]) == 9) {
         return true;
@@ -615,4 +648,82 @@ int config_init()
 
     fclose(fp);
     return CONFIG_ACCEPT;
+}
+
+int vms_config_init()
+{
+    FILE *fp;
+    fp = fopen(VMS_CONFIG_FILE, "r");
+    if (fp == NULL) {
+        log_file_write_fatal_error("error opening %s", VMS_CONFIG_FILE);
+        return CONFIG_INVALID_OPEN_FILE;
+    } else {
+        log_file_write("%s opened successfully %s", VMS_CONFIG_FILE);
+    }
+
+    char buf[CONFIG_LINE_BUFFER_SIZE];
+
+    uint8_t uint8_t_val;
+    uint8_t uint8_t_val_array[PHASE_COUNT_MAX_NUM];
+    char string_val[MAX_CONFIG_VARIABLE_LEN];
+
+    while (!feof(fp)) {
+        fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
+        if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
+            continue;
+        }
+
+        // vms active
+        if (strstr(buf, "VMS_ACTIVE ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "yes") == 0) {
+                    vms_config.vms_active = 1;
+                    log_file_write("vms_config: vms_active = %d",
+                             vms_config.vms_active);
+                    continue;
+                } else if (strcmp(string_val, "no") == 0) {
+                    vms_config.vms_active = 0;
+                    log_file_write("vms_config: vms_active = %d",
+                             vms_config.vms_active);
+                    continue;
+                } else {
+                    return VMS_CONFIG_INVALID_VMS_ACTIVE;
+                }
+            } else {
+                return VMS_CONFIG_INVALID_VMS_ACTIVE;
+            }
+        }
+        // program_ids_green
+        if (strstr(buf, "PROGRAM_IDs_GREEN ")) {
+            if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
+                for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+                    if (uint8_t_val_array[i] >= 0) {
+                        vms_config.program_ids_green[i] = uint8_t_val_array[i];
+                    } else {
+                        return VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN;
+                    }
+                }
+                continue;
+            } else {
+                return VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN;
+            }
+        }
+        // program_ids_not_green
+        if (strstr(buf, "PROGRAM_IDs_NOT_GREEN ")) {
+            if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
+                for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+                    if (uint8_t_val_array[i] >= 0) {
+                        vms_config.program_ids_not_green[i] = uint8_t_val_array[i];
+                    } else {
+                        return VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN;
+                    }
+                }
+                continue;
+            } else {
+                return VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN;
+            }
+        }
+    }
+    fclose(fp);
+    return VMS_CONFIG_ACCEPT;
 }

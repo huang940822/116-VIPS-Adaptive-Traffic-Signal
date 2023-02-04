@@ -64,15 +64,18 @@ int main()
 
     /* read config file*/
     ret = config_init();
-
+    if (ret != CONFIG_ACCEPT) {
+        log_file_write_fatal_error("error reading config file: %d", ret);
+    }
+    /*read vms config file*/
+    ret = vms_config_init();
+    if (ret != VMS_CONFIG_ACCEPT) {
+        log_file_write_fatal_error("error reading vms config file: %d", ret);
+    }
     // init dsrc error detect
     dsrc_error_detect_init();
     // init tc fail detect
     tc_5fcc_error_detect_init();
-
-    if (ret != CONFIG_ACCEPT) {
-        log_file_write_fatal_error("error reading config file: %d", ret);
-    }
 
     printf("query tc firmware version\r\n");
     flag_query_firm_ver = true;
@@ -91,7 +94,7 @@ int main()
         exit(errno);
     }
 
-    pthread_t vms_thread;
+    pthread_t vms_thread;   // vms thread
     ret = pthread_create(&vms_thread, NULL, vms_handler, NULL);
     if(ret != 0) {
         log_file_write_fatal_error(
@@ -157,9 +160,7 @@ int main()
         printf("Fail to init J2735\n");
         return -1;
     }
-
-    // vms_handler_init();
-
+    
     /* Start server */
     com_layer_init(NULL);
 
