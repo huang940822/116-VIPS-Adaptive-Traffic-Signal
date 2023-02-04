@@ -9,12 +9,11 @@
 #define VMS_BAUDRATE B115200
 #define VMS_SERIAL_PORT "/dev/ttyS0"
 #define POLLING_INTERVAL 0.5
-#define RTM_MAX 6
-#define TM_MAX 6 
+#define RTM_MAX 8
+#define TM_MAX 8 
 #define VMIN_LEN 20
 #define NO_SHOW 0xFFFF
-#define TM_NO_SHOW 0xFF
-#define CAROUSEL_NUM 255 
+#define TM_NO_SHOW 0xFF 
 
 extern pthread_mutex_t sec_mutex;
 uint16_t n_rtm_sec[RTM_MAX];
