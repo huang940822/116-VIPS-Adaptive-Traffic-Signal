@@ -8,19 +8,23 @@
 
 #define VMS_BAUDRATE B115200
 #define VMS_SERIAL_PORT "/dev/ttyS0"
-#define POLLING_INTERVAL 0.5
-#define RTM_MAX 8
-#define TM_MAX 8 
 #define VMIN_LEN 20
-#define NO_SHOW 0xFFFF
-#define TM_NO_SHOW 0xFF 
 
-extern pthread_mutex_t sec_mutex;
-uint16_t n_rtm_sec[RTM_MAX];
-uint8_t n_tm_sec[TM_MAX];
+#define RTM_MAX 8
 
+#define VMS_PACKET_TX_LEN_MAX 40
+#define VMS_PACKET_RX_LEN_MAX 100
+#define VMS_PACKET_BEGIN "("
+#define VMS_PACKET_COMMA ","
+#define VMS_PACKET_END "\n"
+
+extern pthread_mutex_t VMS_request_priority_mutex;
+
+void *vms_handler();
 void vms_handler_init();
 void vms_set_serial_attribs();
-void *vms_handler();
+
+void vms_request_start(uint8_t id, uint8_t priority);
+void vms_request_end(uint8_t id, uint8_t priority);
 
 #endif

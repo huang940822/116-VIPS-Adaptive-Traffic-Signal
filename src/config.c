@@ -662,8 +662,6 @@ int vms_config_init()
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
-
-    uint8_t uint8_t_val;
     uint8_t uint8_t_val_array[PHASE_COUNT_MAX_NUM];
     char string_val[MAX_CONFIG_VARIABLE_LEN];
 
@@ -699,6 +697,8 @@ int vms_config_init()
                 for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                     if (uint8_t_val_array[i] >= 0) {
                         vms_config.program_ids_green[i] = uint8_t_val_array[i];
+                        log_file_write("vms_config: program_ids_green[%d] = %d",
+                             i, vms_config.program_ids_green[i]);
                     } else {
                         return VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN;
                     }
@@ -714,6 +714,8 @@ int vms_config_init()
                 for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                     if (uint8_t_val_array[i] >= 0) {
                         vms_config.program_ids_not_green[i] = uint8_t_val_array[i];
+                        log_file_write("vms_config: program_ids_not_green[%d] = %d",
+                             i, vms_config.program_ids_not_green[i]);
                     } else {
                         return VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN;
                     }

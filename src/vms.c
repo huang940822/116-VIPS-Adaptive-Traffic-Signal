@@ -12,7 +12,7 @@
 #include "config.h"
 #include "log.h"
 
-pthread_mutex_t sec_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
 // timer_t controller_polling_timer_id;
 // uint8_t controller_polling_value = 0;
 
@@ -28,7 +28,13 @@ int port_fd;
 // int remain_time;
 int request_priority; // 初始值為預設輪播，應用層用vms_request_start()的方式來改，注意mutex
 int app_id; // 初始值為預設輪播，表示為當前正在服務的對象
+
+// tx sequence format: (seq,p1,p2,p3,p4\n
+// rx sequence format: (seq,reserve,programNo,location\n
+char vms_packet_tx[VMS_PACKET_TX_LEN_MAX];
+char vms_packet_rx[VMS_PACKET_RX_LEN_MAX];
 int sequence_number;
+int res;
 
 int evsp_prog[RTM_MAX];   // 之後改成[246,247,248,249,0,0...],[2,3,4,1,0,0,...]...
 char current_step[RTM_MAX];
@@ -99,8 +105,30 @@ void control_loop()
         sequence_number ++;
     }
 
-    /*for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
-    }*/
+    memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
+    strcat(vms_packet_tx, VMS_PACKET_BEGIN);
+
+    char uint8_t_to_char[10];
+    sprintf(uint8_t_to_char, "%d", sequence_number);
+    strcat(vms_packet_tx, uint8_t_to_char);
+
+    for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+        if (current_step[i] == 'G') {
+            sprintf(uint8_t_to_char, "%d", vms_config.program_ids_green[i]);
+        }
+        else {
+            sprintf(uint8_t_to_char, "%d", vms_config.program_ids_not_green[i]);
+        }
+        strcat(vms_packet_tx, VMS_PACKET_COMMA);
+        strcat(vms_packet_tx, uint8_t_to_char);
+    }
+    strcat(vms_packet_tx, VMS_PACKET_END);
+    printf("%s %ld\n", vms_packet_tx, strlen(vms_packet_tx));
+    
+    res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
+    sleep(1);
+    res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
+    printf("%s\n", vms_packet_rx);
 
     // printf("\n");
     //switch case(service_number)
@@ -121,15 +149,7 @@ void vms_handler_init()
 
     vms_set_serial_attribs();
     
-    printf("%d\n", vms_config.vms_active);
-    for (int i = 0; i < RTM_MAX; ++i) {
-        printf("%d ", vms_config.program_ids_green[i]);
-    }
-    printf("\n");
-    for (int i = 0; i < RTM_MAX; ++i) {
-        printf("%d ", vms_config.program_ids_not_green[i]);
-    }
-    printf("\n");
+    
     // 需要做一次送編號全0的當作初始化，才不會IPC當機恢復之後因為 VMS timeout 所以沒辦法正常播放節目
     /*
     // 施工
