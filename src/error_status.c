@@ -157,3 +157,19 @@ void clear_655xx_error()
     pthread_mutex_unlock(&mutex_error_status);
     return;
 }
+
+void set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    error_status |= CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}
+
+void clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    error_status &= ~CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}

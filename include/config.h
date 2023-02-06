@@ -27,6 +27,7 @@ typedef struct config_object {
     float signal_adjust_upper_bound_percentage;
     float signal_adjust_lower_bound_percentage;
     uint8_t traffic_compensation_method;
+    uint8_t traffic_compensation_cycle_number;
     float phase_weight[PHASE_COUNT_MAX_NUM];
 
     bool log_middleware_timer_event;
@@ -70,6 +71,7 @@ typedef enum config_err {
     CONFIG_INVALID_LOG_OBU_LIST = -21,
     CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD = -22,
     CONFIG_INVALID_PHASE_WEIGHT = -23,
+    CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER = -24,
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 
@@ -91,8 +93,9 @@ typedef enum vms_config_err {
 } vms_config_err_t;
 
 char *trim_space(char *buf);
-
 char *read_line(char *read_buf, int read_buf_len, FILE *fp);
 
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
+// val 的長度使用 MAX_CONFIG_VARIABLE_LEN
+bool read_string_from_config_line(char *config_line, char *val);
 #endif

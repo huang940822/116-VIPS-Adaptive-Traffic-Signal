@@ -1,4 +1,3 @@
-#include <dirent.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -424,7 +423,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 .position_lat,
             static_space.last_direction, plan, &area_ptr);
         // enter activate area
-        if (target_phase >= 0 && target_phase < EVSP_PHASE_MAX) {
+        // phase 的範圍是 1~8
+        if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d",
@@ -523,33 +523,13 @@ int EVSP_on_registration(void *arg)
         log_file_write_fatal_error("error evsp reading config file: %d", ret);
     }
 
-    /* touching area */
-    DIR *dp;
-    struct dirent *dirp;
-    if ((dp = opendir(TOUCHING_AREA_DIR)) == NULL) {
-        log_file_write_fatal_error("error opening %s", TOUCHING_AREA_DIR);
-    } else {
-        log_file_write("%s opened successfully", TOUCHING_AREA_DIR);
-    }
-
-    char rsu_name[RSU_NAME_MAX_LEN];
-    uint8_t plan_id;
-    /* list all file */
-    // while ((dirp = readdir(dp)) != NULL) {
-    //     if (dirp->d_type == 8) {
-    //         /* parse file name */
-    //         sscanf(dirp->d_name, "%[^_]_touching_area.txt", rsu_name);
-    //         if (strncmp(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN) == 0) {
-    //             EVSP_plan_list_read(dirp->d_name);
-    //         }
-    //     }
-    // }
-
-    EVSP_plan_list_read();
+    if (EVSP_config.touching_area_config_type == EVSP_touching_area_DEFAULT)
+        EVSP_default_config();
+    else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE)
+        EVSP_table_config();
 
     fflush(stdout);
-    closedir(dp);
-    // EVSP_plan_list_print();
+    EVSP_plan_list_print();
 
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);

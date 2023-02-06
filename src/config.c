@@ -19,14 +19,8 @@ config_object_t config = {
     .signal_adjust_upper_bound_percentage = 60,
     .signal_adjust_lower_bound_percentage = 60,
     .traffic_compensation_method = 1,
-    .phase_weight = 0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    .traffic_compensation_cycle_number = 1,
+    .phase_weight = 0,0,0,0,0,0,0,0,
     .log_middleware_timer_event = 1,
     .log_application_register_event = 1,
     .log_command_buffer = 1,
@@ -71,6 +65,7 @@ bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
         return false;
     }
 }
+
 static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -81,6 +76,7 @@ static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
         return false;
     }
 }
+
 static bool read_float_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -91,6 +87,7 @@ static bool read_float_from_config_line(char *config_line, float *val)
         return false;
     }
 }
+
 static bool read_double_from_config_line(char *config_line, double *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -101,6 +98,7 @@ static bool read_double_from_config_line(char *config_line, double *val)
         return false;
     }
 }
+
 static bool read_float_array_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -125,7 +123,7 @@ static bool read_uint8_t_array_from_config_line(char *config_line, uint8_t *val)
         return false;
     }
 }
-static bool read_string_from_config_line(char *config_line, char *val)
+bool read_string_from_config_line(char *config_line, char *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
@@ -409,6 +407,20 @@ int config_init()
                 }
             } else {
                 return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
+            }
+        }
+        // traffic compensation cycle number 
+        if (strstr(buf, "TRAFFIC_COMPENSATION_CYCLE_NUMBER ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    config.traffic_compensation_cycle_number = uint8_t_val;
+                    log_file_write("config: traffic_compensation_cycle_number = %d", config.traffic_compensation_cycle_number);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
+                }
+            } else {
+                return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
             }
         }
         // phase weight
