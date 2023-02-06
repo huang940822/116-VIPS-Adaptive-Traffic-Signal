@@ -127,8 +127,17 @@ void control_loop()
     
     res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
     sleep(1);
-    res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
-    printf("%s\n", vms_packet_rx);
+
+    while (1) {
+        res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
+        if(res <= 0){
+            break;
+        }
+        printf("%s\n", vms_packet_rx);
+    }
+
+    // res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
+    // printf("%s\n", vms_packet_rx);
 
     // printf("\n");
     //switch case(service_number)
@@ -148,6 +157,9 @@ void vms_handler_init()
     }
 
     vms_set_serial_attribs();
+    
+    memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
+    strcat(vms_packet_tx, VMS_PACKET_BEGIN);
     
     
     // 需要做一次送編號全0的當作初始化，才不會IPC當機恢復之後因為 VMS timeout 所以沒辦法正常播放節目
