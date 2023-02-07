@@ -32,20 +32,20 @@ void SPM_repeater_start()
             exit(errno);
         }
     }
-    else if (SPM_repeater_send_flag){
-        struct itimerspec timerValue;
-        memset(&timerValue, 0, sizeof(struct itimerspec));
+    // else if (SPM_repeater_send_flag){
+    //     struct itimerspec timerValue;
+    //     memset(&timerValue, 0, sizeof(struct itimerspec));
 
-        timerValue.it_value.tv_sec = 0;
-        timerValue.it_value.tv_nsec = 1;
-        timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
-        timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
+    //     timerValue.it_value.tv_sec = 0;
+    //     timerValue.it_value.tv_nsec = 1;
+    //     timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
+    //     timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
 
-        if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-            log_file_write_fatal_error("SPM_repeater timerfd_settime");
-        }
-        SPM_repeater_send_flag = 0;
-    }
+    //     if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+    //         log_file_write_fatal_error("SPM_repeater timerfd_settime");
+    //     }
+    //     SPM_repeater_send_flag = 0;
+    // }
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
 }
 
@@ -98,6 +98,7 @@ void *SPM_repeater()
         time_t now = (time_t) tv.tv_sec;
 
         struct tm *timeinfo = localtime(&tv.tv_sec);
+        
         ssm->timeStamp = (((timeinfo->tm_yday * 24) + timeinfo->tm_hour) * 60) + timeinfo->tm_min;
         ssm->second = (timeinfo->tm_sec * 1000) + (tv.tv_usec / 1000);
 
@@ -106,7 +107,7 @@ void *SPM_repeater()
 
         ssm->regional_option = true;
         ssm->regional.count = 1;
-        ssm->regional.tab->u.unknown.buf = &tv;
+        ssm->regional.tab->u.unknown.buf = (uint8_t *)&tv;
         ssm->regional.tab->u.unknown.len = sizeof(struct timeval);
 
         while (current != NULL && i <= SignalStatusList_MAX_SIZE) {
@@ -117,7 +118,7 @@ void *SPM_repeater()
                 continue;
             }
 
-            for (int j = 0; j <= current->sigRequest_count && i <= SignalStatusList_MAX_SIZE; j++) {
+            for (int j = 0; j <= current->sigRequest_count && i < SignalStatusList_MAX_SIZE; j++) {
                 SignalStatusPackage *ssp = &ssm->status.tab[0].sigStatus.tab[i++];
                 memset(ssp, 0, sizeof(SignalStatusPackage));
 
@@ -195,7 +196,7 @@ void *SPM_repeater()
             current = current->next;
         }
         pthread_mutex_unlock(&SPM_OBU_obj_mutex);
-
+        
         ssm->status.tab[0].sigStatus.count = i;
         if (ssm->status.tab[0].sigStatus.count > 0)
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
@@ -208,5 +209,6 @@ SPM_repeater_end:
     printf("SPM_repeater_thread end\n");
     SPM_repeater_thread = 0;
     close(SPM_reoeater_fd);
+    SPM_reoeater_fd = 0;
     pthread_detach(pthread_self());
 }
