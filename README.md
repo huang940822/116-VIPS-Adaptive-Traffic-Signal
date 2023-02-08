@@ -60,7 +60,7 @@ sudo systemctl enable middleware.service
 ```bash=
 sudo systemctl status middleware.service
 ```
-Successful status of middleware.service as follow.
+* Successful status of middleware.service as follow.
 
 # RSU_CPS development journal
 ## Application layer
