@@ -192,38 +192,27 @@ void command_buf_send(tsc_command_object_t *command_obj,
         break;
 
     case SHAN_ZHU:
-        if (command_obj->app_id == TSP.id) {
-            if (TSP.dontSend2TC == 1) {
-                printf(
-                    "TSP cmd isn't sent to TC machine for dontSend2TC "
-                    "enabled\r\n");
-                log_file_write(
-                    "TSP cmd isn't sent to TC machine for dontSend2TC "
-                    "enabled\r\n");
+        if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+            if(TSP.dontSend2TC == 1){
+                printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
             }
-            if (conpensation_flag) {
-                printf(
-                    "TSP cmd isn't sent to TC machine ,for conpensation_flag "
-                    "enabled\r\n");
-                log_file_write(
-                    "TSP cmd isn't sent to TC machine ,for conpensation_flag "
-                    "enabled\r\n");
+            if(conpensation_flag){
+                printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 break;
             }
 
-            if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) != 0){
-                if ( current_sec_residual + difference < 0) {
-                    int16_t residual = difference + current_sec_residual;
-                    printf("residual:%d\r\n",residual);
-                    compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
-                } else {
-                    compensation_buffer[current_SubPhaseID - 1] += difference;
-                }
+        }else if(command_obj->app_id == EVSP.id){
+            if(EVSP.dontSend2TC == 1){
+                log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
             }
-        } else {
+        }else{
             log_file_write("not TSP either EVSP is sent to TC machine\r\n");
         }
+
         difference = command_obj->effect_time - command_obj->adjusted_time;
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
@@ -238,10 +227,16 @@ void command_buf_send(tsc_command_object_t *command_obj,
             }
         }
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME,
-                    COMPENSATION_LEN) != 0) {
-            compensation_buffer[current_SubPhaseID - 1] += difference;
+        if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,15) != 0){
+            if ( current_sec_residual + difference < 0) {
+                int16_t residual = difference + current_sec_residual;
+                printf("residual:%d\r\n",residual);
+                compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
+            } else {
+                compensation_buffer[current_SubPhaseID - 1] += difference;
+            }
         }
+
         time = command_obj->effect_time;
         temp_ack_seq = tsc_dynamic();
         WAIT_ACK_LOOP
@@ -250,39 +245,28 @@ void command_buf_send(tsc_command_object_t *command_obj,
         break;
 
     case SHAN_ZHU_M:
-        if (command_obj->app_id == TSP.id) {
-            if (TSP.dontSend2TC == 1) {
-                printf(
-                    "TSP cmd isn't sent to TC machine for dontSend2TC "
-                    "enabled\r\n");
-                log_file_write(
-                    "TSP cmd isn't sent to TC machine for dontSend2TC "
-                    "enabled\r\n");
+        if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+            if(TSP.dontSend2TC == 1){
+                printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
             }
-            if (conpensation_flag) {
-                printf(
-                    "TSP cmd isn't sent to TC machine ,for conpensation_flag "
-                    "enabled\r\n");
-                log_file_write(
-                    "TSP cmd isn't sent to TC machine ,for conpensation_flag "
-                    "enabled\r\n");
+            if(conpensation_flag){
+                printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 break;
             }
-
-            if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,15) != 0){
-                if ( current_sec_residual + difference < 0) {
-                    int16_t residual = difference + current_sec_residual;
-                    printf("residual:%d\r\n",residual);
-                    compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
-                } else {
-                    compensation_buffer[current_SubPhaseID - 1] += difference;
-                }
+        }else if(command_obj->app_id == EVSP.id){
+            if(EVSP.dontSend2TC == 1){
+                log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
             }
-        } else {
+        }else{
             log_file_write("not TSP either EVSP is sent to TC machine\r\n");
         }
+
         difference = command_obj->effect_time - command_obj->adjusted_time;
+        printf("difference:%d\r\n",difference);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
                  "\ndifference is :%d\r\n", difference);
@@ -296,9 +280,14 @@ void command_buf_send(tsc_command_object_t *command_obj,
             }
         }
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-            printf("Not compensation instruction\r\n");
-            compensation_buffer[current_SubPhaseID - 1] += difference;
+        if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) != 0){
+            if ( current_sec_residual + difference < 0) {
+                int16_t residual = difference + current_sec_residual;
+                printf("residual:%d\r\n",residual);
+                compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
+            } else {
+                compensation_buffer[current_SubPhaseID - 1] += difference;
+            }
         }
         time = command_obj->effect_time;
         temp_ack_seq = tsc_dynamic();
@@ -428,7 +417,7 @@ void command_buf_polling()
                     log_file_write(log_content);
                     memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
                 } else continue;
-            } else{
+            } else {
                 snprintf(log_content + strlen(log_content),
                              LOG_CONTENT_LEN - strlen(log_content),
                              "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
@@ -652,7 +641,6 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             target_command_obj->send_flag = false;
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
                     OBU_NAME_MAX_LEN);
-            command_buf_print();
             pthread_mutex_unlock(&mutex_command_buf);
             return INSERT_ACCEPT;
         } else {
