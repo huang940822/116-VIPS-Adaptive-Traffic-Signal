@@ -29,8 +29,8 @@ pwd
 ```
 2. Check the ExecStart and WorkingDirectory in all services is correct.
 * middleware.service as follow.
-    ExecStart=/home/oslab/RSU_Controller_master/build/exec/middleware
-    WorkingDirectory=/home/oslab/RSU_Controller_master
+    * ExecStart=/home/oslab/RSU_Controller_master/build/exec/middleware
+    * WorkingDirectory=/home/oslab/RSU_Controller_master
 3. Go to RSU_Controller_master folder
 ```bash=
 cd RSU_Controller_master
