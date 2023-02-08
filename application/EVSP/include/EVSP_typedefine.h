@@ -60,7 +60,9 @@ typedef struct EVSP_plan_subPhase {
 
 typedef struct EVSP_plan_table {
     uint8_t plan_id_count;
+    uint8_t plan_id_max;
     uint8_t plan_subPhase_count;
+    uint8_t plan_subPhase_max;
 
     uint8_t *plan_id; // 因為可能很多個 plan 都是用同一個 plan table
     EVSP_plan_subPhase_t *plan_subPhase;
@@ -68,14 +70,16 @@ typedef struct EVSP_plan_table {
 
 typedef struct EVSP_plan_list_t {
     uint8_t terminate_area_count;
+    uint8_t terminate_area_max;
     uint8_t touching_area_count;
+    uint8_t touching_area_max;
     uint8_t plan_table_count;
+    uint8_t plan_table_max;
 
     EVSP_terminate_area_t *terminate_area;
     EVSP_touching_area_t *touching_area;
     EVSP_plan_table_t *plan_table;
 } EVSP_plan_list_t;
-
 
 typedef struct EVSP_host_OBU_obj {
     char OBU_name[OBU_NAME_MAX_LEN + 1];
