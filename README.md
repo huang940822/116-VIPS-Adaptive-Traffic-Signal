@@ -7,11 +7,11 @@ cd ~
 2. Clone the RSU repository
 ```bash=
 git clone https://github.com/oslab-csie-ncku/RSU_Controller_master.git
-```bash=
+```
 3. Go to RSU_Controller_master folder
 ```bash=
 cd RSU_Controller_master
-```bash=
+```
 4. Execute command `make` to build code
 ```bash=
 make
