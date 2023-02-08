@@ -61,6 +61,7 @@ sudo systemctl enable middleware.service
 sudo systemctl status middleware.service
 ```
 * Successful status of middleware.service as follow.
+<img width="893" alt="截圖 2023-02-08 上午11 31 02" src="https://user-images.githubusercontent.com/46049179/217422489-22d2aead-0f89-440f-be8e-ce1917d2e041.png">
 
 # RSU_CPS development journal
 ## Application layer
@@ -76,4 +77,5 @@ sudo systemctl status middleware.service
     * Packages which sent from port number **12345** will be classified in **FROM_SMART_AVI**.
 * Make use of Heartbeat package to build the RSU's connection with OSlink.
     * Packages which sent from port number **10001** will be regarded as Heartbeat packages.
+
 
