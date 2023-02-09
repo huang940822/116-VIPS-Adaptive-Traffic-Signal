@@ -7,11 +7,11 @@ cd ~
 2. Clone the RSU repository
 ```bash=
 git clone https://github.com/oslab-csie-ncku/RSU_Controller_master.git
-```bash=
+```
 3. Go to RSU_Controller_master folder
 ```bash=
 cd RSU_Controller_master
-```bash=
+```
 4. Execute command `make` to build code
 ```bash=
 make
@@ -29,8 +29,8 @@ pwd
 ```
 2. Check the ExecStart and WorkingDirectory in all services is correct.
 * middleware.service as follow.
-    ExecStart=/home/oslab/RSU_Controller_master/build/exec/middleware
-    WorkingDirectory=/home/oslab/RSU_Controller_master
+    * ExecStart=/home/oslab/RSU_Controller_master/build/exec/middleware
+    * WorkingDirectory=/home/oslab/RSU_Controller_master
 3. Go to RSU_Controller_master folder
 ```bash=
 cd RSU_Controller_master
@@ -60,7 +60,8 @@ sudo systemctl enable middleware.service
 ```bash=
 sudo systemctl status middleware.service
 ```
-Successful status of middleware.service as follow.
+* Successful status of middleware.service as follow.
+<img width="893" alt="截圖 2023-02-08 上午11 31 02" src="https://user-images.githubusercontent.com/46049179/217422489-22d2aead-0f89-440f-be8e-ce1917d2e041.png">
 
 # RSU_CPS development journal
 ## Application layer
@@ -76,4 +77,5 @@ Successful status of middleware.service as follow.
     * Packages which sent from port number **12345** will be classified in **FROM_SMART_AVI**.
 * Make use of Heartbeat package to build the RSU's connection with OSlink.
     * Packages which sent from port number **10001** will be regarded as Heartbeat packages.
+
 
