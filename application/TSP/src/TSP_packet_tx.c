@@ -132,7 +132,6 @@ void TSP_report_command(uint8_t control_status,
     write_uint8_t(step_id, &write_buf);
     write_uint8_t(effect_time, &write_buf);
     write_char(OBU_name, &write_buf, OBU_NAME_MAX_LEN - 1, OBU_NAME_MAX_LEN);
-    write_uint8_t(config.traffic_compensation_method,&write_buf);
 
 
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
