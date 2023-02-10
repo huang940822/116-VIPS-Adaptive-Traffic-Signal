@@ -25,6 +25,7 @@
 #include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "vms.h"
 
 app_obj_t EVSP = {
     .name = "EVSP",
@@ -343,6 +344,11 @@ int EVSP_on_OBU_packet_rx(void *arg)
         int ret = 0;
         // enter terminate area
         if (terminate == true) {
+
+            /*施工:
+            結束 EVSP_VMS_SERVICE
+            */
+
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: TERMINATE");
@@ -425,6 +431,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
         // enter activate area
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
+
+            /*施工:
+            1.根據方向更改 evsp_prog[]
+            2.呼叫VMS SERVICE
+            */
+
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d",

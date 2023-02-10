@@ -442,24 +442,6 @@ int TSP_on_cloud_packet_rx(void *arg)
             printf("Illegal command of tsc_countdown\r\n");
         }
     } break;
-    case 9:  // 雲端更新 VMS 圖片(尚未考慮到錯誤回報，等到四塊板子都在實驗室再考慮)
-    {
-        // 1.檢查檔名是否存在於VMS_pic資料夾中，無跳2.，有跳3.
-        // 2.沒有指定檔案的回報處理並結束
-        // 3.輪流連線四台VMS並上傳，都上傳成功則走5，反之則走4
-        // 4.上傳異常回報處理並結束
-        // 5.上傳成功回報並結束
-        
-    }break;
-    case 10:  // 雲端更改 VMS 播放(需要調整)
-    {
-    }break;
-    case 11:  // 雲端查詢 VMS 播放節目編號(需要調整)
-    {
-    }break;
-    case 12:  // 雲端查詢 VMS 編號對應檔案名稱
-    {
-    }break;
     case 8: {
         uint8_t strategy = 0;
         uint8_t cyclenumber = 0;
@@ -625,6 +607,24 @@ int TSP_on_cloud_packet_rx(void *arg)
         }
         log_file_write(log_content);
     } break;
+    case 9:  // 雲端更新 VMS 圖片(尚未考慮到錯誤回報，等到四塊板子都在實驗室再考慮)
+    {
+        // 1.檢查檔名是否存在於VMS_pic資料夾中，無跳2.，有跳3.
+        // 2.沒有指定檔案的回報處理並結束
+        // 3.輪流連線四台VMS並上傳，都上傳成功則走5，反之則走4
+        // 4.上傳異常回報處理並結束
+        // 5.上傳成功回報並結束
+        
+    }break;
+    case 10:  // 雲端更改 VMS 播放(需要調整)
+    {
+    }break;
+    case 11:  // 雲端查詢 VMS 播放節目編號(需要調整)
+    {
+    }break;
+    case 12:  // 雲端查詢 VMS 編號對應檔案名稱
+    {
+    }break;
     case 99:  // restart daemon
     {
         char token_packet[TOKEN_LEN];

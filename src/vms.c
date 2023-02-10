@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <pthread.h>
 #include <string.h>
 #include <fcntl.h>
@@ -11,59 +13,56 @@
 #include "traffic_signal_status_updating.h"
 #include "config.h"
 #include "log.h"
+#include "network.h"
 
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
-// timer_t controller_polling_timer_id;
-// uint8_t controller_polling_value = 0;
 
 traffic_signal_status_t signal_status;
-// uint16_t rtm_sec[RTM_MAX];
 uint8_t rtm_phase[RTM_MAX] = {0};
+char current_step[RTM_MAX];
 
 int port_fd;
 
-// int program_carousel[CAROUSEL_NUM];
-// int carousel_time[CAROUSEL_NUM];
-// int current_program;
-// int remain_time;
-int request_priority; // 初始值為預設輪播，應用層用vms_request_start()的方式來改，注意mutex
-int app_id; // 初始值為預設輪播，表示為當前正在服務的對象
+uint8_t request_priority; // 應用層用vms_request_start()的方式來改，初始值為255(預設輪播)
+uint8_t app_id; // 表示為當前正在服務的對象，初始值為255(預設輪播)
+
+uint8_t evsp_prog[RTM_MAX];   // 之後改成[246,247,248,249,0,0...],[2,3,4,1,0,0,...]...
 
 // tx sequence format: (seq,p1,p2,p3,p4\n
 // rx sequence format: (seq,reserve,programNo,location\n
 char vms_packet_tx[VMS_PACKET_TX_LEN_MAX];
 char vms_packet_rx[VMS_PACKET_RX_LEN_MAX];
+char uint8_t_to_char[10];
+
 int sequence_number;
 int res;
 
-int evsp_prog[RTM_MAX];   // 之後改成[246,247,248,249,0,0...],[2,3,4,1,0,0,...]...
-char current_step[RTM_MAX];
-
-// int atm[8]=[phase0,....,phase7]
-
-void evsp_vms_service()
-{
-
-}
-
 void vms_request_start(uint8_t id, uint8_t priority)
 {
-    // mutex
-    request_priority = priority;
-    //for loop
-    //evsp_prog[4]
+    pthread_mutex_lock(&VMS_request_priority_mutex);
+    if (priority < request_priority) {
+        request_priority = priority;
+        app_id = id;
+    }
+    pthread_mutex_unlock(&VMS_request_priority_mutex);
+
 }
 
-void vms_request_end(uint8_t id, uint8_t priority)
+void vms_request_end(uint8_t id)
+{
+    pthread_mutex_lock(&VMS_request_priority_mutex);
+    if (app_id == id) {
+        request_priority = CAROUSEL_NUM;
+        app_id = CAROUSEL_NUM;
+    }
+    pthread_mutex_unlock(&VMS_request_priority_mutex);
+}
+
+
+void carousel_update()  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
 {
 
 }
-
-/*
-void carousel_update(){  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
-    // update program_carousel[] and carousel_time[]
-    // reset current_program to 0
-}*/
 
 
 void phase_rtm_connect()
@@ -83,70 +82,87 @@ void phase_rtm_connect()
 
 void control_loop()
 {
-    // 比較request_number有沒有比service_number小，有的話則服務該請求，
-    // 並把service_number設為它
-    // 如果request_number為-1則直接執行預設輪播
-
-    get_traffic_signal_status(&signal_status);
-    phase_rtm_connect();
-    // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
-    uint8_t current_phase = 1 << (signal_status.SubPhaseID - 1);
-    for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
-        if ((rtm_phase[i] & current_phase) > 0 && signal_status.StepID <= 3) {  // Green
-            current_step[i] = 'G';
-        }
-        else {  // Not Green
-            current_step[i] = 'R';
-        }
-    }
-
     sequence_number = (sequence_number + 1) % 256;
     if (sequence_number == 0) {
         sequence_number ++;
     }
 
-    memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
-    strcat(vms_packet_tx, VMS_PACKET_BEGIN);
-
-    char uint8_t_to_char[10];
-    sprintf(uint8_t_to_char, "%d", sequence_number);
-    strcat(vms_packet_tx, uint8_t_to_char);
-
-    for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
-        if (current_step[i] == 'G') {
-            sprintf(uint8_t_to_char, "%d", vms_config.program_ids_green[i]);
-        }
-        else {
-            sprintf(uint8_t_to_char, "%d", vms_config.program_ids_not_green[i]);
-        }
-        strcat(vms_packet_tx, VMS_PACKET_COMMA);
-        strcat(vms_packet_tx, uint8_t_to_char);
-    }
-    strcat(vms_packet_tx, VMS_PACKET_END);
-    printf("%s %ld\n", vms_packet_tx, strlen(vms_packet_tx));
-    
-    res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
-    sleep(1);
-
-    while (1) {
+    // select
+    /*while (1) {
         res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
+        printf("Hello %d\n", res);
+        
         if(res <= 0){
             break;
         }
-        printf("%s\n", vms_packet_rx);
+        printf("vms_packet_rx: %s\n", vms_packet_rx);
+    }*/
+
+    switch (app_id) {
+        case 1: // EVSP
+        {
+            printf("EVSP VMS SERVICE.............\n");
+        }break;
+        case CAROUSEL_NUM:
+        {
+            get_traffic_signal_status(&signal_status);
+            phase_rtm_connect();
+            // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
+            uint8_t current_phase = 1 << (signal_status.SubPhaseID - 1);
+            for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+                if ((rtm_phase[i] & current_phase) > 0 && signal_status.StepID <= 3) {  // Green
+                    current_step[i] = 'G';
+                }
+                else {  // Not Green
+                    current_step[i] = 'R';
+                }
+            }
+
+            memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
+            strcat(vms_packet_tx, VMS_PACKET_BEGIN);
+
+            sprintf(uint8_t_to_char, "%d", sequence_number);
+            strcat(vms_packet_tx, uint8_t_to_char);
+
+            for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+                if (current_step[i] == 'G') {
+                    sprintf(uint8_t_to_char, "%d", vms_config.program_ids_green[i]);
+                }
+                else {
+                    sprintf(uint8_t_to_char, "%d", vms_config.program_ids_not_green[i]);
+                }
+                strcat(vms_packet_tx, VMS_PACKET_COMMA);
+                strcat(vms_packet_tx, uint8_t_to_char);
+            }
+            strcat(vms_packet_tx, VMS_PACKET_END);
+            printf("vms_packet_tx: %s", vms_packet_tx);
+            res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
+        }break;
+        default:
+        {
+            log_file_write("Useless vms app_id: %d", app_id);
+        }break;
     }
 
-    // res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
-    // printf("%s\n", vms_packet_rx);
+    sleep(1);
+    res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
+    printf("%s\n", vms_packet_rx);
 
-    // printf("\n");
-    //switch case(service_number)
-        //1:evsp_vms_sevice();
+    // res == -1 case(EAGAIN)
+    if (res < 0) {
+        //處理timeout
+    }
+
 }
 
 void vms_handler_init()
-{
-    sequence_number = 1;
+{   
+    srand(time(NULL));
+    sequence_number = ( rand() % CAROUSEL_NUM ) + 1 ;
+
+    request_priority = CAROUSEL_NUM;
+    app_id = CAROUSEL_NUM;
+
     port_fd = open(VMS_SERIAL_PORT, O_RDWR | O_NOCTTY);
 
     if (port_fd == -1) {
@@ -157,14 +173,26 @@ void vms_handler_init()
     }
 
     vms_set_serial_attribs();
+
     
+    res = net_non_block("", port_fd);
+
+    
+    // 需要做一次送編號全255的當作初始化，才不會IPC當機恢復之後因為 VMS timeout 所以沒辦法正常播放節目
+    // 因為有一塊板子的wifi壞了，暫時沒辦法全部上傳黑色節目到編號255
+    /*
     memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
     strcat(vms_packet_tx, VMS_PACKET_BEGIN);
-    
-    
-    // 需要做一次送編號全0的當作初始化，才不會IPC當機恢復之後因為 VMS timeout 所以沒辦法正常播放節目
-    /*
-    // 施工
+    sprintf(uint8_t_to_char, "%d", sequence_number);
+    strcat(vms_packet_tx, uint8_t_to_char);
+    strcat(vms_packet_tx, ",255,255,255,255\n");
+    res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
+    sleep(1);
+    res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
+    printf("%s\n", vms_packet_rx);
+    if (res < 0) {
+        //處理timeout
+    }
     */
 }
 

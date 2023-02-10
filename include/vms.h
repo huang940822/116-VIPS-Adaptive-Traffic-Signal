@@ -18,6 +18,9 @@
 #define VMS_PACKET_COMMA ","
 #define VMS_PACKET_END "\n"
 
+#define CAROUSEL_NUM 255
+
+extern uint8_t evsp_prog[RTM_MAX];
 extern pthread_mutex_t VMS_request_priority_mutex;
 
 void *vms_handler();
@@ -25,6 +28,6 @@ void vms_handler_init();
 void vms_set_serial_attribs();
 
 void vms_request_start(uint8_t id, uint8_t priority);
-void vms_request_end(uint8_t id, uint8_t priority);
+void vms_request_end(uint8_t id);
 
 #endif
