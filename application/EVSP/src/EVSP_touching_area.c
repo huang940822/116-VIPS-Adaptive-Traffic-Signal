@@ -732,7 +732,6 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
                 }
             } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
                 if (flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
-                    vms_request_start(EVSP.id, EVSP.priority);
                     printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID, plan->plan_subPhase[i].touching_area_Id[j]);
                     *area_ptr = touching_area;
                     return plan->plan_subPhase[i].SubPhaseID;
@@ -756,7 +755,6 @@ bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
         } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
             if (checkInside(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
                             EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, &(EVSP_Node_t){lon, lat})) {
-                vms_request_end(EVSP.id);
                 printf("EVSP_terminate------------\n");
                 return true;
             }

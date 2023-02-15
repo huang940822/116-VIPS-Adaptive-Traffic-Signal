@@ -616,8 +616,9 @@ int TSP_on_cloud_packet_rx(void *arg)
         // 5.上傳成功回報並結束
         
     }break;
-    case 10:  // 雲端更改 VMS 播放(需要調整)
+    case 10:  // 雲端更改 VMS 播放
     {
+        
     }break;
     case 11:  // 雲端查詢 VMS 播放節目編號(需要調整)
     {

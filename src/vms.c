@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #include "timer_event.h"
+#include "error_status.h"
 #include "vms.h"
 #include "traffic_signal_status_updating.h"
 #include "config.h"
@@ -26,7 +27,7 @@ int port_fd;
 uint8_t request_priority; // 應用層用vms_request_start()的方式來改，初始值為255(預設輪播)
 uint8_t app_id; // 表示為當前正在服務的對象，初始值為255(預設輪播)
 
-uint8_t evsp_prog[RTM_MAX];   // 之後改成[246,247,248,249,0,0...],[2,3,4,1,0,0,...]...
+uint8_t evsp_prog[RTM_MAX];   // 之後改成[246,247,248,249,0,0...]
 
 // tx sequence format: (seq,p1,p2,p3,p4\n
 // rx sequence format: (seq,reserve,programNo,location\n
@@ -36,6 +37,9 @@ char uint8_t_to_char[10];
 
 int sequence_number;
 int res;
+
+uint8_t vms_respose_cnt[RTM_MAX];
+int readCnt;
 
 void vms_request_start(uint8_t id, uint8_t priority)
 {
@@ -51,6 +55,7 @@ void vms_request_start(uint8_t id, uint8_t priority)
 void vms_request_end(uint8_t id)
 {
     pthread_mutex_lock(&VMS_request_priority_mutex);
+    // 只有自己能關掉自己的服務，避免其他應用在 timeout 的時候把別人的 VMS service 關起來。 
     if (app_id == id) {
         request_priority = CAROUSEL_NUM;
         app_id = CAROUSEL_NUM;
@@ -98,16 +103,28 @@ void control_loop()
         printf("vms_packet_rx: %s\n", vms_packet_rx);
     }*/
 
+    get_traffic_signal_status(&signal_status);
+    phase_rtm_connect();
+    // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
+
+    memset(vms_packet_rx, 0, sizeof(vms_packet_tx));
+
+    strcpy(vms_packet_tx, VMS_PACKET_BEGIN);
+    sprintf(uint8_t_to_char, "%d", sequence_number);
+    strcat(vms_packet_tx, uint8_t_to_char);
+
     switch (app_id) {
         case 1: // EVSP
         {
-            printf("EVSP VMS SERVICE.............\n");
+            for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+                sprintf(uint8_t_to_char, "%d", evsp_prog[i]);
+                strcat(vms_packet_tx, VMS_PACKET_COMMA);
+                strcat(vms_packet_tx, uint8_t_to_char);
+            }
+
         }break;
         case CAROUSEL_NUM:
         {
-            get_traffic_signal_status(&signal_status);
-            phase_rtm_connect();
-            // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
             uint8_t current_phase = 1 << (signal_status.SubPhaseID - 1);
             for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
                 if ((rtm_phase[i] & current_phase) > 0 && signal_status.StepID <= 3) {  // Green
@@ -117,12 +134,6 @@ void control_loop()
                     current_step[i] = 'R';
                 }
             }
-
-            memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
-            strcat(vms_packet_tx, VMS_PACKET_BEGIN);
-
-            sprintf(uint8_t_to_char, "%d", sequence_number);
-            strcat(vms_packet_tx, uint8_t_to_char);
 
             for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
                 if (current_step[i] == 'G') {
@@ -134,9 +145,6 @@ void control_loop()
                 strcat(vms_packet_tx, VMS_PACKET_COMMA);
                 strcat(vms_packet_tx, uint8_t_to_char);
             }
-            strcat(vms_packet_tx, VMS_PACKET_END);
-            printf("vms_packet_tx: %s", vms_packet_tx);
-            res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
         }break;
         default:
         {
@@ -144,56 +152,104 @@ void control_loop()
         }break;
     }
 
+    strcat(vms_packet_tx, VMS_PACKET_END);
+    res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
+    if (res > 0) {
+        log_file_write("vms_packet_tx: %s", vms_packet_tx);
+        printf("vms_packet_tx: %s", vms_packet_tx);
+    }
     sleep(1);
     res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
-    printf("%s\n", vms_packet_rx);
-
     // res == -1 case(EAGAIN)
     if (res < 0) {
         //處理timeout
+        printf("RS232: EAGAIN\n");
+    }else if (res > 0) {
+        log_file_write("vms_packet_rx: %s", vms_packet_rx);
+        printf("%s\n", vms_packet_rx);
     }
 
+    // 需要檢查異常再把註解刪掉
+    readCnt++;
+    
+    for (int i = 0; i < strlen(vms_packet_rx)-1; i++) {
+        if (vms_packet_rx[i+1] == '\n') {
+            // 49 是因為 VMS 編號是從1開始 所以多減一
+            vms_respose_cnt[vms_packet_rx[i]-49]++;
+        }
+    }
+
+    printf("vms_respose_cnt:");
+    for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+        printf("%d ", vms_respose_cnt[i]);
+    }
+    printf("\n");
+    // 每傳送十次檢查一次有沒有VMS已經超過十秒沒有回應，有的話判定 VMS 異常
+    // 因為有一塊板子被廠商拿走了，所以這段程式碼要先註解掉，避免一直觸發異常
+    
+    if (readCnt == VMS_ERROR_THRESHOLD) {
+        int errorFlag = 0;
+        for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+            if (vms_respose_cnt[i] == 0) {
+                errorFlag = 1;
+                log_file_write_fatal_error("VMS_id : %d no respose", i+1);
+            }
+        }
+        if (errorFlag == 1) {
+            set_vms_error();
+            log_file_write_fatal_error("VMS : respose error");
+        }else {
+            clear_vms_error();
+        }
+        
+        readCnt = 0;
+        memset(vms_respose_cnt, 0, sizeof(vms_respose_cnt));
+    }
+    
 }
 
 void vms_handler_init()
 {   
     srand(time(NULL));
     sequence_number = ( rand() % CAROUSEL_NUM ) + 1 ;
-
+    readCnt = 0;
+    memset(vms_respose_cnt, 0, sizeof(vms_respose_cnt));
     request_priority = CAROUSEL_NUM;
     app_id = CAROUSEL_NUM;
 
     port_fd = open(VMS_SERIAL_PORT, O_RDWR | O_NOCTTY);
-
     if (port_fd == -1) {
         log_file_write_fatal_error("error opening %s", VMS_SERIAL_PORT);
-    }
-    else {
+    }else {
         log_file_write("%s opened successfully", VMS_SERIAL_PORT);
     }
 
     vms_set_serial_attribs();
 
-    
     res = net_non_block("", port_fd);
 
-    
     // 需要做一次送編號全255的當作初始化，才不會IPC當機恢復之後因為 VMS timeout 所以沒辦法正常播放節目
     // 因為有一塊板子的wifi壞了，暫時沒辦法全部上傳黑色節目到編號255
-    /*
+    memset(vms_packet_rx, 0, sizeof(vms_packet_rx));
     memset(vms_packet_tx, 0, sizeof(vms_packet_tx));
     strcat(vms_packet_tx, VMS_PACKET_BEGIN);
     sprintf(uint8_t_to_char, "%d", sequence_number);
     strcat(vms_packet_tx, uint8_t_to_char);
     strcat(vms_packet_tx, ",255,255,255,255\n");
     res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
+    if (res > 0) {
+        log_file_write("vms_packet_tx: %s", vms_packet_tx);
+        printf("vms_packet_tx: %s", vms_packet_tx);
+    }
     sleep(1);
     res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
-    printf("%s\n", vms_packet_rx);
     if (res < 0) {
-        //處理timeout
+        //處理異常
+        printf("RS232: EAGAIN\n");
+    }else if (res > 0) {
+        log_file_write("vms_packet_rx: %s", vms_packet_rx);
+        printf("%s\n", vms_packet_rx);
     }
-    */
 }
 
 void vms_set_serial_attribs()

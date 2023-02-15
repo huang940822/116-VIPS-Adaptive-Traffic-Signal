@@ -345,9 +345,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
         // enter terminate area
         if (terminate == true) {
 
-            /*施工:
+            /*
             結束 EVSP_VMS_SERVICE
             */
+            vms_request_end(EVSP.id);
 
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
@@ -432,11 +433,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
 
-            /*施工:
-            1.根據方向更改 evsp_prog[]
-            2.呼叫VMS SERVICE
-            */
-
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d",
@@ -514,9 +510,50 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
             }
             
+            // 如果同時有兩台緊急車輛採到觸碰區域，會進行綠燈延長的是先來的那台
             command.phase = target_phase;
             command.effect_time = pretime + EVSP_adjust_time;
             insert_command_and_log;
+
+            if (ret == INSERT_ACCEPT) {
+                // 本案的 EVSP_VMS_SERVICE 受限於時間及沒有足夠的地理資訊，所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
+                // 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，那再改寫成更 general 的設計。
+
+                /*
+                1.根據方向更改 evsp_prog[]
+                2.呼叫VMS SERVICE
+                */
+                memset(evsp_prog, 255, sizeof(evsp_prog));
+
+                if (static_space.last_direction == 3 || static_space.last_direction == 4) {
+                    //evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
+                    evsp_prog[0] = 245;
+                    evsp_prog[1] = 246;
+                    evsp_prog[2] = 247;
+                    evsp_prog[3] = 248;
+                }else if (static_space.last_direction == 5 || static_space.last_direction == 6) {
+                    //evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
+                    evsp_prog[0] = 248;
+                    evsp_prog[1] = 245;
+                    evsp_prog[2] = 246;
+                    evsp_prog[3] = 247;
+                }else if (static_space.last_direction == 7 || static_space.last_direction == 0) {
+                    //evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
+                    evsp_prog[0] = 247;
+                    evsp_prog[1] = 248;
+                    evsp_prog[2] = 245;
+                    evsp_prog[3] = 246;
+                }else if (static_space.last_direction == 1 || static_space.last_direction == 2) {
+                    //evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
+                    evsp_prog[0] = 246;
+                    evsp_prog[1] = 247;
+                    evsp_prog[2] = 248;
+                    evsp_prog[3] = 245;
+                }
+
+                vms_request_start(EVSP.id, EVSP.priority);
+            }
+
 #undef insert_command_and_log
         }
     }

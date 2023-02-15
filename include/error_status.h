@@ -5,7 +5,7 @@
 #include "typedefine.h"
 
 #define DSRC_BIT_POSITION 1
-#define TSC_BIT_POSITION 2
+#define VMS_BIT_POSITION 2
 #define DISK_BIT_POSITION 4
 #define MEMORY_BIT_POSITION 8
 #define TCFAIL_BIT_POSITION 16
@@ -15,8 +15,8 @@
 uint8_t get_error_status();
 extern timer_t dsrc_heartbeat_timer_id;
 
-void set_tsc_error();
-void clear_tsc_error();
+void set_vms_error();
+void clear_vms_error();
 
 void set_disk_error();
 void clear_disk_error();

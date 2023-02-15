@@ -19,6 +19,7 @@
 #define VMS_PACKET_END "\n"
 
 #define CAROUSEL_NUM 255
+#define VMS_ERROR_THRESHOLD 10
 
 extern uint8_t evsp_prog[RTM_MAX];
 extern pthread_mutex_t VMS_request_priority_mutex;

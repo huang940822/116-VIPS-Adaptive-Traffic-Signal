@@ -7,8 +7,8 @@ MAP_dontSend2TC 1
 
 # 從北開始順時針 先離開路口再進入路口 從內車道到外車道
 # laneId 一個路口中唯一個 id, 從 0 開始
-# egress 是離開, ingress 是進入,ApproachId 0 代表為北 順時針遞增
-# ApproachId 從北開始順時針遞增 從 0 開始
+# egress 是離開, ingress 是進入,Approach 0 代表為北 順時針遞增
+# Approach 從北開始順時針遞增 從 0 開始(在 TCROS 的 MAP 定義的)
 # lane_index 從內車道開始遞增, 從 1 開始
 # node_count 表示後面有幾個 node
 # node 車道的路線點, 從停止線開始往外畫 緯度, 經度
