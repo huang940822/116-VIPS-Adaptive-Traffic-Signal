@@ -348,17 +348,17 @@ void command_buf_polling()
                  LOG_CONTENT_LEN - strlen(log_content),
                  "command_buf_polling: ");
 
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
-                 "prior signal status:", prior_SubPhaseID, prior_StepID,
-                 prior_StepSec);  // here all are global variables
+        // snprintf(log_content + strlen(log_content),
+        //          LOG_CONTENT_LEN - strlen(log_content),
+        //          "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
+        //          "prior signal status:", prior_SubPhaseID, prior_StepID,
+        //          prior_StepSec);  // here all are global variables
 
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
-                 "current signal status:", current_SubPhaseID, current_StepID,
-                 current_StepSec);
+        // snprintf(log_content + strlen(log_content),
+        //          LOG_CONTENT_LEN - strlen(log_content),
+        //          "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
+        //          "current signal status:", current_SubPhaseID, current_StepID,
+        //          current_StepSec);
 
         log_file_write(log_content);
     }
@@ -382,12 +382,12 @@ void command_buf_polling()
                     COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
             if (command_buf[cycle_index][prior_SubPhaseID - 1].send_flag ==
                 true) {
-                snprintf(
-                    log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "\ncommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                    cycle_index, prior_SubPhaseID,
-                    command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
+                // snprintf(
+                //     log_content + strlen(log_content),
+                //     LOG_CONTENT_LEN - strlen(log_content),
+                //     "\ncommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                //     cycle_index, prior_SubPhaseID,
+                //     command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
                 log_file_write(log_content);
                 memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0,
                        sizeof(tsc_command_object_t));
@@ -408,21 +408,21 @@ void command_buf_polling()
             if (strncmp(command_buf[cycle_index][i].host_OBU_name,
                         COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
                 if (command_buf[cycle_index][i].send_flag == true) {
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                             cycle_index, prior_SubPhaseID,
-                             command_buf[cycle_index][prior_SubPhaseID - 1]
-                                 .host_OBU_name);
+                    // snprintf(log_content + strlen(log_content),
+                    //          LOG_CONTENT_LEN - strlen(log_content),
+                    //          "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                    //          cycle_index, prior_SubPhaseID,
+                    //          command_buf[cycle_index][prior_SubPhaseID - 1]
+                    //              .host_OBU_name);
                     log_file_write(log_content);
                     memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
                 } else continue;
             } else {
-                snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                             cycle_index, prior_SubPhaseID,
-                             command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
+                // snprintf(log_content + strlen(log_content),
+                //              LOG_CONTENT_LEN - strlen(log_content),
+                //              "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                //              cycle_index, prior_SubPhaseID,
+                //              command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
                 log_file_write(log_content);
                 memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
             }
@@ -589,9 +589,6 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             pthread_mutex_unlock(&mutex_command_buf);
             return INSERT_ACCEPT;
         }
-        if(command->app_id==TSP.id){
-            return INCOMP_TSPDONOTHING;
-        }
     }
 
     // resume是為了強制回到pretime 怎麼作到？
@@ -714,6 +711,10 @@ int command_buf_insert_effect_time(tsc_command_t *command)
 //調整要送到command_buf_insert_effect_time的command結構的值
 int command_buf_insert_adjustment(tsc_command_t *command)
 {
+    uint8_t is_in_compensation_flag = is_in_compensation();
+    if (is_in_compensation_flag == true) 
+        return INCOMP_TSPDONOTHING;
+
     /* command value valid */
     if (command->adjustment == 0) {
         return INVALID_ADJUSTMENT;
