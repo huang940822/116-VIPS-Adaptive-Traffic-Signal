@@ -126,10 +126,10 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
                                         effect_time;  // 更新這次補償時間
                 }
                 // insert to command buffer cycle
-                if ( j < (signal_status.SubPhaseID - 1)) 
-                    command.cycle = (i+1) % CYCLE_NUM;
+                if ( i < (signal_status.SubPhaseID - 1)) 
+                    command.cycle = (j+1) % CYCLE_NUM;
                 else 
-                    command.cycle = i;
+                    command.cycle = j;
                 command.phase = i + 1;
                 command.target_phase = i + 1;
                 command.effect_time = effect_time;
@@ -140,6 +140,10 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
                     "%d (%d)\r\n",
                     command.cycle, command.phase, command.effect_time,
                     command.compensation_time, ret);
+
+                for(int k=0;k<SUBPHASEID_NUM;k++){
+                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"compensation_buffer %d : %d \r\n",k,compensation_buffer[k]);
+                }    
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content),
                          LOG_CONTENT_LEN - strlen(log_content),
@@ -173,9 +177,10 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
     int16_t effect_time[SUBPHASEID_NUM];
     int16_t compensation_time[SUBPHASEID_NUM];
     bool flag[SUBPHASEID_NUM];  // 是否要重新計算
-    int16_t t[Comp_cyclenum] ;
+    int16_t t[2] ;
     if(Comp_cyclenum==1){
         t[0]=T;
+        t[1]=0;
     }else{
         t[0]=T/2;
         t[1]=T-T/2;
@@ -192,31 +197,15 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
     for ( int i = 0 ; i < Comp_cyclenum ; i++ ) {
         snprintf(log_content + strlen(log_content),
             LOG_CONTENT_LEN - strlen(log_content),
-            "compensation cycle %d is %d\r\n",
+            "\ncompensation cycle %d is %d",
             i,t[i]);
     }
     log_file_write(log_content);
 
-    int first_index = -1 , second_index = -1;
-    for ( int i = 0 ; i < SUBPHASEID_NUM ; i++ ) {
-        if ( phase_weight[i] == 50.0 )
-            first_index = i;
-            break;
-    }
-    for ( int i = first_index + 1 ; i < SUBPHASEID_NUM ; i++ ) {
-        if ( phase_weight[i] == 50.0 )
-            second_index = i;
-            break;
-    }
-    if (first_index != -1 && second_index != -1) {
-        phase_weight[first_index] -= 1;
-        phase_weight[second_index] += 1;
-    }
-  
+
     // initialization
     memset(effect_time, 0, sizeof(effect_time));
     memset(compensation_time, 0, sizeof(compensation_time));
-    memset(flag, false, sizeof(flag));
 
     tsc_command_t command;
     memset(&command, 0, sizeof(tsc_command_t));
@@ -226,28 +215,29 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
 
     int ret = 0;
     memset(log_content, 0, sizeof(log_content));
-    for(int i=0;i<8;i++){
-        snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "comp_buf[%d]: %d \n",i,compensation_time[i]);
-    }
-    log_file_write(log_content);
     
     for (int i = 0; i < Comp_cyclenum; i++) {
+        memset(flag, false, sizeof(flag));
+        uint8_t tmp_weight_initial_flag = false;
+        int tmp_weight = 0;
         for (int j = 0; j < signal_status.SubPhaseCount; j++) {
             if (phase_weight[j] != 0) {
                 if (flag[j] == false) {
                     compensation_time[j] = round(t[i] * phase_weight[j] * 0.01);
                 } else {
-                    int tmp = phase_weight[j];
-                    for (int k = j + 1; j < signal_status.SubPhaseCount; k++)
-                        tmp += phase_weight[k];
-                    compensation_time[j] = round(t[i] * phase_weight[j] / tmp);
+                    if (tmp_weight_initial_flag == false) {
+                        tmp_weight = phase_weight[j];
+                        for (int k = j + 1; k < signal_status.SubPhaseCount; k++)
+                            tmp_weight += phase_weight[k];
+                        tmp_weight_initial_flag = true;
+                    }
+                    
+                    compensation_time[j] = round(t[i] * phase_weight[j] / tmp_weight);
                 }
 
                 effect_time[j] =
                     signal_status.plan[j].PreGreen - compensation_time[j];
-                if (effect_time[j] <= signal_status.plan[j].MinGreen) {
+                if (effect_time[j] < signal_status.plan[j].MinGreen) {
                     effect_time[j] = signal_status.plan[j].MinGreen;
                     compensation_time[j] =
                         signal_status.plan[j].PreGreen - effect_time[j];
@@ -256,7 +246,7 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
                         flag[k] = true;
                     }
                 }
-                if (effect_time[j] >= signal_status.plan[j].MaxGreen) {
+                if (effect_time[j] > signal_status.plan[j].MaxGreen) {
                     effect_time[j] = signal_status.plan[i].MaxGreen;
                     compensation_time[j] =
                         signal_status.plan[j].PreGreen - effect_time[j];
@@ -287,7 +277,7 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
                          command.cycle, command.phase, command.effect_time,
                          command.compensation_time, ret);
                 log_file_write(log_content);
-            }
+            }   
         }
     }
     
@@ -383,7 +373,7 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
                 compensation_time =
                     branch_pretime - effect_time;  //更新補償時間
             }
-            if ( branch_phase > signal_status.SubPhaseID ) 
+            if ( branch_phase < signal_status.SubPhaseID ) 
                 command.cycle = (i+1) % CYCLE_NUM;
             else 
                 command.cycle = i;
