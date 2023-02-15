@@ -30,5 +30,6 @@ void vms_set_serial_attribs();
 
 void vms_request_start(uint8_t id, uint8_t priority);
 void vms_request_end(uint8_t id);
+int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID);
 
 #endif

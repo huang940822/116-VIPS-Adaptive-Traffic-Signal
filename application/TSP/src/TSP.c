@@ -26,6 +26,7 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "vms.h"
 
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -260,7 +261,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                app_section->payload_len);
     }
 
-    TSP_send_ack();
+    TSP_send_ack(0);
 
     // read cmd
     uint8_t cmd;
@@ -607,7 +608,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         }
         log_file_write(log_content);
     } break;
-    case 9:  // 雲端更新 VMS 圖片(尚未考慮到錯誤回報，等到四塊板子都在實驗室再考慮)
+    case 9:  // 雲端更新 VMS 圖片(要考慮到錯誤回報)
     {
         // 1.檢查檔名是否存在於VMS_pic資料夾中，無跳2.，有跳3.
         // 2.沒有指定檔案的回報處理並結束
@@ -616,9 +617,40 @@ int TSP_on_cloud_packet_rx(void *arg)
         // 5.上傳成功回報並結束
         
     }break;
-    case 10:  // 雲端更改 VMS 播放
+    case 10:  // 雲端更改 VMS 播放，設計成只有封包內容都正常才ACK
     {
-        
+        uint8_t VMS_ID;
+        uint8_t Program_Type;
+        uint8_t Program_ID;
+        read_uint8_t(&VMS_ID, &read_buf);
+        read_uint8_t(&Program_Type, &read_buf);
+        read_uint8_t(&Program_ID, &read_buf);
+        printf("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
+        int res = carousel_update(VMS_ID, Program_Type, Program_ID);
+
+        switch (res) {
+        case 0:     // 正常
+        {
+            TSP_send_ack(10);
+        }break;
+        case -1:    // VMS ID 有誤
+        {
+            log_file_write_fatal_error("Error VMS ID");
+        }break;
+        case -2:    // Program Type 有誤
+        {
+            log_file_write_fatal_error("Error Program Type");
+        }break;
+        case -3:    // Program ID 有誤
+        {
+            log_file_write_fatal_error("Error Program ID");
+        }break;
+        default:
+        {
+            log_file_write("Useless return value");
+        }break;
+        }
+
     }break;
     case 11:  // 雲端查詢 VMS 播放節目編號(需要調整)
     {

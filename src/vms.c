@@ -12,6 +12,7 @@
 #include "error_status.h"
 #include "vms.h"
 #include "traffic_signal_status_updating.h"
+#include "typedefine.h"
 #include "config.h"
 #include "log.h"
 #include "network.h"
@@ -64,11 +65,28 @@ void vms_request_end(uint8_t id)
 }
 
 
-void carousel_update()  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
-{
+int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
+{   
+    // 有空改 ENUM
+    if (VMS_ID > 7) {
+        return -1;
+    }else if (Program_Type != 0 || Program_Type != 1) {
+        return -2;
+    }else if (Program_ID == 0) {
+        return -3;
+    }
 
+    if (Program_Type == 0) {  // Green
+        vms_config.program_ids_green[VMS_ID] = Program_ID;
+        log_file_write("program_ids_green[%d] change to %d", VMS_ID, Program_ID);
+        printf("program_ids_green[%d] change to %d", VMS_ID, Program_ID);
+    }else if (Program_Type == 1) {    // Not Green
+        vms_config.program_ids_not_green[VMS_ID] = Program_ID;
+        log_file_write("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
+        printf("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
+    }
+    return 0;
 }
-
 
 void phase_rtm_connect()
 {
@@ -169,7 +187,6 @@ void control_loop()
         printf("%s\n", vms_packet_rx);
     }
 
-    // 需要檢查異常再把註解刪掉
     readCnt++;
     
     for (int i = 0; i < strlen(vms_packet_rx)-1; i++) {
@@ -185,8 +202,7 @@ void control_loop()
     }
     printf("\n");
     // 每傳送十次檢查一次有沒有VMS已經超過十秒沒有回應，有的話判定 VMS 異常
-    // 因為有一塊板子被廠商拿走了，所以這段程式碼要先註解掉，避免一直觸發異常
-    
+    // 因為有一塊板子被廠商拿走了，所以這段程式碼會一直觸發異常
     if (readCnt == VMS_ERROR_THRESHOLD) {
         int errorFlag = 0;
         for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
@@ -201,7 +217,7 @@ void control_loop()
         }else {
             clear_vms_error();
         }
-        
+
         readCnt = 0;
         memset(vms_respose_cnt, 0, sizeof(vms_respose_cnt));
     }
