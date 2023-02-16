@@ -263,20 +263,27 @@ int EVSP_table_config()
                 }
 
                 uint8_t uint8_t_val;
+                uint32_t uint32_t_val;
+
                 /* id */
                 char *sepstr = buf;
                 char *substr = trim_space(strsep(&sepstr, ","));
-                if (substr == NULL || sepstr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
+                if (substr == NULL || sepstr == NULL || sscanf(substr, "%d", &uint32_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
-                if (uint8_t_val != EVSP_plan_list.terminate_area_count) {
-                    goto EVSP_plan_list_read_error;
+                // 檢查沒有重複的 id
+                for (int i = 0; i < EVSP_plan_list.terminate_area_count; i++) {
+                    if (EVSP_plan_list.terminate_area[i].terminate_area_id == uint32_t_val) {
+                        goto EVSP_plan_list_read_error;
+                    }
                 }
 
                 /* 如果 terminate_area 的記憶體空間不夠的話 一次都多五個 */
                 EVSP_plan_list_Vector_Increase(EVSP_plan_list, ., terminate_area);
                 EVSP_terminate_area_t *term_area = &EVSP_plan_list.terminate_area[EVSP_plan_list.terminate_area_count];
                 EVSP_plan_list.terminate_area_count++;
+
+                term_area->terminate_area_id = uint32_t_val;
 
                 /* node_count */
                 substr = trim_space(strsep(&sepstr, ","));
@@ -303,7 +310,6 @@ int EVSP_table_config()
                 }
             }
         }
-
         if (strncmp(buf, "touching_area_table", sizeof("touching_area_table") - 1) == 0) {
             EVSP_plan_list.touching_area_count = 0;
 
@@ -319,20 +325,26 @@ int EVSP_table_config()
                 }
 
                 uint8_t uint8_t_val;
+                uint32_t uint32_t_val;
+
                 /* id */
                 char *sepstr = buf;
                 char *substr = trim_space(strsep(&sepstr, ","));
-                if (substr == NULL || sepstr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
+                if (substr == NULL || sepstr == NULL || sscanf(substr, "%d", &uint32_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
-                if (uint8_t_val != EVSP_plan_list.touching_area_count) {
-                    goto EVSP_plan_list_read_error;
+                // 檢查沒有重複的 id
+                for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
+                    if (EVSP_plan_list.touching_area[i].touching_area_id == uint32_t_val)
+                        goto EVSP_plan_list_read_error;
                 }
 
                 /* 如果 touching_area 的記憶體空間不夠的話 一次都多五個*/
                 EVSP_plan_list_Vector_Increase(EVSP_plan_list, ., touching_area);
                 EVSP_touching_area_t *touch_area = &EVSP_plan_list.touching_area[EVSP_plan_list.touching_area_count];
                 EVSP_plan_list.touching_area_count++;
+
+                touch_area->touching_area_id = uint32_t_val;
 
                 /* direction */
                 substr = trim_space(strsep(&sepstr, ","));
@@ -375,15 +387,16 @@ int EVSP_table_config()
                 if (uint8_t_val > MAX_NODE_COUNT) {  // 只是設個避免填錯的上限 之後會檢查
                     goto EVSP_plan_list_read_error;
                 }
-                touch_area->terminate_area_count = uint8_t_val;
-                Malloc(touch_area->terminate_area_Id, sizeof(uint8_t) * uint8_t_val, "EVSP_terminate_area_Id_new");
 
+                touch_area->terminate_area_count = uint8_t_val;
+                Malloc(touch_area->terminate_area_Id, sizeof(uint32_t) * uint8_t_val, "EVSP_terminate_area_Id_new");
                 for (int i = 0; i < touch_area->terminate_area_count; ++i) {
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
                     substr = trim_space(strsep(&sepstr, ","));
-                    if (substr == NULL || sscanf(substr, "%hhd", &touch_area->terminate_area_Id[i]) != 1)
+                    if (substr == NULL || sscanf(substr, "%d", &touch_area->terminate_area_Id[i]) != 1) {
                         goto EVSP_plan_list_read_error;
+                    }
                 }
             }
         }
@@ -457,6 +470,21 @@ int EVSP_table_config()
                     if (substr == NULL || sscanf(substr, "%hhd", &subPhase->touching_area_Id[i]) != 1)
                         goto EVSP_plan_list_read_error;
                 }
+            }
+        }
+    }
+    for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
+        for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
+            uint8_t k;
+            for (k = 0; i < EVSP_plan_list.terminate_area_count; k++) {
+                if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] == EVSP_plan_list.terminate_area[k].terminate_area_id) {
+                    EVSP_plan_list.touching_area[i].terminate_area_Id[j] = k;
+                    break;
+                }
+            }
+            // 沒有找到對應的 terminate_area
+            if (k == EVSP_plan_list.terminate_area_count) {
+                EVSP_plan_list_clean();
             }
         }
     }
@@ -556,7 +584,8 @@ void EVSP_plan_list_print()
              LOG_CONTENT_LEN - strlen(log_content), "\nterminate_area_count %d",
              EVSP_plan_list.terminate_area_count);
     for (int i = 0; i < EVSP_plan_list.terminate_area_count; i++) {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n %d", i);
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n %d",
+                 EVSP_plan_list.terminate_area[i].terminate_area_id);
         for (int j = 0; j < EVSP_plan_list.terminate_area[i].node_count; j++) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), " %lf %lf,",
@@ -567,7 +596,7 @@ void EVSP_plan_list_print()
              LOG_CONTENT_LEN - strlen(log_content), "\ntouching_area_count %d",
              EVSP_plan_list.touching_area_count);
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n %d %d %d", i,
+        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n %d %d %d", EVSP_plan_list.touching_area[i].touching_area_id,
                  EVSP_plan_list.touching_area[i].direciton_start, EVSP_plan_list.touching_area[i].direciton_end);
         for (int j = 0; j < EVSP_plan_list.touching_area[i].node_count; j++) {
             snprintf(log_content + strlen(log_content),
@@ -577,7 +606,7 @@ void EVSP_plan_list_print()
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), " %d,",
-                     EVSP_plan_list.touching_area[i].terminate_area_Id[j]);
+                     EVSP_plan_list.terminate_area[EVSP_plan_list.touching_area[i].terminate_area_Id[j]].terminate_area_id);
         }
     }
 

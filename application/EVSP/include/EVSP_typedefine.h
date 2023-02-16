@@ -36,19 +36,22 @@ typedef struct EVSP_static_space {
 } EVSP_static_space_t;
 
 typedef struct EVSP_terminate_area {
+    uint32_t terminate_area_id;
+
     uint8_t node_count;
     EVSP_Node_t *node;
 } EVSP_terminate_area_t;
 
 typedef struct EVSP_touching_area {
+    uint32_t touching_area_id;
+
     uint8_t direciton_start;  // 表達一段範圍的方向 總共 0~7 為順時針 6~0 是 6, 7, 0 的意思
     uint8_t direciton_end;    // 從 start 到 end 的範圍都算如果只有一個就是 start == end
-
     uint8_t node_count;
-    EVSP_Node_t *node;
-
     uint8_t terminate_area_count;
-    uint8_t *terminate_area_Id;
+
+    EVSP_Node_t *node;
+    uint32_t *terminate_area_Id;
 } EVSP_touching_area_t;
 
 typedef struct EVSP_plan_subPhase {
