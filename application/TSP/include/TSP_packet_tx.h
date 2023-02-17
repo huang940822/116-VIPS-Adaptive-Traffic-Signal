@@ -3,7 +3,7 @@
 
 #include "TSP_typedefine.h"
 
-void TSP_send_ack(uint8_t CMD);
+void TSP_send_ack(uint8_t cmd);
 void TSP_report_plan();
 void TSP_report_command(uint8_t control_status,
                         uint8_t sub_phase_id,
