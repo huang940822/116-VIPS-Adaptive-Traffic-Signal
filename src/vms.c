@@ -124,7 +124,6 @@ void VMS_report_programs_id(uint8_t cmd)
 void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
 {
     FILE *fp;
-    int program_id = 255;
     char *pos;
     char line[256]; // 用於保存每一行的內容
     char search_str[8]; // 用於保存要查找的字符串
