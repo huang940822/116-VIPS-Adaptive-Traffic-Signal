@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 // 因為 fopen 解析不了~，所以要注意如果 usrname 不是 asrlab 的話要做對應的修正
-#define VMS_pic_path "/home/asrlab/VMS_pic/program_id.txt"
+#define VMS_pic_database_path "/home/asrlab/VMS_pic/program_id.txt"
 
 #define VMS_BAUDRATE B115200
 #define VMS_SERIAL_PORT "/dev/ttyS0"
