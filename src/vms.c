@@ -8,14 +8,16 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "timer_event.h"
-#include "error_status.h"
-#include "vms.h"
-#include "traffic_signal_status_updating.h"
-#include "typedefine.h"
+#include "byte_processing.h"
 #include "config.h"
+#include "com_packet_processing.h"
+#include "error_status.h"
 #include "log.h"
 #include "network.h"
+#include "typedefine.h"
+#include "timer_event.h"
+#include "traffic_signal_status_updating.h"
+#include "vms.h"
 
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -86,6 +88,37 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
         printf("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
     }
     return 0;
+}
+
+void VMS_report_programs_id (uint8_t cmd) 
+{
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
+    if (write_buf.content == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("VMS_report_programs_id: malloc");
+        perror("VMS_report_programs_id: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
+    }
+
+    // cmd
+    write_uint8_t(cmd, &write_buf);
+    // Program IDs(Green)
+    for (int i = 0; i < RTM_MAX; ++i) {
+        write_uint8_t(vms_config.program_ids_green[i], &write_buf);
+    }
+    // Program IDs(Not Green)
+    for (int i = 0; i < RTM_MAX; ++i) {
+        write_uint8_t(vms_config.program_ids_not_green[i], &write_buf);
+    }
+
+    cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
+    free(write_buf.content);
+    return;
 }
 
 void phase_rtm_connect()

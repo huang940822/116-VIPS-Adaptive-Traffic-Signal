@@ -10,6 +10,7 @@
 #define VMS_SERIAL_PORT "/dev/ttyS0"
 #define VMIN_LEN 20
 
+// 一個路口最多有幾個方向
 #define RTM_MAX 8
 
 #define VMS_PACKET_TX_LEN_MAX 40
@@ -31,5 +32,6 @@ void vms_set_serial_attribs();
 void vms_request_start(uint8_t id, uint8_t priority);
 void vms_request_end(uint8_t id);
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID);
+void VMS_report_programs_id (uint8_t cmd);
 
 #endif
