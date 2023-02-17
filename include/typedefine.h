@@ -22,6 +22,7 @@
 #define SIGNAL_COUNT_MAX_NUM 8 // 岔路數目
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
+#define PROGRAM_NAME_LEN 100
 
 // This define CPS_DEBUG is for CPS testing. 
 // It's for the log buffer size. 

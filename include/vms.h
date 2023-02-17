@@ -6,6 +6,9 @@
 #include <pthread.h>
 #include <stdint.h>
 
+// 因為 fopen 解析不了~，所以要注意如果 usrname 不是 asrlab 的話要做對應的修正
+#define VMS_pic_path "/home/asrlab/VMS_pic/program_id.txt"
+
 #define VMS_BAUDRATE B115200
 #define VMS_SERIAL_PORT "/dev/ttyS0"
 #define VMIN_LEN 20
@@ -32,6 +35,6 @@ void vms_set_serial_attribs();
 void vms_request_start(uint8_t id, uint8_t priority);
 void vms_request_end(uint8_t id);
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID);
-void VMS_report_programs_id (uint8_t cmd);
-
+void VMS_report_programs_id(uint8_t cmd);
+void VMS_report_program_name(uint8_t cmd, uint8_t program_id);
 #endif

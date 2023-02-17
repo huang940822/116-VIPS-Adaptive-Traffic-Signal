@@ -657,7 +657,10 @@ int TSP_on_cloud_packet_rx(void *arg)
         VMS_report_programs_id(cmd);
     }break;
     case 12:  // 雲端查詢 VMS 編號對應檔案名稱
-    {
+    {   
+        uint8_t program_id;
+        read_uint8_t(&program_id, &read_buf);
+        VMS_report_program_name(cmd, program_id);
     }break;
     case 99:  // restart daemon
     {

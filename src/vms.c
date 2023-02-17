@@ -90,7 +90,7 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
     return 0;
 }
 
-void VMS_report_programs_id (uint8_t cmd) 
+void VMS_report_programs_id(uint8_t cmd) 
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
@@ -115,6 +115,70 @@ void VMS_report_programs_id (uint8_t cmd)
     for (int i = 0; i < RTM_MAX; ++i) {
         write_uint8_t(vms_config.program_ids_not_green[i], &write_buf);
     }
+
+    cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
+    free(write_buf.content);
+    return;
+}
+
+void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
+{
+    FILE *fp;
+    int program_id = 255;
+    char *pos;
+    char line[256]; // 用於保存每一行的內容
+    char search_str[8]; // 用於保存要查找的字符串
+    char filename[100];
+
+    memset(filename, 0, sizeof(filename));
+    snprintf(search_str, sizeof(search_str), "%d ", program_id); // 生成要查找的字符串
+
+    fp = fopen(VMS_pic_path, "r+");
+    
+    if (fp == NULL) {
+        log_file_write_fatal_error("VMS_report_programs_name: open program_id.txt failed");
+        return;
+    }
+    int flag = 0;
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (strncmp(line, search_str, strlen(search_str)) == 0) {
+            flag = 1;
+            pos = strchr(line, ' ') + 1;
+            if (pos != NULL) {
+                strcpy(filename, pos);
+            }
+            break;
+        }
+
+    }
+
+    if (flag == 0) {
+        strcat(filename, "None\n");
+    }
+
+    fclose(fp);
+
+    // 回傳給雲端
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
+    if (write_buf.content == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("VMS_report_programs_name: malloc");
+        perror("VMS_report_programs_name: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
+    }
+
+    // cmd
+    write_uint8_t(cmd, &write_buf);
+    // Program ID
+    write_uint8_t(program_id, &write_buf);
+    // Program Name, strlen(filename)-1 把換行字元刪掉
+    filename[strlen(filename) - 1] = 0;
+    write_char(filename, &write_buf, strlen(filename), PROGRAM_NAME_LEN);
 
     cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
     free(write_buf.content);
@@ -165,7 +229,7 @@ void control_loop()
     strcat(vms_packet_tx, uint8_t_to_char);
 
     switch (app_id) {
-        case 1: // EVSP
+        case EVSP_ID: // EVSP
         {
             for(int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
                 sprintf(uint8_t_to_char, "%d", evsp_prog[i]);
