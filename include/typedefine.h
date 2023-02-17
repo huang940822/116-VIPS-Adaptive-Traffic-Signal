@@ -38,6 +38,18 @@ typedef enum device_type {
     DEVICE_TYPE_NUMBER
 } device_type_t;
 
+typedef enum application_id {
+    COMMON_BROADCAST_ID = 0,
+    EVSP_ID = 1,
+    TSP_ID = 2,
+    ATSC_ID = 3,
+    CPS_ID = 4,
+    SPAT_ID = 5,
+    MAP_ID = 6,
+    SPM_ID = 7,
+    APPLICATION_ID_NUMBER
+} application_id_t;
+
 typedef enum vehicle_type {
     VEHICLE_NORMAL = 0,
     VEHICLE_AMBULANCE = 1,

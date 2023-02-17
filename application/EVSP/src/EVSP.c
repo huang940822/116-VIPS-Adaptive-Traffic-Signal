@@ -29,7 +29,7 @@
 
 app_obj_t EVSP = {
     .name = "EVSP",
-    .id = 1,
+    .id = EVSP_ID,
     .priority = 1,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,

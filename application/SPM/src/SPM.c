@@ -12,7 +12,7 @@
 
 app_obj_t SPM = {
     .name = "SPM",
-    .id = 7,
+    .id = SPM_ID,
     .priority = 3,
     .on_registration = &SPM_on_registration,
     .dontSend2TC = 1,

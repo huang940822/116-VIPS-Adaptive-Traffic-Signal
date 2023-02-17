@@ -35,7 +35,7 @@ pthread_mutex_t file_writer = PTHREAD_MUTEX_INITIALIZER;
 
 app_obj_t TSP = {
     .name = "TSP",
-    .id = 2,
+    .id = TSP_ID,
     .priority = 2,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
@@ -631,7 +631,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         switch (res) {
         case 0:     // 正常
         {
-            TSP_send_ack(10);
+            TSP_send_ack(cmd);
         }break;
         case -1:    // VMS ID 有誤
         {
@@ -652,8 +652,9 @@ int TSP_on_cloud_packet_rx(void *arg)
         }
 
     }break;
-    case 11:  // 雲端查詢 VMS 播放節目編號(需要調整)
+    case 11:  // 雲端查詢 VMS 播放節目編號
     {
+        VMS_report_programs_id(cmd);
     }break;
     case 12:  // 雲端查詢 VMS 編號對應檔案名稱
     {

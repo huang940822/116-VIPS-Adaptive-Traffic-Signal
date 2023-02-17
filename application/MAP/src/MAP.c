@@ -24,7 +24,7 @@ timer_t MAP_packet_tx_timer_id;
 
 app_obj_t MAP = {
     .name = "MAP",
-    .id = 6,
+    .id = MAP_ID,
     .priority = 3,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
