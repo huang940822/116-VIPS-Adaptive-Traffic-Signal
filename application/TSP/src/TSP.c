@@ -615,7 +615,32 @@ int TSP_on_cloud_packet_rx(void *arg)
         // 3.輪流連線四台VMS並上傳，都上傳成功則走5，反之則走4
         // 4.上傳異常回報處理並結束
         // 5.上傳成功回報並結束
-        
+        uint8_t Program_ID;
+        char Program_Name[100];
+        memset(Program_Name, 0, sizeof(Program_Name));
+        read_uint8_t(&Program_ID, &read_buf);
+        read_char(Program_Name, &read_buf, PROGRAM_NAME_LEN);
+
+        int res;
+        // 檢查檔案存不存在資料夾中
+        res = VMS_search_program(Program_Name);
+
+        switch (res) {
+            case -1:
+            {
+                log_file_write_fatal_error("VMS_search_program: open directory failed");
+            }break;
+            case 0:
+            {
+                log_file_write_fatal_error("VMS_search_program: program doesnt exist");
+                
+            }break;
+            case 1:
+            {
+                
+            }break;
+        }
+
     }break;
     case 10:  // 雲端更改 VMS 播放，設計成只有封包內容都正常才ACK
     {

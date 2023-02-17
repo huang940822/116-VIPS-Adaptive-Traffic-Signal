@@ -7,6 +7,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
 
 #include "byte_processing.h"
 #include "config.h"
@@ -179,6 +180,55 @@ void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
     filename[strlen(filename) - 1] = 0;
     write_char(filename, &write_buf, strlen(filename), PROGRAM_NAME_LEN);
 
+    cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
+    free(write_buf.content);
+    return;
+}
+
+int VMS_search_program(char *program_name) 
+{
+    DIR *dir;
+    struct dirent *entry;
+
+    dir = opendir(VMS_pic_path);  // 打開當前目錄
+    if (dir == NULL) {
+        printf("VMS_search_program: open directory failed\n");
+        return -1;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {  // 讀取目錄中的每個檔案
+        if (strcmp(entry->d_name, program_name) == 0) {  // 比較檔案名稱
+            printf("%s 已經存在\n", program_name);
+            closedir(dir);
+            return 1;
+        }
+    }
+
+    printf("%s 不存在\n", program_name);
+    closedir(dir);
+    return 0;
+}
+
+void VMS_report_programs_update_status(uint8_t cmd, uint8_t status)
+{
+    // 回傳給雲端
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
+    if (write_buf.content == NULL) {
+        set_memory_error();
+        log_file_write_fatal_error("VMS_report_programs_name: malloc");
+        perror("VMS_report_programs_name: malloc");
+        exit(errno);
+    } else {
+        clear_memory_error();
+        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
+    }
+
+    // cmd
+    write_uint8_t(cmd, &write_buf);
+    // Program ID
+    write_uint8_t(status, &write_buf);
     cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
     free(write_buf.content);
     return;
