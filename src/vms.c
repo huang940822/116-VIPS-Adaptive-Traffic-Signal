@@ -396,7 +396,57 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
 }
 
 void VMS_program_update(uint8_t program_id, char *program_name) 
-{
+{   
+
+    // 寫入 program_id.txt
+    FILE *input_file, *output_file;
+    char search_str[8]; // 用於保存要查找的字符串
+    char line[256];  // 用於保存每一行的內容
+
+    memset(line, 0, sizeof(line));
+    memset(search_str, 0, sizeof(search_str));
+    snprintf(search_str, sizeof(search_str), "%d ", program_id); // 生成要查找的字符串
+
+    input_file = fopen(VMS_pic_database_path, "r");
+    output_file = fopen("/home/asrlab/VMS_pic/program_id_after.txt", "w");
+
+    if (input_file == NULL || output_file == NULL) {
+        printf("VMS_program_update: Error opening program_id.txt\n");
+        log_file_write_fatal_error("VMS_program_update: Error opening program_id.txt");
+        return;
+    }
+
+    int flag = 0;
+    // 找到要改寫的那一行寫入新內容
+    while (fgets(line, sizeof(line), input_file) != NULL) {
+        if (strncmp(line, search_str, strlen(search_str)) == 0) {
+            char write_buf[256];
+            memset(write_buf, 0, sizeof(write_buf));
+            sprintf(uint8_t_to_char, "%d", program_id);
+            strcat(write_buf, uint8_t_to_char);
+            strcat(write_buf, SPACEBAR);
+            strcat(write_buf, program_name);
+            strcat(write_buf, "\n");
+            fprintf(output_file, "%s", write_buf);
+            flag = 1;
+        } else {
+            fprintf(output_file, "%s", line);
+        }
+    }
+
+    fclose(input_file);
+    fclose(output_file);
+    // 透過更改檔名的方式將修改後的文件取代原本的文件
+    rename("/home/asrlab/VMS_pic/program_id_after.txt", VMS_pic_database_path);
+
+    if (flag == 1) {
+        printf("VMS_program_update: OverWrite program_id.txt successful\n");
+        log_file_write("VMS_program_update: OverWrite program_id.txt successful");
+    } else {
+        printf("VMS_program_update: OverWrite program_id.txt failed\n");
+        log_file_write_fatal_error("VMS_program_update: OverWrite program_id.txt failed");
+    }
+
     // 每個 VMS 有設定上傳失敗重新上傳的閾值(包含連不到 Wi-Fi)
     // 如果有一個 VMS 超過閾值都還沒上傳成功，則判斷上傳異常，拉起 VMS 異常的 bit
     // 計數方式是連不上wifi就+1，或是連上wifi但是上傳失敗就+1
@@ -437,9 +487,9 @@ void VMS_program_update(uint8_t program_id, char *program_name)
         for (int i = 0; i < 4; i++) {
             if (upload_error_cnt[i] >= VMS_RESEND_THRESHOLD) {
                 // 認定 VMS 異常，回報給雲端
-                //set_vms_error();
+                set_vms_error();
                 printf("VMS_program_update: VMS ID: %s error\n", VMS_name[i]);
-                //log_file_write_fatal_error("VMS_program_update: VMS ID: %s error", VMS_name[i]);
+                log_file_write_fatal_error("VMS_program_update: VMS ID: %s error", VMS_name[i]);
             }
         }
     }
@@ -447,7 +497,7 @@ void VMS_program_update(uint8_t program_id, char *program_name)
     // 因為上傳不是常態性的操作，頻率很低，所以不能等到下次上傳沒有問題才把 vms_error 清掉
     // 但如果定期回報給雲端的時間超過兩秒的話就會有問題(是否有紀錄現在是多久回傳一次的變數存在?)
     sleep(2);
-    //clear_vms_error();
+    clear_vms_error();
 }
 
 void phase_rtm_connect()

@@ -631,7 +631,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                 log_file_write_fatal_error("VMS_search_program: open directory failed");
             }break;
             case 0:
-            {
+            {   
                 VMS_program_update(Program_ID, Program_Name);
                 
 
