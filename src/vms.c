@@ -82,9 +82,9 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
     memset(search_str, 0, sizeof(search_str));
 
     if (Program_Type == 0) {    // Green
-        snprintf(search_str, sizeof(search_str), "%d ", "PROGRAM_IDs_GREEN"); // 生成要查找的字符串
+        strcat(search_str, "PROGRAM_IDs_GREEN");    // 生成要查找的字符串
     } else {    // Not Green
-        snprintf(search_str, sizeof(search_str), "%d ", "PROGRAM_IDs_NOT_GREEN"); // 生成要查找的字符串
+        strcat(search_str, "PROGRAM_IDs_NOT_GREEN");    // 生成要查找的字符串
     }
 
     input_file = fopen(VMS_CONFIG_FILE, "r");
