@@ -237,6 +237,46 @@ void VMS_report_program_update_status(uint8_t cmd, uint8_t status)
     return;
 }
 
+int VMS_wifi_disconnect()
+{
+    FILE* fp;
+    char path[1024];
+
+    /* 執行斷線的指令並將輸出保存到 fp 中 */
+    fp = popen(WIFI_DISCONNECT_COMMAND, "r");
+    if (fp == NULL) {
+        printf("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command\n");
+        log_file_write_fatal_error("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command");
+        pclose(fp);
+        return -1;
+    }
+
+    int disconnected_flag = 0;
+    char *pch1, *pch2;
+    /* 從 fp 中讀資料並比對是不是本來就沒連線或是成功斷線，是的話將 disconnected_flag 設為 1 */
+    while (fgets(path, sizeof(path), fp) != NULL) {
+        //printf("%s", path);
+        pch1 = strstr(path, "disconnecting failed: This device is not active");
+        pch2 = strstr(path, "successfully disconnected");
+        if (pch1 != NULL || pch2 != NULL) {
+            disconnected_flag = 1;
+        }
+    }
+
+    if (disconnected_flag == 1) {
+        printf("VMS_wifi_disconnect: Successfully disconnected\n");
+        log_file_write("VMS_wifi_disconnect: Successfully disconnected");
+    } else {
+        printf("VMS_wifi_disconnect: Failed to disconnect Wi-Fi\n");
+        log_file_write_fatal_error("VMS_wifi_disconnect: Failed to disconnect Wi-Fi");
+        pclose(fp);
+        return -2;
+    }
+
+    pclose(fp);
+    return 0;
+}
+
 int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
 {
     char write_buf[PROGRAM_UPLOAD_PACKET_LEN_MAX];
