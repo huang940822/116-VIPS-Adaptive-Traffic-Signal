@@ -672,6 +672,10 @@ int TSP_on_cloud_packet_rx(void *arg)
         {
             log_file_write_fatal_error("Error Program ID");
         }break;
+        case -4:    // 無法開啟 vms_config.txt
+        {
+            log_file_write_fatal_error("Error opening vms_config.txt");
+        }break;
         default:
         {
             log_file_write("Useless return value");

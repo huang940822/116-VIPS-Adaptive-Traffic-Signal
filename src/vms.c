@@ -72,8 +72,71 @@ void vms_request_end(uint8_t id)
 
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
 {    
-    // 要寫入config!!!!!!!
-    // 有空改 ENUM
+    
+    // 寫入 program_id.txt
+    FILE *input_file, *output_file;
+    char search_str[100]; // 用於保存要查找的字符串
+    char line[256];  // 用於保存每一行的內容
+
+    memset(line, 0, sizeof(line));
+    memset(search_str, 0, sizeof(search_str));
+
+    if (Program_Type == 0) {    // Green
+        snprintf(search_str, sizeof(search_str), "%d ", "PROGRAM_IDs_GREEN"); // 生成要查找的字符串
+    } else {    // Not Green
+        snprintf(search_str, sizeof(search_str), "%d ", "PROGRAM_IDs_NOT_GREEN"); // 生成要查找的字符串
+    }
+
+    input_file = fopen(VMS_CONFIG_FILE, "r");
+    output_file = fopen("./config/vms_config_after.txt", "w");
+
+    if (input_file == NULL || output_file == NULL) {
+        printf("carousel_update: Error opening vms_config.txt\n");
+        log_file_write_fatal_error("carousel_update: Error opening vms_config.txt");
+        return -4;
+    }
+
+    int flag = 0;
+    // 找到要改寫的那一行寫入新內容
+    while (fgets(line, sizeof(line), input_file) != NULL) {
+        if (strncmp(line, search_str, strlen(search_str)) == 0) {
+            char write_buf[256];
+            memset(write_buf, 0, sizeof(write_buf));
+            strcat(write_buf, search_str);
+            for (int i = 0; i < RTM_MAX; i++) {
+                if (i == VMS_ID) {
+                    sprintf(uint8_t_to_char, "%d", Program_ID);
+                } else {
+                    if (Program_Type == 0) {    // Green
+                        sprintf(uint8_t_to_char, "%d", vms_config.program_ids_green[i]);
+                    } else {    // Not Green
+                        sprintf(uint8_t_to_char, "%d", vms_config.program_ids_not_green[i]);
+                    }
+                }
+                strcat(write_buf, SPACEBAR);
+                strcat(write_buf, uint8_t_to_char);
+            }
+            strcat(write_buf, "\n");
+            fprintf(output_file, "%s", write_buf);
+            flag = 1;
+        } else {
+            fprintf(output_file, "%s", line);
+        }
+    }
+
+    fclose(input_file);
+    fclose(output_file);
+    // 透過更改檔名的方式將修改後的文件取代原本的文件
+    rename("./config/vms_config_after.txt", VMS_CONFIG_FILE);
+
+    if (flag == 1) {
+        printf("carousel_update: OverWrite vms_config.txt successful\n");
+        log_file_write("carousel_update: OverWrite vms_config.txt successful");
+    } else {
+        printf("carousel_update: OverWrite vms_config.txt successful failed\n");
+        log_file_write_fatal_error("carousel_update: OverWrite vms_config.txt successful failed");
+    }
+    
     if (VMS_ID > 7) {
         return -1;
     }else if (Program_Type != 0 || Program_Type != 1) {
