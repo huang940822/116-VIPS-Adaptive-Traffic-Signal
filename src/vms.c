@@ -237,6 +237,58 @@ void VMS_report_program_update_status(uint8_t cmd, uint8_t status)
     return;
 }
 
+int VMS_wifi_connect(char *VMS_name)
+{   
+
+    char wifi_connect_cmd[PROGRAM_UPLOAD_PACKET_LEN_MAX];
+    memset(wifi_connect_cmd, 0, sizeof(wifi_connect_cmd));
+    strcat(wifi_connect_cmd, WIFI_CONNECT_COMMAND_BEGIN);
+    strcat(wifi_connect_cmd, SPACEBAR);
+    strcat(wifi_connect_cmd, VMS_name);
+    strcat(wifi_connect_cmd, SPACEBAR);
+    strcat(wifi_connect_cmd, "password");
+    strcat(wifi_connect_cmd, SPACEBAR);
+    strcat(wifi_connect_cmd, VMS_WIFI_AP_PASSWORD);
+
+    //printf("%s\n", wifi_connect_cmd);
+
+    FILE* fp;
+    char path[1024];
+
+    /* 執行連線的指令並將輸出保存到 fp 中 */
+    fp = popen(wifi_connect_cmd, "r");
+    if (fp == NULL) {
+        printf("VMS_wifi_connect: Failed to execute  Wi-Fi connect command\n");
+        log_file_write_fatal_error("VMS_wifi_connect: Failed to execute  Wi-Fi connect command");
+        pclose(fp);
+        return -1;
+    }
+
+    int connected_flag = 0;
+    char *pch;
+    while (fgets(path, sizeof(path), fp) != NULL) {
+        //printf("%s", path);
+        pch = strstr(path, "successfully activated with");
+        if (pch != NULL) {
+            connected_flag = 1;
+        }
+    }
+
+    if (connected_flag == 1) {
+        printf("VMS_wifi_connect: Successfully connected Wi-Fi: %s\n", VMS_name);
+        log_file_write("VMS_wifi_connect: Successfully connected %s", VMS_name);
+    } else {
+        printf("VMS_wifi_connect: Failed to connect Wi-Fi: %s\n", VMS_name);
+        log_file_write_fatal_error("VMS_wifi_connect: Failed to connect Wi-Fi: %s", VMS_name);
+        pclose(fp);
+        return -2;
+    }
+
+    pclose(fp);
+    return 0;
+
+}
+
 int VMS_wifi_disconnect()
 {
     FILE* fp;
