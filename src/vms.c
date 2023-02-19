@@ -45,6 +45,8 @@ int res;
 uint8_t vms_respose_cnt[RTM_MAX];
 int readCnt;
 
+char *VMS_name[4] = {VMS_1, VMS_2, VMS_3, VMS_4};
+
 void vms_request_start(uint8_t id, uint8_t priority)
 {
     pthread_mutex_lock(&VMS_request_priority_mutex);
@@ -69,7 +71,8 @@ void vms_request_end(uint8_t id)
 
 
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
-{   
+{    
+    // 要寫入config!!!!!!!
     // 有空改 ENUM
     if (VMS_ID > 7) {
         return -1;
@@ -200,16 +203,16 @@ int VMS_search_program(char *program_name)
         if (strcmp(entry->d_name, program_name) == 0) {  // 比較檔案名稱
             printf("%s 已經存在\n", program_name);
             closedir(dir);
-            return 1;
+            return 0;
         }
     }
 
     printf("%s 不存在\n", program_name);
     closedir(dir);
-    return 0;
+    return 1;
 }
 
-void VMS_report_programs_update_status(uint8_t cmd, uint8_t status)
+void VMS_report_program_update_status(uint8_t cmd, uint8_t status)
 {
     // 回傳給雲端
     msg_buf_t write_buf;
@@ -232,6 +235,80 @@ void VMS_report_programs_update_status(uint8_t cmd, uint8_t status)
     cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
     free(write_buf.content);
     return;
+}
+
+int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
+{
+    char write_buf[PROGRAM_UPLOAD_PACKET_LEN_MAX];
+    memset(write_buf, 0, sizeof(write_buf));
+    strcat(write_buf, PROGRAM_UPLOAD_PACKET_BEGIN);
+    strcat(write_buf, SPACEBAR);
+    strcat(write_buf, VMS_PROGRAM_UPLOADER_PATH);
+    strcat(write_buf, SPACEBAR);
+    strcat(write_buf, DOUBLE_QUOTATION_MARKS);
+    strcat(write_buf, VMS_pic_path);
+    strcat(write_buf, program_name);
+    strcat(write_buf, DOUBLE_QUOTATION_MARKS);
+    strcat(write_buf, SPACEBAR);
+    strcat(write_buf, DOUBLE_QUOTATION_MARKS);
+    char uint8_t_to_char[10]; 
+    sprintf(uint8_t_to_char, "%d", program_id);
+    strcat(write_buf, uint8_t_to_char);
+    strcat(write_buf, DOUBLE_QUOTATION_MARKS);
+    printf("%s\n", write_buf);
+
+    // 看輸出來決定return 什麼
+    FILE* fp;
+    char path[1024];
+
+    /* 執行上傳並將輸出保存到 fp 中 */
+    fp = popen(write_buf, "r");
+    if (fp == NULL) {
+        printf("VMS_program_update_packet_tx: Failed to execute  upload command\n");
+        log_file_write_fatal_error("VMS_program_update_packet_tx: Failed to execute  upload command");
+        pclose(fp);
+        return -1;
+    }
+
+    int upload_flag = 0;
+    char *pch;
+    char upload_successful_msg[PROGRAM_UPLOAD_PACKET_LEN_MAX];
+    memset(upload_successful_msg, 0, sizeof(upload_successful_msg));
+    strcat(upload_successful_msg, "Upload Program");
+    strcat(upload_successful_msg, SPACEBAR);
+    sprintf(uint8_t_to_char, "%d", program_id);
+    strcat(upload_successful_msg, uint8_t_to_char);
+    strcat(upload_successful_msg, SPACEBAR);
+    strcat(upload_successful_msg, "successful");
+    //printf("%s\n", upload_successful_msg);
+    while (fgets(path, sizeof(path), fp) != NULL) {
+        //printf("%s", path);
+        pch = strstr(path, upload_successful_msg);
+        if (pch != NULL) {
+            upload_flag = 1;
+        }
+    }
+    
+    if (upload_flag == 1) {
+        printf("VMS_program_update_packet_tx: Upload Program %d successful\n", program_id);
+        log_file_write("VMS_program_update_packet_tx: Upload Program %d successful", program_id);
+    } else {
+        printf("VMS_program_update_packet_tx: Upload Program %d failed\n", program_id);
+        log_file_write_fatal_error("VMS_program_update_packet_tx: Upload Program %d failed", program_id);
+        pclose(fp);
+        return -2;
+    }
+    
+    pclose(fp);
+    return 0;
+}
+
+void VMS_program_update(uint8_t program_id, char *program_name) 
+{
+    // 每個 VMS 有設定上傳失敗重新上傳的閾值(包含連不到 Wi-Fi)
+    // 如果有一個 VMS 超過閾值都還沒上傳成功，則判斷上傳異常，拉起 VMS 異常的 bit
+    // 計數方式是連不上wifi就+1，或是連上wifi但是上傳失敗就+1
+
 }
 
 void phase_rtm_connect()

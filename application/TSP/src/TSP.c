@@ -612,7 +612,7 @@ int TSP_on_cloud_packet_rx(void *arg)
     {
         // 1.檢查檔名是否存在於VMS_pic資料夾中，無跳2.，有跳3.
         // 2.沒有指定檔案的回報處理並結束
-        // 3.輪流連線四台VMS並上傳，都上傳成功則走5，反之則走4
+        // 3.輪流連線四台VMS並上傳，都上傳成功則走5，反之則走4(設計成會容許失敗重傳幾次，有時候會找不到wifi，但是平均三次內都可以成功)
         // 4.上傳異常回報處理並結束
         // 5.上傳成功回報並結束
         uint8_t Program_ID;
@@ -632,12 +632,14 @@ int TSP_on_cloud_packet_rx(void *arg)
             }break;
             case 0:
             {
-                log_file_write_fatal_error("VMS_search_program: program doesnt exist");
+                VMS_program_update(Program_ID, Program_Name);
                 
+
             }break;
             case 1:
             {
-                
+                log_file_write_fatal_error("VMS_search_program: program doesnt exist");
+                VMS_report_program_update_status(cmd, res);
             }break;
         }
 

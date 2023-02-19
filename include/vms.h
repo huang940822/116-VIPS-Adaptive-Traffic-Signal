@@ -26,6 +26,25 @@
 #define CAROUSEL_NUM 255
 #define VMS_ERROR_THRESHOLD 10
 
+#define VMS_1 "NCKU_1"
+#define VMS_2 "NCKU_2"
+#define VMS_3 "NCKU_3"
+#define VMS_4 "NCKU_4"
+#define VMS_WIFI_AP_PASSWORD "ncku_sqmbNVw2"
+#define VMS_RESEND_THRESHOLD 20
+#define VMS_WIFI_ADAPTER_NAME "wlxf42853198ed0"
+#define FETCH_STDOUT_AND_STDERR "2>&1"
+
+#define VMS_PROGRAM_UPLOADER_PATH "/home/asrlab/Desktop/CppNcku/CppNcku.exe"
+#define VMS_PROGRAM_UPLOADER_LOG_PATH "/home/asrlab/Desktop/CppNcku/upload.txt"
+#define PROGRAM_UPLOAD_PACKET_BEGIN "wine"
+#define DOUBLE_QUOTATION_MARKS "\""
+#define SPACEBAR " "
+#define PROGRAM_UPLOAD_PACKET_LEN_MAX 1000
+
+#define WIFI_DISCONNECT_COMMAND "sudo nmcli dev disconnect" SPACEBAR VMS_WIFI_ADAPTER_NAME SPACEBAR FETCH_STDOUT_AND_STDERR
+#define WIFI_CONNECT_COMMAND_BEGIN "sudo nmcli device wifi connect"
+
 extern uint8_t evsp_prog[RTM_MAX];
 extern pthread_mutex_t VMS_request_priority_mutex;
 
@@ -39,6 +58,7 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID);
 void VMS_report_programs_id(uint8_t cmd);
 void VMS_report_program_name(uint8_t cmd, uint8_t program_id);
 int VMS_search_program(char *program_name);
-void VMS_report_programs_update_status(uint8_t cmd, uint8_t status);
+void VMS_report_program_update_status(uint8_t cmd, uint8_t status);
+void VMS_program_update(uint8_t program_id, char *program_name);
 
 #endif
