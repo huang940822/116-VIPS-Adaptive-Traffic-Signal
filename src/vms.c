@@ -400,7 +400,54 @@ void VMS_program_update(uint8_t program_id, char *program_name)
     // 每個 VMS 有設定上傳失敗重新上傳的閾值(包含連不到 Wi-Fi)
     // 如果有一個 VMS 超過閾值都還沒上傳成功，則判斷上傳異常，拉起 VMS 異常的 bit
     // 計數方式是連不上wifi就+1，或是連上wifi但是上傳失敗就+1
+    int res;
+    // 無論有沒有連接都先斷線一次
+    res = VMS_wifi_disconnect();
 
+    if (res == 0) {
+        uint8_t upload_error_cnt[RTM_MAX];
+        memset(upload_error_cnt, 0, sizeof(upload_error_cnt));
+
+        for (int i = 0; i < 4; i++) {
+
+            while (upload_error_cnt[i] < VMS_RESEND_THRESHOLD) {
+                sleep(1);
+                res = VMS_wifi_connect(VMS_name[i]);
+                if (res == 0) {
+                    break;
+                }
+                upload_error_cnt[i]++;
+            }
+            // 表示成功連接 Wi-Fi，準備開始嘗試上傳 Program
+            if (res == 0) {
+                while (upload_error_cnt[i] < VMS_RESEND_THRESHOLD) {
+                    sleep(1);
+                    res = VMS_program_update_packet_tx(program_id, program_name);
+                    if (res == 0) {
+                        break;
+                    }
+                    upload_error_cnt[i]++;
+                }
+            }
+            sleep(1);
+            VMS_wifi_disconnect();
+        }
+
+        // 檢查是否有 VMS 異常
+        for (int i = 0; i < 4; i++) {
+            if (upload_error_cnt[i] >= VMS_RESEND_THRESHOLD) {
+                // 認定 VMS 異常，回報給雲端
+                //set_vms_error();
+                printf("VMS_program_update: VMS ID: %s error\n", VMS_name[i]);
+                //log_file_write_fatal_error("VMS_program_update: VMS ID: %s error", VMS_name[i]);
+            }
+        }
+    }
+    // 睡兩秒保證 vms_error 的資訊有送回雲端，然後再把 vms_error 清掉
+    // 因為上傳不是常態性的操作，頻率很低，所以不能等到下次上傳沒有問題才把 vms_error 清掉
+    // 但如果定期回報給雲端的時間超過兩秒的話就會有問題(是否有紀錄現在是多久回傳一次的變數存在?)
+    sleep(2);
+    //clear_vms_error();
 }
 
 void phase_rtm_connect()
