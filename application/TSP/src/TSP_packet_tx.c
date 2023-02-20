@@ -14,10 +14,10 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-void TSP_send_ack()
+void TSP_send_ack(uint8_t cmd)
 {
-    printf("tsp send ack\r\n");
-    log_file_write("tsp send ack\r\n");
+    printf("tsp send ack, CMD is %d\r\n", cmd);
+    log_file_write("tsp send ack, CMD is %d\r\n", cmd);
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
@@ -32,8 +32,8 @@ void TSP_send_ack()
     }
 
     // cmd
-    write_uint8_t(0, &write_buf);
-    write_uint8_t(0, &write_buf);
+    write_uint8_t(cmd, &write_buf);
+    write_uint8_t(cmd, &write_buf);
 
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);

@@ -5,10 +5,12 @@
 #include "typedefine.h"
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
+#define VMS_CONFIG_FILE FILE_PATH "config/vms_config.txt"
 #define CONFIG_LINE_BUFFER_SIZE 256
 #define MAX_CONFIG_VARIABLE_LEN 100
 
 int config_init();
+int vms_config_init();
 
 typedef struct config_object {
     char RSU_name[RSU_NAME_MAX_LEN];
@@ -72,6 +74,23 @@ typedef enum config_err {
     CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER = -24,
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
+
+typedef struct vms_config_object {
+    bool vms_active;
+    uint8_t program_ids_green[PHASE_COUNT_MAX_NUM];
+    uint8_t program_ids_not_green[PHASE_COUNT_MAX_NUM];
+} vms_config_object_t;
+
+extern vms_config_object_t vms_config;
+
+/* Return codes of vms config */
+typedef enum vms_config_err {
+    VMS_CONFIG_ACCEPT = 0,
+    VMS_CONFIG_INVALID_VMS_ACTIVE = -1,
+    VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN = -2,
+    VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN = -3,
+    VMS_CONFIG_INVALID_OPEN_FILE = -99,
+} vms_config_err_t;
 
 char *trim_space(char *buf);
 char *read_line(char *read_buf, int read_buf_len, FILE *fp);

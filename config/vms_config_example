@@ -1,0 +1,15 @@
+# any line started with '#' '\n' ' ' will be ignored
+
+# vms active
+# yes / no
+VMS_ACTIVE yes
+
+# Program IDs(Green)
+# integer number array
+# length of the array is 8
+PROGRAM_IDs_GREEN 3 3 3 3 255 255 255 255
+
+# Program IDs(Not Green)
+# integer number array
+# length of the array is 8
+PROGRAM_IDs_NOT_GREEN 4 4 4 4 255 255 255 255

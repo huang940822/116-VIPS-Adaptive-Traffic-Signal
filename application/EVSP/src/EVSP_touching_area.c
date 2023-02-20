@@ -6,9 +6,11 @@
 
 #include "EVSP_config.h"
 #include "EVSP_touching_area.h"
+#include "EVSP.h"
 #include "config.h"
 #include "error_status.h"
 #include "log.h"
+#include "vms.h"
 
 EVSP_plan_list_t EVSP_plan_list = {0};
 

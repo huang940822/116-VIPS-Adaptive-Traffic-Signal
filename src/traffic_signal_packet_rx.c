@@ -417,17 +417,15 @@ void recv_nak(int fd, traffic_signal_packet_t *packet)
 *https://blog.xuite.net/uwlib_mud/twblog/108242774-Linux+RS-232+%E7%A8%8B%E5%BC%8F%E8%A8%AD%E8%A8%88
 **				http://blog.gitdns.org/2016/10/20/uart-c/
 ******************************************************************************/
-void set_serial_attribs()
+void set_serial_attribs(int fd, int speed, char serial_port[])
 {
     struct termios serial_port_settings; /* Create the structure */
 
-    tcgetattr(serial_port_fd,
-              &serial_port_settings); /* Get the current attributes of the
-                                         Serial port */
+    tcgetattr(serial_port_fd, &serial_port_settings); /* Get the current attributes of the Serial port */
 
     /* Setting the Baud rate */
-    cfsetispeed(&serial_port_settings, BAUDRATE); /* Set Read  Speed as 9600 */
-    cfsetospeed(&serial_port_settings, BAUDRATE); /* Set Write Speed as 9600 */
+    cfsetispeed(&serial_port_settings, speed); /* Set Read  Speed as 9600 */
+    cfsetospeed(&serial_port_settings, speed); /* Set Write Speed as 9600 */
 
     /* 8N1 Mode */
     serial_port_settings.c_cflag &=
@@ -456,9 +454,9 @@ void set_serial_attribs()
     /* Set the attributes to the termios structure */
     if ((tcsetattr(serial_port_fd, TCSANOW, &serial_port_settings)) != 0) {
         log_file_write_fatal_error("error setting attributes of %s",
-                                   SERIAL_PORT);
+                                   serial_port);
     } else {
-        log_file_write("%s set attributes successfully", SERIAL_PORT);
+        log_file_write("%s set attributes successfully", serial_port);
     }
     sleep(2); /* required to make flush work, for some reason */
     tcflush(serial_port_fd,
@@ -467,7 +465,7 @@ void set_serial_attribs()
 
 void traffic_signal_port_init()
 {
-    serial_port_fd = open(SERIAL_PORT, O_RDWR | O_NOCTTY);
+    serial_port_fd = open(TC_SERIAL_PORT, O_RDWR | O_NOCTTY);
     /* ttyUSB0 is the FT232 based USB2SERIAL Converter   */
     /* O_RDWR   - Read/Write access to serial port       */
     /* O_NOCTTY - No terminal will control the process   */
@@ -475,11 +473,11 @@ void traffic_signal_port_init()
 
     /* Error Checking */
     if (serial_port_fd == -1) {
-        log_file_write_fatal_error("error opening %s", SERIAL_PORT);
+        log_file_write_fatal_error("error opening %s", TC_SERIAL_PORT);
     } else {
-        log_file_write("%s opened successfully", SERIAL_PORT);
+        log_file_write("%s opened successfully", TC_SERIAL_PORT);
     }
-    set_serial_attribs();
+    set_serial_attribs(serial_port_fd, TC_BAUDRATE, TC_SERIAL_PORT);
 }
 
 /* traffic_signal_packet_thread */

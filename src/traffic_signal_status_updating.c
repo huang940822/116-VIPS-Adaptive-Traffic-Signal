@@ -407,11 +407,6 @@ void packet_0F04(traffic_signal_packet_t *packet)
 
     log_file_write("tc_health_status after mask is %04X\n\r", original_tc_hstatus);
 
-    if (original_tc_hstatus != 0) {
-        set_tsc_error();
-    } else {
-        clear_tsc_error();
-    }
     pthread_mutex_unlock(&mutex_signal_status);
 }
 
