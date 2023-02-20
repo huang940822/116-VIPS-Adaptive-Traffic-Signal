@@ -778,7 +778,8 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
                 }
             } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
                 if (flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
-                    printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID, plan->plan_subPhase[i].touching_area_Id[j]);
+                    printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID,
+                        EVSP_plan_list.touching_area[plan->plan_subPhase[i].touching_area_Id[j]].touching_area_id);
                     *area_ptr = touching_area;
                     return plan->plan_subPhase[i].SubPhaseID;
                 }
@@ -788,7 +789,7 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
     return -1;
 }
 
-bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
+int EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
 {
     for (int i = 0; i < area_ptr->terminate_area_count; i++) {
         if (EVSP_config.touching_area_config_type == EVSP_touching_area_DEFAULT) {
@@ -796,15 +797,15 @@ bool EVSP_terminate(float lon, float lat, EVSP_touching_area_t *area_ptr)
                 (EVSP_plan_list.terminate_area->node[1].lat <= lat && lat <= EVSP_plan_list.terminate_area->node[0].lat) &&
                 (EVSP_plan_list.terminate_area->node[0].lon <= lon && lon <= EVSP_plan_list.terminate_area->node[1].lon)) {
                 printf("EVSP_terminate------------\n");
-                return true;
+                return 1;
             }
         } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
             if (checkInside(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
                             EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, &(EVSP_Node_t){lon, lat})) {
-                printf("EVSP_terminate------------\n");
-                return true;
+                printf("EVSP_terminate------------ %d\n", EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id);
+                return EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id;
             }
         }
     }
-    return false;
+    return -1;
 }

@@ -301,7 +301,8 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
     get_traffic_signal_status(&signal_status);
 
     int temp_ack_seq;
-    uint16_t atrerial = signal_status.plan[0].PreGreen, branch = INT16_MIN;
+    uint16_t atrerial = signal_status.plan[0].PreGreen;
+    int16_t branch = INT16_MIN;
     uint8_t atrerial_phase = 0, branch_phase = 0;
     uint8_t current_SubPhaseID = signal_status.SubPhaseID;
     uint8_t current_step = signal_status.StepID;
@@ -318,12 +319,18 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
             }
         }
     }
-    if (branch_phase == 0) {
-        // branch_phase = atrerial_phase - 1;
-        uint8_t temp = atrerial_phase;
-        atrerial_phase = temp - 1;
-        branch_phase = temp;
+    if ( signal_status.SubPhaseCount == 2 && 
+        signal_status.plan[0].PreGreen > signal_status.plan[1].PreGreen) {
+        atrerial_phase = 1;
+        branch_phase = 2;
     }
+    
+    // if (branch_phase == 0 ) {
+    //     // branch_phase = atrerial_phase - 1;
+    //     uint8_t temp = atrerial_phase;
+    //     atrerial_phase = temp - 1;
+    //     branch_phase = temp;
+    // }
 
     printf("atrerial_phase:%d\r\n",atrerial_phase);
     printf("branch_phase:%d\r\n",branch_phase);

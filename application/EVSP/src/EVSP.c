@@ -335,7 +335,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
         host_OBU->distance = OBU_distance;
-        uint8_t terminate = EVSP_terminate(
+        int terminate = EVSP_terminate(
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lon,
             app_section->OBU_object->record_ring.record[last_record_index]
@@ -343,8 +343,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             host_OBU->area_ptr);
         int ret = 0;
         // enter terminate area
-        if (terminate == true) {
-
+        if (terminate != -1) {
             /*
             結束 EVSP_VMS_SERVICE
             */
@@ -354,8 +353,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: TERMINATE");
             snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s",
-                     app_section->OBU_object->OBU_name);
+                     LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s\nterminate area id %d",
+                     app_section->OBU_object->OBU_name, terminate);
 
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
@@ -432,11 +431,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
         // enter activate area
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
-
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content),
-                     "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d",
-                     app_section->OBU_object->OBU_name, target_phase);
+                     "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
+                     app_section->OBU_object->OBU_name, target_phase, area_ptr->touching_area_id);
 
             EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
                                      target_phase, area_ptr);
@@ -489,7 +487,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  ret);                                              \
     } while (0);
 
-            command.cycle = 0;  // 0 代表線在這個 cycle
+            command.cycle = 0;                            // 0 代表線在這個 cycle
             command.effect_time = EVSP_config.min_green;  // 縮短到最小綠
 
             // 如果 current_phase >= target_phase，i 就會加到 target_phase
@@ -500,16 +498,16 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
 
             /* target_phase >= current_phase */
-            if (target_phase < current_phase) {                /* target_phase < current_phase */
+            if (target_phase < current_phase) { /* target_phase < current_phase */
                 // 如果 target_phase < current_phase 就代表在下一個 cycle
-                command.cycle = 1; // 所以這裡 cycle = 1 並下面再插入目標時向的時候舊式下一個 cycle
+                command.cycle = 1;  // 所以這裡 cycle = 1 並下面再插入目標時向的時候舊式下一個 cycle
                 command.effect_time = EVSP_config.min_green;
                 for (int i = 1; i < target_phase; i++) {
                     command.phase = i;
                     insert_command_and_log;
                 }
             }
-            
+
             // 如果同時有兩台緊急車輛採到觸碰區域，會進行綠燈延長的是先來的那台
             command.phase = target_phase;
             command.effect_time = pretime + EVSP_adjust_time;
@@ -526,25 +524,25 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 memset(evsp_prog, 255, sizeof(evsp_prog));
 
                 if (static_space.last_direction == 3 || static_space.last_direction == 4) {
-                    //evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
+                    // evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
                     evsp_prog[0] = 245;
                     evsp_prog[1] = 246;
                     evsp_prog[2] = 247;
                     evsp_prog[3] = 248;
-                }else if (static_space.last_direction == 5 || static_space.last_direction == 6) {
-                    //evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
+                } else if (static_space.last_direction == 5 || static_space.last_direction == 6) {
+                    // evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
                     evsp_prog[0] = 248;
                     evsp_prog[1] = 245;
                     evsp_prog[2] = 246;
                     evsp_prog[3] = 247;
-                }else if (static_space.last_direction == 7 || static_space.last_direction == 0) {
-                    //evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
+                } else if (static_space.last_direction == 7 || static_space.last_direction == 0) {
+                    // evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
                     evsp_prog[0] = 247;
                     evsp_prog[1] = 248;
                     evsp_prog[2] = 245;
                     evsp_prog[3] = 246;
-                }else if (static_space.last_direction == 1 || static_space.last_direction == 2) {
-                    //evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
+                } else if (static_space.last_direction == 1 || static_space.last_direction == 2) {
+                    // evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
                     evsp_prog[0] = 246;
                     evsp_prog[1] = 247;
                     evsp_prog[2] = 248;

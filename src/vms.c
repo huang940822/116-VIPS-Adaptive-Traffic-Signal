@@ -717,7 +717,7 @@ void vms_handler_init()
     res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
     if (res > 0) {
         log_file_write("vms_packet_tx: %s", vms_packet_tx);
-        printf("vms_packet_tx: %s", vms_packet_tx);
+        // printf("vms_packet_tx: %s", vms_packet_tx);
     }
     sleep(1);
     res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
@@ -726,7 +726,7 @@ void vms_handler_init()
         printf("RS232: EAGAIN\n");
     } else if (res > 0) {
         log_file_write("vms_packet_rx: %s", vms_packet_rx);
-        printf("%s\n", vms_packet_rx);
+        // printf("%s\n", vms_packet_rx);
     }
 }
 

@@ -131,17 +131,16 @@ void command_buf_send(tsc_command_object_t *command_obj,
                 original_difference, difference);
                 log_file_write(log_content);
             }
-            if (conpensation_flag) {
-                printf(
-                    "TSP cmd isn't sent to TC machine ,for conpensation_flag "
-                    "enabled\r\n");
-                log_file_write(
-                    "TSP cmd isn't sent to TC machine ,for conpensation_flag "
-                    "enabled\r\n");
-                break;
+
+            // compensation_buffer_initialization
+            if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
+                if (CompensationInitialFlag == true) {
+                    get_compensation_buffer(compensation_buffer);
+                    CompensationInitialFlag = false;
+                }
             }
 
-            if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,15) != 0){
+            if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) != 0){
                 if ( current_sec_residual + difference < 0) {
                     int16_t residual = difference + current_sec_residual;
                     printf("residual:%d\r\n",residual);
@@ -151,45 +150,30 @@ void command_buf_send(tsc_command_object_t *command_obj,
                 }
             }
 
-        // compensation_buffer_initialization
-        // EVSP or TSP in this `if` condition.
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-            if (CompensationInitialFlag == true) {
-                // printf("first compensation buffer initialization\r\n");
-                get_compensation_buffer(compensation_buffer);
-                CompensationInitialFlag = false;
+            // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
+            time = pretime + difference;  // difference才是真正會延長的時間
+            // printf("diff: %d, time: %d, pretime: %d\n", difference, time,
+            // pretime);
+            if (time > 255) {
+                time = 255;
             }
-        }
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-            // printf("EVSP or TSP control instruction\r\n");
-            compensation_buffer[current_SubPhaseID - 1] += difference;
-        }
+            while (time < 0) {
+                temp_ack_seq = tsc_dynamic();
+                WAIT_ACK_LOOP
+                //不能下0 否則step會立刻結束
+                temp_ack_seq =
+                    tsc_extend(current_SubPhaseID, 1, 1);  //每次就是pretime-4去扣
+                WAIT_ACK_LOOP
+                // time += pretime;
+                time += (pretime - 4);  //要想一下 -4是因為機器限制的關係
+            }
 
-        // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
-        time = pretime + difference;  // difference才是真正會延長的時間
-        // printf("diff: %d, time: %d, pretime: %d\n", difference, time,
-        // pretime);
-        if (time > 255) {
-            time = 255;
-        }
-
-        while (time < 0) {
             temp_ack_seq = tsc_dynamic();
             WAIT_ACK_LOOP
-            //不能下0 否則step會立刻結束
-            temp_ack_seq =
-                tsc_extend(current_SubPhaseID, 1, 1);  //每次就是pretime-4去扣
+            temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
             WAIT_ACK_LOOP
-            // time += pretime;
-            time += (pretime - 4);  //要想一下 -4是因為機器限制的關係
-        }
-
-        temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP
-        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
-        WAIT_ACK_LOOP
-        break;
+            break;
 
     case SHAN_ZHU:
         if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
@@ -438,24 +422,36 @@ void command_buf_polling()
             current_StepSec;  //換相了 更新adjusted time讓他變成現在的倒數秒數
     }
 
+    uint8_t compensation_send_flag = true;
+
     /* command ready to send in current phase */
     if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == false &&
         command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 &&
         current_StepID == 1 && current_StepSec > 1 &&
-        prior_SubPhaseID == current_SubPhaseID) {
-        // 將目前phase的 command buffer object 送到TC箱
-        command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "command_buf_send(command_buf[%d][%d])\r\n",cycle_index,current_SubPhaseID);
-        log_file_write(log_content);
-        set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);    //判斷是evsp還是tsp
-        command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;// 已送出TC箱
-        CompensationFlag = true;
-        //更新步階一要倒數的時間
-        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
-            command_buf[cycle_index][current_SubPhaseID - 1].effect_time;
+        prior_SubPhaseID == current_SubPhaseID) { 
+        if(strncmp(command_buf[cycle_index][current_SubPhaseID -1].host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) == 0) {
+            int16_t residual_time = current_StepSec - command_buf[cycle_index][current_SubPhaseID - 1].compensation_time;
+            printf("residual_time:%d\r\n",residual_time);
+            if (residual_time <= TIME_DEFENSE) {
+                compensation_send_flag = false;
+                printf("***");
+            } 
+        }
+        if (compensation_send_flag == true) {
+            // 將目前phase的 command buffer object 送到TC箱
+            command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
+            memset(log_content, 0, sizeof(log_content));
+            snprintf(log_content + strlen(log_content),
+                LOG_CONTENT_LEN - strlen(log_content),
+                "command_buf_send(command_buf[%d][%d])\r\n",cycle_index,current_SubPhaseID);
+            log_file_write(log_content);
+            set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);    //判斷是evsp還是tsp
+            command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;// 已送出TC箱
+            CompensationFlag = true;
+            //更新步階一要倒數的時間
+            command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
+                command_buf[cycle_index][current_SubPhaseID - 1].effect_time;
+        }
     }
 
     prior_SubPhaseID = current_SubPhaseID;
