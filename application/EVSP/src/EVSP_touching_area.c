@@ -408,6 +408,7 @@ int EVSP_table_config()
             EVSP_plan_list.plan_table_count++;
 
             uint8_t uint8_t_val;
+            
             int plan_id_max = 0;
             char *substr = trim_space(buf + sizeof("plan_table") - 1);
             char *save_ptr = NULL;
@@ -469,7 +470,7 @@ int EVSP_table_config()
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
                     substr = trim_space(strsep(&sepstr, ","));
-                    if (substr == NULL || sscanf(substr, "%hhd", &subPhase->touching_area_Id[i]) != 1)
+                    if (substr == NULL || sscanf(substr, "%d", &subPhase->touching_area_Id[i]) != 1)
                         goto EVSP_plan_list_read_error;
                 }
             }
@@ -486,7 +487,23 @@ int EVSP_table_config()
             }
             // 沒有找到對應的 terminate_area
             if (k == EVSP_plan_list.terminate_area_count) {
-                EVSP_plan_list_clean();
+                goto EVSP_plan_list_read_error;
+            }
+        }
+    }
+    for (int i = 0; i < EVSP_plan_list.plan_table_count; i++) {
+        for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_subPhase_count; j++) {
+            for (int k = 0; k < EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_count; k++) {
+                int m = 0;
+                for (m = 0; m < EVSP_plan_list.touching_area_count; m++) {
+                    if (EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k] == EVSP_plan_list.touching_area[m].touching_area_id) {
+                        EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k] = m;
+                        break;
+                    } 
+                }
+                if (m == EVSP_plan_list.touching_area_count) {
+                    goto EVSP_plan_list_read_error;
+                }
             }
         }
     }
@@ -507,7 +524,7 @@ bool EVSP_plan_list_check()
 {
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
-            if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] >= EVSP_plan_list.terminate_area_count) {
+            if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] >= EVSP_plan_list.terminate_area_count) {printf("rfrfrrf\n");
                 return false;
             }
         }
@@ -516,14 +533,14 @@ bool EVSP_plan_list_check()
     uint8_t hash_table[256] = {0};
     for (int i = 0; i < EVSP_plan_list.plan_table_count; i++) {
         for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_id_count; j++) {
-            if (hash_table[EVSP_plan_list.plan_table[i].plan_id[j]] != 0) {
+            if (hash_table[EVSP_plan_list.plan_table[i].plan_id[j]] != 0) {printf("rfrfrr2dddf\n");
                 return false;
             }
             hash_table[EVSP_plan_list.plan_table[i].plan_id[j]]++;
         }
         for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_subPhase_count; j++) {
             for (int k = 0; k < EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_count; k++) {
-                if (EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k] >= EVSP_plan_list.touching_area_count) {
+                if (EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k] >= EVSP_plan_list.touching_area_count) {printf("rfrfrvvvvvrf %d\n", EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k]);
                     return false;
                 }
             }
@@ -629,7 +646,7 @@ void EVSP_plan_list_print()
             for (int k = 0; k < EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_count; k++) {
                 snprintf(log_content + strlen(log_content),
                          LOG_CONTENT_LEN - strlen(log_content), " %d",
-                         EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k]);
+                         EVSP_plan_list.touching_area[EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k]].touching_area_id);
             }
         }
     }

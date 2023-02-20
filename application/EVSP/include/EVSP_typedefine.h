@@ -58,7 +58,7 @@ typedef struct EVSP_plan_subPhase {
     uint8_t SubPhaseID;
 
     uint8_t touching_area_count;
-    uint8_t *touching_area_Id;
+    uint32_t *touching_area_Id;
 } EVSP_plan_subPhase_t;
 
 typedef struct EVSP_plan_table {
