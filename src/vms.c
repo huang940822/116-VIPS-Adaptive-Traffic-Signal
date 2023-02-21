@@ -21,6 +21,7 @@
 #include "vms.h"
 
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t VMS_program_update_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 traffic_signal_status_t signal_status;
 uint8_t rtm_phase[RTM_MAX] = {0};
@@ -47,6 +48,28 @@ int readCnt;
 
 char *VMS_name[4] = {VMS_1, VMS_2, VMS_3, VMS_4};
 
+bool vms_program_update_thread_activate(uint8_t Program_ID, char *Program_Name)
+{
+    if (pthread_mutex_trylock(&VMS_program_update_thread_mutex) == 0) {
+        VMS_update_args *args;
+        Malloc(args, sizeof(VMS_update_args), "vms program update VMS_update_args");
+        args->program_id = Program_ID;
+        // 因為用另一個 thread 去 handle 所以需要把 name 多用一塊空間
+        Malloc(args->program_name, strlen(Program_Name), "vms program update name");
+        memcpy(args->program_name, Program_Name, strlen(Program_Name));
+
+        pthread_t VMS_program_update_handler;
+        int ret = pthread_create(&VMS_program_update_handler, NULL, VMS_program_update, args);
+        if (ret != 0) {
+            log_file_write_fatal_error("error creating VMS_program_update_handler: %d", ret);
+            perror("vms: pthread_create");
+            exit(errno);
+        }
+        return true;
+    }
+    return false;
+}
+
 void vms_request_start(uint8_t id, uint8_t priority)
 {
     pthread_mutex_lock(&VMS_request_priority_mutex);
@@ -67,7 +90,6 @@ void vms_request_end(uint8_t id)
     }
     pthread_mutex_unlock(&VMS_request_priority_mutex);
 }
-
 
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
 {
@@ -131,13 +153,13 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
         printf("carousel_update: OverWrite vms_config.txt successful\n");
         log_file_write("carousel_update: OverWrite vms_config.txt successful");
     } else {
-        printf("carousel_update: OverWrite vms_config.txt successful failed\n");
-        log_file_write_fatal_error("carousel_update: OverWrite vms_config.txt successful failed");
+        printf("carousel_update: OverWrite vms_config.txt failed\n");
+        log_file_write_fatal_error("carousel_update: OverWrite vms_config.txt failed");
     }
 
     if (VMS_ID > 7) {
         return -1;
-    } else if (Program_Type != 0 || Program_Type != 1) {
+    } else if (Program_Type != 0 && Program_Type != 1) {
         return -2;
     } else if (Program_ID == 0) {
         return -3;
@@ -197,10 +219,10 @@ void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
     memset(filename, 0, sizeof(filename));
     snprintf(search_str, sizeof(search_str), "%d ", program_id);  // 生成要查找的字符串
 
-    fp = fopen(VMS_pic_path, "r+");
+    fp = fopen(VMS_pic_database_path, "r+");
 
     if (fp == NULL) {
-        log_file_write_fatal_error("VMS_report_programs_name: open program_id.txt failed");
+        log_file_write_fatal_error("VMS_report_programs_name: open %s failed", VMS_pic_database_path);
         return;
     }
     int flag = 0;
@@ -270,31 +292,6 @@ int VMS_search_program(char *program_name)
     printf("%s 不存在\n", program_name);
     closedir(dir);
     return 1;
-}
-
-void VMS_report_program_update_status(uint8_t cmd, uint8_t status)
-{
-    // 回傳給雲端
-    msg_buf_t write_buf;
-    write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("VMS_report_programs_name: malloc");
-        perror("VMS_report_programs_name: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
-
-    // cmd
-    write_uint8_t(cmd, &write_buf);
-    // Program ID
-    write_uint8_t(status, &write_buf);
-    cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
-    free(write_buf.content);
-    return;
 }
 
 int VMS_wifi_connect(char *VMS_name)
@@ -453,8 +450,13 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
     return 0;
 }
 
-void VMS_program_update(uint8_t program_id, char *program_name)
+void *VMS_program_update(void *data)
 {
+    VMS_update_args *tmp = (VMS_update_args *) (data);
+    uint8_t program_id = tmp->program_id;
+    char *program_name = tmp->program_name;
+    free(data);
+
     // 寫入 program_id.txt
     FILE *input_file, *output_file;
     char search_str[8];  // 用於保存要查找的字符串
@@ -469,8 +471,12 @@ void VMS_program_update(uint8_t program_id, char *program_name)
 
     if (input_file == NULL || output_file == NULL) {
         printf("VMS_program_update: Error opening program_id.txt\n");
-        log_file_write_fatal_error("VMS_program_update: Error opening program_id.txt");
-        return;
+        log_file_write_fatal_error("VMS_program_update: Error opening %s", VMS_pic_database_path);
+        pthread_mutex_unlock(&VMS_program_update_thread_mutex);
+        pthread_detach(pthread_self());
+        if (program_name)
+            free(program_name);
+        return NULL;
     }
 
     int flag = 0;
@@ -482,7 +488,7 @@ void VMS_program_update(uint8_t program_id, char *program_name)
             sprintf(uint8_t_to_char, "%d", program_id);
             strcat(write_buf, uint8_t_to_char);
             strcat(write_buf, SPACEBAR);
-            strcat(write_buf, program_name);
+            strncat(write_buf, program_name, PROGRAM_NAME_LEN);
             strcat(write_buf, "\n");
             fprintf(output_file, "%s", write_buf);
             flag = 1;
@@ -554,6 +560,25 @@ void VMS_program_update(uint8_t program_id, char *program_name)
     // 但如果定期回報給雲端的時間超過兩秒的話就會有問題(是否有紀錄現在是多久回傳一次的變數存在?)
     sleep(2);
     clear_vms_error();
+    pthread_mutex_unlock(&VMS_program_update_thread_mutex);
+    if (program_name)
+        free(program_name);
+
+    // 回傳雲端上傳成功
+    // 暫時使用與 TSP ack 相同的封包格式
+    // cmd 9, status 0
+    msg_buf_t write_buf;
+    write_buf.index = 0;
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "TSP_send_ack: malloc");
+
+    // cmd
+    write_uint8_t(9, &write_buf);
+    write_uint8_t(0, &write_buf);
+
+    cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
+    free(write_buf.content);
+
+    pthread_detach(pthread_self());
 }
 
 void phase_rtm_connect()
@@ -638,7 +663,7 @@ void control_loop()
     res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
     if (res > 0) {
         log_file_write("vms_packet_tx: %s", vms_packet_tx);
-        printf("vms_packet_tx: %s", vms_packet_tx);
+        // printf("vms_packet_tx: %s", vms_packet_tx);
     }
     sleep(1);
     res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
@@ -648,7 +673,7 @@ void control_loop()
         printf("RS232: EAGAIN\n");
     } else if (res > 0) {
         log_file_write("vms_packet_rx: %s", vms_packet_rx);
-        printf("%s\n", vms_packet_rx);
+        // printf("%s\n", vms_packet_rx);
     }
 
     readCnt++;
@@ -659,11 +684,11 @@ void control_loop()
         }
     }
 
-    printf("vms_respose_cnt:");
-    for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
-        printf("%d ", vms_respose_cnt[i]);
-    }
-    printf("\n");
+    // printf("vms_respose_cnt:");
+    // for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
+    //     printf("%d ", vms_respose_cnt[i]);
+    // }
+    // printf("\n");
     // 每傳送十次檢查一次有沒有VMS已經超過十秒沒有回應，有的話判定 VMS 異常
     // 因為有一塊板子被廠商拿走了，所以這段程式碼會一直觸發異常
     if (readCnt == VMS_ERROR_THRESHOLD) {
@@ -704,7 +729,7 @@ void vms_handler_init()
 
     vms_set_serial_attribs();
 
-    res = net_non_block("", port_fd);
+    res = net_non_block("set vms port non block.", port_fd);
 
     // 需要做一次送編號全255的當作初始化，才不會IPC當機恢復之後因為 VMS timeout 所以沒辦法正常播放節目
     // 因為有一塊板子的wifi壞了，暫時沒辦法全部上傳黑色節目到編號255

@@ -1,10 +1,10 @@
 #ifndef VMS_H
 #define VMS_H
 
-#include <signal.h>
-#include "time.h"
 #include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
+#include "time.h"
 
 // 因為 fopen 解析不了~，所以要注意如果 usrname 不是 asrlab 的話要做對應的修正
 #define VMS_pic_path "/home/asrlab/VMS_pic/"
@@ -48,6 +48,11 @@
 extern uint8_t evsp_prog[RTM_MAX];
 extern pthread_mutex_t VMS_request_priority_mutex;
 
+typedef struct VMS_update_args {
+    uint8_t program_id;
+    char *program_name;
+} VMS_update_args;
+
 void *vms_handler();
 void vms_handler_init();
 void vms_set_serial_attribs();
@@ -58,7 +63,7 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID);
 void VMS_report_programs_id(uint8_t cmd);
 void VMS_report_program_name(uint8_t cmd, uint8_t program_id);
 int VMS_search_program(char *program_name);
-void VMS_report_program_update_status(uint8_t cmd, uint8_t status);
-void VMS_program_update(uint8_t program_id, char *program_name);
+void *VMS_program_update(void *data);
+bool vms_program_update_thread_activate(uint8_t Program_ID, char *Program_Name);
 
 #endif

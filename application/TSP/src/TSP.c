@@ -261,10 +261,9 @@ int TSP_on_cloud_packet_rx(void *arg)
                app_section->payload_len);
     }
 
-    TSP_send_ack(0);
-
     // read cmd
     uint8_t cmd;
+    uint8_t ack_status = 0;
     read_uint8_t(&cmd, &read_buf);
 
     /* print packet */
@@ -493,8 +492,8 @@ int TSP_on_cloud_packet_rx(void *arg)
                              "\nWarning: error opening ./config/config.txt ");
                 } else {
                     fprintf(outfile, "RSU_NAME \"%s\"\n", config.RSU_name);
-                    fprintf(outfile, "RSU_id \"%d\"\n", config.RSU_id);
-                    fprintf(outfile, "RSU_region \"%d\"\n", config.RSU_region);
+                    fprintf(outfile, "RSU_id %d\n", config.RSU_id);
+                    fprintf(outfile, "RSU_region %d\n", config.RSU_region);
                     fprintf(outfile, "RSU_LAT %f\n", config.RSU_lat);
                     fprintf(outfile, "RSU_LON %f\n", config.RSU_lon);
 
@@ -616,34 +615,35 @@ int TSP_on_cloud_packet_rx(void *arg)
         // 4.上傳異常回報處理並結束
         // 5.上傳成功回報並結束
         uint8_t Program_ID;
-        char Program_Name[100];
-        memset(Program_Name, 0, sizeof(Program_Name));
+        char program_buf[100];
+        char *Program_Name;
+        memset(program_buf, 0, sizeof(program_buf));
         read_uint8_t(&Program_ID, &read_buf);
-        read_char(Program_Name, &read_buf, PROGRAM_NAME_LEN);
-
+        read_char(program_buf, &read_buf, PROGRAM_NAME_LEN);
+        Program_Name = trim_space(program_buf);
         int res;
         // 檢查檔案存不存在資料夾中
         res = VMS_search_program(Program_Name);
 
         switch (res) {
-            case -1:
-            {
-                log_file_write_fatal_error("VMS_search_program: open directory failed");
-            }break;
-            case 0:
-            {   
-                VMS_program_update(Program_ID, Program_Name);
-                
-
-            }break;
-            case 1:
-            {
-                log_file_write_fatal_error("VMS_search_program: program doesnt exist");
-                VMS_report_program_update_status(cmd, res);
-            }break;
+        case -1: {
+            log_file_write_fatal_error("VMS_search_program: open directory failed");
+        } break;
+        case 0: {
+            if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
+                log_file_write("vms program update thread activate.");
+            } else {  // 正在上傳
+                log_file_write_fatal_error("vms program update is process.");
+            }
+            ack_status = 2;
+        } break;
+        case 1: {
+            log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
+            ack_status = res;
+        } break;
         }
 
-    }break;
+    } break;
     case 10:  // 雲端更改 VMS 播放，設計成只有封包內容都正常才ACK
     {
         uint8_t VMS_ID;
@@ -652,47 +652,47 @@ int TSP_on_cloud_packet_rx(void *arg)
         read_uint8_t(&VMS_ID, &read_buf);
         read_uint8_t(&Program_Type, &read_buf);
         read_uint8_t(&Program_ID, &read_buf);
-        printf("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
+        // printf("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
+        log_file_write("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
         int res = carousel_update(VMS_ID, Program_Type, Program_ID);
 
         switch (res) {
-        case 0:     // 正常
+        case 0:  // 正常
         {
-            TSP_send_ack(cmd);
-        }break;
-        case -1:    // VMS ID 有誤
+            // ack_status = res;  // 初始值就是 0
+        } break;
+        case -1:  // VMS ID 有誤
         {
             log_file_write_fatal_error("Error VMS ID");
-        }break;
-        case -2:    // Program Type 有誤
+        } break;
+        case -2:  // Program Type 有誤
         {
             log_file_write_fatal_error("Error Program Type");
-        }break;
-        case -3:    // Program ID 有誤
+        } break;
+        case -3:  // Program ID 有誤
         {
             log_file_write_fatal_error("Error Program ID");
-        }break;
-        case -4:    // 無法開啟 vms_config.txt
+        } break;
+        case -4:  // 無法開啟 vms_config.txt
         {
             log_file_write_fatal_error("Error opening vms_config.txt");
-        }break;
-        default:
-        {
+        } break;
+        default: {
             log_file_write("Useless return value");
-        }break;
+        } break;
         }
 
-    }break;
+    } break;
     case 11:  // 雲端查詢 VMS 播放節目編號
     {
         VMS_report_programs_id(cmd);
-    }break;
+    } break;
     case 12:  // 雲端查詢 VMS 編號對應檔案名稱
-    {   
+    {
         uint8_t program_id;
         read_uint8_t(&program_id, &read_buf);
         VMS_report_program_name(cmd, program_id);
-    }break;
+    } break;
     case 99:  // restart daemon
     {
         char token_packet[TOKEN_LEN];
@@ -701,8 +701,11 @@ int TSP_on_cloud_packet_rx(void *arg)
         printf("the token recv is %s\r\n", token_packet);
 
         if (strncmp(token_packet, token, TOKEN_LEN) == 0) {
+            TSP_send_ack(cmd, ack_status);  // 因為之後就會被 kill 了所以要在這裡傳 ack
+
             log_file_write("daemon get into kill self\r\n");
             printf("daemon get into kill self\r\n");
+            usleep(5000);  // 等待 log 一小段時間
             kill(getpid(), SIGINT);
         }
 
@@ -710,9 +713,10 @@ int TSP_on_cloud_packet_rx(void *arg)
     default:
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nuseless tsp cmd");
-
         break;
     }
+
+    TSP_send_ack(cmd, ack_status);
 
     log_file_write(log_content);
 
