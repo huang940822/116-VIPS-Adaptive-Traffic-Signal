@@ -12,7 +12,12 @@ git clone https://github.com/oslab-csie-ncku/RSU_Controller_master.git
 ```bash=
 cd RSU_Controller_master
 ```
-4. Execute command `make` to build code
+4. Installing Make and GCC
+```bash=
+sudo apt install gcc
+sudo apt install make
+```
+5. Execute command `make` to build code
 ```bash=
 make
 ```
