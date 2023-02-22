@@ -55,8 +55,8 @@ bool vms_program_update_thread_activate(uint8_t Program_ID, char *Program_Name)
         Malloc(args, sizeof(VMS_update_args), "vms program update VMS_update_args");
         args->program_id = Program_ID;
         // 因為用另一個 thread 去 handle 所以需要把 name 多用一塊空間
-        Malloc(args->program_name, strlen(Program_Name), "vms program update name");
-        memcpy(args->program_name, Program_Name, strlen(Program_Name));
+        Malloc(args->program_name, strlen(Program_Name) + 1, "vms program update name");
+        memcpy(args->program_name, Program_Name, strlen(Program_Name) + 1);
 
         pthread_t VMS_program_update_handler;
         int ret = pthread_create(&VMS_program_update_handler, NULL, VMS_program_update, args);
@@ -429,12 +429,15 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
     strcat(upload_successful_msg, "successful");
     // printf("%s\n", upload_successful_msg);
     while (fgets(path, sizeof(path), fp) != NULL) {
-        // printf("%s", path);
+        printf("%s", path);
+        log_file_write("VMS_program_update_packet_tx: Upload message: %s", path);
         pch = strstr(path, upload_successful_msg);
         if (pch != NULL) {
             upload_flag = 1;
         }
     }
+    // 不管上傳失敗與否都把上傳程式資料夾內裡面的 programs 資料夾刪掉，才不會有上傳異常的問題。
+    system(DELETE_UPLOAD_PROGRAMS_FILES);
 
     if (upload_flag == 1) {
         printf("VMS_program_update_packet_tx: Upload Program %d successful\n", program_id);
@@ -467,7 +470,7 @@ void *VMS_program_update(void *data)
     snprintf(search_str, sizeof(search_str), "%d ", program_id);  // 生成要查找的字符串
 
     input_file = fopen(VMS_pic_database_path, "r");
-    output_file = fopen("/home/asrlab/VMS_pic/program_id_after.txt", "w");
+    output_file = fopen(VMS_pic_path "program_id_after.txt", "w");
 
     if (input_file == NULL || output_file == NULL) {
         printf("VMS_program_update: Error opening program_id.txt\n");
@@ -500,7 +503,7 @@ void *VMS_program_update(void *data)
     fclose(input_file);
     fclose(output_file);
     // 透過更改檔名的方式將修改後的文件取代原本的文件
-    rename("/home/asrlab/VMS_pic/program_id_after.txt", VMS_pic_database_path);
+    rename(VMS_pic_path "program_id_after.txt", VMS_pic_database_path);
 
     if (flag == 1) {
         printf("VMS_program_update: OverWrite program_id.txt successful\n");
@@ -817,5 +820,5 @@ void *vms_handler()
 
     close(port_fd);
 }
-
+// 判斷號誌燈號方向的文件
 // https://ncku365-my.sharepoint.com/:p:/g/personal/p76101160_ncku_edu_tw/EdZ5RSBI6kxKgc_KwgRGn-YBjgrhCRPNddsJdz9qVu0ZsQ?rtime=RSZUgDsE20g

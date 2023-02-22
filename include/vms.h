@@ -8,7 +8,7 @@
 
 // 因為 fopen 解析不了~，所以要注意如果 usrname 不是 asrlab 的話要做對應的修正
 #define VMS_pic_path "/home/asrlab/VMS_pic/"
-#define VMS_pic_database_path "/home/asrlab/VMS_pic/program_id.txt"
+#define VMS_pic_database_path VMS_pic_path "program_id.txt"
 
 #define VMS_BAUDRATE B115200
 #define VMS_SERIAL_PORT "/dev/ttyS1"
@@ -35,8 +35,9 @@
 #define VMS_WIFI_ADAPTER_NAME "wlxf42853198ed0"
 #define FETCH_STDOUT_AND_STDERR "2>&1"
 
-#define VMS_PROGRAM_UPLOADER_PATH "/home/asrlab/Desktop/CppNcku/CppNcku.exe"
-#define VMS_PROGRAM_UPLOADER_LOG_PATH "/home/asrlab/Desktop/CppNcku/upload.txt"
+#define VMS_PROGRAM_UPLOADER_DIR "/home/asrlab/Desktop/CppNcku/"
+#define VMS_PROGRAM_UPLOADER_PATH VMS_PROGRAM_UPLOADER_DIR "CppNcku.exe"
+#define VMS_PROGRAM_UPLOADER_LOG_PATH VMS_PROGRAM_UPLOADER_DIR "upload.txt"
 #define PROGRAM_UPLOAD_PACKET_BEGIN "wine"
 #define DOUBLE_QUOTATION_MARKS "\""
 #define SPACEBAR " "
@@ -44,6 +45,8 @@
 
 #define WIFI_DISCONNECT_COMMAND "sudo nmcli dev disconnect" SPACEBAR VMS_WIFI_ADAPTER_NAME SPACEBAR FETCH_STDOUT_AND_STDERR
 #define WIFI_CONNECT_COMMAND_BEGIN "sudo nmcli device wifi connect"
+
+#define DELETE_UPLOAD_PROGRAMS_FILES "sudo rm -rf " VMS_PROGRAM_UPLOADER_DIR "programs/"
 
 extern uint8_t evsp_prog[RTM_MAX];
 extern pthread_mutex_t VMS_request_priority_mutex;
