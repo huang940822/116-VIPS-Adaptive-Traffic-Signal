@@ -308,13 +308,16 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
     for (int i = 1; i < signal_status.SubPhaseCount; i++) {
         if (signal_status.plan[i].PreGreen >= signal_status.plan[atrerial_phase].PreGreen) {
             branch_phase = atrerial_phase;
-            atrerial_phase = i + 1;
+            atrerial_phase = i;
         } else if (signal_status.plan[i].PreGreen != signal_status.plan[atrerial_phase].PreGreen) {
             if ( branch_phase == atrerial_phase || signal_status.plan[i].PreGreen > signal_status.plan[branch_phase].PreGreen) {
-                branch_phase = i + 1;
+                branch_phase = i;
             }
         }
     }
+    
+    atrerial_phase += 1;
+    branch_phase += 1;
 
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
