@@ -188,75 +188,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             .last_record_pointer;  // back of queue; 最新推入的資料？
 
     // 轉傳緊急封包到雲端
-
-    {  // it's for evsp service's rx and try to get it's duty status and route
-        // it to cloud
-        // printf("recv special obu object and will route it to cloud for it's
-        // evsp packet\n\r");
-
-        msg_buf_t write_buf;
-        write_buf.index = 0;
-        write_buf.content = (unsigned char *) malloc(42);
-        if (write_buf.content == NULL) {
-            set_memory_error();
-            log_file_write_fatal_error("OBU_packet_tx: malloc");
-            perror("OBU_packet_tx: malloc");
-            exit(errno);
-        } else {
-            clear_memory_error();
-            // clear mem content which is malloced
-            memset(write_buf.content, 0, 42);
-        }
-        write_uint8_t(0, &write_buf);  // write cmd
-        write_char(
-            app_section->OBU_object->OBU_name,
-            &write_buf, OBU_NAME_MAX_LEN, OBU_NAME_MAX_LEN);  // write OBU_name
-        write_uint8_t(
-            app_section->OBU_object->vehicle_type,
-            &write_buf);  // write vehicle_type
-
-        char timestamp_t[20];
-        struct tm *timeinfo;
-        timeinfo = localtime(&app_section->OBU_object->record_ring
-                                  .record[last_record_index]
-                                  .time_second);
-        int length =
-            strftime(timestamp_t, 20, "%Y-%m-%d %H:%M:%S\n", timeinfo);
-        // printf("obu object timestamp string is %s\n\r",timestamp_t);
-        write_char(timestamp_t, &write_buf, TIMESTAMP_LEN,
-                   TIMESTAMP_LEN);  // write timestamp
-        write_float(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lon,
-            &write_buf);  // write lon
-        write_float(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lat,
-            &write_buf);  // write lat
-
-        // printf("gps data %f
-        // %f\r\n",app_section->OBU_object->record_ring.record[last_record_index].position_lon,
-        // app_section->OBU_object->record_ring.record[last_record_index].position_lat);
-
-        write_uint8_t(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .speed,
-            &write_buf);  // write speed
-        write_uint8_t(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .direction,
-            &write_buf);  // write direction
-        // printf("direction:%d\n\r",app_section->OBU_object->record_ring.record[last_record_index].direction);
-
-        // write dummy duty
-        // write_uint8_t(1, &write_buf);
-        write_uint8_t(static_space.on_duty_flag,
-                      &write_buf);  // write on_duty_flag
-        // printf("on_duty_flag : %d\r\n",static_space.on_duty_flag);
-        printf("route evsp to cloud\r\n");
-        cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
-        free(write_buf.content);
-    }
+    EVSP_report_host_obu(app_section->OBU_object, static_space.on_duty_flag);
 
     // obu與rsu的距離
     uint16_t OBU_distance = (uint16_t) get_distance(
@@ -329,13 +261,23 @@ int EVSP_on_OBU_packet_rx(void *arg)
         return 0;
     }  // tc箱出現錯誤 直接不做
 
+#define insert_command_and_log                                      \
+    do {                                                            \
+        ret = command_buf_insert_effect_time(&command);             \
+        snprintf(log_content + strlen(log_content),                 \
+                 LOG_CONTENT_LEN - strlen(log_content),             \
+                 "\ncycle: %d, phase: %d, effect time: %d (%d)",    \
+                 command.cycle, command.phase, command.effect_time, \
+                 ret);                                              \
+    } while (0);
+
     memset(log_content, 0, sizeof(log_content));
     /* already in host OBU list */
     if (host_OBU != NULL) {
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
         host_OBU->distance = OBU_distance;
-        int terminate = EVSP_terminate(
+        EVSP_terminate_area_t *area_ptr = EVSP_terminate(
             app_section->OBU_object->record_ring.record[last_record_index]
                 .position_lon,
             app_section->OBU_object->record_ring.record[last_record_index]
@@ -343,7 +285,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             host_OBU->area_ptr);
         int ret = 0;
         // enter terminate area
-        if (terminate != -1) {
+        if (area_ptr != NULL) {
             /*
             結束 EVSP_VMS_SERVICE
             */
@@ -354,54 +296,34 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: TERMINATE");
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s\nterminate area id %d",
-                     app_section->OBU_object->OBU_name, terminate);
-
-            tsc_command_t command;
-            memset(&command, 0, sizeof(tsc_command_t));
-            command.app_id = EVSP.id;
-            command.app_priority = EVSP.priority;
-            command.target_phase = host_OBU->target_phase;
-            strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
+                     app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
+            if (EVSP_host_OBU_obj_resume(host_OBU->target_phase) == true) {
+                tsc_command_t command;
+                memset(&command, 0, sizeof(tsc_command_t));
+                command.app_id = EVSP.id;
+                command.app_priority = EVSP.priority;
+                command.target_phase = host_OBU->target_phase;
+                strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
+                command.phase = command.target_phase;
+                command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
+
                 uint8_t current_phase = signal_status.SubPhaseID;
                 if (command.target_phase >= current_phase) {
                     command.cycle = 0;
-                    command.phase = command.target_phase;
-                    command.effect_time =
-                        signal_status.plan[command.target_phase - 1]
-                            .PreTimeCompensated;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("RESUME cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
                 } else {  // target phase已過 到下一個cycle執行
                     command.cycle = 1;
-                    command.phase = command.target_phase;
-                    command.effect_time =
-                        signal_status.plan[command.target_phase - 1]
-                            .PreTimeCompensated;
-                    ret = command_buf_insert_effect_time(&command);
-                    // printf("RESUME cycle: %d, phase: %d, effect time: %d
-                    // (%d)\r\n",command.cycle, command.phase,
-                    // command.effect_time, ret);
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time,
-                             ret);
                 }
+                insert_command_and_log;
             }
             // 進行補償
             // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
+
+            // 回報碰到觸碰點 id
+            EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         }
 
     } else { /* not in host OBU list */
@@ -477,16 +399,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (current_step != 1)
                 current_phase++;
 
-#define insert_command_and_log                                      \
-    do {                                                            \
-        ret = command_buf_insert_effect_time(&command);             \
-        snprintf(log_content + strlen(log_content),                 \
-                 LOG_CONTENT_LEN - strlen(log_content),             \
-                 "\ncycle: %d, phase: %d, effect time: %d (%d)",    \
-                 command.cycle, command.phase, command.effect_time, \
-                 ret);                                              \
-    } while (0);
-
             command.cycle = 0;                            // 0 代表線在這個 cycle
             command.effect_time = EVSP_config.min_green;  // 縮短到最小綠
 
@@ -552,9 +464,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 vms_request_start(EVSP.id, EVSP.priority);
             }
 
-#undef insert_command_and_log
+            // 回報碰到觸碰點 id
+            EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr->touching_area_id);
         }
     }
+#undef insert_command_and_log
+
     log_file_write(log_content);
     if (read_buf.content != NULL) {
         free(read_buf.content);
