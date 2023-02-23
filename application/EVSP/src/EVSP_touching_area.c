@@ -182,6 +182,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
             }
         }
     }
+    return 1;
 EVSP_default_config_rea_error:
     fclose(fp);
     return -1;
@@ -518,6 +519,7 @@ int EVSP_table_config()
             }
         }
     }
+    #undef EVSP_plan_list_Vector_Increase
     if (!EVSP_plan_list_check()) {
         goto EVSP_plan_list_read_error;
     }
@@ -529,10 +531,8 @@ EVSP_plan_list_read_error:
     return -1;
 }
 
-#undef EVSP_touching_area_Vector_Increase
-
 bool EVSP_plan_list_check()
-{
+{printf("wedwedwefwewewd\n");
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
             if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] >= EVSP_plan_list.terminate_area_count) {
@@ -810,7 +810,7 @@ EVSP_terminate_area_t *EVSP_terminate(float lon, float lat, EVSP_touching_area_t
                  lat <= EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node[0].lat) &&
                 (EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node[0].lon <= lon &&
                  lon <= EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node[1].lon)) {
-                printf("EVSP_terminate------------\n");
+                printf("EVSP_terminate------------ %d\n", EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id);
                 return &EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]];
             }
         } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
