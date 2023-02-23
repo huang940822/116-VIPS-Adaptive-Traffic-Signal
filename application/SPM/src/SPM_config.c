@@ -44,10 +44,10 @@ int SPM_config_init()
                              SPM_config.spm_host_obu_packet_timeout);
                     continue;
                 } else {
-                    return -1;
+                    goto SPM_config_init_error;
                 }
             } else {
-                return -1;
+                goto SPM_config_init_error;
             }
         }
         // SPM_packet_transfer_speed
@@ -59,10 +59,10 @@ int SPM_config_init()
                              SPM_config.SPM_packet_transfer_speed);
                     continue;
                 } else {
-                    return -1;
+                    goto SPM_config_init_error;
                 }
             } else {
-                return -1;
+                goto SPM_config_init_error;
             }
         }
         // SPM_dontSend2TC
@@ -74,14 +74,17 @@ int SPM_config_init()
                              SPM_config.SPM_dontSend2TC);
                     continue;
                 } else {
-                    return -1;
+                    goto SPM_config_init_error;
                 }
             } else {
-                return -1;
+                goto SPM_config_init_error;
             }
         }
     }
 
     fclose(fp);
     return SPM_CONFIG_ACCEPT;
+SPM_config_init_error:
+    fclose(fp);
+    return  CONFIG_INVALID_SPM_PACKET;
 }

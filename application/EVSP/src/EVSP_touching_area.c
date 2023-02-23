@@ -83,7 +83,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
         /* Check return value of fscanf */
         if (ret != 1) {
             log_file_write_fatal_error("EVSP_default_config_read: fscanf");
-            return -1;
+            goto  EVSP_default_config_rea_error;
         }
 
         if (activate_num == 0)
@@ -101,7 +101,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
             /* Check return value of fscanf */
             if (ret != 5) {
                 log_file_write_fatal_error("EVSP_default_config_read: fscanf");
-                return -1;
+                goto  EVSP_default_config_rea_error;
             }
             // 是否有一樣的觸碰點
             int k;
@@ -141,7 +141,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
             ret = fscanf(fp, "%d", &terminate_num);
             if (ret != 1) {
                 log_file_write_fatal_error("EVSP_default_config_read: fscanf");
-                return -1;
+                goto  EVSP_default_config_rea_error;
             }
 
             touch_area->terminate_area_count = terminate_num;
@@ -152,7 +152,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
                 /* Check return value of fscanf */
                 if (ret != 4) {
                     log_file_write_fatal_error("EVSP_default_config_read: fscanf");
-                    return -1;
+                    goto  EVSP_default_config_rea_error;
                 }
                 // 是否有一樣的離開點
                 int m;
@@ -182,6 +182,9 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
             }
         }
     }
+EVSP_default_config_rea_error:
+    fclose(fp);
+    return -1;
 }
 
 int EVSP_default_config()
@@ -197,6 +200,7 @@ int EVSP_default_config()
     }
 
     char rsu_name[RSU_NAME_MAX_LEN];
+    memset(rsu_name, 0, sizeof(rsu_name));
     uint8_t plan_id;
     /* list all file */
     while ((dirp = readdir(dp)) != NULL) {
@@ -228,6 +232,7 @@ int EVSP_table_config()
     /* Get file path */
     char file_path[256];
     char rsu_name[RSU_NAME_MAX_LEN + 1];
+    memset(rsu_name, 0, sizeof(rsu_name));
     strncpy(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN);
     char *name = trim_space(rsu_name);
     if (rsu_name == NULL) {
@@ -250,6 +255,8 @@ int EVSP_table_config()
 
     int plan_table_max = 0;
     char read_buf[CONFIG_LINE_BUFFER_SIZE];
+    memset(read_buf, 0, sizeof(read_buf));
+
     while (!feof(fp)) {
         char *buf = read_line(read_buf, sizeof(read_buf), fp);
         if (buf == NULL)
@@ -468,13 +475,13 @@ int EVSP_table_config()
                 }
 
                 subPhase->touching_area_count = uint8_t_val;
-                Malloc(subPhase->touching_area_Id, sizeof(uint8_t) * uint8_t_val, "EVSP_touching_area_Id_new");
+                Malloc(subPhase->touching_area_Id, sizeof(uint32_t) * uint8_t_val, "EVSP_touching_area_Id_new");
 
                 for (int i = 0; i < subPhase->touching_area_count; ++i) {
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
                     substr = trim_space(strsep(&sepstr, ","));
-                    if (substr == NULL || sscanf(substr, "%d", &subPhase->touching_area_Id[i]) != 1)
+                    if (substr == NULL || sscanf(substr, "%u", &subPhase->touching_area_Id[i]) != 1)
                         goto EVSP_plan_list_read_error;
                 }
             }
@@ -539,7 +546,6 @@ bool EVSP_plan_list_check()
     for (int i = 0; i < EVSP_plan_list.plan_table_count; i++) {
         for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_id_count; j++) {
             if (hash_table[EVSP_plan_list.plan_table[i].plan_id[j]] != 0) {
-                printf("rfrfrr2dddf\n");
                 return false;
             }
             hash_table[EVSP_plan_list.plan_table[i].plan_id[j]]++;
@@ -547,7 +553,6 @@ bool EVSP_plan_list_check()
         for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_subPhase_count; j++) {
             for (int k = 0; k < EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_count; k++) {
                 if (EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k] >= EVSP_plan_list.touching_area_count) {
-                    printf("rfrfrvvvvvrf %d\n", EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k]);
                     return false;
                 }
             }

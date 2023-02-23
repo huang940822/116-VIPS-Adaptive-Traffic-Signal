@@ -13,9 +13,9 @@
 #include "j2735_msg.h"
 #include "j2735_srm.h"
 #include "log.h"
+#include "sys/time.h"
 #include "timer_event.h"
 #include "typedefine.h"
-#include "sys/time.h"
 
 timer_t OBU_list_garbage_collection_timer_id;
 
@@ -182,7 +182,7 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
 ** Parameter:   record: OBU record to insert
 ** Return:      object: address of OBU obj where record insert
 ******************************************************************************/
-OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這裡用hash table
+OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // 這裡用hash table
 {
     int hash_code = djb2_hash(
         record->OBU_name);  // hash code is array index for having use mod
@@ -193,14 +193,14 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
 
-        /* insert OBU record */  //如果世新的object 那record ring一定是空的
-                                 //似乎沒有檢查的必要 直接push進去就好？
+        /* insert OBU record */  // 如果世新的object 那record ring一定是空的
+                                 // 似乎沒有檢查的必要 直接push進去就好？
         if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
-            OBU_record_ring_push((OBU_record_t *)record, object);
+            OBU_record_ring_push((OBU_record_t *) record, object);
         } else {
             OBU_record_ring_pop(object);  /// pop純粹就是丟掉嗎？
-            OBU_record_ring_push((OBU_record_t *)record, object);
+            OBU_record_ring_push((OBU_record_t *) record, object);
         }
 
         /* insert at head */
@@ -214,11 +214,11 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  //這
         /* insert OBU record */
         if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
-            OBU_record_ring_push((OBU_record_t *)record, object);
+            OBU_record_ring_push((OBU_record_t *) record, object);
         } else {
-            //滿了 要先pop再push
+            // 滿了 要先pop再push
             OBU_record_ring_pop(object);
-            OBU_record_ring_push((OBU_record_t *)record, object);
+            OBU_record_ring_push((OBU_record_t *) record, object);
         }
     }
     pthread_mutex_unlock(&mutex_normal_OBU_list[hash_code]);
@@ -237,11 +237,11 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
-    
-    if (object == NULL) { /* new OBU object */ 
+
+    if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
         /* insert OBU record */
-        OBU_record_ring_push((OBU_record_t *)record, object);
+        OBU_record_ring_push((OBU_record_t *) record, object);
         /* insert at head */
         object->next = special_OBU_list[type].next;
         object->prev = &special_OBU_list[type];
@@ -251,10 +251,10 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
     } else { /* OBU object exist */
         /* insert OBU record */
         if (OBU_record_ring_full(object->record_ring.first_record_pointer,
-                                  object->record_ring.last_record_pointer)) {
+                                 object->record_ring.last_record_pointer)) {
             OBU_record_ring_pop(object);
         }
-        OBU_record_ring_push((OBU_record_t *)record, object);
+        OBU_record_ring_push((OBU_record_t *) record, object);
         /* move target to head */
         if (special_OBU_list[type].next != object) {
             /* remove target */
@@ -287,7 +287,7 @@ static int yday2month_day(struct tm *timeinfo, int yday)
         }
         yday -= months_arr[month];
     }
-    
+
     if (month >= 12 || timeinfo->tm_mon != month)
         return -1;
     timeinfo->tm_mday = yday;
@@ -332,8 +332,8 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 
         record->position_lat = bsm->coreData.lat / 10000000.0;
         record->position_lon = bsm->coreData.Long / 10000000.0;
-        
-        record->speed = bsm->coreData.speed * 0.072;
+
+        record->speed = bsm->coreData.speed / 50;  // J2735 裡面是 0.02 m / s 轉 m / s
         record->direction = bsm->coreData.heading / 3600;
         record->direction &= 0b111;
     } break;
@@ -341,7 +341,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         SignalRequestMessage *srm = msgf->u.data;
         if (srm->requestor.id.choice != VehicleID_entityID || srm->requestor.type_option != TRUE ||
             srm->requestor.type.hpmsType_option != TRUE || srm->requestor.type.hpmsType != VehicleType_car ||
-            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE || 
+            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE ||
             srm->requestor.position.heading_option != TRUE) {
             return -1;
         }
@@ -361,13 +361,13 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         gettimeofday(&tv, NULL);
         struct tm *timeinfo;
         timeinfo = localtime(&tv.tv_sec);
-        
+
         int yday = (srm->timeStamp / 1440) + 1, dmin = srm->timeStamp % 1440;
 
         if (yday2month_day(timeinfo, yday) == -1) {
             return -1;
         }
-            
+
         timeinfo->tm_hour = dmin / 60;
         timeinfo->tm_min = dmin % 60;
         timeinfo->tm_sec = srm->second / 1000;
@@ -376,7 +376,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 
         record->position_lat = requestor->position.position.lat / 10000000.0;
         record->position_lon = requestor->position.position.Long / 10000000.0;
-        record->speed = requestor->position.speed.speed * 0.072;
+        record->speed = requestor->position.speed.speed / 50;  // J2735 裡面是 0.02 m / s 轉 m / s
         record->direction = requestor->position.heading / 3600;
         record->direction &= 0b111;
     } break;
@@ -389,11 +389,11 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 
 void OBU_object_garbage_collection_init()
 {
-    for (int i = 0;i < HASH_TABLE_SIZE;i++) {
+    for (int i = 0; i < HASH_TABLE_SIZE; i++) {
         normal_OBU_list[i].next = &normal_OBU_list[i];
         normal_OBU_list[i].prev = &normal_OBU_list[i];
     }
-    for (int i = 0;i < VEHICLE_TYPE_NUMBER;i++) {
+    for (int i = 0; i < VEHICLE_TYPE_NUMBER; i++) {
         special_OBU_list[i].next = &special_OBU_list[i];
         special_OBU_list[i].prev = &special_OBU_list[i];
     }

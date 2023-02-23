@@ -2,7 +2,7 @@
 
 # vms active
 # yes / no
-VMS_ACTIVE yes
+VMS_ACTIVE no
 
 # Program IDs(Green)
 # integer number array

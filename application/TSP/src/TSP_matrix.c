@@ -37,6 +37,8 @@ TSP_RSU_matrix_t *TSP_RSU_matrix_new(char *file_name, uint8_t plan_id)
     fp = fopen(file_path, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", file_path);
+        free(matrix);
+        return NULL;
     } else {
         log_file_write("%s opened successfully", file_path);
     }
@@ -196,6 +198,8 @@ TSP_OBU_matrix_t *TSP_OBU_matrix_new(char *file_name, uint8_t plan_id)
     fp = fopen(file_path, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s\n", file_path);
+        free(matrix);
+        return NULL;
     } else {
         log_file_write("%s opened successfully", file_path);
     }

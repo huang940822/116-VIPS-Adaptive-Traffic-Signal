@@ -85,7 +85,7 @@ app_obj_t CPS = {
         # endif
         exit(0);
     }
-# elif
+# else
     FILE *fp2, *fp3;
     int cnter = 0;
     int cnter_2 = 0;

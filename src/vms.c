@@ -113,6 +113,10 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
     if (input_file == NULL || output_file == NULL) {
         printf("carousel_update: Error opening vms_config.txt\n");
         log_file_write_fatal_error("carousel_update: Error opening vms_config.txt");
+        if (input_file)
+            fclose(input_file);
+        if (output_file != NULL)
+            fclose(output_file);
         return -4;
     }
 
@@ -476,9 +480,15 @@ void *VMS_program_update(void *data)
         printf("VMS_program_update: Error opening program_id.txt\n");
         log_file_write_fatal_error("VMS_program_update: Error opening %s", VMS_pic_database_path);
         pthread_mutex_unlock(&VMS_program_update_thread_mutex);
-        pthread_detach(pthread_self());
+
+        if (input_file != NULL)
+            fclose(input_file);
+        if (output_file != NULL)
+            fclose(output_file);
         if (program_name)
             free(program_name);
+
+        pthread_detach(pthread_self());
         return NULL;
     }
 

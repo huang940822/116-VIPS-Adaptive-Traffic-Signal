@@ -6,9 +6,9 @@
 #define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
                      // ‘strptime’
 #include <time.h>
-#include "util.h"
-#include "j2735_msg.h"
 #include "j2735_map.h"
+#include "j2735_msg.h"
+#include "util.h"
 #define FILE_PATH "./"
 #define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
@@ -19,13 +19,13 @@
 #define OBU_RECORD_RING_CAPACITY 5 /* should be 3 ~ 256 */
 #define STATIC_APP_PRIVATE_SPACE_CAPACITY 256
 #define PHASE_COUNT_MAX_NUM 8
-#define SIGNAL_COUNT_MAX_NUM 8 // 岔路數目
+#define SIGNAL_COUNT_MAX_NUM 8  // 岔路數目
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 #define PROGRAM_NAME_LEN 100
 
-// This define CPS_DEBUG is for CPS testing. 
-// It's for the log buffer size. 
+// This define CPS_DEBUG is for CPS testing.
+// It's for the log buffer size.
 // If testing can set 1000 or other you want the positive number.
 // Set negative for normal.
 #define CPS_DEBUG -1
@@ -102,7 +102,7 @@ typedef enum position {
 typedef enum signalstatus {
     RED = 1,
     YELLOW = 2,
-    GREEN = 4,// 圓頭綠
+    GREEN = 4,  // 圓頭綠
     LEFT_GREEN = 8,
     STRAIGHT_GREEN = 16,
     RIGHT_GREEN = 32,
@@ -133,16 +133,14 @@ typedef enum {
     event_callback_id_msg_id,
 } event_callback_id_choice;
 
-typedef struct event_callback_id
-{
+typedef struct event_callback_id {
     event_callback_id_choice choice;
-    union
-    {
+    union {
         int app_id;
         DSRCmsgID msg_id;
     } u;
-    
-}event_callback_id_t;
+
+} event_callback_id_t;
 
 typedef struct event_callback {
     char name[APP_NAME_MAX_LEN];
@@ -156,7 +154,7 @@ typedef struct OBU_record_common_field {
     time_t time_second;
     float position_lon;
     float position_lat;
-    uint8_t speed;
+    uint8_t speed;  // m/s
     uint8_t direction;
     char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
@@ -166,7 +164,7 @@ typedef struct OBU_record {
     time_t time_second;
     float position_lon;
     float position_lat;
-    uint8_t speed;
+    uint8_t speed;  // m/s
     uint8_t direction;
 } OBU_record_t;
 
@@ -208,7 +206,7 @@ typedef struct traffic_signal_packet {
     uint8_t LEN[2];
     uint8_t DLE_2;
     uint8_t ETX;
-    uint8_t INFO[];  //這是指標？
+    uint8_t INFO[];  // 因為 info 長度是會變動並不是一個固定值
 } traffic_signal_packet_t;
 
 typedef struct static_plan {
@@ -223,7 +221,7 @@ typedef struct static_plan {
     uint8_t PedRed;
 
     // Green - PedGreenFlash
-    uint16_t PreGreen;  //原始步階1
+    uint16_t PreGreen;  // 原始步階1
     uint16_t PreTimeCompensated;
 } static_plan_t;
 

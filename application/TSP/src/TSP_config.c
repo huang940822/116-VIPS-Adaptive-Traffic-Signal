@@ -5,8 +5,8 @@
 #include "TSP.h"
 #include "TSP_config.h"
 #include "TSP_typedefine.h"
-#include "log.h"
 #include "config.h"
+#include "log.h"
 
 TSP_config_object_t TSP_config = {
     .tsp_host_obu_list_timeout = 120,
@@ -60,13 +60,13 @@ int TSP_config_init()
                 if (uint8_t_val >= 0) {
                     TSP_config.tsp_host_obu_list_timeout = uint8_t_val;
                     log_file_write("config: tsp_host_obu_list_timeout = %d",
-                             TSP_config.tsp_host_obu_list_timeout);
+                                   TSP_config.tsp_host_obu_list_timeout);
                     continue;
                 } else {
-                    return -1;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    goto config_err;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
                 }
             } else {
-                return -1;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                goto config_err;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
             }
         }
 
@@ -76,17 +76,20 @@ int TSP_config_init()
                 if (uint16_t_val >= 0) {
                     TSP_config.tsp_remaining_distance_max = uint16_t_val;
                     log_file_write("config: tsp_remaining_distance_max = %d",
-                             TSP_config.tsp_remaining_distance_max);
+                                   TSP_config.tsp_remaining_distance_max);
                     continue;
                 } else {
-                    return -1;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    goto config_err;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
                 }
             } else {
-                return -1;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                goto config_err;  // CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
             }
         }
     }
 
     fclose(fp);
     return 0;  // EVSP_CONFIG_ACCEPT;
+config_err:
+    fclose(fp);
+    return -1;
 }
