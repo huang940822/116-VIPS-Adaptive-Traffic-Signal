@@ -532,11 +532,10 @@ EVSP_plan_list_read_error:
 }
 
 bool EVSP_plan_list_check()
-{printf("wedwedwefwewewd\n");
+{
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
             if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] >= EVSP_plan_list.terminate_area_count) {
-                printf("rfrfrrf\n");
                 return false;
             }
         }

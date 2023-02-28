@@ -201,17 +201,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
-             "EVSP OBU packet rx: OBU POSITION");
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\nlat, lon: %f, %f\nOBU distance: %hd\nOBU direction: %hhd",
-             app_section->OBU_object->record_ring.record[last_record_index]
-                 .position_lat,
-             app_section->OBU_object->record_ring.record[last_record_index]
-                 .position_lon,
+             "EVSP OBU packet rx: OBU POSITION\nlat, lon: %f, %f\n"
+             "OBU distance: %hd\nOBU direction: %hhd",
+             app_section->OBU_object->record_ring.record[last_record_index].position_lat,
+             app_section->OBU_object->record_ring.record[last_record_index].position_lon,
              OBU_distance,
-             app_section->OBU_object->record_ring.record[last_record_index]
-                 .direction);
+             app_section->OBU_object->record_ring.record[last_record_index].direction);
 
     uint16_t last_record_distance = 0;
 
@@ -233,21 +228,18 @@ int EVSP_on_OBU_packet_rx(void *arg)
     // 位移有超過閥值 才會紀錄下來 or 第一筆資料
     if (last_record_distance > EVSP_config.valid_record_distance || last_record_distance == 0) {
         static_space.last_lon =
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lon;
+            app_section->OBU_object->record_ring.record[last_record_index].position_lon;
         static_space.last_lat =
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lat;
+            app_section->OBU_object->record_ring.record[last_record_index].position_lat;
         static_space.last_direction =
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .direction;
+            app_section->OBU_object->record_ring.record[last_record_index].direction;
     }
     memcpy(app_section->OBU_object->private_space->static_space,
            &static_space, sizeof(EVSP_static_space_t));
     log_file_write(log_content);
+    memset(log_content, 0, sizeof(log_content));
 
-    EVSP_host_OBU_obj_t *host_OBU =
-        EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
+    EVSP_host_OBU_obj_t *host_OBU = EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -270,18 +262,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  command.cycle, command.phase, command.effect_time, \
                  ret);                                              \
     } while (0);
-
-    memset(log_content, 0, sizeof(log_content));
     /* already in host OBU list */
     if (host_OBU != NULL) {
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
         host_OBU->distance = OBU_distance;
         EVSP_terminate_area_t *area_ptr = EVSP_terminate(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lon,
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lat,
+            app_section->OBU_object->record_ring.record[last_record_index].position_lon,
+            app_section->OBU_object->record_ring.record[last_record_index].position_lat,
             host_OBU->area_ptr);
         int ret = 0;
         // enter terminate area
@@ -291,25 +279,25 @@ int EVSP_on_OBU_packet_rx(void *arg)
             */
             vms_request_end(EVSP.id);
 
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "EVSP OBU packet rx: TERMINATE");
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\nOBU ID: %s\nterminate area id %d",
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
+                     "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
                      app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
+
+            tsc_command_t command;
+            memset(&command, 0, sizeof(tsc_command_t));
+            command.app_id = EVSP.id;
+            command.app_priority = EVSP.priority;
+            command.target_phase = host_OBU->target_phase;
+            strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
+            command.phase = command.target_phase;
+            command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
 
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(host_OBU->target_phase) == true) {
-                tsc_command_t command;
-                memset(&command, 0, sizeof(tsc_command_t));
-                command.app_id = EVSP.id;
-                command.app_priority = EVSP.priority;
-                command.target_phase = host_OBU->target_phase;
-                strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
-                command.phase = command.target_phase;
-                command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
+                // 進行補償
+                // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
 
                 uint8_t current_phase = signal_status.SubPhaseID;
                 if (command.target_phase >= current_phase) {
@@ -319,8 +307,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 insert_command_and_log;
             }
-            // 進行補償
-            // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
 
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
@@ -345,10 +331,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         uint8_t target_phase = 0;
         EVSP_touching_area_t *area_ptr = NULL;
         target_phase = EVSP_activate(
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lon,
-            app_section->OBU_object->record_ring.record[last_record_index]
-                .position_lat,
+            app_section->OBU_object->record_ring.record[last_record_index].position_lon,
+            app_section->OBU_object->record_ring.record[last_record_index].position_lat,
             static_space.last_direction, plan, &area_ptr);
         // enter activate area
         // phase 的範圍是 1~8
