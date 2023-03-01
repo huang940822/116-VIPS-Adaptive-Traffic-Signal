@@ -37,6 +37,7 @@ config_object_t config = {
 // vms config
 vms_config_object_t vms_config = {
     .vms_active = 0,
+    .activate_directions = 0, 0, 0, 0, 0, 0, 0, 0,
     .program_ids_green = 255, 255, 255, 255, 255, 255, 255, 255,
     .program_ids_not_green = 255, 255, 255, 255, 255, 255, 255, 255,
 };
@@ -687,6 +688,19 @@ int vms_config_init()
                 }
             } else {
                 return VMS_CONFIG_INVALID_VMS_ACTIVE;
+            }
+        }
+        // active_directions
+        if (strstr(buf, "ACTIVE_DIRECTIONS ")) {
+            if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
+                for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+                    vms_config.activate_directions[i] = uint8_t_val_array[i];
+                    log_file_write("vms_config: activate_directions[%d] = %d",
+                        i, vms_config.activate_directions[i]);
+                }
+                continue;
+            } else {
+                return VMS_CONFIG_INVALID_ACTIVE_DIRECTIONS;
             }
         }
         // program_ids_green

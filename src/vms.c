@@ -40,6 +40,9 @@ char vms_packet_tx[VMS_PACKET_TX_LEN_MAX];
 char vms_packet_rx[VMS_PACKET_RX_LEN_MAX];
 char uint8_t_to_char[10];
 
+uint8_t program_ids_green[RTM_MAX];
+uint8_t program_ids_not_green[RTM_MAX];
+
 int sequence_number;
 int res;
 
@@ -178,6 +181,15 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
         log_file_write("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
         printf("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
     }
+
+    for (int i = 0, j = 0; i < RTM_MAX; i++) {
+        if (vms_config.activate_directions[i] != 0) {
+            program_ids_green[j] = vms_config.program_ids_green[i];
+            program_ids_not_green[j] = vms_config.program_ids_not_green[i];
+            j++;
+        }
+    }
+
     return 0;
 }
 
@@ -659,9 +671,9 @@ void control_loop()
 
         for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
             if (current_step[i] == 'G') {
-                sprintf(uint8_t_to_char, "%d", vms_config.program_ids_green[i]);
+                sprintf(uint8_t_to_char, "%d", program_ids_green[i]);
             } else {
-                sprintf(uint8_t_to_char, "%d", vms_config.program_ids_not_green[i]);
+                sprintf(uint8_t_to_char, "%d", program_ids_not_green[i]);
             }
             strcat(vms_packet_tx, VMS_PACKET_COMMA);
             strcat(vms_packet_tx, uint8_t_to_char);
@@ -725,7 +737,30 @@ void control_loop()
 }
 
 void vms_handler_init()
-{
+{   
+
+    memset(program_ids_green, 255, sizeof(program_ids_green));
+    memset(program_ids_not_green, 255, sizeof(program_ids_not_green));
+    for (int i = 0, j = 0; i < RTM_MAX; i++) {
+        if (vms_config.activate_directions[i] != 0) {
+            program_ids_green[j] = vms_config.program_ids_green[i];
+            program_ids_not_green[j] = vms_config.program_ids_not_green[i];
+            j++;
+        }
+    }
+
+    printf("Green: ");
+    for (int i = 0, j = 0; i < RTM_MAX; i++) {
+        printf("%d ", program_ids_green[i]);
+    }
+    printf("\n");
+
+    printf("Not Green: ");
+    for (int i = 0, j = 0; i < RTM_MAX; i++) {
+        printf("%d ", program_ids_not_green[i]);
+    }
+    printf("\n");
+
     srand(time(NULL));
     sequence_number = (rand() % CAROUSEL_NUM) + 1;
     readCnt = 0;

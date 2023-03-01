@@ -77,6 +77,7 @@ typedef enum config_err {
 
 typedef struct vms_config_object {
     bool vms_active;
+    uint8_t activate_directions[PHASE_COUNT_MAX_NUM];
     uint8_t program_ids_green[PHASE_COUNT_MAX_NUM];
     uint8_t program_ids_not_green[PHASE_COUNT_MAX_NUM];
 } vms_config_object_t;
@@ -87,8 +88,9 @@ extern vms_config_object_t vms_config;
 typedef enum vms_config_err {
     VMS_CONFIG_ACCEPT = 0,
     VMS_CONFIG_INVALID_VMS_ACTIVE = -1,
-    VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN = -2,
-    VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN = -3,
+    VMS_CONFIG_INVALID_ACTIVE_DIRECTIONS = -2,
+    VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN = -3,
+    VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN = -4,
     VMS_CONFIG_INVALID_OPEN_FILE = -99,
 } vms_config_err_t;
 

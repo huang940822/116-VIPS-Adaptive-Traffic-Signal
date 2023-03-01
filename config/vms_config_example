@@ -4,9 +4,15 @@
 # yes / no
 VMS_ACTIVE no
 
+# Whether VMS is activated
+# 0 = non-active
+# 1 = active
+ACTIVE_DIRECTIONS 1 0 1 0 1 0 1 0 
+
 # Program IDs(Green)
 # integer number array
 # length of the array is 8
+
 PROGRAM_IDs_GREEN 3 3 3 3 255 255 255 255
 
 # Program IDs(Not Green)
