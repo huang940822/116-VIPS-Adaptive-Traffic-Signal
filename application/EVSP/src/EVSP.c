@@ -419,25 +419,25 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 */
                 memset(evsp_prog, 255, sizeof(evsp_prog));
 
-                if (static_space.last_direction == 3 || static_space.last_direction == 4) {
+                if (static_space.last_direction == 7 || static_space.last_direction == 0) {
                     // evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
                     evsp_prog[0] = 245;
                     evsp_prog[1] = 246;
                     evsp_prog[2] = 247;
                     evsp_prog[3] = 248;
-                } else if (static_space.last_direction == 5 || static_space.last_direction == 6) {
+                } else if (static_space.last_direction == 1 || static_space.last_direction == 2) {
                     // evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
                     evsp_prog[0] = 248;
                     evsp_prog[1] = 245;
                     evsp_prog[2] = 246;
                     evsp_prog[3] = 247;
-                } else if (static_space.last_direction == 7 || static_space.last_direction == 0) {
+                } else if (static_space.last_direction == 3 || static_space.last_direction == 4) {
                     // evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
                     evsp_prog[0] = 247;
                     evsp_prog[1] = 248;
                     evsp_prog[2] = 245;
                     evsp_prog[3] = 246;
-                } else if (static_space.last_direction == 1 || static_space.last_direction == 2) {
+                } else if (static_space.last_direction == 5 || static_space.last_direction == 6) {
                     // evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
                     evsp_prog[0] = 246;
                     evsp_prog[1] = 247;
