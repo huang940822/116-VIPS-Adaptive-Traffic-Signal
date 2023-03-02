@@ -332,20 +332,21 @@ void command_buf_polling()
                  LOG_CONTENT_LEN - strlen(log_content),
                  "command_buf_polling: ");
 
-        // snprintf(log_content + strlen(log_content),
-        //          LOG_CONTENT_LEN - strlen(log_content),
-        //          "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
-        //          "prior signal status:", prior_SubPhaseID, prior_StepID,
-        //          prior_StepSec);  // here all are global variables
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
+                 "prior signal status:", prior_SubPhaseID, prior_StepID,
+                 prior_StepSec);  // here all are global variables
 
-        // snprintf(log_content + strlen(log_content),
-        //          LOG_CONTENT_LEN - strlen(log_content),
-        //          "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
-        //          "current signal status:", current_SubPhaseID, current_StepID,
-        //          current_StepSec);
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "\n%-23sSubPhaseID(%d) StepID(%d) StepSec(%d)",
+                 "current signal status:", current_SubPhaseID, current_StepID,
+                 current_StepSec);
 
         log_file_write(log_content);
     }
+    memset(log_content, 0, sizeof(log_content));
 
     // 何時phase會是0 人為設定的？？
     if (prior_SubPhaseID == 0 || current_SubPhaseID == 0) {
@@ -366,12 +367,12 @@ void command_buf_polling()
                     COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
             if (command_buf[cycle_index][prior_SubPhaseID - 1].send_flag ==
                 true) {
-                // snprintf(
-                //     log_content + strlen(log_content),
-                //     LOG_CONTENT_LEN - strlen(log_content),
-                //     "\ncommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                //     cycle_index, prior_SubPhaseID,
-                //     command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
+                snprintf(
+                    log_content + strlen(log_content),
+                    LOG_CONTENT_LEN - strlen(log_content),
+                    "\ncommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                    cycle_index, prior_SubPhaseID,
+                    command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
                 log_file_write(log_content);
                 memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0,
                        sizeof(tsc_command_object_t));
@@ -392,22 +393,22 @@ void command_buf_polling()
             if (strncmp(command_buf[cycle_index][i].host_OBU_name,
                         COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
                 if (command_buf[cycle_index][i].send_flag == true) {
-                    // snprintf(log_content + strlen(log_content),
-                    //          LOG_CONTENT_LEN - strlen(log_content),
-                    //          "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                    //          cycle_index, prior_SubPhaseID,
-                    //          command_buf[cycle_index][prior_SubPhaseID - 1]
-                    //              .host_OBU_name);
+                    snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                             cycle_index, prior_SubPhaseID,
+                             command_buf[cycle_index][prior_SubPhaseID - 1]
+                                 .host_OBU_name);
                     log_file_write(log_content);
                     memset(&command_buf[cycle_index][i], 0, sizeof(tsc_command_object_t));
                 } else
                     continue;
             } else {
-                // snprintf(log_content + strlen(log_content),
-                //              LOG_CONTENT_LEN - strlen(log_content),
-                //              "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                //              cycle_index, prior_SubPhaseID,
-                //              command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
+                snprintf(log_content + strlen(log_content),
+                             LOG_CONTENT_LEN - strlen(log_content),
+                             "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
+                             cycle_index, prior_SubPhaseID,
+                             command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
                 log_file_write(log_content);
                 memset(&command_buf[cycle_index][i], 0, sizeof(tsc_command_object_t));
             }
