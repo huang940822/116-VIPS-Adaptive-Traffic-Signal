@@ -8,6 +8,7 @@
 #include "EVSP.h"
 #include "TSP.h"
 #include "application_registration.h"
+#include "common_packet_tx.h"
 #include "config.h"
 #include "log.h"
 #include "timer_event.h"
@@ -60,7 +61,7 @@ void command_buf_clear()
     log_file_write("command buff is cleared\r\n");
 }
 
-//要送command到tc箱 被polling呼叫
+// 要送command到tc箱 被polling呼叫
 void command_buf_send(tsc_command_object_t *command_obj,
                       uint8_t current_SubPhaseID)
 {
@@ -73,7 +74,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     //????等待某些東西？
     sem_timedwait_millsecs(
         &sem_signal_status,
-        SEM_SIGNAL_STATUS_TIMEOUT);  //有timeout的號誌等待 但是 對應的post在那？
+        SEM_SIGNAL_STATUS_TIMEOUT);  // 有timeout的號誌等待 但是 對應的post在那？
 
     uint16_t pretime =
         signal_status.plan[current_SubPhaseID - 1].PreTimeCompensated;
@@ -86,114 +87,113 @@ void command_buf_send(tsc_command_object_t *command_obj,
     // 公車來臨若TC正在補償則不做控制
 
     // EVSP.dontSend2TC = 0;
-    uint16_t current_sec_residual=get_current_second();
+    uint16_t current_sec_residual = get_current_second();
 
-    switch (config.signal_controller_manufacturer)
-    {
-        case CHENG_LONG:
-            if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
-                if(TSP.dontSend2TC == 1){
-                    printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-                    log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-                    break;
-                }
-                if(conpensation_flag){
-                    printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
-                    log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
-                    break;
-                }
-
-            }else if(command_obj->app_id == EVSP.id){
-                if(EVSP.dontSend2TC == 1){
-                    log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-                    break;
-                }
-            }else{
-                log_file_write("not TSP either EVSP is sent to TC machine\r\n");
-            }
-
-            // command_obj->adjusted_time代表這個step現在的時間
-            difference = command_obj->effect_time - command_obj->adjusted_time;
-            // printf("cmd obj's effect time is %d and adjusted time is %d\r\n", command_obj->effect_time, command_obj->adjusted_time);
-            
-            
-            //below to prevent cheng_long 655xx error
-            int16_t original_difference=0;
-            original_difference=difference;
-            char log_content[LOG_CONTENT_LEN + 1];
-            memset(log_content, 0, sizeof(log_content));
-            
-
-            if(((int)current_sec_residual+difference)<TIME_DEFENSE && current_sec_residual>=TIME_DEFENSE){
-                difference=TIME_DEFENSE-current_sec_residual;  //能夠忍受的砍的值
-                printf("difference has been changed from %d to %d(cheng_long)\r\n", original_difference, difference);
-                snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference has been changed from %d to %d(cheng_long)",
-                original_difference, difference);
-                log_file_write(log_content);
-            }
-
-            // compensation_buffer_initialization
-            if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-                if (CompensationInitialFlag == true) {
-                    get_compensation_buffer(compensation_buffer);
-                    CompensationInitialFlag = false;
-                }
-            }
-
-            if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) != 0){
-                if ( current_sec_residual + difference < 0) {
-                    int16_t residual = difference + current_sec_residual;
-                    printf("residual:%d\r\n",residual);
-                    compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
-                } else {
-                    compensation_buffer[current_SubPhaseID - 1] += difference;
-                }
-            }
-
-            // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
-            time = pretime + difference;  // difference才是真正會延長的時間
-            // printf("diff: %d, time: %d, pretime: %d\n", difference, time,
-            // pretime);
-            if (time > 255) {
-                time = 255;
-            }
-
-            while (time < 0) {
-                temp_ack_seq = tsc_dynamic();
-                WAIT_ACK_LOOP
-                //不能下0 否則step會立刻結束
-                temp_ack_seq =
-                    tsc_extend(current_SubPhaseID, 1, 1);  //每次就是pretime-4去扣
-                WAIT_ACK_LOOP
-                // time += pretime;
-                time += (pretime - 4);  //要想一下 -4是因為機器限制的關係
-            }
-
-            temp_ack_seq = tsc_dynamic();
-            WAIT_ACK_LOOP
-            temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
-            WAIT_ACK_LOOP
-            break;
-
-    case SHAN_ZHU:
-        if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
-            if(TSP.dontSend2TC == 1){
+    switch (config.signal_controller_manufacturer) {
+    case CHENG_LONG:
+        if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+            if (TSP.dontSend2TC == 1) {
                 printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
             }
-            if(conpensation_flag){
+            if (conpensation_flag) {
                 printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 break;
             }
 
-        }else if(command_obj->app_id == EVSP.id){
-            if(EVSP.dontSend2TC == 1){
+        } else if (command_obj->app_id == EVSP.id) {
+            if (EVSP.dontSend2TC == 1) {
                 log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
             }
-        }else{
+        } else {
+            log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+        }
+
+        // command_obj->adjusted_time代表這個step現在的時間
+        difference = command_obj->effect_time - command_obj->adjusted_time;
+        // printf("cmd obj's effect time is %d and adjusted time is %d\r\n", command_obj->effect_time, command_obj->adjusted_time);
+
+
+        // below to prevent cheng_long 655xx error
+        int16_t original_difference = 0;
+        original_difference = difference;
+        char log_content[LOG_CONTENT_LEN + 1];
+        memset(log_content, 0, sizeof(log_content));
+
+
+        if (((int) current_sec_residual + difference) < TIME_DEFENSE && current_sec_residual >= TIME_DEFENSE) {
+            difference = TIME_DEFENSE - current_sec_residual;  // 能夠忍受的砍的值
+            printf("difference has been changed from %d to %d(cheng_long)\r\n", original_difference, difference);
+            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\ndifference has been changed from %d to %d(cheng_long)",
+                     original_difference, difference);
+            log_file_write(log_content);
+        }
+
+        // compensation_buffer_initialization
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
+            if (CompensationInitialFlag == true) {
+                get_compensation_buffer(compensation_buffer);
+                CompensationInitialFlag = false;
+            }
+        }
+
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) != 0) {
+            if (current_sec_residual + difference < 0) {
+                int16_t residual = difference + current_sec_residual;
+                printf("residual:%d\r\n", residual);
+                compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
+            } else {
+                compensation_buffer[current_SubPhaseID - 1] += difference;
+            }
+        }
+
+        // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
+        time = pretime + difference;  // difference才是真正會延長的時間
+        // printf("diff: %d, time: %d, pretime: %d\n", difference, time,
+        // pretime);
+        if (time > 255) {
+            time = 255;
+        }
+
+        while (time < 0) {
+            temp_ack_seq = tsc_dynamic();
+            WAIT_ACK_LOOP
+            // 不能下0 否則step會立刻結束
+            temp_ack_seq =
+                tsc_extend(current_SubPhaseID, 1, 1);  // 每次就是pretime-4去扣
+            WAIT_ACK_LOOP
+            // time += pretime;
+            time += (pretime - 4);  // 要想一下 -4是因為機器限制的關係
+        }
+
+        temp_ack_seq = tsc_dynamic();
+        WAIT_ACK_LOOP
+        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
+        WAIT_ACK_LOOP
+        break;
+
+    case SHAN_ZHU:
+        if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+            if (TSP.dontSend2TC == 1) {
+                printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+            if (conpensation_flag) {
+                printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                break;
+            }
+
+        } else if (command_obj->app_id == EVSP.id) {
+            if (EVSP.dontSend2TC == 1) {
+                log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+        } else {
             log_file_write("not TSP either EVSP is sent to TC machine\r\n");
         }
 
@@ -211,10 +211,10 @@ void command_buf_send(tsc_command_object_t *command_obj,
             }
         }
 
-        if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,15) != 0){
-            if ( current_sec_residual + difference < 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
+            if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
-                printf("residual:%d\r\n",residual);
+                printf("residual:%d\r\n", residual);
                 compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
             } else {
                 compensation_buffer[current_SubPhaseID - 1] += difference;
@@ -229,28 +229,28 @@ void command_buf_send(tsc_command_object_t *command_obj,
         break;
 
     case SHAN_ZHU_M:
-        if(command_obj->app_id == TSP.id){//這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
-            if(TSP.dontSend2TC == 1){
+        if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+            if (TSP.dontSend2TC == 1) {
                 printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
             }
-            if(conpensation_flag){
+            if (conpensation_flag) {
                 printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 break;
             }
-        }else if(command_obj->app_id == EVSP.id){
-            if(EVSP.dontSend2TC == 1){
+        } else if (command_obj->app_id == EVSP.id) {
+            if (EVSP.dontSend2TC == 1) {
                 log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
             }
-        }else{
+        } else {
             log_file_write("not TSP either EVSP is sent to TC machine\r\n");
         }
 
         difference = command_obj->effect_time - command_obj->adjusted_time;
-        printf("difference:%d\r\n",difference);
+        printf("difference:%d\r\n", difference);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
                  "\ndifference is :%d\r\n", difference);
@@ -264,10 +264,10 @@ void command_buf_send(tsc_command_object_t *command_obj,
             }
         }
 
-        if(strncmp(command_obj->host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) != 0){
-            if ( current_sec_residual + difference < 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) != 0) {
+            if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
-                printf("residual:%d\r\n",residual);
+                printf("residual:%d\r\n", residual);
                 compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
             } else {
                 compensation_buffer[current_SubPhaseID - 1] += difference;
@@ -298,7 +298,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     command.effect_time = command_obj->effect_time;
     memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
 
-    //執行callback 完全不管app_id了 event signal packet tx
+    // 執行callback 完全不管app_id了 event signal packet tx
     // goto TSP_report_command()
     event_callback_t *current = &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     while (current->next != NULL) {
@@ -347,7 +347,7 @@ void command_buf_polling()
         log_file_write(log_content);
     }
 
-    //何時phase會是0 人為設定的？？
+    // 何時phase會是0 人為設定的？？
     if (prior_SubPhaseID == 0 || current_SubPhaseID == 0) {
         prior_SubPhaseID = current_SubPhaseID;
         prior_StepID = current_StepID;
@@ -380,7 +380,7 @@ void command_buf_polling()
             memset(&command_buf[cycle_index][prior_SubPhaseID - 1], 0,
                    sizeof(tsc_command_object_t));
         }
-        //設定為0代表不控制？
+        // 設定為0代表不控制？
         set_control_status(0);
     }
     /* cross to next cycle */
@@ -399,8 +399,9 @@ void command_buf_polling()
                     //          command_buf[cycle_index][prior_SubPhaseID - 1]
                     //              .host_OBU_name);
                     log_file_write(log_content);
-                    memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
-                } else continue;
+                    memset(&command_buf[cycle_index][i], 0, sizeof(tsc_command_object_t));
+                } else
+                    continue;
             } else {
                 // snprintf(log_content + strlen(log_content),
                 //              LOG_CONTENT_LEN - strlen(log_content),
@@ -408,7 +409,7 @@ void command_buf_polling()
                 //              cycle_index, prior_SubPhaseID,
                 //              command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
                 log_file_write(log_content);
-                memset(&command_buf[cycle_index][i],0,sizeof(tsc_command_object_t));
+                memset(&command_buf[cycle_index][i], 0, sizeof(tsc_command_object_t));
             }
         }
         // memset(&command_buf[cycle_index][0], 0, sizeof(tsc_command_object_t)
@@ -419,7 +420,7 @@ void command_buf_polling()
     if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0 &&
         prior_SubPhaseID != current_SubPhaseID) {
         command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
-            current_StepSec;  //換相了 更新adjusted time讓他變成現在的倒數秒數
+            current_StepSec;  // 換相了 更新adjusted time讓他變成現在的倒數秒數
     }
 
     uint8_t compensation_send_flag = true;
@@ -428,27 +429,27 @@ void command_buf_polling()
     if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == false &&
         command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 &&
         current_StepID == 1 && current_StepSec > 1 &&
-        prior_SubPhaseID == current_SubPhaseID) { 
-        if(strncmp(command_buf[cycle_index][current_SubPhaseID -1].host_OBU_name,COMPENSATION_NAME,COMPENSATION_LEN) == 0) {
+        prior_SubPhaseID == current_SubPhaseID) {
+        if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
             int16_t residual_time = current_StepSec - command_buf[cycle_index][current_SubPhaseID - 1].compensation_time;
-            printf("residual_time:%d\r\n",residual_time);
+            printf("residual_time:%d\r\n", residual_time);
             if (residual_time <= TIME_DEFENSE) {
                 compensation_send_flag = false;
                 printf("***");
-            } 
+            }
         }
         if (compensation_send_flag == true) {
             // 將目前phase的 command buffer object 送到TC箱
             command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
             memset(log_content, 0, sizeof(log_content));
             snprintf(log_content + strlen(log_content),
-                LOG_CONTENT_LEN - strlen(log_content),
-                "command_buf_send(command_buf[%d][%d])\r\n",cycle_index,current_SubPhaseID);
+                     LOG_CONTENT_LEN - strlen(log_content),
+                     "command_buf_send(command_buf[%d][%d])\r\n", cycle_index, current_SubPhaseID);
             log_file_write(log_content);
-            set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);    //判斷是evsp還是tsp
-            command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;// 已送出TC箱
+            set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);  // 判斷是evsp還是tsp
+            command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;            // 已送出TC箱
             CompensationFlag = true;
-            //更新步階一要倒數的時間
+            // 更新步階一要倒數的時間
             command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
                 command_buf[cycle_index][current_SubPhaseID - 1].effect_time;
         }
@@ -479,26 +480,29 @@ void command_buf_polling()
             CompensationFlag) {
             log_file_write("RESUME instruction is executed\r\n");
             printf("RESUME instruction is executed.\r\n");
+            int16_t ret = 0;
             switch (config.traffic_compensation_method) {
             case 1:
-                traffic_compensation_method1(config.traffic_compensation_cycle_number);
+                ret = traffic_compensation_method1(config.traffic_compensation_cycle_number);
                 break;
             case 2:
-                traffic_compensation_method2(config.traffic_compensation_cycle_number,config.phase_weight);
+                ret = traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
                 break;
             case 3:
-                traffic_compensation_method3(config.traffic_compensation_cycle_number);
+                ret = traffic_compensation_method3(config.traffic_compensation_cycle_number);
                 break;
             default:
                 break;
             }
             CompensationFlag = false;
+
+            report_compensation_time(ret);
         }
     }
     return;
 }
 
-//被command_buf_insert_adjustment和evsp呼叫
+// 被command_buf_insert_adjustment和evsp呼叫
 int command_buf_insert_effect_time(tsc_command_t *command)
 {
     /* command value valid */
@@ -541,9 +545,9 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     }
 
     pthread_mutex_lock(&mutex_command_buf);
-    //抓出要處理的cmd buff object
-    // comman->cycle and phase are used to "indicate the index of the
-    // target_command buffer object".
+    // 抓出要處理的cmd buff object
+    //  comman->cycle and phase are used to "indicate the index of the
+    //  target_command buffer object".
     tsc_command_object_t *target_command_obj =
         &command_buf[(cycle_index + command->cycle) % CYCLE_NUM]
                     [command->phase - 1];
@@ -558,7 +562,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         // controller" is adjusted to.
         if (target_command_obj->adjusted_time == 0) {
             target_command_obj->adjusted_time =
-                pretime;  //因為此步階預設倒數時間為pretime
+                pretime;  // 因為此步階預設倒數時間為pretime
         }
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
@@ -571,12 +575,12 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // 如果target_command是補償指令的話，則取聯集。
     if (strncmp(target_command_obj->host_OBU_name, COMPENSATION_NAME,
                 COMPENSATION_LEN) == 0) {
-        if(strncmp(command->host_OBU_name, COMPENSATION_NAME,COMPENSATION_LEN) == 0){
+        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
             printf("union compensation command\r\n");
-            target_command_obj->compensation_time+=command->compensation_time;
+            target_command_obj->compensation_time += command->compensation_time;
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
-            target_command_obj->effect_time = target_command_obj->effect_time+(command->effect_time-pretime);
+            target_command_obj->effect_time = target_command_obj->effect_time + (command->effect_time - pretime);
             target_command_obj->target_phase = command->target_phase;
             target_command_obj->send_flag = false;
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
@@ -590,12 +594,12 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // resume是為了強制回到pretime 怎麼作到？
     // evsp裡面會使用obu resumeid
     // replace resume command
-    //抓出來的目標cmd buff object其host obu id為resume id則優先取代？
+    // 抓出來的目標cmd buff object其host obu id為resume id則優先取代？
     if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
-        if (strncmp(command->host_OBU_name , COMPENSATION_NAME , COMPENSATION_MAX_LEN) == 0) {
-            if ( command->compensation_cycle == 1) {
+        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, COMPENSATION_MAX_LEN) == 0) {
+            if (command->compensation_cycle == 1) {
                 tsc_command_object_t *target_compensation_command_obj =
-                    &command_buf[(cycle_index+1 + command->cycle) % CYCLE_NUM]
+                    &command_buf[(cycle_index + 1 + command->cycle) % CYCLE_NUM]
                                 [command->phase - 1];
                 target_compensation_command_obj->app_id = command->app_id;
                 target_compensation_command_obj->app_priority = command->app_priority;
@@ -607,19 +611,19 @@ int command_buf_insert_effect_time(tsc_command_t *command)
                 command_buf_print();
                 pthread_mutex_unlock(&mutex_command_buf);
                 return INSERT_ACCEPT;
-            } 
-        } 
+            }
+        }
         target_command_obj->app_id = command->app_id;
         target_command_obj->app_priority = command->app_priority;
         target_command_obj->effect_time = command->effect_time;
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        if (strncmp(command->host_OBU_name , COMPENSATION_NAME , COMPENSATION_MAX_LEN) == 0) {
+        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, COMPENSATION_MAX_LEN) == 0) {
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                COMPENSATION_MAX_LEN);
+                    COMPENSATION_MAX_LEN);
         } else {
             strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                OBU_NAME_MAX_LEN);
+                    OBU_NAME_MAX_LEN);
         }
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);
@@ -661,7 +665,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         // time difference between effect time & pretime increase
         if (abs(target_command_obj->effect_time - pretime) <=
             abs(command->effect_time -
-                pretime)) {  //變化差異要大於上一次的改變？不能縮短
+                pretime)) {  // 變化差異要大於上一次的改變？不能縮短
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
@@ -685,7 +689,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         // different target phase
         // priority higher than original command 數值越小priority越高
         if (target_command_obj->app_priority >
-            command->app_priority) {  //優先權較小 tsp被evsp取代
+            command->app_priority) {  // 優先權較小 tsp被evsp取代
             target_command_obj->app_id = command->app_id;
             target_command_obj->app_priority = command->app_priority;
             target_command_obj->effect_time = command->effect_time;
@@ -704,11 +708,11 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     }
 }
 
-//調整要送到command_buf_insert_effect_time的command結構的值
+// 調整要送到command_buf_insert_effect_time的command結構的值
 int command_buf_insert_adjustment(tsc_command_t *command)
 {
     uint8_t is_in_compensation_flag = is_in_compensation();
-    if (is_in_compensation_flag == true) 
+    if (is_in_compensation_flag == true)
         return INCOMP_TSPDONOTHING;
 
     /* command value valid */
@@ -739,13 +743,13 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     }
 
     pthread_mutex_lock(&mutex_command_buf);
-    //抓出target phase的原始資料
+    // 抓出target phase的原始資料
     tsc_command_object_t *target_command_obj =
         &command_buf[(cycle_index + command->cycle) % CYCLE_NUM]
                     [command->phase - 1];
 
     // This means that this subphase has never been adjusted
-    if (target_command_obj->adjusted_time == 0) {  //第一次被調整？
+    if (target_command_obj->adjusted_time == 0) {  // 第一次被調整？
         command->effect_time = pretime + command->adjustment;
     } else {
         command->effect_time =
@@ -762,8 +766,8 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     }
 
     if (config.log_command_buffer) {
-        log_file_write("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d", 
-                command->host_OBU_name, command->adjustment, command->effect_time);
+        log_file_write("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d",
+                       command->host_OBU_name, command->adjustment, command->effect_time);
     }
 
     int ret = 0;
@@ -772,7 +776,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
 }
 
 void command_buf_print()
-{  //就要不要log command buffer的開關
+{  // 就要不要log command buffer的開關
     if (config.log_command_buffer == 0) {
         return;
     }

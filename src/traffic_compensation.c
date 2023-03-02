@@ -1,8 +1,8 @@
 #include <limits.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #include "config.h"
 #include "log.h"
@@ -61,17 +61,17 @@ uint8_t is_in_compensation()
             }
         } else
             return false;
-    }else{
-        for(int i=0;i<CYCLE_NUM;i++){
-            for(int j=0;j<SUBPHASEID_NUM;j++)
-             if(command_buf[i][j].app_id == COMPENSATION_ID)
-                return true;
+    } else {
+        for (int i = 0; i < CYCLE_NUM; i++) {
+            for (int j = 0; j < SUBPHASEID_NUM; j++)
+                if (command_buf[i][j].app_id == COMPENSATION_ID)
+                    return true;
         }
         return false;
     }
 }
 
-void traffic_compensation_method1(uint8_t Comp_cyclenum)
+int16_t traffic_compensation_method1(uint8_t Comp_cyclenum)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -92,15 +92,14 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
     uint8_t current_step = get_current_step();
     uint16_t current_second = get_current_second();
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "Total compensation second:%d\r\n",
-            T);
+             LOG_CONTENT_LEN - strlen(log_content),
+             "Total compensation second:%d\r\n",
+             T);
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "compensation cycle is %d\r\n",
-            Comp_cyclenum);
+             LOG_CONTENT_LEN - strlen(log_content),
+             "compensation cycle is %d\r\n",
+             Comp_cyclenum);
     log_file_write(log_content);
-
 
     tsc_command_t command;
     memset(&command, 0, sizeof(tsc_command_t));
@@ -111,9 +110,7 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
     memset(log_content, 0, sizeof(log_content));
 
     for (int i = 0; i < SUBPHASEID_NUM; i++) {
-        
         compensation_time = compensation_buffer[i] / Comp_cyclenum;
-        
         if (compensation_time != 0) {
             for (int j = 0; j < Comp_cyclenum; j++) {
                 effect_time =
@@ -129,24 +126,22 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
                                         effect_time;  // 更新這次補償時間
                 }
                 // insert to command buffer cycle
-                if ( i < (signal_status.SubPhaseID - 1)) 
-                    command.cycle = (j+1) % CYCLE_NUM;
-                else 
+                if (i < (signal_status.SubPhaseID - 1))
+                    command.cycle = (j + 1) % CYCLE_NUM;
+                else
                     command.cycle = j;
                 command.phase = i + 1;
                 command.target_phase = i + 1;
                 command.effect_time = effect_time;
                 command.compensation_time = compensation_time;
                 command.compensation_cycle = Comp_cyclenum;
-                printf(
-                    "cycle: %d, phase: %d, effect time: %d ,compensation_time: "
-                    "%d (%d)\r\n",
-                    command.cycle, command.phase, command.effect_time,
-                    command.compensation_time, ret);
+                printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
+                       command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
 
-                for(int k=0;k<SUBPHASEID_NUM;k++){
-                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"compensation_buffer %d : %d \r\n",k,compensation_buffer[k]);
-                }    
+                for (int k = 0; k < SUBPHASEID_NUM; k++) {
+                    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
+                             "compensation_buffer %d : %d \r\n", k, compensation_buffer[k]);
+                }
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content),
                          LOG_CONTENT_LEN - strlen(log_content),
@@ -154,17 +149,17 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
                          ",compensation_time: %d (%d)",
                          command.cycle, command.phase, command.effect_time,
                          command.compensation_time, ret);
-                compensation_buffer[i] =
-                    compensation_buffer[i] - compensation_time;
+                compensation_buffer[i] = compensation_buffer[i] - compensation_time;
                 compensation_time = compensation_buffer[i];
             }
         }
     }
     log_file_write(log_content);
     compensation_buffer_clear();
+    return T;
 }
 
-void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE_COUNT_MAX_NUM])
+int16_t traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -180,28 +175,28 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
     int16_t effect_time[SUBPHASEID_NUM];
     int16_t compensation_time[SUBPHASEID_NUM];
     bool flag[SUBPHASEID_NUM];  // 是否要重新計算
-    int16_t t[2] ;
-    if(Comp_cyclenum==1){
-        t[0]=T;
-        t[1]=0;
-    }else{
-        t[0]=T/2;
-        t[1]=T-T/2;
+    int16_t t[2];
+    if (Comp_cyclenum == 1) {
+        t[0] = T;
+        t[1] = 0;
+    } else {
+        t[0] = T / 2;
+        t[1] = T - T / 2;
     }
-    
+
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "Total compensation second:%d\r\n",
-            T);
+             LOG_CONTENT_LEN - strlen(log_content),
+             "Total compensation second:%d\r\n",
+             T);
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "compensation cycle is %d\r\n",
-            Comp_cyclenum);
-    for ( int i = 0 ; i < Comp_cyclenum ; i++ ) {
+             LOG_CONTENT_LEN - strlen(log_content),
+             "compensation cycle is %d\r\n",
+             Comp_cyclenum);
+    for (int i = 0; i < Comp_cyclenum; i++) {
         snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\ncompensation cycle %d is %d",
-            i,t[i]);
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "\ncompensation cycle %d is %d",
+                 i, t[i]);
     }
     log_file_write(log_content);
 
@@ -218,7 +213,7 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
 
     int ret = 0;
     memset(log_content, 0, sizeof(log_content));
-    
+
     for (int i = 0; i < Comp_cyclenum; i++) {
         memset(flag, false, sizeof(flag));
         uint8_t tmp_weight_initial_flag = false;
@@ -234,7 +229,7 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
                             tmp_weight += phase_weight[k];
                         tmp_weight_initial_flag = true;
                     }
-                    
+
                     compensation_time[j] = round(t[i] * phase_weight[j] / tmp_weight);
                 }
 
@@ -259,19 +254,20 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
                     }
                 }
                 // insert into command buffer
-                if ( j < (signal_status.SubPhaseID - 1)) 
-                    command.cycle = (i+1) % CYCLE_NUM;
-                else 
+                if (j < (signal_status.SubPhaseID - 1))
+                    command.cycle = (i + 1) % CYCLE_NUM;
+                else
                     command.cycle = i;
                 command.phase = j + 1;
                 command.target_phase = j + 1;
                 command.compensation_time = compensation_time[j];
                 command.compensation_cycle = Comp_cyclenum;
                 command.effect_time = effect_time[j];
-                printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: "
-                        "%d (%d)\r\n",
-                        command.cycle, command.phase, command.effect_time,
-                        command.compensation_time, ret);
+                printf(
+                    "cycle: %d, phase: %d, effect time: %d ,compensation_time: "
+                    "%d (%d)\r\n",
+                    command.cycle, command.phase, command.effect_time,
+                    command.compensation_time, ret);
                 ret = command_buf_insert_effect_time(&command);
                 snprintf(log_content + strlen(log_content),
                          LOG_CONTENT_LEN - strlen(log_content),
@@ -279,18 +275,19 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum,float phase_weight[PHASE
                          ",compensation_time: %d (%d)",
                          command.cycle, command.phase, command.effect_time,
                          command.compensation_time, ret);
-            }   
+            }
         }
     }
     log_file_write(log_content);
     compensation_buffer_clear();
+    return T;
 }
 /***************
 幹支道明顯的道路
  1. 延長延幹道
  2. 縮短縮支道
 ***************/
-void traffic_compensation_method3(uint8_t Comp_cyclenum)
+int16_t traffic_compensation_method3(uint8_t Comp_cyclenum)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -310,18 +307,18 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
             branch_phase = atrerial_phase;
             atrerial_phase = i;
         } else if (signal_status.plan[i].PreGreen != signal_status.plan[atrerial_phase].PreGreen) {
-            if ( branch_phase == atrerial_phase || signal_status.plan[i].PreGreen > signal_status.plan[branch_phase].PreGreen) {
+            if (branch_phase == atrerial_phase || signal_status.plan[i].PreGreen > signal_status.plan[branch_phase].PreGreen) {
                 branch_phase = i;
             }
         }
     }
-    
+
     atrerial_phase += 1;
     branch_phase += 1;
 
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
-             "atrerial_phase:%d \r\n branch_phase:%d\r\n",atrerial_phase,branch_phase);
+             "atrerial_phase:%d \r\n branch_phase:%d\r\n", atrerial_phase, branch_phase);
     log_file_write(log_content);
 
     int16_t compensation_time = 0;
@@ -331,13 +328,13 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
 
     int16_t T = get_total_compensation_second();
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "Total compensation second:%d\r\n",
-            T);
+             LOG_CONTENT_LEN - strlen(log_content),
+             "Total compensation second:%d\r\n",
+             T);
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "compensation cycle is %d\r\n",
-            Comp_cyclenum);
+             LOG_CONTENT_LEN - strlen(log_content),
+             "compensation cycle is %d\r\n",
+             Comp_cyclenum);
 
     int16_t branch_pretime = signal_status.plan[branch_phase - 1].PreGreen;
     int16_t atrerial_pretime = signal_status.plan[atrerial_phase - 1].PreGreen;
@@ -358,8 +355,8 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
     if (T > 0) {
         printf("minus compensation\r\n");
         snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "minus compensation\r\n");
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "minus compensation\r\n");
         log_file_write(log_content);
         memset(log_content, 0, sizeof(log_content));
 
@@ -370,11 +367,11 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
             if (effect_time < branch_min_green) {
                 effect_time = branch_min_green;
                 compensation_time =
-                    branch_pretime - effect_time;  //更新補償時間
+                    branch_pretime - effect_time;  // 更新補償時間
             }
-            if ( branch_phase < signal_status.SubPhaseID ) 
-                command.cycle = (i+1) % CYCLE_NUM;
-            else 
+            if (branch_phase < signal_status.SubPhaseID)
+                command.cycle = (i + 1) % CYCLE_NUM;
+            else
                 command.cycle = i;
             command.phase = branch_phase;
             command.effect_time = effect_time;
@@ -392,25 +389,25 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
                      ",compensation_time: %d (%d)",
                      command.cycle, command.phase, command.effect_time,
                      command.compensation_time, ret);
-            T = T - compensation_time;  //剩餘多少補償時間
+            T = T - compensation_time;  // 剩餘多少補償時間
             compensation_time = T;
         }
         log_file_write(log_content);
         compensation_buffer_clear();
 
-    } else if ( T < 0 ) {  // 進行正補償
+    } else if (T < 0) {  // 進行正補償
         snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "positive compensation\r\n");
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "positive compensation\r\n");
         command.target_phase = atrerial_phase;
         T = abs(T);
         compensation_time = T / Comp_cyclenum;
         snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "compensation_time:%d",compensation_time);
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "compensation_time:%d", compensation_time);
         snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "T: %d",T);
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "T: %d", T);
         log_file_write(log_content);
         memset(log_content, 0, sizeof(log_content));
 
@@ -419,12 +416,12 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
             if (effect_time > atrerial_max_green) {
                 effect_time = atrerial_max_green;
                 compensation_time =
-                    effect_time - atrerial_pretime;  //更新補償時間
+                    effect_time - atrerial_pretime;  // 更新補償時間
             }
-            
-            if ( atrerial_phase < signal_status.SubPhaseID) 
-                command.cycle = (i+1) % CYCLE_NUM;
-            else 
+
+            if (atrerial_phase < signal_status.SubPhaseID)
+                command.cycle = (i + 1) % CYCLE_NUM;
+            else
                 command.cycle = i;
             command.phase = atrerial_phase;
             command.effect_time = effect_time;
@@ -442,10 +439,11 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
                      ",compensation_time: %d (%d)",
                      command.cycle, command.phase, command.effect_time,
                      command.compensation_time, ret);
-            T = T - compensation_time;  //剩餘多少補償時間
+            T = T - compensation_time;  // 剩餘多少補償時間
             compensation_time = T;
         }
         log_file_write(log_content);
         compensation_buffer_clear();
     }
+    return T;
 }
