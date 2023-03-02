@@ -28,7 +28,7 @@ extern uint8_t flag_switch2nextStep;
 extern uint8_t flag_PhaseOrder;
 uint8_t phase_change_flag = false;
 uint8_t real_pretime = 0;
-static uint8_t FirstSwitchFlag = true;
+static uint8_t FirstSwitchFlag = 0;
 static uint8_t PhaseOrder_initial = true;
 
 // static bool flag = true;
@@ -71,13 +71,14 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     // printf("previous phase is %d and current phase is %d\r\n",
     // previous_phase, signal_status.SubPhaseID);
     if (previous_phase != signal_status.SubPhaseID) {
-        if (FirstSwitchFlag == true) {  // 第一次換相不取值
-            FirstSwitchFlag = false;
-        } else {
+        if (FirstSwitchFlag == 1) {  // 第一次換相不取值
+            FirstSwitchFlag = 2;
+        } else if (FirstSwitchFlag == 2) {
             signal_status.plan[signal_status.SubPhaseID - 1]
                 .PreTimeCompensated = signal_status.StepSec;
             printf("phase changed and pretime for phase %d is %d\r\n",
                    signal_status.SubPhaseID, signal_status.StepSec);
+            log_file_write("signal_status.plan[%d].PreTimeCompensated:%d\r\n",signal_status.SubPhaseID - 1,signal_status.plan[signal_status.SubPhaseID - 1].PreTimeCompensated);
         }
     }
 
@@ -147,6 +148,12 @@ void packet_5FC8(traffic_signal_packet_t *packet)
         current_signal_status.plan[i].Green =
             (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
     }
+    if (FirstSwitchFlag == 0) {
+        for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
+            signal_status.plan[i].PreTimeCompensated = current_signal_status.plan[i].Green;
+        }
+        FirstSwitchFlag = 1;
+    }
     current_signal_status.CycleTime =
         packet->INFO[6 + current_signal_status.SubPhaseCount * 2] << 8 |
         packet->INFO[7 + current_signal_status.SubPhaseCount * 2];
@@ -174,6 +181,9 @@ void packet_5FC8(traffic_signal_packet_t *packet)
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d",
                      current_signal_status.plan[i].Green);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\nPreTimeCompensated: %d",
+                     signal_status.plan[i].PreTimeCompensated);
         }
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nCycleTime: %d",

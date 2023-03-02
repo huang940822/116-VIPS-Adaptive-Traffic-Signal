@@ -290,7 +290,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(host_OBU->target_phase) == true) {
+            if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
                 // 進行補償
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
 
@@ -376,18 +376,17 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
             EVSP_adjust_time += 20;  // Gmx += 20 ，緩衝誤差值調最大
             printf("new EVSP_adjust_time:%d\n", EVSP_adjust_time);
-
             // 因為只有 step 1 綠燈可以動態控制 所以不是在綠燈的時候就當作到下個時相了
             if (current_step != 1)
                 current_phase++;
 
             command.cycle = 0;                            // 0 代表線在這個 cycle
-            command.effect_time = EVSP_config.min_green;  // 縮短到最小綠
 
             // 如果 current_phase >= target_phase，i 就會加到 target_phase
             // target_phase < current_phase，的話就會停在 SubPhaseCount 把現在的 cycle 都換成最小綠
             for (int i = current_phase; i <= signal_status.SubPhaseCount && i != target_phase; i++) {
                 command.phase = i;
+                command.effect_time = EVSP_config.min_green;  // 縮短到最小綠
                 insert_command_and_log;
             }
 
@@ -395,9 +394,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (target_phase < current_phase) { /* target_phase < current_phase */
                 // 如果 target_phase < current_phase 就代表在下一個 cycle
                 command.cycle = 1;  // 所以這裡 cycle = 1 並下面再插入目標時向的時候舊式下一個 cycle
-                command.effect_time = EVSP_config.min_green;
                 for (int i = 1; i < target_phase; i++) {
                     command.phase = i;
+                    command.effect_time = EVSP_config.min_green;
                     insert_command_and_log;
                 }
             }
