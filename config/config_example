@@ -48,6 +48,9 @@ SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE 100
 # int number
 TRAFFIC_COMPENSATION_METHOD 3
 
+# traffic compensation cycle number
+TRAFFIC_COMPENSATION_CYCLE_NUMBER 1
+
 PHASE_WEIGHT 50 50 0 0 0 0 0 0
 
 # log middleware timer event
