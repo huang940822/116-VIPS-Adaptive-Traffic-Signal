@@ -12,10 +12,9 @@ int16_t compensation_buffer[SUBPHASEID_NUM];
 
 void compensation_buffer_clear();
 uint8_t is_in_compensation();
-int16_t traffic_compensation_method1(uint8_t compensation_cyclenum);
-int16_t traffic_compensation_method2(uint8_t compensation_cyclenum,
-                                     float phase_weight[PHASE_COUNT_MAX_NUM]);
-int16_t traffic_compensation_method3(uint8_t compensation_cyclenum);
-
+void traffic_compensation_method1(uint8_t compensation_cyclenum);
+void traffic_compensation_method2(uint8_t compensation_cyclenum,
+                                  float phase_weight[PHASE_COUNT_MAX_NUM]);
+void traffic_compensation_method3(uint8_t compensation_cyclenum);
 
 #endif

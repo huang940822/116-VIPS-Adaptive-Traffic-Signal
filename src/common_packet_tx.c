@@ -28,7 +28,7 @@ void common_send_ack(uint8_t cmd, uint8_t status)
     return;
 }
 
-void report_compensation_time(int16_t compensation_time)
+void report_compensation_time()
 {
     printf("report compensation time\r\n");
     msg_buf_t write_buf;
@@ -46,7 +46,7 @@ void report_compensation_time(int16_t compensation_time)
     write_uint8_t(config.traffic_compensation_cycle_number, &write_buf);
 
     // compensation_time
-    write_uint16_t(compensation_time, &write_buf);
+    write_uint16_t(get_total_compensation_second(), &write_buf);
 
     // 因為補償策略二會需要用到 config.phase_weight 所以一併送去雲端
     for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {

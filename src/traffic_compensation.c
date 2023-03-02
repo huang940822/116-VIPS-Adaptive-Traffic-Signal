@@ -71,7 +71,7 @@ uint8_t is_in_compensation()
     }
 }
 
-int16_t traffic_compensation_method1(uint8_t Comp_cyclenum)
+void traffic_compensation_method1(uint8_t Comp_cyclenum)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -156,10 +156,9 @@ int16_t traffic_compensation_method1(uint8_t Comp_cyclenum)
     }
     log_file_write(log_content);
     compensation_buffer_clear();
-    return T;
 }
 
-int16_t traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
+void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -280,14 +279,13 @@ int16_t traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[P
     }
     log_file_write(log_content);
     compensation_buffer_clear();
-    return T;
 }
 /***************
 幹支道明顯的道路
  1. 延長延幹道
  2. 縮短縮支道
 ***************/
-int16_t traffic_compensation_method3(uint8_t Comp_cyclenum)
+void traffic_compensation_method3(uint8_t Comp_cyclenum)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -445,5 +443,4 @@ int16_t traffic_compensation_method3(uint8_t Comp_cyclenum)
         log_file_write(log_content);
         compensation_buffer_clear();
     }
-    return T;
 }

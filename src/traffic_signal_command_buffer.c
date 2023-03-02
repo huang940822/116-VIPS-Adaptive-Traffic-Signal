@@ -480,23 +480,23 @@ void command_buf_polling()
             CompensationFlag) {
             log_file_write("RESUME instruction is executed\r\n");
             printf("RESUME instruction is executed.\r\n");
-            int16_t ret = 0;
+
+            report_compensation_time();
+
             switch (config.traffic_compensation_method) {
             case 1:
-                ret = traffic_compensation_method1(config.traffic_compensation_cycle_number);
+                traffic_compensation_method1(config.traffic_compensation_cycle_number);
                 break;
             case 2:
-                ret = traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
+                traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
                 break;
             case 3:
-                ret = traffic_compensation_method3(config.traffic_compensation_cycle_number);
+                traffic_compensation_method3(config.traffic_compensation_cycle_number);
                 break;
             default:
                 break;
             }
             CompensationFlag = false;
-
-            report_compensation_time(ret);
         }
     }
     return;

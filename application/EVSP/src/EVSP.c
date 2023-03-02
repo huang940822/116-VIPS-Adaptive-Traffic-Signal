@@ -274,11 +274,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
-            /*
-            結束 EVSP_VMS_SERVICE
-            */
-            vms_request_end(EVSP.id);
-
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
                      app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
@@ -306,6 +301,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     command.cycle = 1;
                 }
                 insert_command_and_log;
+
+                // 結束 EVSP_VMS_SERVICE
+                vms_request_end(EVSP.id);
             }
 
             // 回報碰到觸碰點 id
