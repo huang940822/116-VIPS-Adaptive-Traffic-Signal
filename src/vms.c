@@ -20,6 +20,7 @@
 #include "typedefine.h"
 #include "vms.h"
 
+wifi_adapter_device_t wifi_adapter;
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t VMS_program_update_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -365,8 +366,13 @@ int VMS_wifi_disconnect()
     FILE *fp;
     char path[1024];
 
+    char wifi_disconnect_cmd[PROGRAM_UPLOAD_PACKET_LEN_MAX];
+    memset(wifi_disconnect_cmd, 0, sizeof(wifi_disconnect_cmd));
+    strcat(wifi_disconnect_cmd, WIFI_DISCONNECT_COMMAND_BEGIN);
+    strcat(wifi_disconnect_cmd, wifi_adapter.device_name);
+    strcat(wifi_disconnect_cmd, WIFI_DISCONNECT_COMMAND_END);
     /* 執行斷線的指令並將輸出保存到 fp 中 */
-    fp = popen(WIFI_DISCONNECT_COMMAND, "r");
+    fp = popen(wifi_disconnect_cmd, "r");
     if (fp == NULL) {
         printf("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command\n");
         log_file_write_fatal_error("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command");
@@ -736,8 +742,35 @@ void control_loop()
     }
 }
 
+void WiFi_adapter_search ()
+{
+    FILE *fp;
+    char path[1024];
+
+    /* 執行上傳並將輸出保存到 fp 中 */
+    fp = popen("nmcli dev status | grep wifi", "r");
+    if (fp == NULL) {
+        printf("WiFi_adapter_search: Failed to execute command\n");
+        log_file_write_fatal_error("WiFi_adapter_search: Failed to execute command");
+        pclose(fp);
+        return;
+    }
+    char *pch;
+    while (fgets(path, sizeof(path), fp) != NULL) {
+        printf("%s", path);
+        log_file_write("WiFi_adapter_search: search message: %s", path);
+        pch = strstr(path, "wifi");
+        if (pch != NULL) {
+            strncpy(wifi_adapter.device_name, path, pch - path - 2);
+            printf("%s %ld\n", wifi_adapter.device_name, strlen(wifi_adapter.device_name));
+        }
+    }
+}
+
 void vms_handler_init()
 {   
+    
+    WiFi_adapter_search();
 
     memset(program_ids_green, 255, sizeof(program_ids_green));
     memset(program_ids_not_green, 255, sizeof(program_ids_not_green));

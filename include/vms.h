@@ -4,8 +4,9 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
+#include <stdbool.h>
+
 #include "time.h"
-#include<stdbool.h>
 
 // 因為 fopen 解析不了~，所以要注意如果 usrname 不是 asrlab 的話要做對應的修正
 #define VMS_pic_path "/home/asrlab/VMS_pic/"
@@ -33,7 +34,6 @@
 #define VMS_4 "NCKU_4"
 #define VMS_WIFI_AP_PASSWORD "ncku_sqmbNVw2"
 #define VMS_RESEND_THRESHOLD 20
-#define VMS_WIFI_ADAPTER_NAME "wlx5c925ed425c8"
 #define FETCH_STDOUT_AND_STDERR "2>&1"
 
 #define VMS_PROGRAM_UPLOADER_DIR "/home/asrlab/Desktop/CppNcku/"
@@ -44,7 +44,9 @@
 #define SPACEBAR " "
 #define PROGRAM_UPLOAD_PACKET_LEN_MAX 1000
 
-#define WIFI_DISCONNECT_COMMAND "sudo nmcli dev disconnect" SPACEBAR VMS_WIFI_ADAPTER_NAME SPACEBAR FETCH_STDOUT_AND_STDERR
+#define WIFI_DISCONNECT_COMMAND_BEGIN "sudo nmcli dev disconnect" SPACEBAR
+#define WIFI_DISCONNECT_COMMAND_END SPACEBAR FETCH_STDOUT_AND_STDERR
+
 #define WIFI_CONNECT_COMMAND_BEGIN "sudo nmcli device wifi connect"
 
 #define DELETE_UPLOAD_PROGRAMS_FILES "sudo rm -rf " VMS_PROGRAM_UPLOADER_DIR "programs/"

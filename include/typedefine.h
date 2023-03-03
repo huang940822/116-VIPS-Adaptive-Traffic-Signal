@@ -23,6 +23,7 @@
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 #define PROGRAM_NAME_LEN 100
+#define WIFI_ADAPTER_DEVICE_NAME 50
 
 // This define CPS_DEBUG is for CPS testing.
 // It's for the log buffer size.
@@ -356,5 +357,9 @@ typedef struct traffic_signal_command_arg {
     uint8_t effect_time;
     char host_OBU_name[OBU_NAME_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
+
+typedef struct wifi_adapter_device {
+    char device_name[WIFI_ADAPTER_DEVICE_NAME + 1];
+} wifi_adapter_device_t;
 
 #endif
