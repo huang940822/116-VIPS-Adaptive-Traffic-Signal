@@ -1,5 +1,20 @@
-# How to install RSU middleware service 
-## Install step
+# RSU_Controller_master
+## Compiling Environment
+
+1. Installing Make and GCC9
+```bash=
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt install make
+sudo apt install gcc
+```
+2. Access Serial Port
+```bash=
+sudo adduser oslab dialout
+```
+3. RS232 is plugged into **COM1**
+## Setup and Start Program
+
 1. Go to home directory
 ```bash=
 cd ~
@@ -12,19 +27,27 @@ git clone https://github.com/oslab-csie-ncku/RSU_Controller_master.git
 ```bash=
 cd RSU_Controller_master
 ```
-4. Installing Make and GCC
-```bash=
-sudo apt install gcc
-sudo apt install make
-```
-5. Execute command `make` to build code
+4. Execute command `make` to build code
 ```bash=
 make
 ```
-## Installing service in RSU_Controller_master folder
-* There are three service in RSU_Controller_master such as middleware.service,capacity_check_service and
-network_check.service. You have to make sure path is correct.
-1. You have to check your path of RSU_Controller_master folder
+
+5. You must check *config* file in RSU_Controller_master directory
+    * *config* file is placed in `RSU_Controller_master/config` directory
+    * *config* file for EVSP application is placed in `RSU_Controller_master/application/EVSP/config` directory
+    * *_touching_area.txt* is placed in `RSU_Controller_master/application/EVSP/config` directory
+    * *config* file for TSP application is placed in `RSU_Controller_master/application/TSP/config` directory   
+    * *Supermatrix* file is placed in `RSU_Controller_master/application/TSP/config/RSU_supermatrix` directory
+
+## Execute at systemd
+* There are three service in RSU_Controller_master as folloe
+    1. *middleware.service*
+    2. *capacity_check_service*
+    3. *network_check.service*
+
+You have to make sure path is correct.
+
+1. Check your path of RSU_Controller_master folder
 ```bash=
 pwd
 ```
@@ -32,16 +55,22 @@ pwd
 ```bash=
 /home/oslab/RSU_Controller_master
 ```
-2. Check the ExecStart and WorkingDirectory in all services is correct.
-* middleware.service as follow.
+2. Check the `ExecStart` and `WorkingDirectory` in all services is correct.
+* *middleware.service*
     * ExecStart=/home/oslab/RSU_Controller_master/build/exec/middleware
+    * WorkingDirectory=/home/oslab/RSU_Controller_master
+* *capacity_check_service*
+    * ExecStart=/home/oslab/RSU_Controller_master/log_usage_check.sh
+    * WorkingDirectory=/home/oslab/RSU_Controller_master/log
+* *network_check.service*
+    * ExecStart=/home/oslab/RSU_Controller_master/ping_test.sh
     * WorkingDirectory=/home/oslab/RSU_Controller_master
 3. Go to RSU_Controller_master folder
 ```bash=
 cd RSU_Controller_master
 ```
 4. Copy services in RSU_Controller_master folder to system
-* I take middleware.service as example, other services are the same.
+* Take middleware.service as example, other services are the same.
 ```bash=
 sudo cp middleware.service /etc/systemd/system/
 ```
@@ -65,7 +94,7 @@ sudo systemctl enable middleware.service
 ```bash=
 sudo systemctl status middleware.service
 ```
-* Successful status of middleware.service as follow.
+* Successful status of *middleware.service* as follow.
 <img width="893" alt="截圖 2023-02-08 上午11 31 02" src="https://user-images.githubusercontent.com/46049179/217422489-22d2aead-0f89-440f-be8e-ce1917d2e041.png">
 
 # RSU_CPS development journal
