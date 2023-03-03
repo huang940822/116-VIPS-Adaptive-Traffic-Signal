@@ -103,6 +103,7 @@ sudo systemctl status middleware.service
     ```
     2. The WorkingDirectory path defined is incorrect.
     3. The ExecStart path defined is incorrect.
+    
 # RSU_CPS development journal
 ## Application layer
 * Add a new application CPS.
