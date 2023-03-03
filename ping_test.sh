@@ -55,7 +55,7 @@ network_detect(){
 				count=0
 				NOW=$( date '+%F_%H:%M:%S' )
 				echo "network fails"
-				echo "network fails">>/home/asrlab/RSU_Controller_master/log/networkfail_$NOW.log
+				echo "network fails">>/home/oslab/RSU_Controller_master/log/networkfail_$NOW.log
 				reboot
 			fi
 	
