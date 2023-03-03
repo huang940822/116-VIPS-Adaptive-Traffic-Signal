@@ -96,7 +96,13 @@ sudo systemctl status middleware.service
 ```
 * Successful status of *middleware.service* as follow.
 <img width="893" alt="截圖 2023-02-08 上午11 31 02" src="https://user-images.githubusercontent.com/46049179/217422489-22d2aead-0f89-440f-be8e-ce1917d2e041.png">
-
+* If you encounter **code=exited, status=203/EXEC**, you should check the following things:
+    1. The target directory does not have sufficient execute permissions.
+    ```bash=
+    chmod 777 directory/file name
+    ```
+    2. The WorkingDirectory path defined is incorrect.
+    3. The ExecStart path defined is incorrect.
 # RSU_CPS development journal
 ## Application layer
 * Add a new application CPS.
