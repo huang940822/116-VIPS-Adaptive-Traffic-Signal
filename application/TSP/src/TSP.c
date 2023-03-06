@@ -394,9 +394,7 @@ int TSP_on_cloud_packet_rx(void *arg)
     {
         // set_timer(TSP_report_plan_timer_id, 10 / 10, 0, 1, 0);
         uint8_t enableOrdisable = 0;
-        uint8_t type = 0;
         read_int8_t(&enableOrdisable, &read_buf);
-        read_int8_t(&type, &read_buf);
         if (enableOrdisable == 1 &&
             TSP.dontSend2TC == 0) {  // enable/clear command buffer
             TSP.dontSend2TC = 1;

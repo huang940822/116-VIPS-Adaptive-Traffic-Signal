@@ -507,7 +507,6 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 }
 int Is_Heartbeat(msg_obj_t *msg)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
     msg_buf_t read_buf;
     V2R_common_field_t common_field;
     read_buf.index = 0;

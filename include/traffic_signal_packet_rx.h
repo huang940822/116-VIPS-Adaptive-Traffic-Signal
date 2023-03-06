@@ -23,8 +23,8 @@
 #define ERR_ADDR 0x4
 #define ERR_LENGTH 0x8
 
-#define HEADER_LEN 10         // packet_len - info_len
-#define MAX_PACKET_LEN 65535  // two bytes
+#define HEADER_LEN 10       // packet_len - info_len
+#define MAX_PACKET_LEN 128  // two bytes
 #define MAX_PAYLOAD_LEN (MAX_PACKET_LEN - HEADER_LEN)
 #define ACK_INFO_LEN 0
 #define NAK_INFO_LEN 1

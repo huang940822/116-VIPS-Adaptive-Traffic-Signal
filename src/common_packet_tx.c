@@ -17,7 +17,7 @@ void common_send_ack(uint8_t cmd, uint8_t status)
     log_file_write("common send ack, CMD is %d %d\r\n", cmd, status);
     msg_buf_t write_buf;
     write_buf.index = 0;
-    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "common_send_ack: malloc");
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "common_send_ack");
 
     // cmd
     write_uint8_t(cmd, &write_buf);
@@ -34,7 +34,7 @@ void report_compensation_time()
     msg_buf_t write_buf;
     write_buf.index = 0;
 
-    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "report_compensation_time: malloc");
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "report_compensation_time");
 
     // cmd
     write_uint8_t(13, &write_buf);
