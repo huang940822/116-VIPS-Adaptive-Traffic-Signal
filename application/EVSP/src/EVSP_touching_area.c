@@ -196,6 +196,7 @@ int EVSP_default_config()
     struct dirent *dirp;
     if ((dp = opendir(TOUCHING_AREA_DIR)) == NULL) {
         log_file_write_fatal_error("error opening %s", TOUCHING_AREA_DIR);
+        return -1;
     } else {
         log_file_write("%s opened successfully", TOUCHING_AREA_DIR);
     }

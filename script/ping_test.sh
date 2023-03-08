@@ -1,5 +1,7 @@
 #!/bin/bash
 
+path=$(cd "$(dirname "$0")"; pwd)
+
 reboot_midnight(){
     	while true
     	do	
@@ -10,14 +12,14 @@ reboot_midnight(){
 		if [[ "$currenttime" > "00:00:01" ]] && [[ "$currenttime" < "00:00:15" ]]; then
      			#reboot
 			echo "time to reboot"
-			echo "system reboot at midnight">>/home/oslab/RSU_Controller_master/log/system_reboot_$NOW.log
+			echo "system reboot at midnight">>$path/log/system_reboot_$NOW.log
 			reboot
    		fi
 
 		if [[ "$currenttime" > "00:05:01" ]] && [[ "$currenttime" < "00:05:03" ]]; then
      			#dsrc reboot
 			echo "time to dsrc reboot"
-			echo "DSRC reboot at midnight">>/home/oslab/RSU_Controller_master/log/system_reboot_$NOW.log
+			echo "DSRC reboot at midnight">>$path/log/system_reboot_$NOW.log
 			ssh root@192.168.100.3 '/sbin/reboot'
    		fi
 
@@ -55,7 +57,7 @@ network_detect(){
 				count=0
 				NOW=$( date '+%F_%H:%M:%S' )
 				echo "network fails"
-				echo "network fails">>/home/oslab/RSU_Controller_master/log/networkfail_$NOW.log
+				echo "network fails">>$path/log/networkfail_$NOW.log
 				reboot
 			fi
 	

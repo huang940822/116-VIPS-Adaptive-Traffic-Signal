@@ -1,5 +1,5 @@
 #!/bin/bash
-filename='iplist.txt'
+filename='iplist'
 echo "input  filepath/filename:"
 read middleware_path
 while read line; do

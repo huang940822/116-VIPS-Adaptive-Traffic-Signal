@@ -754,6 +754,7 @@ int TSP_on_registration(void *arg)
     struct dirent *dirp;
     if ((dp = opendir(RSU_SUPERMATRIX_DIR)) == NULL) {
         log_file_write_fatal_error("error opening %s", RSU_SUPERMATRIX_DIR);
+        return -1;
     } else {
         log_file_write("%s opened successfully", RSU_SUPERMATRIX_DIR);
     }

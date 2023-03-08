@@ -77,3 +77,10 @@ clean:
 recompile:
 	make clean
 	make
+
+DEPLOT_DIR := RSU_Controller
+deploy:
+	make recompile
+	script/deploy.sh
+
+
