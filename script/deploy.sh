@@ -22,8 +22,8 @@ do
     if [ -d $APP_DIR/$var/'config' ]; then
         mkdir -p $DEPLOT_DIR/$APP_DIR/$var/
         cp -r $APP_DIR/$var/'config' $DEPLOT_DIR/$APP_DIR/$var/
-        if [ -d $APP_DIR/$var/'config/config_example' ]; then
-            rm -r $APP_DIR/$var/config/*_example
+        if [ -f $APP_DIR/$var/'config/config_example' ]; then
+            rm -rf $DEPLOT_DIR/$APP_DIR/$var/config/*_example
         fi
     fi
 done
