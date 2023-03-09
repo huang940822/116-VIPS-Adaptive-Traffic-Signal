@@ -59,8 +59,7 @@
     } while (0)
 
 // Close debug mode on deployment
-#define DEBUG_MOD 1
-#if DEBUG_MOD
+#ifndef DEBUG_MOD
 #define printf(...) printf(__VA_ARGS__)
 #else
 #define printf(...) ;

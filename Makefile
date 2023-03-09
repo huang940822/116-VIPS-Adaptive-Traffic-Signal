@@ -48,16 +48,6 @@ build:
 	@mkdir -p $(EXEC_DIR)
 	@mkdir -p $(OBJ_DIR)
 
-signal: build $(EXEC_DIR)/signal
-
-$(OBJ_DIR)/%.o: %.c
-	@mkdir -p $(@D)
-	$(CC) $(WARN_OPT) $(CFLAGS) $(INCLUDE_PATH) -c $< -o $@ $(LIBS)
-
-$(EXEC_DIR)/signal: $(TEST_OBJECTS)
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -o $(EXEC_DIR)/signal $^ $(LIBS)
-
 check:
 	@$(foreach test_file,$(TEST_FILE),\
 		echo "Compile "$(test_file);\
@@ -79,8 +69,8 @@ recompile:
 	make
 
 DEPLOT_DIR := RSU_Controller
+
 deploy:
-	make recompile
+	make clean
+	make all CFLAGS:="-D DEBUG_MOD"
 	script/deploy.sh
-
-
