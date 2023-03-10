@@ -86,7 +86,7 @@ void EVSP_host_OBU_obj_delete(char *OBU_name)
 
     /* traverse host OBU list */
     while (current != NULL && strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) != 0) {
-        previous = NULL;
+        previous = current;
         current = current->next;
     }
     if (current == EVSP_host_OBU_list_head) {

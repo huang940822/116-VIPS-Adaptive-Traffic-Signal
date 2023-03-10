@@ -9,13 +9,24 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
+/* error_status 說明:
+Bit 0: DSRC
+Bit 1: VMS異常
+Bit 2: DISK
+Bit 3: MEMORY
+Bit 4: 號控箱死當
+Bit 5: 655xx_error
+Bit 6: 雲端下的更新補償策略封包策略二phase weight錯誤
+Bit 7: 時間異常
+*/
+
 uint8_t error_status = 0;
+
 timer_t dsrc_heartbeat_timer_id;
 timer_t tc_5fcc_timer_id;
 // static uint8_t err_count_5fcc=0;
 
 pthread_mutex_t mutex_error_status = PTHREAD_MUTEX_INITIALIZER;
-
 
 uint8_t get_error_status()
 {
@@ -43,19 +54,18 @@ void clear_dsrc_error()
     return;
 }
 
-//在traffic_signal_status_updating.c
-void set_tsc_error()
+void set_vms_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    error_status |= TSC_BIT_POSITION;
+    error_status |= VMS_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     return;
 }
 
-void clear_tsc_error()
+void clear_vms_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    error_status &= ~TSC_BIT_POSITION;
+    error_status &= ~VMS_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     return;
 }
@@ -154,6 +164,22 @@ void clear_655xx_error()
     pthread_mutex_lock(&mutex_error_status);
     // log_file_write("get dsrc heartbeat packet and clear dsrc err bit\r\n");
     error_status &= ~TC_655XX_ERR;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}
+
+void set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    error_status |= CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR;
+    pthread_mutex_unlock(&mutex_error_status);
+    return;
+}
+
+void clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR()
+{
+    pthread_mutex_lock(&mutex_error_status);
+    error_status &= ~CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR;
     pthread_mutex_unlock(&mutex_error_status);
     return;
 }

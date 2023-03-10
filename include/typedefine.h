@@ -6,9 +6,9 @@
 #define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
                      // ‘strptime’
 #include <time.h>
-#include "util.h"
-#include "j2735_msg.h"
 #include "j2735_map.h"
+#include "j2735_msg.h"
+#include "util.h"
 #define FILE_PATH "./"
 #define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
@@ -19,12 +19,14 @@
 #define OBU_RECORD_RING_CAPACITY 5 /* should be 3 ~ 256 */
 #define STATIC_APP_PRIVATE_SPACE_CAPACITY 256
 #define PHASE_COUNT_MAX_NUM 8
-#define SIGNAL_COUNT_MAX_NUM 8 // 岔路數目
+#define SIGNAL_COUNT_MAX_NUM 8  // 岔路數目
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
+#define PROGRAM_NAME_LEN 100
+#define WIFI_ADAPTER_DEVICE_NAME 50
 
-// This define CPS_DEBUG is for CPS testing. 
-// It's for the log buffer size. 
+// This define CPS_DEBUG is for CPS testing.
+// It's for the log buffer size.
 // If testing can set 1000 or other you want the positive number.
 // Set negative for normal.
 #define CPS_DEBUG -1
@@ -37,6 +39,18 @@ typedef enum device_type {
     DEVICE_CLOUD = 2,
     DEVICE_TYPE_NUMBER
 } device_type_t;
+
+typedef enum application_id {
+    COMMON_BROADCAST_ID = 0,
+    EVSP_ID = 1,
+    TSP_ID = 2,
+    ATSC_ID = 3,
+    CPS_ID = 4,
+    SPAT_ID = 5,
+    MAP_ID = 6,
+    SPM_ID = 7,
+    APPLICATION_ID_NUMBER
+} application_id_t;
 
 typedef enum vehicle_type {
     VEHICLE_NORMAL = -1,
@@ -89,7 +103,7 @@ typedef enum position {
 typedef enum signalstatus {
     RED = 1,
     YELLOW = 2,
-    GREEN = 4,// 圓頭綠
+    GREEN = 4,  // 圓頭綠
     LEFT_GREEN = 8,
     STRAIGHT_GREEN = 16,
     RIGHT_GREEN = 32,
@@ -120,16 +134,14 @@ typedef enum {
     event_callback_id_msg_id,
 } event_callback_id_choice;
 
-typedef struct event_callback_id
-{
+typedef struct event_callback_id {
     event_callback_id_choice choice;
-    union
-    {
+    union {
         int app_id;
         DSRCmsgID msg_id;
     } u;
-    
-}event_callback_id_t;
+
+} event_callback_id_t;
 
 typedef struct event_callback {
     char name[APP_NAME_MAX_LEN];
@@ -144,7 +156,7 @@ typedef struct OBU_record_common_field {
     time_t time_nsec;
     float position_lon;
     float position_lat;
-    uint8_t speed;
+    uint8_t speed;  // m/s
     uint8_t direction;
     char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
@@ -155,7 +167,7 @@ typedef struct OBU_record {
     time_t time_nsec;
     float position_lon;
     float position_lat;
-    uint8_t speed;
+    uint8_t speed;  // m/s
     uint8_t direction;
 } OBU_record_t;
 
@@ -198,7 +210,7 @@ typedef struct traffic_signal_packet {
     uint8_t LEN[2];
     uint8_t DLE_2;
     uint8_t ETX;
-    uint8_t INFO[];  //這是指標？
+    uint8_t INFO[];  // 因為 info 長度是會變動並不是一個固定值
 } traffic_signal_packet_t;
 
 typedef struct static_plan {
@@ -213,7 +225,7 @@ typedef struct static_plan {
     uint8_t PedRed;
 
     // Green - PedGreenFlash
-    uint16_t PreGreen;  //原始步階1
+    uint16_t PreGreen;  // 原始步階1
     uint16_t PreTimeCompensated;
 } static_plan_t;
 
@@ -244,6 +256,8 @@ typedef struct traffic_signal_status {
     uint8_t Hour;   // (00~23)
     uint8_t Min;    // (00~59)
     uint8_t Sec;    // (00~59)
+    // 0F 04
+    uint16_t original_tc_health_status;
 
     static_plan_t plan[PHASE_COUNT_MAX_NUM];
 
@@ -252,7 +266,6 @@ typedef struct traffic_signal_status {
     phaseorder_plan_t phaseorder_plan[PHASE_COUNT_MAX_NUM][SIGNAL_COUNT_MAX_NUM];
 
     uint8_t control_status;
-    uint16_t original_tc_status;
 
 } traffic_signal_status_t;
 
@@ -321,6 +334,8 @@ typedef struct tsc_command {
     int16_t effect_time;  // is the length of time that the application requests
                           // to be adjusted to.
     int8_t compensation_time;
+    uint8_t compensation_cycle;
+
     char host_OBU_name[ID_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
 } tsc_command_t;
@@ -347,5 +362,9 @@ typedef struct traffic_signal_command_arg {
     uint8_t effect_time;
     char host_OBU_name[OBU_NAME_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
+
+typedef struct wifi_adapter_device {
+    char device_name[WIFI_ADAPTER_DEVICE_NAME + 1];
+} wifi_adapter_device_t;
 
 #endif

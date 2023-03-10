@@ -22,7 +22,7 @@ timer_t SPaT_packet_tx_timer_id;
 
 app_obj_t SPaT = {
     .name = "SPaT",
-    .id = 5,
+    .id = SPAT_ID,
     .priority = 3,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,

@@ -24,8 +24,8 @@
 
 #define CLEAR_BIT(var, bit) (WRITE_BIT(var, bit, 0UL))
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 #define Malloc(obj, size, error_log)                          \
     do {                                                      \
@@ -42,25 +42,24 @@
     } while (0)
 
 
-#define Realloc(obj, oldSize, newSize, error_log)              \
-    do {                                                       \
-        obj = realloc(obj, newSize);                           \
-        if (obj == NULL) {                                     \
-            set_memory_error();                                \
-            log_file_write_fatal_error(error_log ": realloc"); \
-            perror(error_log ": realloc");                     \
-            exit(errno);                                       \
-        } else {                                               \
-            clear_memory_error();                              \
-            if (newSize > oldSize) {                           \
-                memset(obj + oldSize, 0, newSize - oldSize);  \
-            }                                                  \
-        }                                                      \
+#define Realloc(obj, oldSize, newSize, error_log)                     \
+    do {                                                              \
+        obj = realloc(obj, newSize);                                  \
+        if (obj == NULL) {                                            \
+            set_memory_error();                                       \
+            log_file_write_fatal_error(error_log ": realloc");        \
+            perror(error_log ": realloc");                            \
+            exit(errno);                                              \
+        } else {                                                      \
+            clear_memory_error();                                     \
+            if (newSize > oldSize) {                                  \
+                memset((char *) obj + oldSize, 0, newSize - oldSize); \
+            }                                                         \
+        }                                                             \
     } while (0)
 
 // Close debug mode on deployment
-#define DEBUG_MOD 1
-#if DEBUG_MOD
+#ifndef DEBUG_MOD
 #define printf(...) printf(__VA_ARGS__)
 #else
 #define printf(...) ;

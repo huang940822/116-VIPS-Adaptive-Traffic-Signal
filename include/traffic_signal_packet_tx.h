@@ -42,4 +42,5 @@ uint8_t tsc_5F43();
 uint8_t tsc_countdown_on(uint8_t);
 uint8_t tsc_countdown_off(uint8_t);
 uint8_t tsc_query_firmware_version(void);
+uint8_t TC_packet_tx(traffic_signal_packet_t *packet, char *describe);
 #endif

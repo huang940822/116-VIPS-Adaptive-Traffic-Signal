@@ -30,6 +30,7 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "vms.h"
 #include "typedefine.h"
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -61,17 +62,22 @@ int main()
     /* log init */
     log_file_init();  //一個timer被created
 
+    log_file_write("version : v2.3");
+
     /* read config file*/
     ret = config_init();
-
+    if (ret != CONFIG_ACCEPT) {
+        log_file_write_fatal_error("error reading config file: %d", ret);
+    }
+    /*read vms config file*/
+    ret = vms_config_init();
+    if (ret != VMS_CONFIG_ACCEPT) {
+        log_file_write_fatal_error("error reading vms config file: %d", ret);
+    }
     // init dsrc error detect
     dsrc_error_detect_init();
     // init tc fail detect
     tc_5fcc_error_detect_init();
-
-    if (ret != CONFIG_ACCEPT) {
-        log_file_write_fatal_error("error reading config file: %d", ret);
-    }
 
     printf("query tc firmware version\r\n");
     flag_query_firm_ver = true;
@@ -86,6 +92,15 @@ int main()
     if (ret != 0) {
         log_file_write_fatal_error(
             "error creating traffic_signal_packet_rx_thread: %d", ret);
+        perror("main: pthread_create");
+        exit(errno);
+    }
+
+    pthread_t vms_thread;   // vms thread
+    ret = pthread_create(&vms_thread, NULL, vms_handler, NULL);
+    if(ret != 0) {
+        log_file_write_fatal_error(
+            "error creating vms_thread: %d", ret);
         perror("main: pthread_create");
         exit(errno);
     }
@@ -110,9 +125,9 @@ int main()
         &EVSP,
         &TSP,
         // &CPS,
-        &SPaT,
-        &MAP,
-        &SPM,
+        // &SPaT,
+        // &MAP,
+        // &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {
@@ -147,6 +162,7 @@ int main()
         printf("Fail to init J2735\n");
         return -1;
     }
+    
     /* Start server */
     com_layer_init(NULL);
 

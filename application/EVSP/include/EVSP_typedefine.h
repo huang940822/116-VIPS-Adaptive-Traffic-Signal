@@ -36,31 +36,36 @@ typedef struct EVSP_static_space {
 } EVSP_static_space_t;
 
 typedef struct EVSP_terminate_area {
+    uint32_t terminate_area_id;
+
     uint8_t node_count;
     EVSP_Node_t *node;
 } EVSP_terminate_area_t;
 
 typedef struct EVSP_touching_area {
+    uint32_t touching_area_id;
+
     uint8_t direciton_start;  // 表達一段範圍的方向 總共 0~7 為順時針 6~0 是 6, 7, 0 的意思
     uint8_t direciton_end;    // 從 start 到 end 的範圍都算如果只有一個就是 start == end
-
     uint8_t node_count;
-    EVSP_Node_t *node;
-
     uint8_t terminate_area_count;
-    uint8_t *terminate_area_Id;
+
+    EVSP_Node_t *node;
+    uint32_t *terminate_area_Id;
 } EVSP_touching_area_t;
 
 typedef struct EVSP_plan_subPhase {
     uint8_t SubPhaseID;
 
     uint8_t touching_area_count;
-    uint8_t *touching_area_Id;
+    uint32_t *touching_area_Id;
 } EVSP_plan_subPhase_t;
 
 typedef struct EVSP_plan_table {
     uint8_t plan_id_count;
+    uint8_t plan_id_max;
     uint8_t plan_subPhase_count;
+    uint8_t plan_subPhase_max;
 
     uint8_t *plan_id; // 因為可能很多個 plan 都是用同一個 plan table
     EVSP_plan_subPhase_t *plan_subPhase;
@@ -68,14 +73,16 @@ typedef struct EVSP_plan_table {
 
 typedef struct EVSP_plan_list_t {
     uint8_t terminate_area_count;
+    uint8_t terminate_area_max;
     uint8_t touching_area_count;
+    uint8_t touching_area_max;
     uint8_t plan_table_count;
+    uint8_t plan_table_max;
 
     EVSP_terminate_area_t *terminate_area;
     EVSP_touching_area_t *touching_area;
     EVSP_plan_table_t *plan_table;
 } EVSP_plan_list_t;
-
 
 typedef struct EVSP_host_OBU_obj {
     char OBU_name[OBU_NAME_MAX_LEN + 1];

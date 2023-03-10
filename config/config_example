@@ -2,6 +2,9 @@
 
 # rsu name
 # "S429001   " pad to 10 characters with space & add double quotes as leading and trailing characters 
+# RSU_id is RSU_NAME last four number
+# RSU_region is the first alphabetically concatenated the second number
+# RSU_id and RSU_region is use on j2735 format
 RSU_NAME "S429001   "   
 RSU_id 29001
 RSU_region 164
@@ -44,6 +47,9 @@ SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE 100
 # traffic compensation method
 # int number
 TRAFFIC_COMPENSATION_METHOD 3
+
+# traffic compensation cycle number
+TRAFFIC_COMPENSATION_CYCLE_NUMBER 1
 
 PHASE_WEIGHT 50 50 0 0 0 0 0 0
 

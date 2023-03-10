@@ -1,5 +1,4 @@
 *.log
-log_*
 build/
 Latency_Test/
 network_test/
@@ -13,3 +12,4 @@ application/EVSP/config/*.txt
 *.txt
 .VSCodeCounter/
 tmp/
+RSU_Controller/

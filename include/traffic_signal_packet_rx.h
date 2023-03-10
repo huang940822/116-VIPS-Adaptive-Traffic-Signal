@@ -4,8 +4,8 @@
 #include "time.h"
 #include "typedefine.h"
 
-#define BAUDRATE B9600
-#define SERIAL_PORT "/dev/ttyS0"
+#define TC_BAUDRATE B9600
+#define TC_SERIAL_PORT "/dev/ttyS0"
 #define DLE_VAL 0xAA
 #define STX_VAL 0xBB
 #define ETX_VAL 0xCC
@@ -23,8 +23,8 @@
 #define ERR_ADDR 0x4
 #define ERR_LENGTH 0x8
 
-#define HEADER_LEN 10         // packet_len - info_len
-#define MAX_PACKET_LEN 65535  // two bytes
+#define HEADER_LEN 10       // packet_len - info_len
+#define MAX_PACKET_LEN 128  // two bytes
 #define MAX_PAYLOAD_LEN (MAX_PACKET_LEN - HEADER_LEN)
 #define ACK_INFO_LEN 0
 #define NAK_INFO_LEN 1
@@ -49,5 +49,6 @@ extern int16_t ack_seq;
 void traffic_signal_port_init();
 void *traffic_signal_packet_rx_handler();
 int check_sum(traffic_signal_packet_t *, int);
+void set_serial_attribs(int fd, int speed, char serial_port[]);
 
 #endif

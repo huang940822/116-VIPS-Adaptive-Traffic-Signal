@@ -19,14 +19,8 @@ config_object_t config = {
     .signal_adjust_upper_bound_percentage = 60,
     .signal_adjust_lower_bound_percentage = 60,
     .traffic_compensation_method = 1,
-    .phase_weight = 0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    .traffic_compensation_cycle_number = 1,
+    .phase_weight = 0,0,0,0,0,0,0,0,
     .log_middleware_timer_event = 1,
     .log_application_register_event = 1,
     .log_command_buffer = 1,
@@ -40,6 +34,14 @@ config_object_t config = {
     .log_OBU_list = 1,
 };
 
+// vms config
+vms_config_object_t vms_config = {
+    .vms_active = 0,
+    .activate_directions = 0, 0, 0, 0, 0, 0, 0, 0,
+    .program_ids_green = 255, 255, 255, 255, 255, 255, 255, 255,
+    .program_ids_not_green = 255, 255, 255, 255, 255, 255, 255, 255,
+};
+
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -50,6 +52,7 @@ bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
         return false;
     }
 }
+
 static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -60,6 +63,7 @@ static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
         return false;
     }
 }
+
 static bool read_float_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -70,6 +74,7 @@ static bool read_float_from_config_line(char *config_line, float *val)
         return false;
     }
 }
+
 static bool read_double_from_config_line(char *config_line, double *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -80,6 +85,7 @@ static bool read_double_from_config_line(char *config_line, double *val)
         return false;
     }
 }
+
 static bool read_float_array_from_config_line(char *config_line, float *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -92,7 +98,19 @@ static bool read_float_array_from_config_line(char *config_line, float *val)
         return false;
     }
 }
-static bool read_string_from_config_line(char *config_line, char *val)
+static bool read_uint8_t_array_from_config_line(char *config_line, uint8_t *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    memset(val, 0, sizeof(uint8_t) * 8);
+    if (sscanf(config_line, "%s %hhd %hhd %hhd %hhd %hhd %hhd %hhd %hhd \n", prm_name, &val[0],
+               &val[1], &val[2], &val[3], &val[4], &val[5], &val[6],
+               &val[7]) == 9) {
+        return true;
+    } else {
+        return false;
+    }
+}
+bool read_string_from_config_line(char *config_line, char *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     memset(val, 0, MAX_CONFIG_VARIABLE_LEN);
@@ -378,6 +396,20 @@ int config_init()
                 return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
             }
         }
+        // traffic compensation cycle number 
+        if (strstr(buf, "TRAFFIC_COMPENSATION_CYCLE_NUMBER ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    config.traffic_compensation_cycle_number = uint8_t_val;
+                    log_file_write("config: traffic_compensation_cycle_number = %d", config.traffic_compensation_cycle_number);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
+                }
+            } else {
+                return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
+            }
+        }
         // phase weight
         if (strstr(buf, "PHASE_WEIGHT ")) {
             if (read_float_array_from_config_line(buf, float_val_array)) {
@@ -615,4 +647,97 @@ int config_init()
 
     fclose(fp);
     return CONFIG_ACCEPT;
+}
+
+int vms_config_init()
+{
+    FILE *fp;
+    fp = fopen(VMS_CONFIG_FILE, "r");
+    if (fp == NULL) {
+        log_file_write_fatal_error("error opening %s", VMS_CONFIG_FILE);
+        return CONFIG_INVALID_OPEN_FILE;
+    } else {
+        log_file_write("%s opened successfully %s", VMS_CONFIG_FILE);
+    }
+
+    char buf[CONFIG_LINE_BUFFER_SIZE];
+    uint8_t uint8_t_val_array[PHASE_COUNT_MAX_NUM];
+    char string_val[MAX_CONFIG_VARIABLE_LEN];
+
+    while (!feof(fp)) {
+        fgets(buf, CONFIG_LINE_BUFFER_SIZE, fp);
+        if (buf[0] == '#' || buf[0] == '\n' || buf[0] == ' ') {
+            continue;
+        }
+
+        // vms active
+        if (strstr(buf, "VMS_ACTIVE ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "yes") == 0) {
+                    vms_config.vms_active = 1;
+                    log_file_write("vms_config: vms_active = %d",
+                             vms_config.vms_active);
+                    continue;
+                } else if (strcmp(string_val, "no") == 0) {
+                    vms_config.vms_active = 0;
+                    log_file_write("vms_config: vms_active = %d",
+                             vms_config.vms_active);
+                    continue;
+                } else {
+                    return VMS_CONFIG_INVALID_VMS_ACTIVE;
+                }
+            } else {
+                return VMS_CONFIG_INVALID_VMS_ACTIVE;
+            }
+        }
+        // active_directions
+        if (strstr(buf, "ACTIVE_DIRECTIONS ")) {
+            if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
+                for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+                    vms_config.activate_directions[i] = uint8_t_val_array[i];
+                    log_file_write("vms_config: activate_directions[%d] = %d",
+                        i, vms_config.activate_directions[i]);
+                }
+                continue;
+            } else {
+                return VMS_CONFIG_INVALID_ACTIVE_DIRECTIONS;
+            }
+        }
+        // program_ids_green
+        if (strstr(buf, "PROGRAM_IDs_GREEN ")) {
+            if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
+                for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+                    if (uint8_t_val_array[i] >= 0) {
+                        vms_config.program_ids_green[i] = uint8_t_val_array[i];
+                        log_file_write("vms_config: program_ids_green[%d] = %d",
+                             i, vms_config.program_ids_green[i]);
+                    } else {
+                        return VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN;
+                    }
+                }
+                continue;
+            } else {
+                return VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN;
+            }
+        }
+        // program_ids_not_green
+        if (strstr(buf, "PROGRAM_IDs_NOT_GREEN ")) {
+            if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
+                for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+                    if (uint8_t_val_array[i] >= 0) {
+                        vms_config.program_ids_not_green[i] = uint8_t_val_array[i];
+                        log_file_write("vms_config: program_ids_not_green[%d] = %d",
+                             i, vms_config.program_ids_not_green[i]);
+                    } else {
+                        return VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN;
+                    }
+                }
+                continue;
+            } else {
+                return VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN;
+            }
+        }
+    }
+    fclose(fp);
+    return VMS_CONFIG_ACCEPT;
 }

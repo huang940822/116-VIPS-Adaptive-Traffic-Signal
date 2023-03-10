@@ -3,8 +3,8 @@ Description=capacity check and del old files
 
 [Service]
 User=oslab
-ExecStart=/home/oslab/RSU_Controller_v3-master/log_usage_check.sh
-WorkingDirectory=/home/oslab/RSU_Controller_v3-master/log
+ExecStart=/home/oslab/RSU_Controller_master/log_usage_check.sh
+WorkingDirectory=/home/oslab/RSU_Controller_master/log
 Restart=always
 [Install]
 WantedBy=multi-user.target

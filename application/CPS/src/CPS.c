@@ -44,7 +44,7 @@
 
 app_obj_t CPS = {
         .name = "CPS",
-        .id = 3,
+        .id = CPS_ID,
         .priority = 3,
         .on_OBU_packet_rx = NULL,
         .on_OBU_packet_tx = NULL,
@@ -85,7 +85,7 @@ app_obj_t CPS = {
         # endif
         exit(0);
     }
-# elif
+# else
     FILE *fp2, *fp3;
     int cnter = 0;
     int cnter_2 = 0;

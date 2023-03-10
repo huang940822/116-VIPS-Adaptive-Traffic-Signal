@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "SPaT_config.h"
+#include "config.h"
 #include "log.h"
 #include "typedefine.h"
-#include "config.h"
 
 SPaT_config_object_t SPaT_config = {
     .SPaT_packet_transfer_speed = 10,
@@ -41,13 +41,13 @@ int SPaT_config_init()
                 if (uint8_t_val >= 0) {
                     SPaT_config.SPaT_packet_transfer_speed = uint8_t_val;
                     log_file_write("config: SPaT_packet_transfer_speed = %d",
-                             SPaT_config.SPaT_packet_transfer_speed);
+                                   SPaT_config.SPaT_packet_transfer_speed);
                     continue;
                 } else {
-                    return CONFIG_INVALID_SPAT_PACKET;
+                    goto SPaT_config_init_error;
                 }
             } else {
-                return CONFIG_INVALID_SPAT_PACKET;
+                goto SPaT_config_init_error;
             }
         }
 
@@ -57,17 +57,20 @@ int SPaT_config_init()
                 if (uint8_t_val >= 0) {
                     SPaT_config.SPaT_dontSend2TC = uint8_t_val;
                     log_file_write("config: SPaT_dontSend2TC = %d",
-                             SPaT_config.SPaT_dontSend2TC);
+                                   SPaT_config.SPaT_dontSend2TC);
                     continue;
                 } else {
-                    return -1;
+                    goto SPaT_config_init_error;
                 }
             } else {
-                return -1;
+                goto SPaT_config_init_error;
             }
         }
     }
 
     fclose(fp);
     return SPAT_CONFIG_ACCEPT;
+SPaT_config_init_error:
+    fclose(fp);
+    return CONFIG_INVALID_SPAT_PACKET;
 }

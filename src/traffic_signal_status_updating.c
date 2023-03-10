@@ -28,7 +28,7 @@ extern uint8_t flag_switch2nextStep;
 extern uint8_t flag_PhaseOrder;
 uint8_t phase_change_flag = false;
 uint8_t real_pretime = 0;
-static uint8_t FirstSwitchFlag = true;
+static uint8_t FirstSwitchFlag = 0;
 static uint8_t PhaseOrder_initial = true;
 
 // static bool flag = true;
@@ -39,9 +39,6 @@ void packet_5FCC(traffic_signal_packet_t *packet)
 {
     static uint8_t previous_phase = 0;
     // static uint8_t init_get_phase_flag=false;
-
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
 
     pthread_mutex_lock(&mutex_signal_status);
 
@@ -74,13 +71,14 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     // printf("previous phase is %d and current phase is %d\r\n",
     // previous_phase, signal_status.SubPhaseID);
     if (previous_phase != signal_status.SubPhaseID) {
-        if (FirstSwitchFlag == true) {  //第一次換相不取值
-            FirstSwitchFlag = false;
-        } else {
+        if (FirstSwitchFlag == 1) {  // 第一次換相不取值
+            FirstSwitchFlag = 2;
+        } else if (FirstSwitchFlag == 2) {
             signal_status.plan[signal_status.SubPhaseID - 1]
                 .PreTimeCompensated = signal_status.StepSec;
             printf("phase changed and pretime for phase %d is %d\r\n",
                    signal_status.SubPhaseID, signal_status.StepSec);
+            log_file_write("signal_status.plan[%d].PreTimeCompensated:%d\r\n",signal_status.SubPhaseID - 1,signal_status.plan[signal_status.SubPhaseID - 1].PreTimeCompensated);
         }
     }
 
@@ -117,22 +115,8 @@ void packet_5FCC(traffic_signal_packet_t *packet)
 
 
     if (config.log_signal_packet_info) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "signal packet info: 5FCC");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nControlStrategy: %d",
-                 signal_status.ControlStrategy);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseID: %d",
-                 signal_status.SubPhaseID);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nStepID: %d",
-                 signal_status.StepID);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nStepSec: %d",
-                 signal_status.StepSec);
-        log_file_write(log_content);
+        log_file_write("signal packet info: 5FCC\nControlStrategy: %d\nSubPhaseID: %d\nStepID: %d\nStepSec: %d",
+                       signal_status.ControlStrategy, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
     }
     pthread_mutex_unlock(&mutex_signal_status);
 
@@ -164,6 +148,12 @@ void packet_5FC8(traffic_signal_packet_t *packet)
         current_signal_status.plan[i].Green =
             (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
     }
+    if (FirstSwitchFlag == 0) {
+        for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
+            signal_status.plan[i].PreTimeCompensated = current_signal_status.plan[i].Green;
+        }
+        FirstSwitchFlag = 1;
+    }
     current_signal_status.CycleTime =
         packet->INFO[6 + current_signal_status.SubPhaseCount * 2] << 8 |
         packet->INFO[7 + current_signal_status.SubPhaseCount * 2];
@@ -191,6 +181,9 @@ void packet_5FC8(traffic_signal_packet_t *packet)
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d",
                      current_signal_status.plan[i].Green);
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\nPreTimeCompensated: %d",
+                     signal_status.plan[i].PreTimeCompensated);
         }
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nCycleTime: %d",
@@ -204,7 +197,7 @@ void packet_5FC8(traffic_signal_packet_t *packet)
     pthread_mutex_unlock(&mutex_current_signal_status);
     return;
 }
-/* 5F C5 回報時制計畫編號與資料庫 */  //收tc箱資料
+/* 5F C5 回報時制計畫編號與資料庫 */  // 收tc箱資料
 void packet_5FC5(traffic_signal_packet_t *packet)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -212,8 +205,8 @@ void packet_5FC5(traffic_signal_packet_t *packet)
 
     pthread_mutex_lock(&mutex_signal_status);
     // signal_status.PlanID = packet->INFO[2];
-    // 
-    if(PhaseOrder_initial == true) {
+    //
+    if (PhaseOrder_initial == true) {
         flag_PhaseOrder = true;
         PhaseOrder_initial = false;
     }
@@ -286,14 +279,14 @@ void packet_5FC4(traffic_signal_packet_t *packet)
         signal_status.plan[i].PreGreen =
             signal_status.plan[i].Green - signal_status.plan[i].PedGreenFlash;
 
-        //為了初始化被補償的pretime
+        // 為了初始化被補償的pretime
         if (initialize_flag == true) {
             count_initialize++;
             // printf("get inside\r\n");
             if (count_initialize >
-                signal_status.SubPhaseCount *2) {  
-                    // 2是為了第一次讀出來的值常常是錯誤的
-                    // 所以等到第二次讀取才取值
+                signal_status.SubPhaseCount * 2) {
+                // 2是為了第一次讀出來的值常常是錯誤的
+                // 所以等到第二次讀取才取值
 
                 signal_status.plan[i].PreTimeCompensated =
                     signal_status.plan[i].PreGreen;
@@ -345,26 +338,26 @@ void packet_5FC3(traffic_signal_packet_t *packet)
     signal_status.SignalCount = packet->INFO[4];
 
     snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\nSignalMap:%x SignalCount:%x\r\n",
-            signal_status.SignalMap,signal_status.SignalCount);
+             LOG_CONTENT_LEN - strlen(log_content),
+             "\nSignalMap:%x SignalCount:%x\r\n",
+             signal_status.SignalMap, signal_status.SignalCount);
 
-    printf("SignalMap:%x SignalCount:%x\r\n",signal_status.SignalMap,signal_status.SignalCount);
+    printf("SignalMap:%x SignalCount:%x\r\n", signal_status.SignalMap, signal_status.SignalCount);
 
 
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
-        for(int j = 0; j < signal_status.SignalCount; j++) {
-            signal_status.phaseorder_plan[i][j].SignalStatus = packet->INFO[6 + i*signal_status.SignalCount+j];
+        for (int j = 0; j < signal_status.SignalCount; j++) {
+            signal_status.phaseorder_plan[i][j].SignalStatus = packet->INFO[6 + i * signal_status.SignalCount + j];
             snprintf(log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "SignalStatus:%x ",
-                    signal_status.phaseorder_plan[i][j].SignalStatus);
-            printf("SignalStatus:%x ",signal_status.phaseorder_plan[i][j].SignalStatus);
+                     LOG_CONTENT_LEN - strlen(log_content),
+                     "SignalStatus:%x ",
+                     signal_status.phaseorder_plan[i][j].SignalStatus);
+            printf("SignalStatus:%x ", signal_status.phaseorder_plan[i][j].SignalStatus);
         }
         printf("\r\n");
         snprintf(log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "\r\n");
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "\r\n");
     }
 
     log_file_write(log_content);
@@ -405,16 +398,10 @@ void packet_0FC2(traffic_signal_packet_t *packet)
 void packet_0F04(traffic_signal_packet_t *packet)
 {
     // printf("tc status info: ");
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
     pthread_mutex_lock(&mutex_signal_status);
 
     uint16_t original_tc_hstatus = packet->INFO[2] << 8 | packet->INFO[3];
-    signal_status.original_tc_status = original_tc_hstatus;
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"original_tc_health_status is %04X\n\r",original_tc_hstatus);
-
-    log_file_write(log_content);
-
+    signal_status.original_tc_health_status = original_tc_hstatus;
     log_file_write("original_tc_health_status is %04X\n\r", original_tc_hstatus);
     // dont show bit 14, 8, 9 for they seprately means controller ready,
     // cabinated opened, communication connect
@@ -422,29 +409,18 @@ void packet_0F04(traffic_signal_packet_t *packet)
     // 1001 1101 0001 0011
     original_tc_hstatus =
         original_tc_hstatus &
-        0x9d13;  //介庸學長建議如下
-                 // Bit0、1、4、8、10、11、12、15要通報處理，因為控制不是無法控制就是故障不亮或跳閃光模式
+        0x9d13;  // 介庸學長建議如下
+                 //  Bit0、1、4、8、10、11、12、15要通報處理，因為控制不是無法控制就是故障不亮或跳閃光模式
 
     printf("tc status\n\r");
     printf("%04X\n\r", original_tc_hstatus);
-    
+
     log_file_write("tc_health_status after mask is %04X\n\r", original_tc_hstatus);
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"original_tc_health_status is %04x\r\n",signal_status.original_tc_status);
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),"tc_health_status after mask is %04X\n\r",original_tc_hstatus);
-    log_file_write(log_content);
 
-
-    if (original_tc_hstatus != 0) {
-        set_tsc_error();
-    } else {
-        clear_tsc_error();
-    }
     pthread_mutex_unlock(&mutex_signal_status);
-
 }
 
-//裡面有些部份看不太懂 為何要用號誌加上mutex保護
+// 裡面有些部份看不太懂 為何要用號誌加上mutex保護
 void get_traffic_signal_status(traffic_signal_status_t *traffic_signal_status)
 {  // wait what??
     sem_timedwait_millsecs(&sem_signal_status, SEM_SIGNAL_STATUS_TIMEOUT);
@@ -455,13 +431,12 @@ void get_traffic_signal_status(traffic_signal_status_t *traffic_signal_status)
            sizeof(traffic_signal_status_t));
     pthread_mutex_unlock(&mutex_signal_status);
 
-    //號誌的釋放
+    // 號誌的釋放
     int sem_value;
     sem_getvalue(&sem_signal_status, &sem_value);
     if (sem_value == 0) {
         sem_post(&sem_signal_status);
     }
-
     return;
 }
 
@@ -533,12 +508,12 @@ uint8_t get_control_status()
 uint16_t get_original_tc_health_status()
 {
     pthread_mutex_lock(&mutex_signal_status);
-    uint16_t original_tc_health_status = signal_status.original_tc_status;
+    uint16_t original_tc_health_status = signal_status.original_tc_health_status;
     pthread_mutex_unlock(&mutex_signal_status);
     return original_tc_health_status;
 }
-//不同的step進來看到的remaining time不一樣 用自己剩餘的秒數
-//在加上還沒跑得step的秒數 就是remaining time
+// 不同的step進來看到的remaining time不一樣 用自己剩餘的秒數
+// 在加上還沒跑得step的秒數 就是remaining time
 uint16_t get_remaining_time(uint8_t phase, uint8_t step, uint16_t second)
 {
     pthread_mutex_lock(&mutex_signal_status);
@@ -592,7 +567,7 @@ uint8_t get_prev_SubPhaseID()
     uint8_t phase = signal_status.SubPhaseID;
     pthread_mutex_unlock(&mutex_signal_status);
     uint8_t prev = phase - 1;
-    if(prev == 0)
+    if (prev == 0)
         return phase_count;
     else
         return prev;
@@ -646,7 +621,7 @@ void set_control_status(uint8_t control_status)
     return;
 }
 
-//這個函式在幹麻？？ 要廣播給obu現在tc箱的狀況
+// 這個函式在幹麻？？ 要廣播給obu現在tc箱的狀況
 void report_plan()
 {
     msg_buf_t write_buf;

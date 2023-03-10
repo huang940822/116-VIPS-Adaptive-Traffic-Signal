@@ -40,6 +40,7 @@ int16_t get_total_compensation_second();
 void get_compensation_buffer(int16_t *);
 
 void set_control_status(uint8_t control_status);
+uint16_t get_original_tc_health_status();
 
 void report_plan();
 

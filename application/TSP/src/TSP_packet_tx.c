@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "log.h"
+#include "config.h"
 #include "TSP.h"
 #include "TSP_matrix.h"
 #include "TSP_packet_tx.h"
@@ -12,26 +14,17 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-void TSP_send_ack()
+void TSP_send_ack(uint8_t cmd, uint8_t status)
 {
-    printf("tsp send ack\r\n");
-    log_file_write("tsp send ack\r\n");
+    printf("tsp send ack, CMD is %d %d\r\n", cmd, status);
+    log_file_write("tsp send ack, CMD is %d %d\r\n", cmd, status);
     msg_buf_t write_buf;
     write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("TSP_send_ack: malloc");
-        perror("TSP_send_ack: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "TSP_send_ack: malloc");
 
     // cmd
-    write_uint8_t(0, &write_buf);
-    write_uint8_t(0, &write_buf);
+    write_uint8_t(cmd, &write_buf);
+    write_uint8_t(status, &write_buf);
 
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
@@ -96,8 +89,8 @@ void TSP_report_plan()
     // error status
     write_uint8_t(error_status, &write_buf);
     write_uint16_t(original_tc_health_status,&write_buf);
-
-    // printf("test\r\n");
+    write_uint8_t(config.traffic_compensation_method,&write_buf);
+    
     cloud_packet_tx(write_buf.index, TSP.id, write_buf.content);
     free(write_buf.content);
     return;

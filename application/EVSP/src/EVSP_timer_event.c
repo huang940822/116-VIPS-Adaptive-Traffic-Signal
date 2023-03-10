@@ -10,10 +10,15 @@
 #include "log.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
+#include "vms.h"
 
 void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
-{
-    // printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
+{   
+
+    // 檢查 EVSP 有沒有關掉 VMS 服務，沒有的話要關掉
+    vms_request_end(EVSP.id); 
+
+    printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     snprintf(log_content + strlen(log_content),
@@ -67,8 +72,11 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
 }
 
 void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
-{
-    // printf("EVSP_host_OBU_list_timeout_timer_handler\n");
+{   
+    // 檢查 EVSP 有沒有關掉 VMS 服務，沒有的話要關掉
+    vms_request_end(EVSP.id);
+
+    printf("EVSP_host_OBU_list_timeout_timer_handler\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     snprintf(log_content + strlen(log_content),

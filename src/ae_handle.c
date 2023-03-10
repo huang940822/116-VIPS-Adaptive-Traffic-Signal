@@ -86,7 +86,7 @@ size_t udp_recv(client_t *client)
         recv(client->fd, client->read_buffer->buff, udp_handle.max_msg_len, 0);
     client->read_buffer->size = readn;
     if (readn == -1) {
-        printf("EAGAIN\n");
+        printf("UDP: EAGAIN\n");
     }
     return readn;
 }
