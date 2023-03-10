@@ -54,8 +54,8 @@ int SPM_on_OBU_packet_rx(void *arg)
     if (SPM.dontSend2TC)
         return 1;
     printf("SPM recv----- %ld %ld\n", tv.tv_sec - timestamp, tv.tv_usec - nsec);
-    SPM_OBU_obj_insert(app_section->OBU_object, srm);
-    SPM_repeater_start();
+
+    SPM_repeater_start(SPM_OBU_obj_insert(app_section->OBU_object, srm));
 }
 
 int SPM_on_registration(void *arg)

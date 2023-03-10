@@ -125,9 +125,9 @@ int main()
         &EVSP,
         &TSP,
         // &CPS,
-        // &SPaT,
-        // &MAP,
-        // &SPM,
+        &SPaT,
+        &MAP,
+        &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {

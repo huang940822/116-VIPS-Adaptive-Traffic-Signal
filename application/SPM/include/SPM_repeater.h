@@ -1,7 +1,9 @@
 #ifndef SPM_REPEAT_H
 #define SPM_REPEAT_H
 
-void SPM_repeater_start();
+#include <stdbool.h>
+
+void SPM_repeater_start(bool send_flag);
 void *SPM_repeater();
 
 #endif

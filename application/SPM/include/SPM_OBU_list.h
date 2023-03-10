@@ -26,9 +26,6 @@ typedef struct SPM_OBU_obj {
 extern SPM_OBU_obj_t *SPM_OBU_obj_head;
 extern pthread_mutex_t SPM_OBU_obj_mutex;
 
-// 當這個 flag 立起來 repeater 會在執行 SPM_repeater_start 時被快速的執行一次
-uint8_t SPM_repeater_send_flag;
-
-void SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage* srm);
+bool SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage *srm);
 void SPM_OBU_obj_delete(char *OBU_name);
 #endif

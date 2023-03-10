@@ -21,7 +21,7 @@ pthread_t SPM_repeater_thread = 0;
 pthread_mutex_t SPM_repeater_run_mutex = PTHREAD_MUTEX_INITIALIZER;
 int SPM_reoeater_fd = 0;
 
-void SPM_repeater_start()
+void SPM_repeater_start(bool send_flag)
 {
     pthread_mutex_lock(&SPM_repeater_run_mutex);
     if (SPM_repeater_thread == 0) {
@@ -31,7 +31,7 @@ void SPM_repeater_start()
             perror("main: pthread_create");
             exit(errno);
         }
-    } else if (SPM_repeater_send_flag) {
+    } else if (send_flag) {
         struct itimerspec timerValue;
         memset(&timerValue, 0, sizeof(struct itimerspec));
 
@@ -43,7 +43,6 @@ void SPM_repeater_start()
         if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
             log_file_write_fatal_error("SPM_repeater timerfd_settime");
         }
-        SPM_repeater_send_flag = 0;
     }
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
 }
@@ -102,7 +101,7 @@ void *SPM_repeater()
         ssm->second = (timeinfo->tm_sec * 1000) + (tv.tv_usec / 1000);
 
         ssm->status.tab[0].sequenceNumber = sequenceNumber++;
-        sequenceNumber &= 0b1111111; // mod
+        sequenceNumber &= 0b1111111;  // mod
 
         ssm->regional_option = true;
         ssm->regional.count = 1;
@@ -127,7 +126,6 @@ void *SPM_repeater()
                     break;
                 case PriorityRequestType_priorityRequestUpdate: {
                     int status = special_OBU_list_search_status(current->vehicle_type, current->OBU_name);
-                    printf("special_OBU_list_search_status status %d\n", status);
                     switch (status) {
                     case OBU_object_unknown:
                         i--;
@@ -169,7 +167,6 @@ void *SPM_repeater()
                     ssp->requester.id.u.stationID = current->id.u.stationID;
 
                 ssp->requester.request = current->sigRequestList[j].request.requestID;
-                printf("ssp->requester.request %d\n", ssp->requester.request);
                 ssp->requester.role_option = TRUE;
                 ssp->requester.role = current->role;
 

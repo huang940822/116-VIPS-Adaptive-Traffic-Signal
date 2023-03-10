@@ -22,8 +22,9 @@ SPM_OBU_obj_t *SPM_OBU_obj_new(OBU_object_t *OBU_obj)
     return SPM_OBU_obj;
 }
 
-void SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage *p_srm)
+bool SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage *p_srm)
 {
+    bool send_flag = false;
     pthread_mutex_lock(&SPM_OBU_obj_mutex);
     SPM_OBU_obj_t *current = SPM_OBU_obj_head;
     if (SPM_OBU_obj_head == NULL) {
@@ -58,11 +59,12 @@ SPM_OBU_obj_insert_end:
             current->sigRequest_count += 1;
 
             if (p_srm->requests.tab[i].request.requestType == PriorityRequestType_priorityRequest) {
-                SPM_repeater_send_flag = 1;
+                send_flag = true;
             }
         }
-    }printf("current->sigRequest_count %d\n", current->sigRequest_count);
+    }
     pthread_mutex_unlock(&SPM_OBU_obj_mutex);
+    return send_flag;
 }
 
 void SPM_OBU_obj_delete(char *OBU_name)
