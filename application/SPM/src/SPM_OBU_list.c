@@ -61,7 +61,7 @@ SPM_OBU_obj_insert_end:
                 SPM_repeater_send_flag = 1;
             }
         }
-    }
+    }printf("current->sigRequest_count %d\n", current->sigRequest_count);
     pthread_mutex_unlock(&SPM_OBU_obj_mutex);
 }
 

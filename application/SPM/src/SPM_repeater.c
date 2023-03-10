@@ -31,21 +31,20 @@ void SPM_repeater_start()
             perror("main: pthread_create");
             exit(errno);
         }
+    } else if (SPM_repeater_send_flag) {
+        struct itimerspec timerValue;
+        memset(&timerValue, 0, sizeof(struct itimerspec));
+
+        timerValue.it_value.tv_sec = 0;
+        timerValue.it_value.tv_nsec = 1;
+        timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
+        timerValue.it_interval.tv_nsec = (int) (1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
+
+        if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+            log_file_write_fatal_error("SPM_repeater timerfd_settime");
+        }
+        SPM_repeater_send_flag = 0;
     }
-    // else if (SPM_repeater_send_flag){
-    //     struct itimerspec timerValue;
-    //     memset(&timerValue, 0, sizeof(struct itimerspec));
-
-    //     timerValue.it_value.tv_sec = 0;
-    //     timerValue.it_value.tv_nsec = 1;
-    //     timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
-    //     timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
-
-    //     if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-    //         log_file_write_fatal_error("SPM_repeater timerfd_settime");
-    //     }
-    //     SPM_repeater_send_flag = 0;
-    // }
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
 }
 
@@ -59,9 +58,9 @@ void *SPM_repeater()
     memset(&timerValue, 0, sizeof(struct itimerspec));
 
     timerValue.it_value.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
-    timerValue.it_value.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
+    timerValue.it_value.tv_nsec = (int) (1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
     timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
-    timerValue.it_interval.tv_nsec = (int)(1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
+    timerValue.it_interval.tv_nsec = (int) (1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
 
     printf("SPM_repeater timerfd_settime %ld %ld\n", timerValue.it_interval.tv_sec, timerValue.it_interval.tv_nsec);
     if (timerfd_settime(SPM_reoeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
@@ -98,16 +97,16 @@ void *SPM_repeater()
         time_t now = (time_t) tv.tv_sec;
 
         struct tm *timeinfo = localtime(&tv.tv_sec);
-        
+
         ssm->timeStamp = (((timeinfo->tm_yday * 24) + timeinfo->tm_hour) * 60) + timeinfo->tm_min;
         ssm->second = (timeinfo->tm_sec * 1000) + (tv.tv_usec / 1000);
 
         ssm->status.tab[0].sequenceNumber = sequenceNumber++;
-        sequenceNumber &= 0b1111111;
+        sequenceNumber &= 0b1111111; // mod
 
         ssm->regional_option = true;
         ssm->regional.count = 1;
-        ssm->regional.tab->u.unknown.buf = (uint8_t *)&tv;
+        ssm->regional.tab->u.unknown.buf = (uint8_t *) &tv;
         ssm->regional.tab->u.unknown.len = sizeof(struct timeval);
 
         while (current != NULL && i <= SignalStatusList_MAX_SIZE) {
@@ -128,6 +127,7 @@ void *SPM_repeater()
                     break;
                 case PriorityRequestType_priorityRequestUpdate: {
                     int status = special_OBU_list_search_status(current->vehicle_type, current->OBU_name);
+                    printf("special_OBU_list_search_status status %d\n", status);
                     switch (status) {
                     case OBU_object_unknown:
                         i--;
@@ -169,6 +169,7 @@ void *SPM_repeater()
                     ssp->requester.id.u.stationID = current->id.u.stationID;
 
                 ssp->requester.request = current->sigRequestList[j].request.requestID;
+                printf("ssp->requester.request %d\n", ssp->requester.request);
                 ssp->requester.role_option = TRUE;
                 ssp->requester.role = current->role;
 
@@ -196,7 +197,7 @@ void *SPM_repeater()
             current = current->next;
         }
         pthread_mutex_unlock(&SPM_OBU_obj_mutex);
-        
+
         ssm->status.tab[0].sigStatus.count = i;
         if (ssm->status.tab[0].sigStatus.count > 0)
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
