@@ -10,6 +10,7 @@
 typedef enum area_type {
     TOUCHING_AREA = 0,
     TERMINATE_ATRA = 1,
+    TIMEOUT = 2,
 } area_type_t;
 
 extern EVSP_plan_list_t EVSP_plan_list;
