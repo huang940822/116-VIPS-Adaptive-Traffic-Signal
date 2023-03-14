@@ -28,9 +28,11 @@ void EVSP_timeout_report(union sigval value)
 
 void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
 {   
+    // 回報 EVSP timeout event
+    EVSP_timeout_report(value);
 
     // 檢查 EVSP 有沒有關掉 VMS 服務，沒有的話要關掉
-    vms_request_end(EVSP.id); 
+    vms_request_end(EVSP.id);
 
     printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
     char log_content[LOG_CONTENT_LEN + 1];
@@ -83,12 +85,13 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     log_file_write(log_content);
 
     EVSP_host_OBU_obj_print();
-
-    EVSP_timeout_report(value);
 }
 
 void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
 {   
+    // 回報 EVSP timeout event
+    EVSP_timeout_report(value);
+    
     // 檢查 EVSP 有沒有關掉 VMS 服務，沒有的話要關掉
     vms_request_end(EVSP.id);
 
@@ -142,6 +145,4 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     log_file_write(log_content);
 
     EVSP_host_OBU_obj_print();
-
-    EVSP_timeout_report(value);
 }
