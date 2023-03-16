@@ -13,6 +13,24 @@ sudo apt install gcc
 sudo adduser oslab dialout
 ```
 3. RS232 is plugged into **COM1**
+## Deploy RSU controller
+Compile middleware and package into an install package.
+```
+make deploy
+```
+Afther use the `make deploy`, will generate the mew folder `RSU_Controller\`.<br>
+Put it into the IPC which want to deploy and paste it on the correct path then install.<br>
+**In other IPC**
+```
+sudo ./install
+```
+Finally can see the three system service .
+```
+systemctl status capacity_check.service
+systemctl status network_check.service
+systemctl status middleware.service
+```
+
 ## Setup and Start Program
 
 1. Go to home directory
