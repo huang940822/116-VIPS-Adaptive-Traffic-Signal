@@ -1,5 +1,5 @@
 #!/bin/bash
-filename='iplist'
+filename='111_iplist'
 echo "input  filepath/filename:"
 read middleware_path
 while read line; do
@@ -34,12 +34,12 @@ while read line; do
 	
 	#scp  -o 'ProxyJump nckucsieos@223.200.250.100 -p 10122' $middleware_path oslab@$line:/home/oslab/RSU_Controller_v3-master/
 
-	echo "oslabTainanBUS"|ssh -J nckucsieos@223.200.250.100:10122 oslab@$line -tt 'sudo systemctl stop middleware.service'
+	echo "oslabTainanBUS"|ssh -J nckucsieos@223.200.250.100:10122 -p 10003 oslab@$line -tt 'sudo systemctl status middleware.service'
 	#echo "oslab"|ssh -J nckucsieos@223.200.250.100:10122 oslab@$line -tt  'sudo systemctl restart middleware.service;sudo systemctl status middleware.service'
 	#echo "oslab"|ssh -J nckucsieos@223.200.250.100:10122 oslab@$line -tt  'sudo systemctl restart middleware.service;sudo systemctl status middleware.service'
 
-	scp  -o 'ProxyJump nckucsieos@223.200.250.100 -p 10122' -r $middleware_path oslab@$line:/home/oslab/RSU_Controller_v3-master/
-	echo "oslabTainanBUS"|ssh -J nckucsieos@223.200.250.100:10122 oslab@$line -tt 'sudo systemctl restart middleware.service'
+	#scp  -o 'ProxyJump nckucsieos@223.200.250.100 -p 10122'  $middleware_path -p 10003 oslab@$line:/home/oslab/RSU_Controller/
+	#echo "oslabTainanBUS"|ssh -J nckucsieos@223.200.250.100:10122 -p 10003 oslab@$line -tt 'sudo systemctl restart middleware.service'
 	#scp  $middleware_path oslab@$line:/home/oslab/RSU_Controller_v3-master/build/exec/
 
 
@@ -52,3 +52,4 @@ while read line; do
 	#echo $?
 
 done < $filename
+
