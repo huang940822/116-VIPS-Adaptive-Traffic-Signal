@@ -290,6 +290,8 @@ int TSP_on_cloud_packet_rx(void *arg)
              LOG_CONTENT_LEN - strlen(log_content),
              "TSP cloud packet rx: CMD(%d)", cmd);
 
+    TSP_send_ack(cmd, ack_status);
+
     switch (cmd) {
     case 0:
         TSP_report_plan();
@@ -713,8 +715,6 @@ int TSP_on_cloud_packet_rx(void *arg)
                  LOG_CONTENT_LEN - strlen(log_content), "\nuseless tsp cmd");
         break;
     }
-
-    TSP_send_ack(cmd, ack_status);
 
     log_file_write(log_content);
 
