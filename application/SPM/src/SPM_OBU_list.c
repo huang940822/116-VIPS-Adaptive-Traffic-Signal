@@ -9,7 +9,7 @@
 #include "log.h"
 #include "string.h"
 
-SPM_OBU_obj_t *SPM_OBU_obj_head = NULL;
+LIST_HEAD(SPM_OBU_list_head);
 pthread_mutex_t SPM_OBU_obj_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 SPM_OBU_obj_t *SPM_OBU_obj_new(OBU_object_t *OBU_obj)
@@ -19,6 +19,7 @@ SPM_OBU_obj_t *SPM_OBU_obj_new(OBU_object_t *OBU_obj)
 
     strncpy(SPM_OBU_obj->OBU_name, OBU_obj->OBU_name, OBU_NAME_MAX_LEN);
     SPM_OBU_obj->vehicle_type = OBU_obj->vehicle_type;
+    INIT_LIST_HEAD(&SPM_OBU_obj->node);
     return SPM_OBU_obj;
 }
 
@@ -26,20 +27,16 @@ bool SPM_OBU_obj_insert(OBU_object_t *OBU_obj, SignalRequestMessage *p_srm)
 {
     bool send_flag = false;
     pthread_mutex_lock(&SPM_OBU_obj_mutex);
-    SPM_OBU_obj_t *current = SPM_OBU_obj_head;
-    if (SPM_OBU_obj_head == NULL) {
-        current = SPM_OBU_obj_head = SPM_OBU_obj_new(OBU_obj);
-    } else {
-        SPM_OBU_obj_t *previous = current;
-        while (current) {
-            if (strcmp(current->OBU_name, OBU_obj->OBU_name) == 0) {
-                goto SPM_OBU_obj_insert_end;
-            }
-            previous = current;
-            current = current->next;
+    SPM_OBU_obj_t *current, *safe;
+    list_for_each_entry_safe(current, safe, &SPM_OBU_list_head, node)
+    {
+        if (strcmp(current->OBU_name, OBU_obj->OBU_name) == 0) {
+            goto SPM_OBU_obj_insert_end;
         }
-        current = previous->next = SPM_OBU_obj_new(OBU_obj);
     }
+    current = SPM_OBU_obj_new(OBU_obj);
+    list_add(&current->node, &SPM_OBU_list_head);
+
     current->id.choice = p_srm->requestor.id.choice;
     if (current->id.choice == VehicleID_entityID)
         strncat(current->id.u.buf, p_srm->requestor.id.u.entityID.buf, 4);
@@ -67,20 +64,9 @@ SPM_OBU_obj_insert_end:
     return send_flag;
 }
 
-void SPM_OBU_obj_delete(char *OBU_name)
+SPM_OBU_obj_t *SPM_OBU_obj_delete(SPM_OBU_obj_t *target)
 {
-    pthread_mutex_lock(&SPM_OBU_obj_mutex);
-    SPM_OBU_obj_t *current = SPM_OBU_obj_head, *previous = SPM_OBU_obj_head;
-    while (current) {
-        if (strcmp(current->OBU_name, OBU_name) == 0) {
-            if (current == SPM_OBU_obj_head) {
-                SPM_OBU_obj_head = NULL;
-            } else {
-                previous->next = current->next;
-            }
-            free(current);
-            break;
-        }
-    }
-    pthread_mutex_unlock(&SPM_OBU_obj_mutex);
+    SPM_OBU_obj_t *next = list_entry(target->node.next, SPM_OBU_obj_t, node);
+    list_del(&target->node);
+    return next;
 }
