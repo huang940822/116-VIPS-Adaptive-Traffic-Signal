@@ -306,7 +306,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         if (sup_ext->classification_option != TRUE) {
             return -1;
         }
-        memset(record->OBU_name, ' ', OBU_NAME_MAX_LEN);
+        memset(record->OBU_name, 0, OBU_NAME_MAX_LEN);
         switch (sup_ext->classification) {
         case 50:
             strcpy(record->OBU_name, "bus_");
@@ -347,7 +347,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
             return -1;
         }
         RequestorDescription *requestor = &srm->requestor;
-        memset(record->OBU_name, ' ', OBU_NAME_MAX_LEN);
+        memset(record->OBU_name, 0, OBU_NAME_MAX_LEN);
         switch (srm->requestor.type.role) {
         case BasicVehicleRole_ambulance:
             strcpy(record->OBU_name, "amb_");
