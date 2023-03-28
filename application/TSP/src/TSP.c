@@ -311,6 +311,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                  "TSP group control\r\n");
         // read host OBU
         read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
+        trim_space(host_OBU_name);
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
@@ -349,6 +350,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         /* intersection control */
         // read host OBU
         read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
+        trim_space(host_OBU_name);
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
@@ -362,6 +364,7 @@ int TSP_on_cloud_packet_rx(void *arg)
     case 5:  // for host obu delete?
         // read host OBU
         read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
+        trim_space(host_OBU_name);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
                  "\ndelete host OBU (%s)", host_OBU_name);
