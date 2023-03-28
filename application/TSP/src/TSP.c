@@ -290,8 +290,6 @@ int TSP_on_cloud_packet_rx(void *arg)
              LOG_CONTENT_LEN - strlen(log_content),
              "TSP cloud packet rx: CMD(%d)", cmd);
 
-    TSP_send_ack(cmd, ack_status);
-
     switch (cmd) {
     case 0:
         TSP_report_plan();
@@ -474,7 +472,6 @@ int TSP_on_cloud_packet_rx(void *arg)
             } else {
                 printf("warning : total phase weight is not 100\n");
                 set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
-                return (0);
             }
         }
 
@@ -615,12 +612,10 @@ int TSP_on_cloud_packet_rx(void *arg)
         // 4.上傳異常回報處理並結束
         // 5.上傳成功回報並結束
         uint8_t Program_ID;
-        char program_buf[100];
-        char *Program_Name;
-        memset(program_buf, 0, sizeof(program_buf));
+        char Program_Name[100] = {0};
         read_uint8_t(&Program_ID, &read_buf);
-        read_char(program_buf, &read_buf, PROGRAM_NAME_LEN);
-        Program_Name = trim_space(program_buf);
+        read_char(Program_Name, &read_buf, PROGRAM_NAME_LEN);
+        trim_space(Program_Name);
         int res;
         // 檢查檔案存不存在資料夾中
         res = VMS_search_program(Program_Name);
@@ -716,6 +711,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         break;
     }
 
+    TSP_send_ack(cmd, ack_status);
     log_file_write(log_content);
 
     if (read_buf.content != NULL) {

@@ -125,7 +125,7 @@ int MAP_config_init()
 
                 char *save_ptr = NULL;
                 // laneId
-                char *substr = trim_space(strtok_r(buf, delim, &save_ptr));
+                char *substr = trim_comments(strtok_r(buf, delim, &save_ptr));
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
                     return MAP_CONFIG_INVALID;
                 if (int_val != intersection->laneSet.count)
@@ -134,7 +134,7 @@ int MAP_config_init()
                 GenericLane *lane = &intersection->laneSet.tab[intersection->laneSet.count];
 
                 // Approach
-                substr = trim_space(strtok_r(NULL, delim, &save_ptr));
+                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
                 int32_t *ApproachId;
 
                 if (strstr(substr, "egress")) {
@@ -152,12 +152,12 @@ int MAP_config_init()
                 }
 
                 // Approach
-                substr = trim_space(strtok_r(NULL, delim, &save_ptr));
+                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
                 if (substr == NULL || sscanf(substr, "%d", ApproachId) != 1)
                     return MAP_CONFIG_INVALID;
 
                 // lane_index
-                substr = trim_space(strtok_r(NULL, delim, &save_ptr));
+                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
                     return MAP_CONFIG_INVALID;
 
@@ -173,7 +173,7 @@ int MAP_config_init()
 
                 // node_count
                 int node_count;
-                substr = trim_space(strtok_r(NULL, delim, &save_ptr));
+                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
                 if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
                     return MAP_CONFIG_INVALID;
 
@@ -184,12 +184,12 @@ int MAP_config_init()
                 for (int i = 0; i < node_count; i++, lane->nodeList.u.nodes.count++) {
                     lane->nodeList.u.nodes.tab[i].delta.choice = NodeOffsetPointXY_node_LatLon;
 
-                    substr = trim_space(strtok_r(NULL, delim, &save_ptr));
+                    substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
                     if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
                         return MAP_CONFIG_INVALID;
                     lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lat = double_val * 10000000;
 
-                    substr = trim_space(strtok_r(NULL, delim, &save_ptr));
+                    substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
 
                     if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
                         return MAP_CONFIG_INVALID;

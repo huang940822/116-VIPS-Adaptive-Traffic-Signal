@@ -526,7 +526,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         return INVALID_EFFECT_TIME;
     }
     if (strlen(command->host_OBU_name) == 0) {
-        return OBU_nameINVALID_HOST_OBU_NAME;
+        return INVALID_HOST_OBU_NAME;
     }
 
     traffic_signal_status_t signal_status;

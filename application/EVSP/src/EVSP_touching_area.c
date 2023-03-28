@@ -18,8 +18,8 @@ bool static inline read_node(char *buf, EVSP_Node_t *node)
 {
     char *tmp = buf;
     buf = strsep(&tmp, " ");
-    buf = trim_space(buf);
-    tmp = trim_space(tmp);
+    trim_comments(buf);
+    trim_comments(tmp);
 
     if (buf == NULL || tmp == NULL)
         return false;
@@ -236,7 +236,7 @@ int EVSP_table_config()
     char rsu_name[RSU_NAME_MAX_LEN + 1];
     memset(rsu_name, 0, sizeof(rsu_name));
     strncpy(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN);
-    char *name = trim_space(rsu_name);
+    trim_space(rsu_name);
     if (rsu_name == NULL) {
         log_file_write_fatal_error("error name %s", config.RSU_name);
     }
@@ -282,7 +282,7 @@ int EVSP_table_config()
 
                 /* id */
                 char *sepstr = buf;
-                char *substr = trim_space(strsep(&sepstr, ","));
+                char *substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sepstr == NULL || sscanf(substr, "%d", &uint32_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
@@ -301,7 +301,7 @@ int EVSP_table_config()
                 term_area->terminate_area_id = uint32_t_val;
 
                 /* node_count */
-                substr = trim_space(strsep(&sepstr, ","));
+                substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sepstr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
@@ -316,7 +316,7 @@ int EVSP_table_config()
                 for (int i = 0; i < term_area->node_count; ++i) {
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
-                    substr = trim_space(strsep(&sepstr, ","));
+                    substr = trim_comments(strsep(&sepstr, ","));
                     if (substr == NULL)
                         goto EVSP_plan_list_read_error;
 
@@ -344,7 +344,7 @@ int EVSP_table_config()
 
                 /* id */
                 char *sepstr = buf;
-                char *substr = trim_space(strsep(&sepstr, ","));
+                char *substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sepstr == NULL || sscanf(substr, "%d", &uint32_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
@@ -362,7 +362,7 @@ int EVSP_table_config()
                 touch_area->touching_area_id = uint32_t_val;
 
                 /* direction */
-                substr = trim_space(strsep(&sepstr, ","));
+                substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sepstr == NULL)
                     goto EVSP_plan_list_read_error;
 
@@ -378,7 +378,7 @@ int EVSP_table_config()
                 touch_area->direciton_end = (touch_area->direciton_end + 1) % 8;  // + 1 變得像 vector 的 max
 
                 /* node_count */
-                substr = trim_space(strsep(&sepstr, ","));
+                substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
                     goto EVSP_plan_list_read_error;
                 if (uint8_t_val > MAX_NODE_COUNT) {
@@ -388,7 +388,7 @@ int EVSP_table_config()
                 Malloc(touch_area->node, sizeof(EVSP_Node_t) * uint8_t_val, "EVSP_Node_new");
 
                 for (int i = 0; i < touch_area->node_count; ++i) {
-                    substr = trim_space(strsep(&sepstr, ","));
+                    substr = trim_comments(strsep(&sepstr, ","));
                     if (substr == NULL || sepstr == NULL)
                         goto EVSP_plan_list_read_error;
                     if (read_node(substr, &touch_area->node[i]) == false)
@@ -396,7 +396,7 @@ int EVSP_table_config()
                 }
 
                 /* terminate_area_count */
-                substr = trim_space(strsep(&sepstr, ","));
+                substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
                     goto EVSP_plan_list_read_error;
                 if (uint8_t_val > MAX_NODE_COUNT) {  // 只是設個避免填錯的上限 之後會檢查
@@ -408,7 +408,7 @@ int EVSP_table_config()
                 for (int i = 0; i < touch_area->terminate_area_count; ++i) {
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
-                    substr = trim_space(strsep(&sepstr, ","));
+                    substr = trim_comments(strsep(&sepstr, ","));
                     if (substr == NULL || sscanf(substr, "%d", &touch_area->terminate_area_Id[i]) != 1) {
                         goto EVSP_plan_list_read_error;
                     }
@@ -423,11 +423,11 @@ int EVSP_table_config()
             uint8_t uint8_t_val;
 
             int plan_id_max = 0;
-            char *substr = trim_space(buf + sizeof("plan_table") - 1);
+            char *substr = trim_comments(buf + sizeof("plan_table") - 1);
             char *save_ptr = NULL;
             substr = strtok_r(substr, ",", &save_ptr);
             do {
-                substr = trim_space(substr);
+                trim_comments(substr);
                 if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
                     goto EVSP_plan_list_read_error;
 
@@ -459,7 +459,7 @@ int EVSP_table_config()
                 uint8_t uint8_t_val;
                 /* SubphaseId */
                 char *sepstr = buf;
-                char *substr = trim_space(strsep(&sepstr, ","));
+                char *substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sepstr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
@@ -468,7 +468,7 @@ int EVSP_table_config()
                 }
                 subPhase->SubPhaseID = uint8_t_val;
 
-                substr = trim_space(strsep(&sepstr, ","));
+                substr = trim_comments(strsep(&sepstr, ","));
                 if (substr == NULL || sepstr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
                     goto EVSP_plan_list_read_error;
                 }
@@ -482,7 +482,7 @@ int EVSP_table_config()
                 for (int i = 0; i < subPhase->touching_area_count; ++i) {
                     if (sepstr == NULL)
                         goto EVSP_plan_list_read_error;
-                    substr = trim_space(strsep(&sepstr, ","));
+                    substr = trim_comments(strsep(&sepstr, ","));
                     if (substr == NULL || sscanf(substr, "%u", &subPhase->touching_area_Id[i]) != 1)
                         goto EVSP_plan_list_read_error;
                 }
