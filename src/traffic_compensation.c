@@ -212,68 +212,70 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHAS
 
     int ret = 0;
     memset(log_content, 0, sizeof(log_content));
+    if (T != 0) {
+        for (int i = 0; i < Comp_cyclenum; i++) {
+            memset(flag, false, sizeof(flag));
+            uint8_t tmp_weight_initial_flag = false;
+            int tmp_weight = 0;
+            for (int j = 0; j < signal_status.SubPhaseCount; j++) {
+                if (phase_weight[j] != 0) {
+                    if (flag[j] == false) {
+                        compensation_time[j] = round(t[i] * phase_weight[j] * 0.01);
+                    } else {
+                        if (tmp_weight_initial_flag == false) {
+                            tmp_weight = phase_weight[j];
+                            for (int k = j + 1; k < signal_status.SubPhaseCount; k++)
+                                tmp_weight += phase_weight[k];
+                            tmp_weight_initial_flag = true;
+                        }
 
-    for (int i = 0; i < Comp_cyclenum; i++) {
-        memset(flag, false, sizeof(flag));
-        uint8_t tmp_weight_initial_flag = false;
-        int tmp_weight = 0;
-        for (int j = 0; j < signal_status.SubPhaseCount; j++) {
-            if (phase_weight[j] != 0) {
-                if (flag[j] == false) {
-                    compensation_time[j] = round(t[i] * phase_weight[j] * 0.01);
-                } else {
-                    if (tmp_weight_initial_flag == false) {
-                        tmp_weight = phase_weight[j];
-                        for (int k = j + 1; k < signal_status.SubPhaseCount; k++)
-                            tmp_weight += phase_weight[k];
-                        tmp_weight_initial_flag = true;
+                        compensation_time[j] = round(t[i] * phase_weight[j] / tmp_weight);
                     }
-
-                    compensation_time[j] = round(t[i] * phase_weight[j] / tmp_weight);
-                }
-
-                effect_time[j] =
-                    signal_status.plan[j].PreGreen - compensation_time[j];
-                if (effect_time[j] < signal_status.plan[j].MinGreen) {
-                    effect_time[j] = signal_status.plan[j].MinGreen;
-                    compensation_time[j] =
-                        signal_status.plan[j].PreGreen - effect_time[j];
-                    t[i] -= compensation_time[j];
-                    for (int k = j + 1; k < signal_status.SubPhaseCount; k++) {
-                        flag[k] = true;
+                    if (compensation_time[j] != 0) {
+                        effect_time[j] =
+                            signal_status.plan[j].PreGreen - compensation_time[j];
+                        if (effect_time[j] < signal_status.plan[j].MinGreen) {
+                            effect_time[j] = signal_status.plan[j].MinGreen;
+                            compensation_time[j] =
+                                signal_status.plan[j].PreGreen - effect_time[j];
+                            t[i] -= compensation_time[j];
+                            for (int k = j + 1; k < signal_status.SubPhaseCount; k++) {
+                                flag[k] = true;
+                            }
+                        }
+                        if (effect_time[j] > signal_status.plan[j].MaxGreen) {
+                            effect_time[j] = signal_status.plan[i].MaxGreen;
+                            compensation_time[j] =
+                                signal_status.plan[j].PreGreen - effect_time[j];
+                            t[i] -= compensation_time[j];
+                            for (int k = j + 1; k < signal_status.SubPhaseCount; k++) {
+                                flag[k] = true;
+                            }
+                        }
+                        // insert into command buffer
+                        if (j < (signal_status.SubPhaseID - 1))
+                            command.cycle = (i + 1) % CYCLE_NUM;
+                        else
+                            command.cycle = i;
+                        command.phase = j + 1;
+                        command.target_phase = j + 1;
+                        command.compensation_time = compensation_time[j];
+                        command.compensation_cycle = Comp_cyclenum;
+                        command.effect_time = effect_time[j];
+                        printf(
+                            "cycle: %d, phase: %d, effect time: %d ,compensation_time: "
+                            "%d (%d)\r\n",
+                            command.cycle, command.phase, command.effect_time,
+                            command.compensation_time, ret);
+                        ret = command_buf_insert_effect_time(&command);
+                        snprintf(log_content + strlen(log_content),
+                                LOG_CONTENT_LEN - strlen(log_content),
+                                "\ncycle: %d, phase: %d, effect time: %d "
+                                ",compensation_time: %d (%d)",
+                                command.cycle, command.phase, command.effect_time,
+                                command.compensation_time, ret);
                     }
                 }
-                if (effect_time[j] > signal_status.plan[j].MaxGreen) {
-                    effect_time[j] = signal_status.plan[i].MaxGreen;
-                    compensation_time[j] =
-                        signal_status.plan[j].PreGreen - effect_time[j];
-                    t[i] -= compensation_time[j];
-                    for (int k = j + 1; k < signal_status.SubPhaseCount; k++) {
-                        flag[k] = true;
-                    }
-                }
-                // insert into command buffer
-                if (j < (signal_status.SubPhaseID - 1))
-                    command.cycle = (i + 1) % CYCLE_NUM;
-                else
-                    command.cycle = i;
-                command.phase = j + 1;
-                command.target_phase = j + 1;
-                command.compensation_time = compensation_time[j];
-                command.compensation_cycle = Comp_cyclenum;
-                command.effect_time = effect_time[j];
-                printf(
-                    "cycle: %d, phase: %d, effect time: %d ,compensation_time: "
-                    "%d (%d)\r\n",
-                    command.cycle, command.phase, command.effect_time,
-                    command.compensation_time, ret);
-                ret = command_buf_insert_effect_time(&command);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, effect time: %d "
-                         ",compensation_time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time,
-                         command.compensation_time, ret);
             }
         }
     }
