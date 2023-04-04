@@ -524,6 +524,25 @@ int Is_Heartbeat(msg_obj_t *msg)
     read_uint32_t(&common_field.packet_len, &read_buf);
     // service id
     read_uint8_t(&common_field.service_id, &read_buf);
+
+    uint8_t antenna_status;
+    read_uint8_t(&antenna_status, &read_buf);
+    switch (antenna_status) {
+    case 0:
+        printf("No status. Cannot get status from GNSS hardware.\n");
+        break;
+    case 1:
+        printf("The GNSS antenna is connected well.\n");
+        break;
+    case 2:
+        printf("The connection status of GNSS antenna is open.\n");
+        break;
+    case 3:
+        printf("The connection status of GNSS antenna is short.\n");
+        break;
+    default:
+        break;
+    }
     if (common_field.service_id == 0 &&
         common_field.packet_len == 512) {  // dsrc heart beat packet
         printf("dsrc alive and postpone the timer handle execution\r\n");
