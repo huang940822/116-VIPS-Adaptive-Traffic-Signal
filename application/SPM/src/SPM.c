@@ -55,9 +55,9 @@ int SPM_on_OBU_packet_rx(void *arg)
         return 1;
     printf("SPM recv----- %ld %ld\n", tv.tv_sec - timestamp, tv.tv_usec - nsec);
 
-    //SPM_OBU_obj_insert(app_section->OBU_object, srm);
-    //SPM_repeater_start(false);
-    SPM_repeater_start(SPM_OBU_obj_insert(app_section->OBU_object, srm));
+    SPM_OBU_obj_insert(app_section->OBU_object, srm);
+    SPM_repeater_start(false);
+    // SPM_repeater_start(SPM_OBU_obj_insert(app_section->OBU_object, srm));
 }
 
 int SPM_on_registration(void *arg)
@@ -68,5 +68,6 @@ int SPM_on_registration(void *arg)
     }
     SPM.dontSend2TC = SPM_config.SPM_dontSend2TC;
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, SPM.name, SPM.priority, SignalRequestMessage_Id, &SPM_on_OBU_packet_rx);
+    signal(SIGINT, sigintHandlerSPM);
     return 1;
 }

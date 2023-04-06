@@ -38,7 +38,7 @@ void MAP_packet_tx(__sigval_t value)
         OBU_j2735_tx(MapData_Id, map);
     } else {
         MAP_config.Mapconfig->intersections_option = true;
-        OBU_j2735_tx(MapData_Id, MAP_config.Mapconfig);
+        // OBU_j2735_tx(MapData_Id, MAP_config.Mapconfig);
     }
 }
 
