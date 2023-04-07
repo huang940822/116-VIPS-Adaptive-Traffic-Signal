@@ -125,7 +125,7 @@ void *SPM_repeater()
                 sequenceNumber &= 0b1111111;  // mod
 
                 while (&current->node != &SPM_OBU_list_head && status->sigStatus.count < SignalStatusList_MAX_SIZE) {
-                    if (now - current->time_second > 1) {
+                    if (now - current->time_second > 20) {
                         current = SPM_OBU_obj_delete(current);
                         continue;
                     }
@@ -209,15 +209,17 @@ void *SPM_repeater()
                 if (status->sigStatus.count == 0)
                     ssm->status.count--;
             }
+            if (ssm->status.count == 0)
+                ssm_ptrv_index--;
         }
-
-
         pthread_mutex_unlock(&SPM_OBU_obj_mutex);
-
+        if (ssm_ptrv_index == 0)
+            goto SPM_repeater_end;
         for (int i = 0; i < ssm_ptrv_index; i++) {
             SignalStatusMessage *ssm = vector_at(ssm_ptrv, i);
             if (ssm->status.count == 0)
                 break;
+            printf("ssm->status.count %d %d", ssm->status.count, i);
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
             send_packet_num++;
         }
@@ -228,8 +230,10 @@ SPM_repeater_end:
     close(SPM_repeater_fd);
     SPM_repeater_fd = 0;
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
+    printf("vector_size(ssm_ptrv) %d\n", vector_size(ssm_ptrv));
     for (int i = 0; i < vector_size(ssm_ptrv); i++) {
-        j2735_msg_dealloc(SignalStatusMessage_Id, vector_at(ssm_ptrv, i));
+        SignalStatusMessage *ssm = vector_at(ssm_ptrv, i);
+        j2735_msg_dealloc(SignalStatusMessage_Id, ssm);
     }
     vector_free(ssm_ptrv);
     printf("SPM_repeater_thread end\n");

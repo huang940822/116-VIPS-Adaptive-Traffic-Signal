@@ -40,12 +40,9 @@ int spat_msg_init(SPAT **pp_spat)
         perror("J2735 library initial");
         exit(errno);
     }
-
-    (*pp_spat) = (SPAT *) calloc(1, sizeof(SPAT));
+    (*pp_spat) = (SPAT *) j2735_msg_prealloc(SPAT_Id);
     /* only 1 intersection */
     (*pp_spat)->intersections.count = 1;
-    (*pp_spat)->intersections.tab =
-        (IntersectionState *) calloc(1, sizeof(IntersectionState));
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     /* set randomly  */
     int_state->id.id = config.RSU_id;
@@ -89,14 +86,10 @@ int spat_msg_update(SPAT **pp_spat)
 
     if( int_state->states.count != signal_status.SubPhaseCount) {
         int_state->states.count = signal_status.SubPhaseCount;
-        int_state->states.tab = (MovementState *) calloc(int_state->states.count,
-                                                     sizeof(MovementState));
         for (int i = 0; i < int_state->states.count; i++) {
             /* only support to update 1 state */
             int_state->states.tab[i].signalGroup = i+1;
             int_state->states.tab[i].state_time_speed.count = 3;
-            int_state->states.tab[i].state_time_speed.tab =
-                (MovementEvent *) calloc(3, sizeof(MovementEvent));
             for (int j = 0; j < 3; j++) {
                 int_state->states.tab[i].state_time_speed.tab[j].timing_option =
                     TRUE;
@@ -158,7 +151,6 @@ int spat_msg_update(SPAT **pp_spat)
                     .Green;
         }
     }
-    // calloc the memory of step in each signal group
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         if (!(int_state->states.tab[i].state_time_speed.tab) || 
             int_state->states.tab[i].state_time_speed.count != 
@@ -167,9 +159,6 @@ int spat_msg_update(SPAT **pp_spat)
             int_state->states.tab[i].state_time_speed.count = 
                 phase_plan_num[i];  // for how many plan in this signal
                                     // group(phase)
-            int_state->states.tab[i].state_time_speed.tab = 
-                (MovementEvent *) calloc(phase_plan_num[i], 
-                                         sizeof(MovementEvent));
             for (int j = 0; j < phase_plan_num[i]; j++) {
                 int_state->states.tab[i].state_time_speed.tab[j].timing_option = 
                     TRUE;

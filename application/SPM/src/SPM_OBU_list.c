@@ -68,5 +68,6 @@ SPM_OBU_obj_t *SPM_OBU_obj_delete(SPM_OBU_obj_t *target)
 {
     SPM_OBU_obj_t *next = list_entry(target->node.next, SPM_OBU_obj_t, node);
     list_del(&target->node);
+    free(target);
     return next;
 }
