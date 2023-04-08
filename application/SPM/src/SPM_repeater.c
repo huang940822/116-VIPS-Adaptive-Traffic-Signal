@@ -132,7 +132,6 @@ void *SPM_repeater()
 
                     for (int j = 0; j <= current->sigRequest_count && status->sigStatus.count < SignalStatusList_MAX_SIZE; j++) {
                         SignalStatusPackage *ssp = &status->sigStatus.tab[status->sigStatus.count++];
-                        memset(ssp, 0, sizeof(SignalStatusPackage));
 
                         switch (current->sigRequestList[j].request.requestType) {
                         case PriorityRequestType_priorityRequest:
@@ -172,9 +171,9 @@ void *SPM_repeater()
                         }
 
                         ssp->requester_option = TRUE;
-                        ssp->requester.id.choice = current->id.choice;
-                        if (current->id.choice == VehicleID_entityID)
-                            asn1_ostr_clone_cstr(&ssp->requester.id.u.entityID, current->id.u.buf, 4);
+                        ssp->requester.id.choice = VehicleID_stationID;
+                        if (current->id.choice == current->id.choice)
+                            ssp->requester.id.u.stationID = *(uint32_t *)current->id.u.buf;
                         else
                             ssp->requester.id.u.stationID = current->id.u.stationID;
 
@@ -186,21 +185,29 @@ void *SPM_repeater()
                         if (current->sigRequestList[j].request.outBoundLane_option) {
                             ssp->outboundOn_option = TRUE;
                             memcpy(&ssp->outboundOn, &current->sigRequestList[j].request.outBoundLane, sizeof(IntersectionAccessPoint));
+                        } else {
+                            ssp->outboundOn_option = FALSE;
                         }
 
                         if (current->sigRequestList[j].minute_option) {
                             ssp->minute_option = TRUE;
                             ssp->minute = current->sigRequestList[j].minute;
+                        } else {
+                            ssp->minute_option = FALSE;
                         }
 
                         if (current->sigRequestList[j].second_option) {
                             ssp->second_option = TRUE;
                             ssp->second = current->sigRequestList[j].second;
+                        } else {
+                            ssp->second_option = FALSE;
                         }
 
                         if (current->sigRequestList[j].duration_option) {
                             ssp->duration_option = TRUE;
                             ssp->duration = current->sigRequestList[j].duration;
+                        } else {
+                            ssp->duration_option = FALSE;
                         }
                     }
                     current = list_entry(current->node.next, SPM_OBU_obj_t, node);
@@ -219,7 +226,6 @@ void *SPM_repeater()
             SignalStatusMessage *ssm = vector_at(ssm_ptrv, i);
             if (ssm->status.count == 0)
                 break;
-            printf("ssm->status.count %d %d", ssm->status.count, i);
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
             send_packet_num++;
         }
@@ -230,7 +236,6 @@ SPM_repeater_end:
     close(SPM_repeater_fd);
     SPM_repeater_fd = 0;
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
-    printf("vector_size(ssm_ptrv) %d\n", vector_size(ssm_ptrv));
     for (int i = 0; i < vector_size(ssm_ptrv); i++) {
         SignalStatusMessage *ssm = vector_at(ssm_ptrv, i);
         j2735_msg_dealloc(SignalStatusMessage_Id, ssm);

@@ -152,7 +152,7 @@ OBU_object_t *OBU_object_new(OBU_record_common_field_t *record_common)
 ** Return:      object: address of OBU obj
 **              NULL: OBU obj not found
 ******************************************************************************/
-inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head,const char *str)
+inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, const char *str)
 {
     OBU_object_t *current = OBU_list_head->next;
     while (current != OBU_list_head) {
@@ -176,7 +176,7 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
     return status;
 }
 
-int special_OBU_list_update_status(const char* name, vehicle_type_t type, OBU_object_status status)
+int special_OBU_list_update_status(const char *name, vehicle_type_t type, OBU_object_status status)
 {
     if (type == VEHICLE_NORMAL)
         return -1;
@@ -332,12 +332,12 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         }
         memset(record->OBU_name, ' ', OBU_NAME_MAX_LEN);
         switch (sup_ext->classification) {
-        case 50: // j2735 classification  transit-TypeUnknown -- default type
+        case 50:  // j2735 classification  transit-TypeUnknown -- default type
             strcpy(record->OBU_name, "bus_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_BUS;
             break;
-        case 60: // j2735 classification  emergency-TypeUnknown -- default type
+        case 60:  // j2735 classification  emergency-TypeUnknown -- default type
             strcpy(record->OBU_name, "amb_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;
@@ -364,10 +364,9 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
     } break;
     case SignalRequestMessage_Id: {
         SignalRequestMessage *srm = msgf->u.data;
-        if (srm->requestor.id.choice != VehicleID_entityID || srm->requestor.type_option != TRUE ||
-            srm->requestor.type.hpmsType_option != TRUE || srm->requestor.type.hpmsType != VehicleType_car ||
-            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE ||
-            srm->requestor.position.heading_option != TRUE) {
+        if (srm->requestor.type_option != TRUE || srm->requestor.type.hpmsType_option != TRUE ||
+            srm->requestor.type.hpmsType != VehicleType_car || srm->requestor.position_option != TRUE ||
+            srm->requestor.position.speed_option != TRUE || srm->requestor.position.heading_option != TRUE) {
             return -1;
         }
         RequestorDescription *requestor = &srm->requestor;
@@ -375,7 +374,10 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         switch (srm->requestor.type.role) {
         case BasicVehicleRole_ambulance:
             strcpy(record->OBU_name, "amb_");
-            strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            if (requestor->id.choice == VehicleID_entityID)
+                strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            else
+                strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;
             break;
         default:
@@ -399,7 +401,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         timeinfo->tm_sec = srm->second / 1000;
         timeinfo->tm_isdst = -1;
         record->time_second = mktime(timeinfo);
-        struct timeval *stv =(struct timeval *)(srm->regional.tab->u.unknown.buf);
+        struct timeval *stv = (struct timeval *) (srm->regional.tab->u.unknown.buf);
         record->time_nsec = stv->tv_usec;
 
         record->position_lat = requestor->position.position.lat / 10000000.0;
@@ -541,6 +543,6 @@ void OBU_object_print()
         }
         pthread_mutex_unlock(&mutex_special_OBU_list[i]);
     }
-    log_file_write(log_content);
+    log_file_write("%s", log_content);
     return;
 }
