@@ -50,7 +50,7 @@ int res;
 uint8_t vms_respose_cnt[RTM_MAX];
 int readCnt;
 
-char *VMS_name[4] = {VMS_1, VMS_2, VMS_3, VMS_4};
+char *VMS_name[4] = {VMS_2, VMS_1, VMS_4, VMS_3};
 
 bool vms_program_update_thread_activate(uint8_t Program_ID, char *Program_Name)
 {
