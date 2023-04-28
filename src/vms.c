@@ -318,10 +318,10 @@ int VMS_wifi_connect(char *VMS_name)
     strcat(wifi_connect_cmd, WIFI_CONNECT_COMMAND_BEGIN);
     strcat(wifi_connect_cmd, SPACEBAR);
     strcat(wifi_connect_cmd, VMS_name);
-    strcat(wifi_connect_cmd, SPACEBAR);
-    strcat(wifi_connect_cmd, "password");
-    strcat(wifi_connect_cmd, SPACEBAR);
-    strcat(wifi_connect_cmd, VMS_WIFI_AP_PASSWORD);
+    //strcat(wifi_connect_cmd, SPACEBAR);
+    //strcat(wifi_connect_cmd, "password");
+    //strcat(wifi_connect_cmd, SPACEBAR);
+    //strcat(wifi_connect_cmd, VMS_WIFI_AP_PASSWORD);
 
     // printf("%s\n", wifi_connect_cmd);
 
@@ -341,7 +341,7 @@ int VMS_wifi_connect(char *VMS_name)
     char *pch;
     while (fgets(path, sizeof(path), fp) != NULL) {
         // printf("%s", path);
-        pch = strstr(path, "successfully activated with");
+        pch = strstr(path, "Connection successfully");
         if (pch != NULL) {
             connected_flag = 1;
         }
@@ -358,6 +358,9 @@ int VMS_wifi_connect(char *VMS_name)
     }
 
     pclose(fp);
+
+    system("sudo route add 192.168.10.222 dev wlx5c925ed425c8");
+
     return 0;
 }
 
@@ -676,10 +679,20 @@ void control_loop()
         }
 
         for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
-            if (current_step[i] == 'G') {
-                sprintf(uint8_t_to_char, "%d", program_ids_green[i]);
+            int j;
+            if (i == 0) {
+                j = 1;
+            } else if (i == 1) {
+                j = 0;
+            } else if (i == 2) {
+                j = 3;
             } else {
-                sprintf(uint8_t_to_char, "%d", program_ids_not_green[i]);
+                j = 2;
+            }
+            if (current_step[j] == 'G') {
+                sprintf(uint8_t_to_char, "%d", program_ids_green[j]);
+            } else {
+                sprintf(uint8_t_to_char, "%d", program_ids_not_green[j]);
             }
             strcat(vms_packet_tx, VMS_PACKET_COMMA);
             strcat(vms_packet_tx, uint8_t_to_char);

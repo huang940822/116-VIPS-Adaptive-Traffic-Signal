@@ -9,7 +9,7 @@
 #include "time.h"
 
 // 因為 fopen 解析不了~，所以要注意如果 usrname 不是 asrlab 的話要做對應的修正
-#define VMS_pic_path "/home/asrlab/VMS_pic/"
+#define VMS_pic_path "/home/oslab/VMS_pic/"
 #define VMS_pic_database_path VMS_pic_path "program_id.txt"
 
 #define VMS_BAUDRATE B115200
@@ -25,7 +25,7 @@
 #define VMS_PACKET_COMMA ","
 #define VMS_PACKET_END "\n"
 
-#define CAROUSEL_NUM 255
+#define CAROUSEL_NUM 255 
 #define VMS_ERROR_THRESHOLD 10
 
 #define VMS_1 "NCKU_1"
@@ -36,7 +36,7 @@
 #define VMS_RESEND_THRESHOLD 20
 #define FETCH_STDOUT_AND_STDERR "2>&1"
 
-#define VMS_PROGRAM_UPLOADER_DIR "/home/asrlab/Desktop/CppNcku/"
+#define VMS_PROGRAM_UPLOADER_DIR "/home/oslab/CppNcku/"
 #define VMS_PROGRAM_UPLOADER_PATH VMS_PROGRAM_UPLOADER_DIR "CppNcku.exe"
 #define VMS_PROGRAM_UPLOADER_LOG_PATH VMS_PROGRAM_UPLOADER_DIR "upload.txt"
 #define PROGRAM_UPLOAD_PACKET_BEGIN "wine"
@@ -47,7 +47,7 @@
 #define WIFI_DISCONNECT_COMMAND_BEGIN "sudo nmcli dev disconnect" SPACEBAR
 #define WIFI_DISCONNECT_COMMAND_END SPACEBAR FETCH_STDOUT_AND_STDERR
 
-#define WIFI_CONNECT_COMMAND_BEGIN "sudo nmcli device wifi connect"
+#define WIFI_CONNECT_COMMAND_BEGIN "sudo nmcli connection up"
 
 #define DELETE_UPLOAD_PROGRAMS_FILES "sudo rm -rf " VMS_PROGRAM_UPLOADER_DIR "programs/"
 
