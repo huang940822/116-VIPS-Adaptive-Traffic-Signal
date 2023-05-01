@@ -306,7 +306,7 @@ static int yday2month_day(struct tm *timeinfo, int yday)
         months_arr[1]++;
 
     for (month; month < 12; month++) {
-        if (yday < months_arr[month]) {
+        if (yday <= months_arr[month]) {
             break;
         }
         yday -= months_arr[month];

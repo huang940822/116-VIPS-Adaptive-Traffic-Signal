@@ -5,5 +5,4 @@
 
 void SPM_repeater_start(bool send_flag);
 void *SPM_repeater();
-void sigintHandlerSPM(int sig_num);
 #endif

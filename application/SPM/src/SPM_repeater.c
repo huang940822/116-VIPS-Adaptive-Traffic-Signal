@@ -22,13 +22,6 @@ pthread_t SPM_repeater_thread = 0;
 pthread_mutex_t SPM_repeater_run_mutex = PTHREAD_MUTEX_INITIALIZER;
 int SPM_repeater_fd = 0;
 
-uint32_t send_packet_num = 0;
-void sigintHandlerSPM(int sig_num)
-{
-    printf("send_packet_num %d\n", send_packet_num);
-    exit(0);
-}
-
 void SPM_repeater_start(bool send_flag)
 {
     pthread_mutex_lock(&SPM_repeater_run_mutex);
@@ -227,7 +220,6 @@ void *SPM_repeater()
             if (ssm->status.count == 0)
                 break;
             OBU_j2735_tx(SignalStatusMessage_Id, ssm);
-            send_packet_num++;
         }
     }
 SPM_repeater_end:
