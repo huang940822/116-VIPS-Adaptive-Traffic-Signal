@@ -23,7 +23,7 @@ void common_send_ack(uint8_t cmd, uint8_t status)
     write_uint8_t(cmd, &write_buf);
     write_uint8_t(status, &write_buf);
 
-    cloud_packet_tx(write_buf.index, COMMON_BROADCAST_ID, write_buf.content);
+    cloud_packet_tx(write_buf.index, MMP_ID, write_buf.content);
     free(write_buf.content);
     return;
 }
