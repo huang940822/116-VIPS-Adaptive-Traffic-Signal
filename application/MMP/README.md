@@ -1,6 +1,6 @@
 # Middleware Message Proxy (MMP) 
 
-The MMP application handles the cloud packet rx/tx as a middleware proxy.
+The MMP application handles the cloud package rx/tx as a middleware proxy.
 
 ---
 
