@@ -9,7 +9,6 @@
 extern app_obj_t MMP;
 
 int MMP_on_cloud_packet_rx(void *);
-int MMP_on_cloud_packet_tx(void *);
 int MMP_on_registration(void *);
 
 #endif
