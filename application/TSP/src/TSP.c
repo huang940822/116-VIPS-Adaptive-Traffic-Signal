@@ -443,6 +443,7 @@ int TSP_on_cloud_packet_rx(void *arg)
             printf("Illegal command of tsc_countdown\r\n");
         }
     } break;
+    // TODO: remove case 8-12, the MMP will take control.
     case 8: {
         uint8_t strategy = 0;
         uint8_t cyclenumber = 0;

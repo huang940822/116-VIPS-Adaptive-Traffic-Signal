@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "MMP.h"
 #include "EVSP.h"
 #include "TSP.h"
 #include "CPS.h"
@@ -122,6 +123,7 @@ int main()
 
     /* application service registration */
     app_obj_t *app_arr[] = {
+        &MMP,
         &EVSP,
         &TSP,
         // &CPS,

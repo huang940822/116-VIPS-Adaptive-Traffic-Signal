@@ -41,7 +41,7 @@ typedef enum device_type {
 } device_type_t;
 
 typedef enum application_id {
-    COMMON_BROADCAST_ID = 0,
+    MMP_ID = 0,
     EVSP_ID = 1,
     TSP_ID = 2,
     ATSC_ID = 3,
