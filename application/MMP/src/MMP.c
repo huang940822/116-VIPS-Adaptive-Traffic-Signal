@@ -1,6 +1,6 @@
 #include "MMP.h"
 
-pthread_mutex_t file_writer = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mmp_file_writer = PTHREAD_MUTEX_INITIALIZER;
 
 app_obj_t MMP = {
     .name = "MMP",
@@ -101,7 +101,7 @@ int MMP_on_cloud_packet_rx(void *arg)
                     clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
                     config.traffic_compensation_cycle_number = cyclenumber;
                     config.traffic_compensation_method = strategy;
-                    pthread_mutex_lock(&file_writer);
+                    pthread_mutex_lock(&mmp_file_writer);
                     FILE *outfile;
                     outfile = fopen("config/config.txt", "w");
                     if (outfile == NULL) {
@@ -208,7 +208,7 @@ int MMP_on_cloud_packet_rx(void *arg)
                         }
                     }
                     fclose(outfile);
-                    pthread_mutex_unlock(&file_writer);
+                    pthread_mutex_unlock(&mmp_file_writer);
                 } else {
                     snprintf(log_content + strlen(log_content),
                             LOG_CONTENT_LEN - strlen(log_content),

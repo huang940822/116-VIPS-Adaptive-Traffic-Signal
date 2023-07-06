@@ -1,9 +1,13 @@
 #ifndef MMP_H
 #define MMP_H
 
+#include <pthread.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "byte_processing.h"
 #include "typedefine.h"
 #include "config.h"
-#include <pthread.h>
 #include "vms.h"
 
 extern app_obj_t MMP;
