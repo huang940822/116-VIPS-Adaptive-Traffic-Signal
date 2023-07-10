@@ -6,12 +6,35 @@ MAP_packet_transfer_speed 1
 MAP_dontSend2TC 1
 
 # 從北開始順時針 先離開路口再進入路口 從內車道到外車道
+
 # laneId 一個路口中唯一個 id, 從 0 開始
-# egress 是離開, ingress 是進入,ApproachId 0 代表為北 順時針遞增
-# ApproachId 從北開始順時針遞增 從 0 開始
+# Use: The DE_LaneID data element conveys an assigned index that is unique within an intersection. It is used to refer to 
+# that lane by other objects in the intersection map data structure. Lanes may be ingress (inbound traffic) or egress (outbound
+# traffic) in nature, as well as barriers and other types of specialty lanes. Each lane (each lane object) is assigned a unique 
+# ID. The lane ID, in conjunction with the intersection ID, forms a regionally unique way to address a specific lane in that 
+# region. 
+
+# egress 是離開, ingress 是進入
+# Use: The LaneDirection data element is used to denote the allowed direction of travel over a lane object. By convention, 
+# the lane object is always described from the stop line outwards away from the intersection. Therefore, the ingress direction 
+# is from the end of the path to the stop line and the egress direction is from the stop line outwards. It should be noted that 
+# some lane objects are not used for travel and that some lane objects allow bi-directional travel. 
+
+# ApproachId 從北 (ApproachId 0) 開始順時針遞增 從 0 開始
+# Use: The DE_ApproachID data element is used to relate the index of an approach, either ingress or egress within the 
+# subject lane. In general, an approach index in the context of a timing movement is not of value in the MAP and SPAT 
+# process because the lane ID and signal group ID concepts handle this with more precision. This value can also be useful 
+# as an aid as it can be used to indicate the gross position of a moving object (vehicle) when its lane level accuracy is 
+# unknown. This value can also be used when a deployment represents sets of lanes as groups without further details (as is 
+# done in Japan). 
+
 # lane_index 從內車道開始遞增, 從 1 開始
 # node_count 表示後面有幾個 node
 # node 車道的路線點, 從停止線開始往外畫 緯度, 經度
+# Use: The NodeListXY data structure provides the sequence of signed offset node point values for determining the Xs and 
+# Ys (and possibly width or Zs when present), using the then current Position3D object to build a path for the centerline of the 
+# subject lane type. Each X,Y point is referred to as a node point. The straight line paths between these points are referred 
+# to as segments. 
 
 LaneSet_table_start
 # laneId, LaneDirection, Approach, lane_index , node_count, node_lat, node_lon, ...
@@ -33,56 +56,21 @@ LaneSet_table_start
 15, ingress, 3, 3, 2, 22.92432, 120.29078, 22.92396, 120.28989
 LaneSet_table_end
 
-# LaneID 0 ~ 255
-# NORTH : 0
-Direction 0
-Lane_count 1
-Lane_Index 0
-LaneID 17
-LeftconnectingLane 33 34 35 0 0
-StrightconnectingLane 65 0 0 0 0
-RightconnectingLane 97 98 99 0 0
+# laneId 對應 LaneSet_table 的 laneId, 只會有 ingress 的 laneId
+# 後面接著 左轉 (LeftconnectingLane), 直走 (StrightconnectingLane), 右轉 (RightconnectingLane) 的 laneIdSet
+# 三個都會包含一個 laneIdCount 後面接著 laneId 陣列
+# Use: The ConnectsToList data structure is used in the generic lane descriptions to provide a sequence of other defined 
+# lanes to which each lane connects beyond its stop point. See the Connection data frame entry for details. Note that this 
+# data frame is not used in some lane object types.
 
-# EAST : 1
-Direction 1
-Lane_count 3
-Lane_Index 0
-LaneID 51
-StrightconnectingLane 97 98 99 0 0
-RightconnectingLane 1 0 0 0 0
-
-Lane_Index 1
-LaneID 50
-StrightconnectingLane 97 98 99 0 0
-
-Lane_Index 2
-LaneID 49
-StrightconnectingLane 97 98 99 0 0
-LeftconnectingLane 65 0 0 0 0 
-
-# SOUTH : 2
-Direction 2
-Lane_count 1
-Lane_Index 0
-LaneID 81
-LeftconnectingLane 97 98 99 0 0
-StrightconnectingLane 1 0 0 0 0
-RightconnectingLane 33 34 35 0 0
-
-# WEST : 3
-Direction 3
-Lane_count 3
-Lane_Index 0
-LaneID 113
-LeftconnectingLane 1 0 0 0 0
-StrightconnectingLane 33 34 35 0 0
-
-Lane_Index 1
-LaneID 114
-StrightconnectingLane 33 34 35 0 0
-
-Lane_Index 2
-LaneID 115
-StrightconnectingLane 33 34 35 0 0
-RightconnectingLane 65 0 0 0 0
-
+LaneSet_ConnectsTo_table_start
+# laneId, LeftconnectingLane, ..., StrightconnectingLane, ..., RightconnectingLane, ...
+1,  3, 2, 3, 4,    1, 8,  3, 10, 11, 12
+5,  1, 8,          1, 10, 1, 0
+6,  1, 8,          1, 11, 1, 0
+7,  1, 8,          1, 12, 1, 0
+9,  3, 10, 11, 12, 1, 0,  3, 2, 3, 4
+13, 1, 0,          1, 2,  1, 8
+14, 1, 0,          1, 3,  1, 8
+15, 1, 0,          1, 4,  1, 8
+LaneSet_ConnectsTo_table_end
