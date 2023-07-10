@@ -78,106 +78,106 @@ void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_ind
     
     // 去 and SignalStatus_t
     if(SignalStatus & GREEN) {
-        for(int i = 0; i < MAP_config.map_lane2connecting.Direction[j].Lane_count; i++) {
-            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0; k < map->intersections.tab[0].laneSet.count; k++) {
-                if(GeLane[k].laneID == LANEID) {
-                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
-                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
-                        if(!con_lane_id)
-                            continue;
-                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
-                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
-                            }
-                        }
-                    }
-                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
-                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
-                        if(!con_lane_id)
-                            continue;
-                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
-                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
-                            }
-                        }
-                    }
-                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
-                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
-                        if(!con_lane_id)
-                            continue;
-                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
-                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // for(int i = 0; i < MAP_config.map_lane2connecting.Direction[j].Lane_count; i++) {
+        //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+        //     for(int k = 0; k < map->intersections.tab[0].laneSet.count; k++) {
+        //         if(GeLane[k].laneID == LANEID) {
+        //             for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+        //                 int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
+        //                 if(!con_lane_id)
+        //                     continue;
+        //                 for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+        //                     if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+        //                     }
+        //                 }
+        //             }
+        //             for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+        //                 int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
+        //                 if(!con_lane_id)
+        //                     continue;
+        //                 for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+        //                     if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+        //                     }
+        //                 }
+        //             }
+        //             for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+        //                 int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
+        //                 if(!con_lane_id)
+        //                     continue;
+        //                 for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+        //                     if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
     if(SignalStatus & LEFT_GREEN) {
-        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
-            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
-                if(GeLane[k].laneID == LANEID) {
-                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
-                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
-                        if(!con_lane_id)
-                            continue;
-                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
-                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+        //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+        //     for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
+        //         if(GeLane[k].laneID == LANEID) {
+        //             for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+        //                 int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LeftconnectingLane[connect_lane];
+        //                 if(!con_lane_id)
+        //                     continue;
+        //                 for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+        //                     if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
     if(SignalStatus & STRAIGHT_GREEN) {
-        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
-            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
-                if(GeLane[k].laneID == LANEID) {
-                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
-                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
-                        if(!con_lane_id)
-                            continue;
-                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
-                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+        //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+        //     for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
+        //         if(GeLane[k].laneID == LANEID) {
+        //             for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+        //                 int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].StrightconnectingLane[connect_lane];
+        //                 if(!con_lane_id)
+        //                     continue;
+        //                 for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+        //                     if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
     if(SignalStatus & RIGHT_GREEN) {
-        for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
-            int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
-            for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
-                if(GeLane[k].laneID == LANEID) {
-                    for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
-                        int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
-                        if(!con_lane_id)
-                            continue;
-                        for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
-                            if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
-                                GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
+        //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
+        //     for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
+        //         if(GeLane[k].laneID == LANEID) {
+        //             for(int connect_lane = 0; connect_lane < LANE_MAX_NUMBER; connect_lane++) {
+        //                 int con_lane_id = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].RightconnectingLane[connect_lane];
+        //                 if(!con_lane_id)
+        //                     continue;
+        //                 for(int f_connect_lane = 0; f_connect_lane < GeLane[k].connectsTo.count; f_connect_lane++) {
+        //                     if(GeLane[k].connectsTo.tab[f_connect_lane].connectingLane.lane == con_lane_id) {
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup_option = TRUE;
+        //                         GeLane[k].connectsTo.tab[f_connect_lane].signalGroup = SubPhaseCount_index;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 

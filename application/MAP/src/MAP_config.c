@@ -2,51 +2,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "config.h"
 #include "j2735_codec.h"
 #include "j2735_msg.h"
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
-#include "config.h"
 
 MAP_config_object_t MAP_config = {
     .MAP_packet_transfer_speed = 1,
     .MAP_dontSend2TC = 1,
     .Mapconfig = NULL,
 };
-
-static bool read_float_from_config_line(char *config_line, float *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %f\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
-static bool read_int_from_config_line(char *config_line, int *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    *val = 0;
-    if (sscanf(config_line, "%s %d\n", prm_name, val) == 2) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-static bool read_int_array_from_config_line(char *config_line, int *val)
-{
-    char prm_name[MAX_CONFIG_VARIABLE_LEN];
-    memset(val, 0, sizeof(int) * LANE_MAX_NUMBER);
-    if (sscanf(config_line, "%s %d %d %d %d %d\n", prm_name, &val[0],
-               &val[1], &val[2], &val[3], &val[4]) == 6) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
 int MAP_config_init()
 {
@@ -66,29 +33,12 @@ int MAP_config_init()
     char read_buf[CONFIG_LINE_BUFFER_SIZE];
     int int_val;
     uint8_t uint8_t_val;
-    float float_val;
     double double_val;
-    char string_val[MAX_CONFIG_VARIABLE_LEN];
-    int int_val_array[LANE_MAX_NUMBER];
-    int intersection_n = 0;
 
-    int intersection_number;
-    int intersection_count = 1;
-    int intersection_laneSet_number = 0;
-    int intersection_laneSet_count = 1;
-    int intersection_speedLimits_count = 1;
-    int intersection_speedLimits_number = 0;
-    int intersection_laneSet_NodeXY_count = 1;
-    int intersection_laneSet_NodeXY_number = 0;
-    int intersection_connectsTo_number = 0;
-    int intersection_connectsTo_n = 0;
-    int direction_index = 0;
-    int Lane_index = 0;
+    int tableId_to_laneId[LaneList_MAX_SIZE + 1][2];
 
     MAP_config.Mapconfig->msgIssueRevision = 0;
-    // MAP_config.intersections.tab = (IntersectionGeometry *) calloc(1, sizeof(IntersectionGeometry));
-    // MAP_config.intersections.tab->speedLimits.tab = (RegulatorySpeedLimit *) calloc(1, sizeof(RegulatorySpeedLimit));
-    // MAP_config.intersections.tab->laneSet.tab = (GenericLane *) calloc(1, sizeof(GenericLane));
+
     while (!feof(fp)) {
         char *buf = read_line(read_buf, sizeof(read_buf), fp);
         if (buf == NULL)
@@ -109,11 +59,31 @@ int MAP_config_init()
             }
         }
 
+        // MAP_dontSend2TC
+        if (strstr(buf, "MAP_dontSend2TC ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    MAP_config.MAP_dontSend2TC = uint8_t_val;
+                    log_file_write("config: MAP_dontSend2TC = %d",
+                                   MAP_config.MAP_dontSend2TC);
+                    continue;
+                } else {
+                    return -1;
+                }
+            } else {
+                return -1;
+            }
+        }
+
         // LaneSet_table
         if (strstr(buf, "LaneSet_table_start")) {
             IntersectionGeometry *intersection = &MAP_config.Mapconfig->intersections.tab[0];
+            intersection->id.id = config.RSU_id;
+            intersection->id.region_option = TRUE;
+            intersection->id.region = config.RSU_region;
 
-            const char const delim[] = ",";
+            const char delim[] = ",";
+
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
@@ -200,87 +170,20 @@ int MAP_config_init()
             MAP_config.Mapconfig->intersections.count = 1;
         }
 
-        if (strstr(buf, "intersection_connectsTo_connectingLane_maneuver ")) {
-            if (read_int_from_config_line(buf, &int_val)) {
-            }
-        }
+        if (strstr(buf, "LaneSet_ConnectsTo_table_start")) {
+            while (!feof(fp)) {
+                buf = read_line(read_buf, sizeof(read_buf), fp);
+                if (buf == NULL)
+                    return MAP_CONFIG_INVALID;
 
-        // Direction
-        if (strstr(buf, "Direction ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                direction_index = uint8_t_val;
-            }
-        }
-
-        // Lane_count
-        if (strstr(buf, "Lane_count ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                MAP_config.map_lane2connecting.Direction[direction_index].Lane_count = uint8_t_val;
-            }
-        }
-
-        // Lane_Index
-        if (strstr(buf, "Lane_Index ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                Lane_index = uint8_t_val;
-            }
-        }
-
-        // LaneID
-        if (strstr(buf, "LaneID ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].LaneID = uint8_t_val;
-            }
-        }
-
-        // LeftconnectingLane
-        if (strstr(buf, "LeftconnectingLane ")) {
-            if (read_int_array_from_config_line(buf, int_val_array)) {
-                for (int i = 0; i < LANE_MAX_NUMBER; i++) {
-                    if (int_val_array[i] > 0) {
-                        MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].LeftconnectingLane[i] = int_val_array[i];
-                    }
+                if (strstr(buf, "LaneSet_ConnectsTo_table_end")) {
+                    break;
                 }
-            }
-        }
-
-        // StrightconnectingLane
-        if (strstr(buf, "StrightconnectingLane ")) {
-            if (read_int_array_from_config_line(buf, int_val_array)) {
-                for (int i = 0; i < LANE_MAX_NUMBER; i++) {
-                    if (int_val_array[i] > 0) {
-                        MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].StrightconnectingLane[i] = int_val_array[i];
-                    }
-                }
-            }
-        }
-
-        // RightconnectingLane
-        if (strstr(buf, "RightconnectingLane ")) {
-            if (read_int_array_from_config_line(buf, int_val_array)) {
-                for (int i = 0; i < LANE_MAX_NUMBER; i++) {
-                    if (int_val_array[i] > 0) {
-                        MAP_config.map_lane2connecting.Direction[direction_index].connectingLane[Lane_index].RightconnectingLane[i] = int_val_array[i];
-                    }
-                }
-            }
-        }
-
-
-
-        // MAP_dontSend2TC
-        if (strstr(buf, "MAP_dontSend2TC ")) {
-            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
-                if (uint8_t_val >= 0) {
-                    MAP_config.MAP_dontSend2TC = uint8_t_val;
-                    log_file_write("config: MAP_dontSend2TC = %d",
-                                   MAP_config.MAP_dontSend2TC);
-                    continue;
-                } else {
-                    return -1;
-                }
-            } else {
-                return -1;
+                vector_t(char *) str_arr;
+                vector_init(str_arr);
+                read_string_arr_from_config_line(buf, &str_arr, ",");
+                
+                vector_free(str_arr);
             }
         }
     }
@@ -297,9 +200,9 @@ void print_config_map(char *buf, int buf_len)
     }
     LaneList *laneSet = &MAP_config.Mapconfig->intersections.tab[0].laneSet;
     snprintf(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
-    
+
     for (int i = 0; i < laneSet->count; i++) {
-        for ( int j = 0 ;j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
+        for (int j = 0; j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", laneSet->tab[i].laneID);
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", j);

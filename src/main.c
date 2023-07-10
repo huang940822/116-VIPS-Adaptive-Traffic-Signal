@@ -128,7 +128,7 @@ int main()
         &TSP,
         // &CPS,
         // &SPaT,
-        // &MAP,
+        &MAP,
         // &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);

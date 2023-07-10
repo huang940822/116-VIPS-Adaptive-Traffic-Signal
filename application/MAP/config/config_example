@@ -7,7 +7,7 @@ MAP_dontSend2TC 1
 
 # 從北開始順時針 先離開路口再進入路口 從內車道到外車道
 
-# laneId 一個路口中唯一個 id, 從 0 開始
+# laneId 一個路口中唯一個 id, 從 0 開始, 最大到 255
 # Use: The DE_LaneID data element conveys an assigned index that is unique within an intersection. It is used to refer to 
 # that lane by other objects in the intersection map data structure. Lanes may be ingress (inbound traffic) or egress (outbound
 # traffic) in nature, as well as barriers and other types of specialty lanes. Each lane (each lane object) is assigned a unique 
