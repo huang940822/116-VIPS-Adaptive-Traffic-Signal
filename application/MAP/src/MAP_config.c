@@ -35,7 +35,8 @@ int MAP_config_init()
     uint8_t uint8_t_val;
     double double_val;
 
-    int tableId_to_laneId[LaneList_MAX_SIZE + 1][2];
+    vector_t(int) tableId_to_laneId;
+    vector_init(tableId_to_laneId);
 
     MAP_config.Mapconfig->msgIssueRevision = 0;
 
@@ -75,6 +76,12 @@ int MAP_config_init()
             }
         }
 
+#define FreeAndReturnInvalid(v)    \
+    do {                           \
+        vector_free(v);            \
+        return MAP_CONFIG_INVALID; \
+    } while (0);
+
         // LaneSet_table
         if (strstr(buf, "LaneSet_table_start")) {
             IntersectionGeometry *intersection = &MAP_config.Mapconfig->intersections.tab[0];
@@ -93,18 +100,25 @@ int MAP_config_init()
                     break;
                 }
 
-                char *save_ptr = NULL;
+                vector_t(char *) str_arr;
+                vector_init(str_arr);
+                read_string_arr_from_config_line(buf, &str_arr, ",");
+
+                // laneId ~ node_count
+                if (str_arr.size < 5)
+                    FreeAndReturnInvalid(str_arr);
+
                 // laneId
-                char *substr = trim_comments(strtok_r(buf, delim, &save_ptr));
+                char *substr = vector_at(str_arr, 0);
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
-                    return MAP_CONFIG_INVALID;
+                    FreeAndReturnInvalid(str_arr);
                 if (int_val != intersection->laneSet.count)
-                    return MAP_CONFIG_INVALID;
+                    FreeAndReturnInvalid(str_arr);
 
                 GenericLane *lane = &intersection->laneSet.tab[intersection->laneSet.count];
 
                 // Approach
-                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
+                substr = vector_at(str_arr, 1);
                 int32_t *ApproachId;
 
                 if (strstr(substr, "egress")) {
@@ -118,18 +132,12 @@ int MAP_config_init()
                     ApproachId = &lane->ingressApproach;
                     asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath);
                 } else {
-                    return MAP_CONFIG_INVALID;
+                    FreeAndReturnInvalid(str_arr);
                 }
 
-                // Approach
-                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
+                substr = vector_at(str_arr, 2);
                 if (substr == NULL || sscanf(substr, "%d", ApproachId) != 1)
-                    return MAP_CONFIG_INVALID;
-
-                // lane_index
-                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
-                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
-                    return MAP_CONFIG_INVALID;
+                    FreeAndReturnInvalid(str_arr);
 
                 // bit 5-8 為 Approach
                 lane->laneID = ((*ApproachId << 5) & 0b11100000);
@@ -139,32 +147,40 @@ int MAP_config_init()
                     lane->laneID |= 0b00010000;
                 }
 
+                // lane_index
+                substr = vector_at(str_arr, 3);
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    FreeAndReturnInvalid(str_arr);
+
                 lane->laneID |= (0b00001111 & int_val);
 
                 // node_count
                 int node_count;
-                substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
+                substr = vector_at(str_arr, 4);
                 if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
-                    return MAP_CONFIG_INVALID;
+                    FreeAndReturnInvalid(str_arr);
 
                 lane->nodeList.choice = NodeListXY_nodes;
-
                 Malloc(lane->nodeList.u.nodes.tab, sizeof(NodeXY) * node_count, "MAP_config_NodeXY_new");
+
+                if (str_arr.size < 5 + (node_count * 2))
+                    FreeAndReturnInvalid(str_arr);
 
                 for (int i = 0; i < node_count; i++, lane->nodeList.u.nodes.count++) {
                     lane->nodeList.u.nodes.tab[i].delta.choice = NodeOffsetPointXY_node_LatLon;
 
-                    substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
+                    substr = vector_at(str_arr, 4 + (i * 2));
                     if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
-                        return MAP_CONFIG_INVALID;
+                        FreeAndReturnInvalid(str_arr);
                     lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lat = double_val * 10000000;
 
-                    substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
-
+                    substr = vector_at(str_arr, 4 + (i * 2) + 1);
                     if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
-                        return MAP_CONFIG_INVALID;
+                        FreeAndReturnInvalid(str_arr);
                     lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lon = double_val * 10000000;
                 }
+
+                vector_free(str_arr);
                 intersection->laneSet.count++;
             }
             MAP_config.Mapconfig->intersections.count = 1;
@@ -182,10 +198,11 @@ int MAP_config_init()
                 vector_t(char *) str_arr;
                 vector_init(str_arr);
                 read_string_arr_from_config_line(buf, &str_arr, ",");
-                
+
                 vector_free(str_arr);
             }
         }
+#undef FreeAndReturnInvalid
     }
 
     fclose(fp);
