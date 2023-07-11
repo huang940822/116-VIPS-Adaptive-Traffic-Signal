@@ -127,7 +127,7 @@ int MAP_on_registration(void *arg)
     }
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    // print_config_map(log_content, LOG_CONTENT_LEN);
+    print_config_map(log_content, LOG_CONTENT_LEN);
     printf("%s\n", log_content);
     /* MAP msg init */
     map = (MapData *) j2735_msg_prealloc(MapData_Id);

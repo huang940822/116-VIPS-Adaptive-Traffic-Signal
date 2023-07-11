@@ -35,10 +35,17 @@ int MAP_config_init()
     uint8_t uint8_t_val;
     double double_val;
 
-    vector_t(int) tableId_to_laneId;
+    vector_t(GenericLane *) tableId_to_laneId;
     vector_init(tableId_to_laneId);
 
     MAP_config.Mapconfig->msgIssueRevision = 0;
+
+#define FreeAndReturnInvalid(v)         \
+    do {                                \
+        vector_free(v);                 \
+        vector_free(tableId_to_laneId); \
+        return MAP_CONFIG_INVALID;      \
+    } while (0);
 
     while (!feof(fp)) {
         char *buf = read_line(read_buf, sizeof(read_buf), fp);
@@ -53,9 +60,11 @@ int MAP_config_init()
                     log_file_write("config: MAP_packet_transfer_speed = %d", MAP_config.MAP_packet_transfer_speed);
                     continue;
                 } else {
+                    vector_free(tableId_to_laneId);
                     return MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
                 }
             } else {
+                vector_free(tableId_to_laneId);
                 return MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
             }
         }
@@ -69,18 +78,14 @@ int MAP_config_init()
                                    MAP_config.MAP_dontSend2TC);
                     continue;
                 } else {
+                    vector_free(tableId_to_laneId);
                     return -1;
                 }
             } else {
+                vector_free(tableId_to_laneId);
                 return -1;
             }
         }
-
-#define FreeAndReturnInvalid(v)    \
-    do {                           \
-        vector_free(v);            \
-        return MAP_CONFIG_INVALID; \
-    } while (0);
 
         // LaneSet_table
         if (strstr(buf, "LaneSet_table_start")) {
@@ -116,6 +121,7 @@ int MAP_config_init()
                     FreeAndReturnInvalid(str_arr);
 
                 GenericLane *lane = &intersection->laneSet.tab[intersection->laneSet.count];
+                vector_push_back(tableId_to_laneId, lane);
 
                 // Approach
                 substr = vector_at(str_arr, 1);
@@ -169,12 +175,12 @@ int MAP_config_init()
                 for (int i = 0; i < node_count; i++, lane->nodeList.u.nodes.count++) {
                     lane->nodeList.u.nodes.tab[i].delta.choice = NodeOffsetPointXY_node_LatLon;
 
-                    substr = vector_at(str_arr, 4 + (i * 2));
+                    substr = vector_at(str_arr, 5 + (i * 2));
                     if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
                         FreeAndReturnInvalid(str_arr);
                     lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lat = double_val * 10000000;
 
-                    substr = vector_at(str_arr, 4 + (i * 2) + 1);
+                    substr = vector_at(str_arr, 5 + (i * 2) + 1);
                     if (substr == NULL || sscanf(substr, "%lf", &double_val) != 1)
                         FreeAndReturnInvalid(str_arr);
                     lane->nodeList.u.nodes.tab[i].delta.u.node_LatLon.lon = double_val * 10000000;
@@ -199,12 +205,77 @@ int MAP_config_init()
                 vector_init(str_arr);
                 read_string_arr_from_config_line(buf, &str_arr, ",");
 
+                int index = 0;
+
+                if (str_arr.size < index + 2)
+                    FreeAndReturnInvalid(str_arr);
+                char *substr = vector_at(str_arr, index);
+                index++;
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    FreeAndReturnInvalid(str_arr);
+
+                if (int_val >= tableId_to_laneId.size || int_val < 0)
+                    FreeAndReturnInvalid(str_arr);
+                GenericLane *lane = vector_at(tableId_to_laneId, int_val);
+                lane->connectsTo_option = TRUE;
+
+                int connect_count = 0;
+                // left
+                substr = vector_at(str_arr, index);
+                index++;
+                if (substr == NULL || sscanf(substr, "%d", &connect_count) != 1)
+                    FreeAndReturnInvalid(str_arr);
+                if (connect_count < 0 || str_arr.size < index + connect_count + 1)
+                    FreeAndReturnInvalid(str_arr);
+                for (int i = index; i < index + connect_count; i++) {
+                    substr = vector_at(str_arr, i);
+                    if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                        FreeAndReturnInvalid(str_arr);
+                    if (int_val >= tableId_to_laneId.size || int_val < 0)
+                        FreeAndReturnInvalid(str_arr);
+                    lane->connectsTo.tab[lane->connectsTo.count++].connectingLane.lane = vector_at(tableId_to_laneId, int_val)->laneID;
+                }
+                index += connect_count;
+
+                // stright
+                substr = vector_at(str_arr, index);
+                index++;
+                if (substr == NULL || sscanf(substr, "%d", &connect_count) != 1)
+                    FreeAndReturnInvalid(str_arr);
+                if (connect_count < 0 || str_arr.size < index + connect_count + 1)
+                    FreeAndReturnInvalid(str_arr);
+
+                for (int i = index; i < index + connect_count; i++) {
+                    substr = vector_at(str_arr, i);
+                    if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                        FreeAndReturnInvalid(str_arr);
+                    if (int_val >= tableId_to_laneId.size || int_val < 0)
+                        FreeAndReturnInvalid(str_arr);
+                    lane->connectsTo.tab[lane->connectsTo.count++].connectingLane.lane = vector_at(tableId_to_laneId, int_val)->laneID;
+                }
+                index += connect_count;
+
+                // right
+                substr = vector_at(str_arr, index);
+                index++;
+                if (substr == NULL || sscanf(substr, "%d", &connect_count) != 1)
+                    FreeAndReturnInvalid(str_arr);
+                if (connect_count < 0 || str_arr.size < index + connect_count)
+                    FreeAndReturnInvalid(str_arr);
+                for (int i = index; i < index + connect_count; i++) {
+                    substr = vector_at(str_arr, i);
+                    if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                        FreeAndReturnInvalid(str_arr);
+                    if (int_val >= tableId_to_laneId.size || int_val < 0)
+                        FreeAndReturnInvalid(str_arr);
+                    lane->connectsTo.tab[lane->connectsTo.count++].connectingLane.lane = vector_at(tableId_to_laneId, int_val)->laneID;
+                }
                 vector_free(str_arr);
             }
         }
-#undef FreeAndReturnInvalid
     }
-
+#undef FreeAndReturnInvalid
+    vector_free(tableId_to_laneId);
     fclose(fp);
     return MAP_CONFIG_ACCEPT;
 }
@@ -227,4 +298,16 @@ void print_config_map(char *buf, int buf_len)
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
         }
     }
+    for (int i = 0; i < laneSet->count; i++) {
+        if (laneSet->tab[i].connectsTo_option == FALSE)
+            continue;
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
+        ConnectsToList *connlist = &laneSet->tab[i].connectsTo;
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->count);
+        for (int k = 0; k < connlist->count; k++) {
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->tab[k].connectingLane.lane);
+        }
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+    }
+    printf("\n");
 }
