@@ -8,12 +8,12 @@
 
 #include "MAP.h"
 #include "MAP_config.h"
-#include "MAP_utils.h"
 #include "MAP_packet_tx.h"
+#include "MAP_utils.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
-#include "error_status.h"
 #include "config.h"
+#include "error_status.h"
 #include "log.h"
 #include "timer_event.h"
 
@@ -43,7 +43,7 @@ int MAP_on_CLOUD_packet_rx(void *arg)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    
+
     C2R_app_section_t *app_section = (C2R_app_section_t *) arg;
 
     msg_buf_t read_buf;
@@ -97,7 +97,7 @@ int MAP_on_CLOUD_packet_rx(void *arg)
             log_file_write("MAP disable\r\n");
             printf("MAP disable\r\n");
         } else if (enableOrdisable == 2 &&
-                   MAP.dontSend2TC == 1) {  
+                   MAP.dontSend2TC == 1) {
             MAP.dontSend2TC = 0;
             log_file_write("MAP enable and command buffer clear\r\n");
             printf("MAP enable\r\n");
@@ -105,7 +105,7 @@ int MAP_on_CLOUD_packet_rx(void *arg)
             log_file_write(
                 "invalid cloud pcket disable/enable packet to tc machine\r\n");
         }
-        
+
     } break;
     default:
         break;
@@ -122,22 +122,21 @@ int MAP_on_registration(void *arg)
 {
     /* read map confile file*/
     int ret = MAP_config_init();
-    if(ret != 0) {
+    if (ret != 0) {
         log_file_write_fatal_error("error map reading config file: %d", ret);
     }
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    print_config_map(log_content, LOG_CONTENT_LEN);
-    printf("%s\n", log_content);
     /* MAP msg init */
     map = (MapData *) j2735_msg_prealloc(MapData_Id);
     map_msg_init(map);
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+    print_config_map(map, log_content, LOG_CONTENT_LEN);
+    printf("%s\n", log_content);
     MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);
-    set_timer(MAP_packet_tx_timer_id, (int)(1 / MAP_config.MAP_packet_transfer_speed),
-                (int)((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000), 
-                (int)(1 / MAP_config.MAP_packet_transfer_speed), 
-                (int)((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000));
-
+    set_timer(MAP_packet_tx_timer_id, (int) (1 / MAP_config.MAP_packet_transfer_speed),
+              (int) ((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000),
+              (int) (1 / MAP_config.MAP_packet_transfer_speed),
+              (int) ((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000));
 }

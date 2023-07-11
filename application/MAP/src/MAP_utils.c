@@ -34,12 +34,12 @@ void map_msg_init(MapData *map)
     map->intersections.tab->refPoint.elevation_option = TRUE;
     map->intersections.tab->refPoint.elevation = config.RSU_elev * 10000000;
 
-    map->intersections.tab->laneSet.count = MAP_config.Mapconfig->intersections.tab[0].laneSet.count;
+    map->intersections.tab->laneSet.count;
 
     GenericLane *GeLane = map->intersections.tab->laneSet.tab;
 
     for(int i = 0;i < map->intersections.tab[0].laneSet.count ;i++) {
-        GenericLane *config_lane = &MAP_config.Mapconfig->intersections.tab[0].laneSet.tab[i];
+        GenericLane *config_lane;
         
         GeLane[i].laneID = config_lane->laneID;
         
