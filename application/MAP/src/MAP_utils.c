@@ -1,17 +1,17 @@
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
-#include "log.h"
-#include "traffic_signal_status_updating.h"
+#include "MAP_config.h"
+#include "MAP_utils.h"
+#include "config.h"
 #include "error_code_user.h"
 #include "j2735_codec.h"
 #include "j2735_msg.h"
-#include "MAP_utils.h"
-#include "MAP_config.h"
-#include "config.h"
+#include "log.h"
+#include "traffic_signal_status_updating.h"
 
 extern MapData *map;
 
@@ -23,61 +23,68 @@ void map_msg_init(MapData *map)
     map->intersections_option = TRUE;
     map->intersections.count = 1;
 
-    map->intersections.tab->id.id = config.RSU_id;
-    map->intersections.tab->id.region_option = TRUE;
-    map->intersections.tab->id.region = config.RSU_region;
+    IntersectionGeometry *intersection = map->intersections.tab;
+    intersection->id.id = config.RSU_id;
+    intersection->id.region_option = TRUE;
+    intersection->id.region = config.RSU_region;
 
-    map->intersections.tab->revision = 0;
+    intersection->revision = 0;
 
-    map->intersections.tab->refPoint.lat = config.RSU_lat * 10000000;
-    map->intersections.tab->refPoint.Long = config.RSU_lon * 10000000;
-    map->intersections.tab->refPoint.elevation_option = TRUE;
-    map->intersections.tab->refPoint.elevation = config.RSU_elev * 10000000;
+    intersection->refPoint.lat = config.RSU_lat * 10000000;
+    intersection->refPoint.Long = config.RSU_lon * 10000000;
+    intersection->refPoint.elevation_option = TRUE;
+    intersection->refPoint.elevation = config.RSU_elev * 10000000;
 
-    map->intersections.tab->laneSet.count;
+    intersection->laneSet.count = MAP_config.lane_list.size;
 
-    GenericLane *GeLane = map->intersections.tab->laneSet.tab;
+    for (int i = 0; i < intersection->laneSet.count; i++) {
+        GenericLane *lane = &intersection->laneSet.tab[i];
+        MAP_config_lane_t *config_lane = &vector_at(MAP_config.lane_list, i);
 
-    for(int i = 0;i < map->intersections.tab[0].laneSet.count ;i++) {
-        GenericLane *config_lane;
-        
-        GeLane[i].laneID = config_lane->laneID;
-        
-        if (config_lane->egressApproach_option) {
-            GeLane[i].egressApproach_option = TRUE;
-            GeLane[i].egressApproach = config_lane->egressApproach;
-            asn1_bstr_set_bit(&GeLane[i].laneAttributes.directionalUse, LaneDirection_egressPath);
+        // bit 5-8 為 Approach
+        lane->laneID = ((config_lane->approach << 5) & 0b11100000);
+        // ingress 設 bit 4 為 0, egress 為 0
+        if (config_lane->direction == LaneDirection_ingressPath) {
+            lane->laneID |= 0b00010000;
         }
-        if (config_lane->ingressApproach_option) {
-            GeLane[i].ingressApproach_option = TRUE;
-            GeLane[i].ingressApproach = config_lane->ingressApproach;
-            asn1_bstr_set_bit(&GeLane[i].laneAttributes.directionalUse, LaneDirection_ingressPath);
+        lane->laneID |= (0b00001111 & config_lane->lane_index);
+
+        if (config_lane->direction == LaneDirection_ingressPath) {
+            lane[i].egressApproach_option = TRUE;
+            lane[i].egressApproach = LaneDirection_ingressPath;
+            asn1_bstr_set_bit(&lane[i].laneAttributes.directionalUse, LaneDirection_ingressPath);
+        } else {
+            lane[i].ingressApproach_option = TRUE;
+            lane[i].ingressApproach = LaneDirection_egressPath;
+            asn1_bstr_set_bit(&lane[i].laneAttributes.directionalUse, LaneDirection_egressPath);
         }
 
-        GeLane[i].laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
+        lane[i].laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
 
-        GeLane[i].nodeList.choice = NodeListXY_nodes;
-        GeLane[i].nodeList.u.nodes.count = config_lane->nodeList.u.nodes.count;
+        lane[i].nodeList.choice = NodeListXY_nodes;
+        lane[i].nodeList.u.nodes.count = config_lane->node_list.size;
 
-        Malloc(GeLane[i].nodeList.u.nodes.tab, sizeof(NodeXY) * GeLane[i].nodeList.u.nodes.count, "MAP_init_NodeXY_new");
+        Malloc(lane[i].nodeList.u.nodes.tab, sizeof(NodeXY) * lane[i].nodeList.u.nodes.count, "MAP_init_NodeXY_new");
 
-        for(int j = 0 ; j < GeLane[i].nodeList.u.nodes.count; j++) {
-            GeLane[i].nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
-            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = config_lane->nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat;
-            GeLane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = config_lane->nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon;
+        for (int j = 0; j < config_lane->node_list.size; j++) {
+            MAP_Node_t *node = &vector_at(config_lane->node_list, j);
+            lane[i].nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
+            lane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = node->lat * 10000000;
+            lane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = node->lon * 10000000;
         }
     }
-    return ;
+    return;
 }
 
 
-void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_index) {
+void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_index)
+{
     GenericLane *GeLane = map->intersections.tab->laneSet.tab;
     int j = SignalCount_index;
     uint8_t SignalStatus = get_SignalStatus(SubPhaseCount_index - 1, SignalCount_index);
-    
+
     // 去 and SignalStatus_t
-    if(SignalStatus & GREEN) {
+    if (SignalStatus & GREEN) {
         // for(int i = 0; i < MAP_config.map_lane2connecting.Direction[j].Lane_count; i++) {
         //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
         //     for(int k = 0; k < map->intersections.tab[0].laneSet.count; k++) {
@@ -119,7 +126,7 @@ void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_ind
         //     }
         // }
     }
-    if(SignalStatus & LEFT_GREEN) {
+    if (SignalStatus & LEFT_GREEN) {
         // for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
         //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
         //     for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
@@ -139,7 +146,7 @@ void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_ind
         //     }
         // }
     }
-    if(SignalStatus & STRAIGHT_GREEN) {
+    if (SignalStatus & STRAIGHT_GREEN) {
         // for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
         //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
         //     for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
@@ -159,7 +166,7 @@ void map_signal_group(MapData *map, int SubPhaseCount_index, int SignalCount_ind
         //     }
         // }
     }
-    if(SignalStatus & RIGHT_GREEN) {
+    if (SignalStatus & RIGHT_GREEN) {
         // for(int i = 0;i < MAP_config.map_lane2connecting.Direction[j].Lane_count ;i++) {
         //     int LANEID = MAP_config.map_lane2connecting.Direction[j].connectingLane[i].LaneID;
         //     for(int k = 0;k < map->intersections.tab[0].laneSet.count ;k++) {
@@ -186,16 +193,16 @@ void map_msg_update(MapData *map)
     uint8_t SubPhaseCount = get_SubPhaseCount();
     uint8_t SignalCount = get_SignalCount();
     uint8_t current_phase = get_current_phase();
-    
+
     map->intersections.tab->revision++;
     map->intersections.tab->revision &= 0b1111111;
-    
-    for(int i = SubPhaseCount;i > 0;i--) {
-        for(int j = 0;j < SignalCount;j++){
+
+    for (int i = SubPhaseCount; i > 0; i--) {
+        for (int j = 0; j < SignalCount; j++) {
             map_signal_group(map, i, j);
         }
     }
-    for(int j = 0;j < SignalCount;j++){
+    for (int j = 0; j < SignalCount; j++) {
         map_signal_group(map, current_phase, j);
     }
 }
@@ -203,7 +210,7 @@ void map_msg_update(MapData *map)
 void map_dump_mem(void *data, int len)
 {
     int count;
-    unsigned char *p = (unsigned char *)data;
+    unsigned char *p = (unsigned char *) data;
     for (count = 0; count < len; count++) {
         if (count % 16 == 0)
             printf("\n");
@@ -245,34 +252,33 @@ void map_print(MapData *map)
                     printf("  node list egressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].egressApproach);
                     for (node_index = 0; node_index < map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count; node_index++) {
                         switch (map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice) {
-                            case NodeOffsetPointXY_node_XY1:
-                                printf("   [%d] node_XY1 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.y);
-                                break;
-                            case NodeOffsetPointXY_node_XY2:
-                                printf("   [%d] node_XY2 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.y);
-                                break;
-                            case NodeOffsetPointXY_node_XY3:
-                                printf("   [%d] node_XY3 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.y);
-                                break;
-                            case NodeOffsetPointXY_node_XY4:
-                                printf("   [%d] node_XY4 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.y);
-                                break;
-                            case NodeOffsetPointXY_node_XY5:
-                                printf("   [%d] node_XY5 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.y);
-                                break;
-                            case NodeOffsetPointXY_node_XY6:
-                                printf("   [%d] node_XY6 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.y);
-                                break;
-                            case NodeOffsetPointXY_node_LatLon:
-                                printf("   [%d] LatLon latitude: %d, longitude: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lat, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lon);
-                                break;
-                            default:
-                                printf("   [%d] Unhandled delta choice type: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice);
-                                break;
+                        case NodeOffsetPointXY_node_XY1:
+                            printf("   [%d] node_XY1 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY1.y);
+                            break;
+                        case NodeOffsetPointXY_node_XY2:
+                            printf("   [%d] node_XY2 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY2.y);
+                            break;
+                        case NodeOffsetPointXY_node_XY3:
+                            printf("   [%d] node_XY3 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY3.y);
+                            break;
+                        case NodeOffsetPointXY_node_XY4:
+                            printf("   [%d] node_XY4 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY4.y);
+                            break;
+                        case NodeOffsetPointXY_node_XY5:
+                            printf("   [%d] node_XY5 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY5.y);
+                            break;
+                        case NodeOffsetPointXY_node_XY6:
+                            printf("   [%d] node_XY6 x: %d, y: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.x, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_XY6.y);
+                            break;
+                        case NodeOffsetPointXY_node_LatLon:
+                            printf("   [%d] LatLon latitude: %d, longitude: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lat, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.u.node_LatLon.lon);
+                            break;
+                        default:
+                            printf("   [%d] Unhandled delta choice type: %d\n", node_index, map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice);
+                            break;
                         }
                     }
-                }
-                else {
+                } else {
                     printf("  Unhandled node choice type: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice);
                 }
                 if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo_option) {
@@ -291,18 +297,18 @@ void map_print(MapData *map)
                             for (maneuver_index = 0; maneuver_index < AllowedManeuvers_MAX_BITS; maneuver_index++) {
                                 if (asn1_bstr_is_bit_set(&(map->intersections.tab[intersection_index].laneSet.tab[lane_index].connectsTo.tab[connectionTo_index].connectingLane.maneuver), maneuver_index)) {
                                     switch (maneuver_index) {
-                                        case AllowedManeuvers_maneuverStraightAllowed:
-                                            printf(" maneuverStraightAllowed");
-                                            break;
-                                        case AllowedManeuvers_maneuverLeftAllowed:
-                                            printf(" maneuverLeftAllowed");
-                                            break;
-                                        case AllowedManeuvers_maneuverRightAllowed:
-                                            printf(" maneuverRightAllowed");
-                                            break;
-                                        default:
-                                            printf(" bit %d", maneuver_index);
-                                            break;
+                                    case AllowedManeuvers_maneuverStraightAllowed:
+                                        printf(" maneuverStraightAllowed");
+                                        break;
+                                    case AllowedManeuvers_maneuverLeftAllowed:
+                                        printf(" maneuverLeftAllowed");
+                                        break;
+                                    case AllowedManeuvers_maneuverRightAllowed:
+                                        printf(" maneuverRightAllowed");
+                                        break;
+                                    default:
+                                        printf(" bit %d", maneuver_index);
+                                        break;
                                     }
                                 }
                             }
@@ -332,12 +338,10 @@ void map_decode(uint8_t *rx_buf, int rx_buf_len)
     if (ret < 0) {
         /* handling the decoding error */
         printf("decode msg error\n");
-    }
-    else if ((ret > 0) && (p_msgf->messageId == MapData_Id)) {
-        map_print((MapData *)(p_msgf->u.data));
+    } else if ((ret > 0) && (p_msgf->messageId == MapData_Id)) {
+        map_print((MapData *) (p_msgf->u.data));
         J2735_FREE_MSG_FRAME(p_msgf);
     }
 
     return;
 }
-
