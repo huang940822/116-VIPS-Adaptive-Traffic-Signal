@@ -73,7 +73,6 @@ void map_msg_init(MapData *map)
             lane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = node->lon * 10000000;
         }
     }
-    return;
 }
 
 
