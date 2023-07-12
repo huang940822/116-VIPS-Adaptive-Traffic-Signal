@@ -1,6 +1,6 @@
-# MAP
+# SPaT
 
-Broadcast MAP packets.
+Broadcast SPaT packets.
 
 ---
 
