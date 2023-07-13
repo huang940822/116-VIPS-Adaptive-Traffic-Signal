@@ -51,27 +51,27 @@ void map_msg_init(MapData *map)
         lane->laneID |= (0b00001111 & config_lane->lane_index);
 
         if (config_lane->direction == LaneDirection_ingressPath) {
-            lane[i].egressApproach_option = TRUE;
-            lane[i].egressApproach = LaneDirection_ingressPath;
-            asn1_bstr_set_bit(&lane[i].laneAttributes.directionalUse, LaneDirection_ingressPath);
+            lane->egressApproach_option = TRUE;
+            lane->egressApproach = LaneDirection_ingressPath;
+            asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath);
         } else {
-            lane[i].ingressApproach_option = TRUE;
-            lane[i].ingressApproach = LaneDirection_egressPath;
-            asn1_bstr_set_bit(&lane[i].laneAttributes.directionalUse, LaneDirection_egressPath);
+            lane->ingressApproach_option = TRUE;
+            lane->ingressApproach = LaneDirection_egressPath;
+            asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_egressPath);
         }
 
-        lane[i].laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
+        lane->laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
 
-        lane[i].nodeList.choice = NodeListXY_nodes;
-        lane[i].nodeList.u.nodes.count = config_lane->node_list.size;
+        lane->nodeList.choice = NodeListXY_nodes;
+        lane->nodeList.u.nodes.count = config_lane->node_list.size;
 
-        Malloc(lane[i].nodeList.u.nodes.tab, sizeof(NodeXY) * lane[i].nodeList.u.nodes.count, "MAP_init_NodeXY_new");
+        Malloc(lane->nodeList.u.nodes.tab, sizeof(NodeXY) * lane->nodeList.u.nodes.count, "MAP_init_NodeXY_new");
 
         for (int j = 0; j < config_lane->node_list.size; j++) {
             MAP_Node_t *node = &vector_at(config_lane->node_list, j);
-            lane[i].nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
-            lane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = node->lat * 10000000;
-            lane[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = node->lon * 10000000;
+            lane->nodeList.u.nodes.tab[j].delta.choice = NodeOffsetPointXY_node_LatLon;
+            lane->nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat = node->lat * 10000000;
+            lane->nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon = node->lon * 10000000;
         }
     }
 }
@@ -107,7 +107,6 @@ void map_signal_group(MapData *map)
 
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
-            
         }
     }
 }
