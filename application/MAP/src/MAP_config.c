@@ -98,7 +98,7 @@ int MAP_config_init()
                 MAP_config_lane_t config_lane = {0};
 
                 // laneId ~ node_count
-                if (str_arr.size < 5)
+                if (str_arr.size < 6)
                     FreeAndReturnInvalid(str_arr);
 
                 int index = 0;
@@ -311,7 +311,7 @@ void print_config_map(MapData *map, char *buf, int buf_len)
         snprintf(buf + strlen(buf), buf_len - strlen(buf), "%s: ", conpass_order[i]);
         list_for_each_entry_safe(lane, safe, &MAP_config.lane_compass[i], compass_node)
         {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", lane->config_laneID);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
         }
     }
 }

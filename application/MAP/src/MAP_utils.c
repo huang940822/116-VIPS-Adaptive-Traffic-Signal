@@ -67,6 +67,7 @@ void map_msg_init(MapData *map)
         lane->nodeList.u.nodes.count = config_lane->node_list.size;
 
         Malloc(lane->nodeList.u.nodes.tab, sizeof(NodeXY) * lane->nodeList.u.nodes.count, "MAP_init_NodeXY_new");
+        Malloc(lane->connectsTo.tab, sizeof(Connection) * ConnectsToList_MAX_SIZE, "Connection");
 
         for (int j = 0; j < config_lane->node_list.size; j++) {
             MAP_Node_t *node = &vector_at(config_lane->node_list, j);
