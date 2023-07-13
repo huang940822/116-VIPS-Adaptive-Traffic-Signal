@@ -134,18 +134,23 @@ int MAP_config_init()
 
                 if (str_arr.size < 5 + (node_count * 2))
                     FreeAndReturnInvalid(str_arr);
-
+                vector_init(config_lane.node_list);
                 for (int i = 0; i < node_count; i++) {
                     MAP_Node_t node;
                     substr = vector_at(str_arr, 5 + (i * 2));
-                    if (substr == NULL || sscanf(substr, "%lf", &node.lat) != 1)
+                    if (substr == NULL || sscanf(substr, "%lf", &node.lat) != 1) {
+                        vector_free(config_lane.node_list);
                         FreeAndReturnInvalid(str_arr);
+                    }
 
                     substr = vector_at(str_arr, 5 + (i * 2) + 1);
-                    if (substr == NULL || sscanf(substr, "%lf", &node.lon) != 1)
+                    if (substr == NULL || sscanf(substr, "%lf", &node.lon) != 1) {
+                        vector_free(config_lane.node_list);
                         FreeAndReturnInvalid(str_arr);
+                    }
                     vector_push_back(config_lane.node_list, node);
                 }
+                vector_push_back(MAP_config.lane_list, config_lane);
                 vector_free(str_arr);
             }
         }
@@ -185,12 +190,15 @@ int MAP_config_init()
                     FreeAndReturnInvalid(str_arr);
                 if (connect_count < 0 || str_arr.size < index + connect_count + 1)
                     FreeAndReturnInvalid(str_arr);
+
+                vector_init(connectsTo.left_laneId);
                 for (int i = index; i < index + connect_count; i++) {
                     substr = vector_at(str_arr, i);
-                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
+                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
+                        uint8_t_val >= MAP_config.lane_list.size) {
+                        vector_free(connectsTo.left_laneId);
                         FreeAndReturnInvalid(str_arr);
-                    if (uint8_t_val >= MAP_config.lane_list.size)
-                        FreeAndReturnInvalid(str_arr);
+                    }
                     vector_push_back(connectsTo.left_laneId, uint8_t_val);
                 }
                 index += connect_count;
@@ -203,12 +211,15 @@ int MAP_config_init()
                 if (connect_count < 0 || str_arr.size < index + connect_count + 1)
                     FreeAndReturnInvalid(str_arr);
 
+                vector_init(connectsTo.stright_laneId);
                 for (int i = index; i < index + connect_count; i++) {
                     substr = vector_at(str_arr, i);
-                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
+                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
+                        uint8_t_val >= MAP_config.lane_list.size) {
+                        vector_free(connectsTo.left_laneId);
+                        vector_free(connectsTo.stright_laneId);
                         FreeAndReturnInvalid(str_arr);
-                    if (uint8_t_val >= MAP_config.lane_list.size)
-                        FreeAndReturnInvalid(str_arr);
+                    }
                     vector_push_back(connectsTo.stright_laneId, uint8_t_val);
                 }
                 index += connect_count;
@@ -220,15 +231,21 @@ int MAP_config_init()
                     FreeAndReturnInvalid(str_arr);
                 if (connect_count < 0 || str_arr.size < index + connect_count)
                     FreeAndReturnInvalid(str_arr);
+
+                vector_init(connectsTo.right_laneId);
                 for (int i = index; i < index + connect_count; i++) {
                     substr = vector_at(str_arr, i);
-                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
+                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
+                        uint8_t_val >= MAP_config.lane_list.size) {
+                        vector_free(connectsTo.left_laneId);
+                        vector_free(connectsTo.stright_laneId);
+                        vector_free(connectsTo.right_laneId);
                         FreeAndReturnInvalid(str_arr);
-                    if (uint8_t_val >= MAP_config.lane_list.size)
-                        FreeAndReturnInvalid(str_arr);
+                    }
                     vector_push_back(connectsTo.right_laneId, uint8_t_val);
                 }
                 vector_free(str_arr);
+                vector_push_back(MAP_config.connectsTo_list, connectsTo);
             }
         }
     }

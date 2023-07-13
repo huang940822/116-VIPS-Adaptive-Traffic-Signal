@@ -14,13 +14,16 @@ MAP_dontSend2TC 1
 # ID. The lane ID, in conjunction with the intersection ID, forms a regionally unique way to address a specific lane in that 
 # region. 
 
-# egress 是離開, ingress 是進入
+# direction N 北向 W 西向 S 南向 E 東向 
+# NE 東北向 SN 東南向 SE 西南向 NW 西北向
+
+# LaneDirection egress 是離開, ingress 是進入
 # Use: The LaneDirection data element is used to denote the allowed direction of travel over a lane object. By convention, 
 # the lane object is always described from the stop line outwards away from the intersection. Therefore, the ingress direction 
 # is from the end of the path to the stop line and the egress direction is from the stop line outwards. It should be noted that 
 # some lane objects are not used for travel and that some lane objects allow bi-directional travel. 
 
-# ApproachId 從北 (ApproachId 0) 開始順時針遞增 從 0 開始
+# ApproachId 從位於北邊的路 (ApproachId 0) 開始順時針遞增 從 0 開始
 # Use: The DE_ApproachID data element is used to relate the index of an approach, either ingress or egress within the 
 # subject lane. In general, an approach index in the context of a timing movement is not of value in the MAP and SPAT 
 # process because the lane ID and signal group ID concepts handle this with more precision. This value can also be useful 
@@ -37,23 +40,23 @@ MAP_dontSend2TC 1
 # to as segments. 
 
 LaneSet_table_start
-# laneId, LaneDirection, Approach, lane_index , node_count, node_lat, node_lon, ...
-0,  egress,  0, 1, 2, 22.92458, 120.29077,  22.925588,  120.290339
-1,  ingress, 0, 1, 2, 22.92457,   120.29076,   22.9254, 120.29037
-2,  egress,  1, 1, 2, 22.924479,  120.290994,  22.924479,  120.290994
-3,  egress,  1, 2, 2, 22.9245516, 120.2909701, 22.9246616, 120.2912517
-4,  egress,  1, 3, 2, 22.9244230, 120.2910190, 22.9244230, 120.2910190
-5,  ingress, 1, 1, 2, 22.92451, 120.29097,  22.92488, 120.29186
-6,  ingress, 1, 2, 2, 22.92454, 120.29096, 22.92491, 120.29184
-7,  ingress, 1, 3, 2, 22.92456, 120.29095, 22.92493, 120.29183
-8,  egress,  2, 1, 2, 22.924322,  120.290976,  22.9239873, 120.291141
-9,  ingress, 2, 1, 2, 22.92431, 120.29097,  22.92349, 120.29138
-10, egress,  3, 1, 2, 22.9244680, 120.290718,  22.924468,  120.2907180
-11, egress,  3, 2, 2, 22.9244450, 120.2907290, 22.9244450, 120.2907290
-12, egress,  3, 3, 2, 22.9244180, 120.2907420, 22.9244180, 120.2907420
-13, ingress, 3, 1, 2, 22.92437, 120.29076, 22.92401, 120.28987
-14, ingress, 3, 2, 2, 22.92434, 120.29077, 22.92398, 120.28988
-15, ingress, 3, 3, 2, 22.92432, 120.29078, 22.92396, 120.28989
+# laneId, direction, LaneDirection, Approach, lane_index , node_count, node_lat, node_lon, ...
+0,  S, egress,  0, 1, 2, 22.92458, 120.29077,  22.925588,  120.290339
+1,  S, ingress, 0, 1, 2, 22.92457,   120.29076,   22.9254, 120.29037
+2,  W, egress,  1, 1, 2, 22.924479,  120.290994,  22.924479,  120.290994
+3,  W, egress,  1, 2, 2, 22.9245516, 120.2909701, 22.9246616, 120.2912517
+4,  W, egress,  1, 3, 2, 22.9244230, 120.2910190, 22.9244230, 120.2910190
+5,  W, ingress, 1, 1, 2, 22.92451, 120.29097,  22.92488, 120.29186
+6,  W, ingress, 1, 2, 2, 22.92454, 120.29096, 22.92491, 120.29184
+7,  W, ingress, 1, 3, 2, 22.92456, 120.29095, 22.92493, 120.29183
+8,  N, egress,  2, 1, 2, 22.924322,  120.290976,  22.9239873, 120.291141
+9,  N, ingress, 2, 1, 2, 22.92431, 120.29097,  22.92349, 120.29138
+10, E, egress,  3, 1, 2, 22.9244680, 120.290718,  22.924468,  120.2907180
+11, E, egress,  3, 2, 2, 22.9244450, 120.2907290, 22.9244450, 120.2907290
+12, E, egress,  3, 3, 2, 22.9244180, 120.2907420, 22.9244180, 120.2907420
+13, E, ingress, 3, 1, 2, 22.92437, 120.29076, 22.92401, 120.28987
+14, E, ingress, 3, 2, 2, 22.92434, 120.29077, 22.92398, 120.28988
+15, E, ingress, 3, 3, 2, 22.92432, 120.29078, 22.92396, 120.28989
 LaneSet_table_end
 
 # laneId 對應 LaneSet_table 的 laneId, 只會有 ingress 的 laneId

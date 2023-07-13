@@ -23,6 +23,7 @@ typedef struct MAP_config_lane {
     uint8_t approach;
     uint8_t lane_index;
     vector_t(MAP_Node_t) node_list;
+    GenericLane *lane_ptr;
 } MAP_config_lane_t;
 
 typedef struct MAP_config_connectsTo {
@@ -45,6 +46,7 @@ typedef struct MAP_config_object {
     vector_t(MAP_config_connectsTo_t) connectsTo_list;
     uint8_t MAP_packet_transfer_speed;
     uint8_t MAP_dontSend2TC;
+    
 } MAP_config_object_t;
 
 void print_config_map(MapData *map, char *buf, int buf_len);
