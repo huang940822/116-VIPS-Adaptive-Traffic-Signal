@@ -25,6 +25,7 @@ typedef struct MAP_config_lane {
     uint8_t lane_index;
     vector_t(MAP_Node_t) node_list;
     GenericLane *lane_ptr;
+    struct list_head compass_node;
 } MAP_config_lane_t;
 
 typedef struct MAP_config_connectsTo {

@@ -13,7 +13,7 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-extern MapData *map;
+MapData *map;
 
 void map_msg_init(MapData *map)
 {
@@ -23,6 +23,7 @@ void map_msg_init(MapData *map)
     map->intersections_option = TRUE;
     map->intersections.count = 1;
 
+    Malloc(map->intersections.tab, sizeof(IntersectionGeometry), "IntersectionGeometry");
     IntersectionGeometry *intersection = map->intersections.tab;
     intersection->id.id = config.RSU_id;
     intersection->id.region_option = TRUE;
@@ -36,11 +37,11 @@ void map_msg_init(MapData *map)
     intersection->refPoint.elevation = config.RSU_elev * 10000000;
 
     intersection->laneSet.count = MAP_config.lane_list.size;
+    Malloc(intersection->laneSet.tab, sizeof(GenericLane) * intersection->laneSet.count, "GenericLane");
 
     for (int i = 0; i < intersection->laneSet.count; i++) {
         GenericLane *lane = &intersection->laneSet.tab[i];
         MAP_config_lane_t *config_lane = &vector_at(MAP_config.lane_list, i);
-        config_lane->lane_ptr = lane;
 
         // bit 5-8 為 Approach
         lane->laneID = ((config_lane->approach << 5) & 0b11100000);

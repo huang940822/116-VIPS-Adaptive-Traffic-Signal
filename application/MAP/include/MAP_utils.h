@@ -12,4 +12,6 @@ void map_decode(uint8_t *rx_buf, int rx_buf_len);
 void map_dump_mem(void *data, int len);
 void map_signal_group(MapData *map);
 
+extern MapData *map;
+
 #endif

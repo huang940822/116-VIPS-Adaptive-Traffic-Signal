@@ -5,8 +5,6 @@
 
 extern app_obj_t MAP;
 
-MapData *map;
-
 int MAP_on_registration(void *);
 int MAP_on_CLOUD_packet_rx(void *);
 

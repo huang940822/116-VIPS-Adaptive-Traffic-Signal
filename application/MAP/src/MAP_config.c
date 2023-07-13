@@ -169,6 +169,11 @@ int MAP_config_init()
                 }
                 vector_free(str_arr);
                 vector_push_back(MAP_config.lane_list, config_lane);
+                MAP_config_lane_t *lane = &vector_at(MAP_config.lane_list, MAP_config.lane_list.size - 1);
+                INIT_LIST_HEAD(&lane->compass_node);
+                if (compass < COMPASS_NUM) {
+                    list_add_tail(&lane->compass_node, &MAP_config.lane_compass[compass]);
+                }
             }
         }
 
@@ -299,5 +304,14 @@ void print_config_map(MapData *map, char *buf, int buf_len)
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->tab[k].connectingLane.lane);
         }
         snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+    }
+    const char *conpass_order[] = COMPASS_ORDER;
+    for (int i = 0; i < COMPASS_NUM; i++) {
+        MAP_config_lane_t *lane, *safe;
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%s: ", conpass_order[i]);
+        list_for_each_entry_safe(lane, safe, &MAP_config.lane_compass[i], compass_node)
+        {
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", lane->config_laneID);
+        }
     }
 }
