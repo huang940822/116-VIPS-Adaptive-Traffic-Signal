@@ -79,6 +79,8 @@ int MAP_config_init()
         // LaneSet_table
         if (strstr(buf, "LaneSet_table_start")) {
             vector_init(MAP_config.lane_list);
+            for (int i = 0; i < COMPASS_NUM; i++)
+                INIT_LIST_HEAD(&MAP_config.lane_compass[i]);
             const char delim[] = ",";
 
             while (!feof(fp)) {
@@ -93,22 +95,35 @@ int MAP_config_init()
                 vector_t(char *) str_arr;
                 vector_init(str_arr);
                 read_string_arr_from_config_line(buf, &str_arr, ",");
-                MAP_config_lane_t config_lane;
+                MAP_config_lane_t config_lane = {0};
 
                 // laneId ~ node_count
                 if (str_arr.size < 5)
                     FreeAndReturnInvalid(str_arr);
 
+                int index = 0;
                 // laneId
-                char *substr = vector_at(str_arr, 0);
+                char *substr = vector_at(str_arr, index);
+                index++;
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
                     FreeAndReturnInvalid(str_arr);
                 if (int_val != MAP_config.lane_list.size)
                     FreeAndReturnInvalid(str_arr);
+                config_lane.config_laneID = int_val;
 
-                // direction
-                substr = vector_at(str_arr, 1);
+                // compasss
+                substr = vector_at(str_arr, index);
+                index++;
+                int compass = 0;
+                const char *compass_order[] = COMPASS_ORDER;
+                for (compass = 0; compass < COMPASS_NUM; compass++) {
+                    if (strcmp(compass_order[compass], substr) == 0)
+                        break;
+                }
 
+                // lane_direction
+                substr = vector_at(str_arr, index);
+                index++;
                 if (strstr(substr, "egress")) {
                     config_lane.direction = LaneDirection_egressPath;
                 } else if (strstr(substr, "ingress")) {
@@ -117,41 +132,43 @@ int MAP_config_init()
                     FreeAndReturnInvalid(str_arr);
                 }
 
-                substr = vector_at(str_arr, 2);
+                substr = vector_at(str_arr, index);
+                index++;
                 if (substr == NULL || sscanf(substr, "%hhd", &config_lane.approach) != 1)
                     FreeAndReturnInvalid(str_arr);
-
                 // lane_index
-                substr = vector_at(str_arr, 3);
+                substr = vector_at(str_arr, index);
+                index++;
                 if (substr == NULL || sscanf(substr, "%hhd", &config_lane.lane_index) != 1)
                     FreeAndReturnInvalid(str_arr);
 
                 // node_count
                 int node_count;
-                substr = vector_at(str_arr, 4);
+                substr = vector_at(str_arr, index);
+                index++;
                 if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
                     FreeAndReturnInvalid(str_arr);
 
-                if (str_arr.size < 5 + (node_count * 2))
+                if (str_arr.size < index + (node_count * 2))
                     FreeAndReturnInvalid(str_arr);
                 vector_init(config_lane.node_list);
                 for (int i = 0; i < node_count; i++) {
                     MAP_Node_t node;
-                    substr = vector_at(str_arr, 5 + (i * 2));
+                    substr = vector_at(str_arr, index + (i * 2));
                     if (substr == NULL || sscanf(substr, "%lf", &node.lat) != 1) {
                         vector_free(config_lane.node_list);
                         FreeAndReturnInvalid(str_arr);
                     }
 
-                    substr = vector_at(str_arr, 5 + (i * 2) + 1);
+                    substr = vector_at(str_arr, index + (i * 2) + 1);
                     if (substr == NULL || sscanf(substr, "%lf", &node.lon) != 1) {
                         vector_free(config_lane.node_list);
                         FreeAndReturnInvalid(str_arr);
                     }
                     vector_push_back(config_lane.node_list, node);
                 }
-                vector_push_back(MAP_config.lane_list, config_lane);
                 vector_free(str_arr);
+                vector_push_back(MAP_config.lane_list, config_lane);
             }
         }
 
@@ -256,10 +273,10 @@ int MAP_config_init()
 
 void print_config_map(MapData *map, char *buf, int buf_len)
 {
-    if (map->intersections.count != 1) {
-        snprintf(buf, buf_len, "intersections.count only can be 1, but is %d", map->intersections.count);
-        return;
-    }
+    // if (map->intersections.count != 1) {
+    //     snprintf(buf, buf_len, "intersections.count only can be 1, but is %d", map->intersections.count);
+    //     return;
+    // }
     LaneList *laneSet = &map->intersections.tab[0].laneSet;
     snprintf(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
 
@@ -283,5 +300,4 @@ void print_config_map(MapData *map, char *buf, int buf_len)
         }
         snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
     }
-    printf("\n");
 }
