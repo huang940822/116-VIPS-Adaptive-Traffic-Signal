@@ -11,3 +11,5 @@ Broadcast SPaT & MAP packets.
 設 SignalGroup2 為南往北圓頭綠燈。
 設 SignalGroup3 為東往西圓頭綠燈。
 設 SignalGroup4 為西往東圓頭綠燈。
+
+2. MAP sharedWith

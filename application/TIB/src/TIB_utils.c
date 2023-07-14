@@ -45,6 +45,8 @@ void map_msg_init(MapData **map_ptr)
     for (int i = 0; i < intersection->laneSet.count; i++) {
         GenericLane *lane = &intersection->laneSet.tab[i];
         MAP_config_lane_t *config_lane = &vector_at(TIB_config.lane_list, i);
+        lane->laneAttributes.sharedWith.len = 10;
+        Malloc(lane->laneAttributes.sharedWith.buf, 2, "sharedWith");
 
         // bit 5-8 為 Approach
         lane->laneID = ((config_lane->approach << 5) & 0b11100000);
@@ -54,6 +56,8 @@ void map_msg_init(MapData **map_ptr)
         }
         lane->laneID |= (0b00001111 & config_lane->lane_index);
 
+        lane->laneAttributes.directionalUse.len = 2;
+        Malloc(lane->laneAttributes.directionalUse.buf, 1, "directionalUse");
         if (config_lane->direction == LaneDirection_ingressPath) {
             lane->egressApproach_option = TRUE;
             lane->egressApproach = LaneDirection_ingressPath;
@@ -67,7 +71,8 @@ void map_msg_init(MapData **map_ptr)
         lane->laneAttributes.laneType.choice = LaneTypeAttributes_vehicle;
 
         lane->nodeList.choice = NodeListXY_nodes;
-        lane->nodeList.u.nodes.count = config_lane->node_list.size;
+        lane->nodeList.u.nodes.count =
+            config_lane->node_list.size > NodeSetXY_MAX_SIZE ? NodeSetXY_MAX_SIZE : config_lane->node_list.size;
 
         Malloc(lane->nodeList.u.nodes.tab, sizeof(NodeXY) * lane->nodeList.u.nodes.count, "MAP_init_NodeXY_new");
         Malloc(lane->connectsTo.tab, sizeof(Connection) * ConnectsToList_MAX_SIZE, "Connection");
@@ -106,9 +111,14 @@ void map_signal_group(MapData *map)
     get_traffic_signal_status(&signal_status);
 
     map_connectTo_clean(map);
-    GenericLane *lane = map->intersections.tab->laneSet.tab;
+    LaneList *laneSet = &map->intersections.tab->laneSet;
 
     int signalGroupID = 1;
+    printf("laneSet->tab[i].laneID\n");
+    for (int i = 0; i < laneSet->count; i++) {
+        printf("%d ", laneSet->tab[i].laneID);
+    }
+    printf("\n");
 
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
@@ -118,10 +128,6 @@ void map_signal_group(MapData *map)
 
 void map_msg_update(MapData *map)
 {
-    uint8_t SubPhaseCount = get_SubPhaseCount();
-    uint8_t SignalCount = get_SignalCount();
-    uint8_t current_phase = get_current_phase();
-
     map->intersections.tab->revision++;
     map->intersections.tab->revision &= 0b1111111;
 
