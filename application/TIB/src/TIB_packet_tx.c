@@ -1,39 +1,32 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>
 
 #include "TIB.h"
+#include "TIB_config.h"
 #include "TIB_packet_tx.h"
 #include "TIB_utils.h"
-#include "TIB_config.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "error_status.h"
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-static uint8_t *tx_buf = NULL;
-static int tx_buf_len = 0;
 static uint8_t PhaseOrder = 255;
-static uint8_t prev_phase = 0;
 
 void MAP_packet_tx(__sigval_t value)
 {
-    if (TIB.dontSend2TC)
-        return;
-
-    // FILE *fp;
     uint8_t SubPhaseCount = get_SubPhaseCount();
-    if(SubPhaseCount > 0){
-        if (PhaseOrder != get_PhaseOrder() || prev_phase != get_current_phase()) {
+    if (SubPhaseCount > 0) {
+        uint8_t phaseOrder = get_PhaseOrder();
+        if (PhaseOrder != phaseOrder) {
             // update map
             printf("update map information\r\n");
             map_msg_update(map);
-            PhaseOrder = get_PhaseOrder();
-            prev_phase = get_current_phase();
+            PhaseOrder = phaseOrder;
         }
         OBU_j2735_tx(MapData_Id, map);
     }
