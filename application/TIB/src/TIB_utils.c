@@ -113,38 +113,22 @@ void map_signal_group(MapData *map)
     map_connectTo_clean(map);
     LaneList *laneSet = &map->intersections.tab->laneSet;
 
-    printf("laneSet->tab[i].laneID\n");
-    for (int i = 0; i < laneSet->count; i++) {
-        printf("%d ", laneSet->tab[i].laneID);
-    }
-    printf("\n");
-    printf("laneSet->tab[i].laneID\n");
-    for (int i = 0; i < COMPASS_NUM; i++) {
-        struct list_head *head = &TIB_config.MAP_lane_compass[i];
-        MAP_config_lane_t *lane, *safe;
-        list_for_each_entry_safe(lane, safe, head, compass_node)
-        {
-            printf("%d ", lane->config_laneID);
-        }
-        printf("\n");
-    }
-    printf("%x\n", signal_status.SignalMap);
-
-    struct list_head *lane_compass[COMPASS_NUM] = {0};
-    uint8_t compass = 0;
-    for (uint8_t mask = 1; mask != 0; mask = mask << 1, compass++) {
+    int map_table[COMPASS_NUM] = {0};
+    for (uint8_t mask = 1, i = 0, j = 0; mask != 0; mask = mask << 1, j++) {
         if (mask & signal_status.SignalMap) {
-            lane_compass[compass] = &TIB_config.MAP_lane_compass[compass];
+            map_table[i++] = j;
         }
     }
     int signalGroupID = 1;
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
-            MAP_config_lane_t *lane = NULL, *safe = NULL;
-            // list_for_each_entry_safe(lane, safe, lane_compass[j], compass_node)
-            // {
-            //     //printf("%d ", lane->config_laneID);
-            // }printf("\n");
+            struct list_head *head = &TIB_config.MAP_lane_compass[map_table[i]];
+            MAP_config_lane_t *lane, *safe;
+            list_for_each_entry_safe(lane, safe, head, compass_node)
+            {
+                printf("%d ", lane->config_laneID);
+            }
+            printf("\n");
         }
     }
 }
