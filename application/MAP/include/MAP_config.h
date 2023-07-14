@@ -2,9 +2,9 @@
 #define MAP_CONFIG_H
 
 #include "j2735_data_component.h"
+#include "list.h"
 #include "typedefine.h"
 #include "vector.h"
-#include "list.h"
 
 #define MAP_CONFIG_FILE FILE_PATH "application/MAP/config/config.txt"
 
@@ -19,13 +19,13 @@ typedef struct MAP_Node {
 } MAP_Node_t;
 
 typedef struct MAP_config_lane {
+    struct list_head compass_node;
+    vector_t(MAP_Node_t) node_list;
     int32_t config_laneID;
     LaneDirection direction;
     uint8_t approach;
     uint8_t lane_index;
-    vector_t(MAP_Node_t) node_list;
-    GenericLane *lane_ptr;
-    struct list_head compass_node;
+    void *lane_ptr;
 } MAP_config_lane_t;
 
 typedef struct MAP_config_connectsTo {
@@ -45,7 +45,10 @@ typedef enum MAP_config_err {
 
 #define COMPASS_NUM 8
 // const char *conpass_order[] = COMPASS_ORDER;
-#define COMPASS_ORDER {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
+#define COMPASS_ORDER                              \
+    {                                              \
+        "N", "NE", "E", "SE", "S", "SW", "W", "NW" \
+    }
 
 typedef struct MAP_config_object {
     vector_t(MAP_config_lane_t) lane_list;
