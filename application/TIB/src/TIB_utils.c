@@ -15,8 +15,11 @@
 
 MapData *map;
 
-void map_msg_init(MapData *map)
+void map_msg_init(MapData **map_ptr)
 {
+    Malloc(*map_ptr, sizeof(MapData), "MapData");
+    MapData *map = *map_ptr;
+
     map->timeStamp_option = FALSE;
     map->msgIssueRevision = 0;
 

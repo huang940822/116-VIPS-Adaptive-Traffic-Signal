@@ -126,8 +126,7 @@ int TIB_on_registration(void *arg)
         log_file_write_fatal_error("error map reading config file: %d", ret);
     }
     /* MAP msg init */
-    Malloc(map, sizeof(MapData), "MapData");
-    map_msg_init(map);
+    map_msg_init(&map);
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     print_config_map(map, log_content, LOG_CONTENT_LEN);
