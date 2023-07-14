@@ -22,7 +22,7 @@ void MAP_packet_tx(__sigval_t value)
     uint8_t SubPhaseCount = get_SubPhaseCount();
     if (SubPhaseCount > 0) {
         uint8_t phaseOrder = get_PhaseOrder();
-        if (PhaseOrder != phaseOrder) {
+        if (1) {
             // update map
             printf("update map information\r\n");
             map_msg_update(map);

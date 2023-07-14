@@ -14,6 +14,7 @@ TIB_config_object_t TIB_config = {
     .TIB_dontSend2TC = 1,
     .lane_list = {0},
     .connectsTo_list = {0},
+    .MAP_lane_compass = {0},
 };
 
 int TIB_config_init()
