@@ -11,7 +11,7 @@
 #include "TSP.h"
 #include "CPS.h"
 #include "SPaT.h"
-#include "MAP.h"
+#include "TIB.h"
 #include "SPM.h"
 
 #include "OBU_record_processing.h"
@@ -128,7 +128,7 @@ int main()
         &TSP,
         // &CPS,
         // &SPaT,
-        &MAP,
+        &TIB,
         // &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);

@@ -1,6 +1,6 @@
-# MAP
+# Traffic Information Broadcaster (TIB)
 
-Broadcast MAP packets.
+Broadcast SPaT & MAP packets.
 
 ---
 

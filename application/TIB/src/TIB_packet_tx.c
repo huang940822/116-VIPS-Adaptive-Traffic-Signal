@@ -5,10 +5,10 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "MAP.h"
-#include "MAP_packet_tx.h"
-#include "MAP_utils.h"
-#include "MAP_config.h"
+#include "TIB.h"
+#include "TIB_packet_tx.h"
+#include "TIB_utils.h"
+#include "TIB_config.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "error_status.h"
@@ -22,7 +22,7 @@ static uint8_t prev_phase = 0;
 
 void MAP_packet_tx(__sigval_t value)
 {
-    if (MAP.dontSend2TC)
+    if (TIB.dontSend2TC)
         return;
 
     // FILE *fp;
@@ -39,15 +39,15 @@ void MAP_packet_tx(__sigval_t value)
     }
 }
 
-void MAP_send_ack()
+void TIB_send_ack()
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("MAP_send_ack: malloc");
-        perror("MAP_send_ack: malloc");
+        log_file_write_fatal_error("TIB_send_ack: malloc");
+        perror("TIB_send_ack: malloc");
         exit(errno);
     } else {
         clear_memory_error();
@@ -58,7 +58,7 @@ void MAP_send_ack()
     write_uint8_t(0, &write_buf);
     write_uint8_t(0, &write_buf);
 
-    cloud_packet_tx(write_buf.index, MAP.id, write_buf.content);
+    cloud_packet_tx(write_buf.index, TIB.id, write_buf.content);
     free(write_buf.content);
     return;
 }

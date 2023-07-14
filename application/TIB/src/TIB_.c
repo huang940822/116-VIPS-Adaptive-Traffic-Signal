@@ -6,10 +6,10 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "MAP.h"
-#include "MAP_config.h"
-#include "MAP_packet_tx.h"
-#include "MAP_utils.h"
+#include "TIB.h"
+#include "TIB_config.h"
+#include "TIB_packet_tx.h"
+#include "TIB_utils.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"
@@ -22,24 +22,24 @@
 
 timer_t MAP_packet_tx_timer_id;
 
-app_obj_t MAP = {
-    .name = "MAP",
-    .id = MAP_ID,
+app_obj_t TIB = {
+    .name = "TIB",
+    .id = TIB_ID,
     .priority = 3,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
     .on_RSU_packet_tx = NULL,
-    .on_cloud_packet_rx = &MAP_on_CLOUD_packet_rx,
+    .on_cloud_packet_rx = &TIB_on_CLOUD_packet_rx,
     .on_cloud_packet_tx = NULL,
     .on_camera_packet_rx = NULL,
     .on_traffic_signal_command_tx = NULL,
-    .on_registration = &MAP_on_registration,
+    .on_registration = &TIB_on_registration,
     .dontSend2TC = 1,
     .next = NULL,
 };
 
-int MAP_on_CLOUD_packet_rx(void *arg)
+int TIB_on_CLOUD_packet_rx(void *arg)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -51,8 +51,8 @@ int MAP_on_CLOUD_packet_rx(void *arg)
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("MAP_on_cloud_packet_rx: malloc");
-        perror("MAP_on_cloud_packet_rx: malloc");
+        log_file_write_fatal_error("TIB_on_cloud_packet_rx: malloc");
+        perror("TIB_on_cloud_packet_rx: malloc");
         exit(errno);
     } else {
         clear_memory_error();
@@ -61,7 +61,7 @@ int MAP_on_CLOUD_packet_rx(void *arg)
     }
 
     // needs a map sned ack function to send ack to cloud
-    MAP_send_ack();
+    TIB_send_ack();
 
     // read cmd
     uint8_t cmd;
@@ -92,13 +92,13 @@ int MAP_on_CLOUD_packet_rx(void *arg)
         read_int8_t(&enableOrdisable, &read_buf);
         // read_int8_t(&type, &read_buf);
         if (enableOrdisable == 1 &&
-            MAP.dontSend2TC == 0) {  // enable/clear command buffer
-            MAP.dontSend2TC = 1;
+            TIB.dontSend2TC == 0) {  // enable/clear command buffer
+            TIB.dontSend2TC = 1;
             log_file_write("MAP disable\r\n");
             printf("MAP disable\r\n");
         } else if (enableOrdisable == 2 &&
-                   MAP.dontSend2TC == 1) {
-            MAP.dontSend2TC = 0;
+                   TIB.dontSend2TC == 1) {
+            TIB.dontSend2TC = 0;
             log_file_write("MAP enable and command buffer clear\r\n");
             printf("MAP enable\r\n");
         } else {
@@ -118,10 +118,10 @@ int MAP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
-int MAP_on_registration(void *arg)
+int TIB_on_registration(void *arg)
 {
     /* read map confile file*/
-    int ret = MAP_config_init();
+    int ret = TIB_config_init();
     if (ret != 0) {
         log_file_write_fatal_error("error map reading config file: %d", ret);
     }
@@ -132,11 +132,11 @@ int MAP_on_registration(void *arg)
     memset(log_content, 0, sizeof(log_content));
     print_config_map(map, log_content, LOG_CONTENT_LEN);
     printf("%s\n", log_content);
-    MAP.dontSend2TC = MAP_config.MAP_dontSend2TC;
+    TIB.dontSend2TC = TIB_config.TIB_dontSend2TC;
     /* create a timer to send map packet */
     create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);
-    set_timer(MAP_packet_tx_timer_id, (int) (1 / MAP_config.MAP_packet_transfer_speed),
-              (int) ((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000),
-              (int) (1 / MAP_config.MAP_packet_transfer_speed),
-              (int) ((1000000000 / MAP_config.MAP_packet_transfer_speed) % 1000000000));
+    set_timer(MAP_packet_tx_timer_id, (int) (1 / TIB_config.MAP_packet_transfer_speed),
+              (int) ((1000000000 / TIB_config.MAP_packet_transfer_speed) % 1000000000),
+              (int) (1 / TIB_config.MAP_packet_transfer_speed),
+              (int) ((1000000000 / TIB_config.MAP_packet_transfer_speed) % 1000000000));
 }

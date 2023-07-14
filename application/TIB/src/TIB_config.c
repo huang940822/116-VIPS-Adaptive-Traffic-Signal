@@ -1,4 +1,4 @@
-#include "MAP_config.h"
+#include "TIB_config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,22 +9,22 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-MAP_config_object_t MAP_config = {
+TIB_config_object_t TIB_config = {
     .MAP_packet_transfer_speed = 1,
-    .MAP_dontSend2TC = 1,
+    .TIB_dontSend2TC = 1,
     .lane_list = {0},
     .connectsTo_list = {0},
 };
 
-int MAP_config_init()
+int TIB_config_init()
 {
     FILE *fp;
-    fp = fopen(MAP_CONFIG_FILE, "r");
+    fp = fopen(TIB_CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", MAP_CONFIG_FILE);
-        return MAP_CONFIG_INVALID_OPEN_FILE;
+        log_file_write_fatal_error("error opening %s", TIB_CONFIG_FILE);
+        return TIB_CONFIG_INVALID_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully", MAP_CONFIG_FILE);
+        log_file_write("%s opened successfully", TIB_CONFIG_FILE);
     }
 
     char read_buf[CONFIG_LINE_BUFFER_SIZE];
@@ -34,10 +34,10 @@ int MAP_config_init()
 
 #define FreeAndReturnInvalid(v)                  \
     do {                                         \
-        vector_free(MAP_config.lane_list);       \
-        vector_free(MAP_config.connectsTo_list); \
+        vector_free(TIB_config.lane_list);       \
+        vector_free(TIB_config.connectsTo_list); \
         vector_free(v);                          \
-        return MAP_CONFIG_INVALID;               \
+        return TIB_CONFIG_INVALID;               \
     } while (0);
 
     while (!feof(fp)) {
@@ -49,24 +49,24 @@ int MAP_config_init()
         if (strstr(buf, "MAP_packet_transfer_speed ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
-                    MAP_config.MAP_packet_transfer_speed = uint8_t_val;
-                    log_file_write("config: MAP_packet_transfer_speed = %d", MAP_config.MAP_packet_transfer_speed);
+                    TIB_config.MAP_packet_transfer_speed = uint8_t_val;
+                    log_file_write("config: MAP_packet_transfer_speed = %d", TIB_config.MAP_packet_transfer_speed);
                     continue;
                 } else {
-                    return MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
+                    return TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
                 }
             } else {
-                return MAP_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
+                return TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
             }
         }
 
-        // MAP_dontSend2TC
-        if (strstr(buf, "MAP_dontSend2TC ")) {
+        // TIB_dontSend2TC
+        if (strstr(buf, "TIB_dontSend2TC ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
-                    MAP_config.MAP_dontSend2TC = uint8_t_val;
-                    log_file_write("config: MAP_dontSend2TC = %d",
-                                   MAP_config.MAP_dontSend2TC);
+                    TIB_config.TIB_dontSend2TC = uint8_t_val;
+                    log_file_write("config: TIB_dontSend2TC = %d",
+                                   TIB_config.TIB_dontSend2TC);
                     continue;
                 } else {
                     return -1;
@@ -78,15 +78,15 @@ int MAP_config_init()
 
         // LaneSet_table
         if (strstr(buf, "LaneSet_table_start")) {
-            vector_init(MAP_config.lane_list);
+            vector_init(TIB_config.lane_list);
             for (int i = 0; i < COMPASS_NUM; i++)
-                INIT_LIST_HEAD(&MAP_config.lane_compass[i]);
+                INIT_LIST_HEAD(&TIB_config.MAP_lane_compass[i]);
             const char delim[] = ",";
 
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
-                    return MAP_CONFIG_INVALID;
+                    return TIB_CONFIG_INVALID;
 
                 if (strstr(buf, "LaneSet_table_end")) {
                     break;
@@ -107,7 +107,7 @@ int MAP_config_init()
                 index++;
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
                     FreeAndReturnInvalid(str_arr);
-                if (int_val != MAP_config.lane_list.size)
+                if (int_val != TIB_config.lane_list.size)
                     FreeAndReturnInvalid(str_arr);
                 config_lane.config_laneID = int_val;
 
@@ -168,21 +168,21 @@ int MAP_config_init()
                     vector_push_back(config_lane.node_list, node);
                 }
                 vector_free(str_arr);
-                vector_push_back(MAP_config.lane_list, config_lane);
-                MAP_config_lane_t *lane = &vector_at(MAP_config.lane_list, MAP_config.lane_list.size - 1);
+                vector_push_back(TIB_config.lane_list, config_lane);
+                MAP_config_lane_t *lane = &vector_at(TIB_config.lane_list, TIB_config.lane_list.size - 1);
                 INIT_LIST_HEAD(&lane->compass_node);
                 if (compass < COMPASS_NUM) {
-                    list_add_tail(&lane->compass_node, &MAP_config.lane_compass[compass]);
+                    list_add_tail(&lane->compass_node, &TIB_config.MAP_lane_compass[compass]);
                 }
             }
         }
 
         if (strstr(buf, "LaneSet_ConnectsTo_table_start")) {
-            vector_init(MAP_config.connectsTo_list);
+            vector_init(TIB_config.connectsTo_list);
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
-                    return MAP_CONFIG_INVALID;
+                    return TIB_CONFIG_INVALID;
 
                 if (strstr(buf, "LaneSet_ConnectsTo_table_end")) {
                     break;
@@ -200,7 +200,7 @@ int MAP_config_init()
                 index++;
                 if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
                     FreeAndReturnInvalid(str_arr);
-                if (uint8_t_val >= MAP_config.lane_list.size || uint8_t_val < 0)
+                if (uint8_t_val >= TIB_config.lane_list.size || uint8_t_val < 0)
                     FreeAndReturnInvalid(str_arr);
                 connectsTo.config_laneID = uint8_t_val;
 
@@ -217,7 +217,7 @@ int MAP_config_init()
                 for (int i = index; i < index + connect_count; i++) {
                     substr = vector_at(str_arr, i);
                     if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
-                        uint8_t_val >= MAP_config.lane_list.size) {
+                        uint8_t_val >= TIB_config.lane_list.size) {
                         vector_free(connectsTo.left_laneId);
                         FreeAndReturnInvalid(str_arr);
                     }
@@ -237,7 +237,7 @@ int MAP_config_init()
                 for (int i = index; i < index + connect_count; i++) {
                     substr = vector_at(str_arr, i);
                     if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
-                        uint8_t_val >= MAP_config.lane_list.size) {
+                        uint8_t_val >= TIB_config.lane_list.size) {
                         vector_free(connectsTo.left_laneId);
                         vector_free(connectsTo.stright_laneId);
                         FreeAndReturnInvalid(str_arr);
@@ -258,7 +258,7 @@ int MAP_config_init()
                 for (int i = index; i < index + connect_count; i++) {
                     substr = vector_at(str_arr, i);
                     if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
-                        uint8_t_val >= MAP_config.lane_list.size) {
+                        uint8_t_val >= TIB_config.lane_list.size) {
                         vector_free(connectsTo.left_laneId);
                         vector_free(connectsTo.stright_laneId);
                         vector_free(connectsTo.right_laneId);
@@ -267,13 +267,13 @@ int MAP_config_init()
                     vector_push_back(connectsTo.right_laneId, uint8_t_val);
                 }
                 vector_free(str_arr);
-                vector_push_back(MAP_config.connectsTo_list, connectsTo);
+                vector_push_back(TIB_config.connectsTo_list, connectsTo);
             }
         }
     }
 #undef FreeAndReturnInvalid
     fclose(fp);
-    return MAP_CONFIG_ACCEPT;
+    return TIB_CONFIG_ACCEPT;
 }
 
 void print_config_map(MapData *map, char *buf, int buf_len)
@@ -309,7 +309,7 @@ void print_config_map(MapData *map, char *buf, int buf_len)
     for (int i = 0; i < COMPASS_NUM; i++) {
         MAP_config_lane_t *lane, *safe;
         snprintf(buf + strlen(buf), buf_len - strlen(buf), "%s: ", conpass_order[i]);
-        list_for_each_entry_safe(lane, safe, &MAP_config.lane_compass[i], compass_node)
+        list_for_each_entry_safe(lane, safe, &TIB_config.MAP_lane_compass[i], compass_node)
         {
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
         }

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "MAP_config.h"
-#include "MAP_utils.h"
+#include "TIB_config.h"
+#include "TIB_utils.h"
 #include "config.h"
 #include "error_code_user.h"
 #include "j2735_codec.h"
@@ -36,12 +36,12 @@ void map_msg_init(MapData *map)
     intersection->refPoint.elevation_option = TRUE;
     intersection->refPoint.elevation = config.RSU_elev * 10000000;
 
-    intersection->laneSet.count = MAP_config.lane_list.size;
+    intersection->laneSet.count = TIB_config.lane_list.size;
     Malloc(intersection->laneSet.tab, sizeof(GenericLane) * intersection->laneSet.count, "GenericLane");
 
     for (int i = 0; i < intersection->laneSet.count; i++) {
         GenericLane *lane = &intersection->laneSet.tab[i];
-        MAP_config_lane_t *config_lane = &vector_at(MAP_config.lane_list, i);
+        MAP_config_lane_t *config_lane = &vector_at(TIB_config.lane_list, i);
 
         // bit 5-8 為 Approach
         lane->laneID = ((config_lane->approach << 5) & 0b11100000);
