@@ -60,11 +60,11 @@ void map_msg_init(MapData **map_ptr)
         Malloc(lane->laneAttributes.directionalUse.buf, 1, "directionalUse");
         if (config_lane->direction == LaneDirection_ingressPath) {
             lane->egressApproach_option = TRUE;
-            lane->egressApproach = LaneDirection_ingressPath;
+            lane->egressApproach = config_lane->approach;
             asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath);
         } else {
             lane->ingressApproach_option = TRUE;
-            lane->ingressApproach = LaneDirection_egressPath;
+            lane->ingressApproach = config_lane->approach;
             asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_egressPath);
         }
 
@@ -88,22 +88,19 @@ void map_msg_init(MapData **map_ptr)
 
 void map_connectTo_clean(MapData *map)
 {
-    if (map->intersections_option == FALSE && map->intersections.count <= 0)
+    if (map->intersections.count <= 0)
         return;
     LaneList *laneList = &map->intersections.tab[0].laneSet;
     for (int i = 0; i < laneList->count; i++) {
-        if (laneList->tab[i].connectsTo_option == FALSE)
-            continue;
         laneList->tab[i].connectsTo_option = FALSE;
         laneList->tab[i].connectsTo.count = 0;
     }
 }
 
-#define RroundHeadGreen 0b00100000
-#define LeftGreen 0b00010000
-#define StrightGreen 0b00001000
-#define RightGreen 0b00000100
-const uint8_t GreenMasks[] = {RroundHeadGreen, LeftGreen, StrightGreen, RightGreen};
+#define RroundHeadGreen 0b00000100
+#define LeftGreen 0b00001000
+#define StrightGreen 0b00010000
+#define RightGreen 0b00100000
 
 void map_signal_group(MapData *map)
 {
@@ -119,18 +116,55 @@ void map_signal_group(MapData *map)
             map_table[i++] = j;
         }
     }
+
+#define set_compass_connectsTo(compass)                                         \
+    do {                                                                        \
+        for (int k = 0; k < config_connectTo->compass.size; k++) {              \
+            uint8_t connectTo_laneId = vector_at(config_connectTo->compass, k); \
+            lane->connectsTo_option = TRUE;                                     \
+            lane->connectsTo.tab[connectsTo_count].connectingLane.lane =        \
+                laneSet->tab[connectTo_laneId].laneID;                          \
+            lane->connectsTo.tab[connectsTo_count].signalGroup_option = TRUE;   \
+            lane->connectsTo.tab[connectsTo_count].signalGroup = signalGroupID; \
+            lane->connectsTo.count = ++connectsTo_count;                        \
+        }                                                                       \
+    } while (0)
+
+#define search_signal_compass(signalMask, setFunc)                                   \
+    do {                                                                             \
+        if (signal_status.phaseorder_plan[i][j].SignalStatus & signalMask &&         \
+            signalGroupID <= 255) {                                                  \
+            for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {              \
+                MAP_config_connectsTo_t *config_connectTo =                          \
+                    &vector_at(TIB_config.connectsTo_list, i);                       \
+                int connectsTo_count = lane->connectsTo.count;                       \
+                if (config_connectTo->config_laneID == config_lane->config_laneID) { \
+                    setFunc                                                          \
+                }                                                                    \
+            }                                                                        \
+            ++signalGroupID;                                                         \
+        }                                                                            \
+    } while (0)
+
     int signalGroupID = 1;
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
             struct list_head *head = &TIB_config.MAP_lane_compass[map_table[i]];
-            MAP_config_lane_t *lane, *safe;
-            list_for_each_entry_safe(lane, safe, head, compass_node)
+            MAP_config_lane_t *config_lane, *safe;
+            list_for_each_entry_safe(config_lane, safe, head, compass_node)
             {
-                printf("%d ", lane->config_laneID);
+                GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
+                search_signal_compass(RroundHeadGreen, set_compass_connectsTo(left_laneId);
+                                      set_compass_connectsTo(stright_laneId);
+                                      set_compass_connectsTo(right_laneId););
+                search_signal_compass(LeftGreen, set_compass_connectsTo(left_laneId););
+                search_signal_compass(StrightGreen, set_compass_connectsTo(stright_laneId););
+                search_signal_compass(RightGreen, set_compass_connectsTo(right_laneId););
             }
-            printf("\n");
         }
     }
+#undef set_compass_connectsTo
+#undef search_signal_compass
 }
 
 void map_msg_update(MapData *map)

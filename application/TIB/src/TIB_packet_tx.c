@@ -22,12 +22,13 @@ void MAP_packet_tx(__sigval_t value)
     uint8_t SubPhaseCount = get_SubPhaseCount();
     if (SubPhaseCount > 0) {
         uint8_t phaseOrder = get_PhaseOrder();
-        if (1) {
-            // update map
+        if (PhaseOrder != phaseOrder) {
+            PhaseOrder = phaseOrder;
             printf("update map information\r\n");
             map_msg_update(map);
-            PhaseOrder = phaseOrder;
+            map_print(map);
         }
+        // 剛啟動先沒有 connectTo
         OBU_j2735_tx(MapData_Id, map);
     }
 }
