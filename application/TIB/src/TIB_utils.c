@@ -149,7 +149,7 @@ void map_signal_group(MapData *map)
     int signalGroupID = 1;
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
-            struct list_head *head = &TIB_config.MAP_lane_compass[map_table[i]];
+            struct list_head *head = &TIB_config.MAP_lane_compass[map_table[j]];
             MAP_config_lane_t *config_lane, *safe;
             list_for_each_entry_safe(config_lane, safe, head, compass_node)
             {

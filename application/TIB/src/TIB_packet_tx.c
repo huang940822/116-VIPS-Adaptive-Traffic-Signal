@@ -15,20 +15,12 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-static uint8_t PhaseOrder = 255;
-
 void MAP_packet_tx(__sigval_t value)
 {
     uint8_t SubPhaseCount = get_SubPhaseCount();
     if (SubPhaseCount > 0) {
-        uint8_t phaseOrder = get_PhaseOrder();
-        if (PhaseOrder != phaseOrder) {
-            PhaseOrder = phaseOrder;
-            printf("update map information\r\n");
-            map_msg_update(map);
-            map_print(map);
-        }
-        // 剛啟動先沒有 connectTo
+        map_msg_update(map);
+        map_print(map);
         OBU_j2735_tx(MapData_Id, map);
     }
 }
