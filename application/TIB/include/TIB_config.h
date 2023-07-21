@@ -54,6 +54,7 @@ typedef struct TIB_config_object {
     vector_t(MAP_config_lane_t) lane_list;
     vector_t(MAP_config_connectsTo_t) connectsTo_list;
     uint8_t MAP_packet_transfer_speed;
+    uint8_t SPaT_packet_transfer_speed;
     // N NE E SE S S W NW
     struct list_head MAP_lane_compass[COMPASS_NUM];
     uint8_t TIB_dontSend2TC;

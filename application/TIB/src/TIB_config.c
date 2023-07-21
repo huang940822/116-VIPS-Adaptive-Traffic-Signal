@@ -11,6 +11,7 @@
 
 TIB_config_object_t TIB_config = {
     .MAP_packet_transfer_speed = 1,
+    .SPaT_packet_transfer_speed = 10,
     .TIB_dontSend2TC = 1,
     .lane_list = {0},
     .connectsTo_list = {0},

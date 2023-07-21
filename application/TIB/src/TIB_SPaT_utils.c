@@ -1,4 +1,4 @@
-#include "SPaT_utils.h"
+#include "TIB_SPaT_utils.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +6,8 @@
 #include <time.h>
 #include "config.h"
 #include "log.h"
+
+SPAT *p_spat;
 
 struct tc_now_time tc_store_time = {
     .Sec = 0,

@@ -10,7 +10,6 @@
 #include "EVSP.h"
 #include "TSP.h"
 #include "CPS.h"
-#include "SPaT.h"
 #include "TIB.h"
 #include "SPM.h"
 

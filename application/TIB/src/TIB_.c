@@ -9,7 +9,7 @@
 #include "TIB.h"
 #include "TIB_config.h"
 #include "TIB_packet_tx.h"
-#include "TIB_utils.h"
+#include "TIB_MAP_utils.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"

@@ -1,5 +1,5 @@
-#ifndef TIB_UTILS_H
-#define TIB_UTILS_H
+#ifndef TIB_MAP_UTILS_H
+#define TIB_MAP_UTILS_H
 
 #include <stdint.h>
 #include "j2735_map.h"

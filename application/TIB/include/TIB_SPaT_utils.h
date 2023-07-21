@@ -1,22 +1,17 @@
-#ifndef SPAT_UTILS_H
-#define SPAT_UTILS_H
+#ifndef TIB_SPAT_UTILS_H
+#define TIB_SPAT_UTILS_H
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include "j2735_codec.h"
-#include "SPaT_config.h"
+#include "TIB_config.h"
 #include "traffic_signal_status_updating.h"
 
 #define MAX_NUM_SIGNAL_GROUP 2
 #define to_TimeMark(tmark) \
     (((tmark).min * 60 * 10) + ((tmark).sec * 10) + ((tmark).ms / 100))
-
-extern SPaT_config_object_t SPaT_config;
-/* A fake signal phase and time */
-
-extern struct SPaT_config_intersection_info intersection_info;
 
 typedef enum {
     SIGNAL_INVALID,
@@ -47,4 +42,7 @@ int spat_msg_update(SPAT **pp_spat);
 void print_spat(SPAT **pp_spat);
 int leapYear(int a);
 int calDate(int year, int month, int day);
+
+extern SPAT *p_spat;
+
 #endif
