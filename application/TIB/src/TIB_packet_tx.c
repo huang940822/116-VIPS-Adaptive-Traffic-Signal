@@ -82,7 +82,7 @@ void *SPaT_packet_tx_loop()
             continue;
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
-        if (spat_msg_update(&p_spat) < 0) {
+        if (spat_msg_update(p_spat) < 0) {
             continue;
         }
         OBU_j2735_tx(SPAT_Id, p_spat);
