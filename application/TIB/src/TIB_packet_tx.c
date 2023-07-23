@@ -22,7 +22,7 @@ void MAP_packet_tx(__sigval_t value)
     uint8_t SubPhaseCount = get_SubPhaseCount();
     if (SubPhaseCount > 0) {
         map_msg_update(map);
-        map_print(map);
+        // map_print(map);
         OBU_j2735_tx(MapData_Id, map);
     }
 }
