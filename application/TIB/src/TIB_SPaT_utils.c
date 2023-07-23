@@ -57,6 +57,7 @@ int spat_msg_init(SPAT **pp_spat)
 
 int spat_msg_update(SPAT *pp_spat)
 {
+    printf("awdwd\n");
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
     if (signal_status.SubPhaseID == 0 || signal_status.StepID == 0)
@@ -81,16 +82,67 @@ int spat_msg_update(SPAT *pp_spat)
         for (int j = 0; j < signal_status.SignalCount; j++) {
             if (signal_status.phaseorder_plan[i][j].SignalStatus & RroundHeadGreen && signalGroupID <= 255) {
                 MovementState *state = &statesList->tab[statesList->count++];
+                state->state_time_speed.count = 0;
                 state->signalGroup = signalGroupID;
 
                 if (i == signal_status.SubPhaseID - 1) {
-                    if (signal_status.StepID == 1) {
-                        int index = state->state_time_speed.count++;
+                    int index = state->state_time_speed.count++;
+                    int offset = signal_status.StepSec;
+                    state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                    state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+                    if (signal_status.StepID == 1 || signal_status.StepID == 2 || signal_status.StepID == 3) {
                         state->state_time_speed.tab[index].eventState = MovementPhaseState_permissive_Movement_Allowed;
-                        state->state_time_speed.tab[index].timing.minEndTime =
-                            (timeinfo->tm_min * 60 + timeinfo->tm_sec + signal_status.StepSec) * 10;
-                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
                         state->state_time_speed.tab[index].timing.startTime = -(signal_status.plan[i].Green - signal_status.StepSec);
+
+                        index = state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_protected_clearance;
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        state->state_time_speed.tab[index].timing.startTime = offset;
+                        offset += signal_status.plan[i].Yellow;
+                        state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+                        index = state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        state->state_time_speed.tab[index].timing.startTime = offset;
+                        offset += signal_status.plan[i].AllRed;
+                        state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+                    } else if (signal_status.StepID == 4) {
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_protected_clearance;
+                        state->state_time_speed.tab[index].timing.startTime = -(signal_status.plan[i].Yellow - signal_status.StepSec);
+
+                        index = state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        state->state_time_speed.tab[index].timing.startTime = offset;
+                        offset += signal_status.plan[i].Yellow;
+                        state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+                        index = state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_permissive_Movement_Allowed;
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        state->state_time_speed.tab[index].timing.startTime = offset;
+                        offset += signal_status.plan[i].AllRed;
+                        state->state_time_speed.tab[index].timing.minEndTime = offset;
+                    } else if (signal_status.StepID == 5) {
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
+                        state->state_time_speed.tab[index].timing.startTime = -(signal_status.plan[i].AllRed - signal_status.StepSec);
+
+                        index = state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_permissive_Movement_Allowed;
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        state->state_time_speed.tab[index].timing.startTime = offset;
+                        offset += signal_status.plan[i].Yellow;
+                        state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+                        index = state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_protected_clearance;
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        state->state_time_speed.tab[index].timing.startTime = offset;
+                        offset += signal_status.plan[i].AllRed;
+                        state->state_time_speed.tab[index].timing.minEndTime = offset;
                     }
                 } else {
                     int index = state->state_time_speed.count++;
@@ -120,6 +172,21 @@ int spat_msg_update(SPAT *pp_spat)
                         offset += signal_status.plan[k].Yellow;
                         offset += signal_status.plan[k].AllRed;
                     }
+                    state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+
+                    index = state->state_time_speed.count++;
+                    state->state_time_speed.tab[index].eventState = MovementPhaseState_permissive_Movement_Allowed;
+                    state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                    state->state_time_speed.tab[index].timing.startTime = offset;
+                    offset += signal_status.plan[i].Green;
+                    state->state_time_speed.tab[index].timing.minEndTime = offset;
+
+                    index = state->state_time_speed.count++;
+                    state->state_time_speed.tab[index].eventState = MovementPhaseState_protected_clearance;
+                    state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                    state->state_time_speed.tab[index].timing.startTime = offset;
+                    offset += signal_status.plan[i].Yellow;
                     state->state_time_speed.tab[index].timing.minEndTime = offset;
                 }
             }

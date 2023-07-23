@@ -13,16 +13,6 @@
 #define to_TimeMark(tmark) \
     (((tmark).min * 60 * 10) + ((tmark).sec * 10) + ((tmark).ms / 100))
 
-typedef enum {
-    SIGNAL_INVALID,
-    /* mapping to state listed in J2735 */
-    SIGNAL_GREEN = MovementPhaseState_permissive_Movement_Allowed,
-    /* mapping to state listed in J2735 */
-    SIGNAL_YELLOW = MovementPhaseState_protected_clearance,
-    /* mapping to state listed in J2735 */
-    SIGNAL_RED = MovementPhaseState_stop_And_Remain,
-} signal_t;
-
 /* TimeMark: minute, second and ms of UTC. */
 typedef struct timemark {
     unsigned int min;

@@ -7,9 +7,10 @@
 #include <unistd.h>
 
 #include "TIB.h"
+#include "TIB_MAP_utils.h"
+#include "TIB_SPaT_utils.h"
 #include "TIB_config.h"
 #include "TIB_packet_tx.h"
-#include "TIB_MAP_utils.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"
@@ -138,4 +139,8 @@ int TIB_on_registration(void *arg)
               (int) ((1000000000 / TIB_config.MAP_packet_transfer_speed) % 1000000000),
               (int) (1 / TIB_config.MAP_packet_transfer_speed),
               (int) ((1000000000 / TIB_config.MAP_packet_transfer_speed) % 1000000000));
+
+    spat_msg_init(&p_spat);
+    pthread_t SPaT_packet_tx_thread;
+    ret = pthread_create(&SPaT_packet_tx_thread, NULL, SPaT_packet_tx_loop, NULL);
 }

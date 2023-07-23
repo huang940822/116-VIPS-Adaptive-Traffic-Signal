@@ -27,30 +27,6 @@ void MAP_packet_tx(__sigval_t value)
     }
 }
 
-void TIB_send_ack()
-{
-    msg_buf_t write_buf;
-    write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("TIB_send_ack: malloc");
-        perror("TIB_send_ack: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
-
-    // cmd
-    write_uint8_t(0, &write_buf);
-    write_uint8_t(0, &write_buf);
-
-    cloud_packet_tx(write_buf.index, TIB.id, write_buf.content);
-    free(write_buf.content);
-    return;
-}
-
 void *SPaT_packet_tx_loop()
 {
     // sleep(1);
@@ -78,8 +54,7 @@ void *SPaT_packet_tx_loop()
     int tx_buf_len = 0;
     while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
-        if (TIB_config.TIB_dontSend2TC)
-            continue;
+            printf("dwqdqwdqw\n");
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
         if (spat_msg_update(p_spat) < 0) {
@@ -90,15 +65,15 @@ void *SPaT_packet_tx_loop()
     close(fd);
 }
 
-void SPaT_send_ack()
+void TIB_send_ack()
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("SPaT_send_ack: malloc");
-        perror("SPaT_send_ack: malloc");
+        log_file_write_fatal_error("TIB_send_ack: malloc");
+        perror("TIB_send_ack: malloc");
         exit(errno);
     } else {
         clear_memory_error();
