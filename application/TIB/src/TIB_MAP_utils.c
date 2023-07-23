@@ -106,12 +106,6 @@ void map_signal_group(MapData *map)
 {
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
-    printf("signal_status.StepSec %d\n", signal_status.StepSec);
-    printf("signal_status.StepID %d\n", signal_status.StepID);
-    printf("signal_status.plan[0].PedGreenFlash %d\n", signal_status.plan[0].PedGreenFlash);
-    printf("signal_status.plan[0].PedRed %d\n", signal_status.plan[0].PedRed);
-    
-
 
     map_connectTo_clean(map);
     LaneList *laneSet = &map->intersections.tab->laneSet;

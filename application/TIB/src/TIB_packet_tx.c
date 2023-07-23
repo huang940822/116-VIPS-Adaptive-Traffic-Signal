@@ -54,7 +54,6 @@ void *SPaT_packet_tx_loop()
     int tx_buf_len = 0;
     while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
-            printf("dwqdqwdqw\n");
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
         if (spat_msg_update(p_spat) < 0) {
