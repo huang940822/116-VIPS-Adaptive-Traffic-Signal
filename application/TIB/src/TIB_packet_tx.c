@@ -59,6 +59,7 @@ void *SPaT_packet_tx_loop()
         if (spat_msg_update(p_spat) < 0) {
             continue;
         }
+        // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);
     }
     close(fd);

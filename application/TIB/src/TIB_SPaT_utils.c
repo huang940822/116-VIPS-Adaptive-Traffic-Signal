@@ -56,16 +56,21 @@ int spat_msg_init(SPAT **pp_spat)
 #define RightGreen 0b00100000
 const uint8_t signal_mask_arr[] = {RroundHeadGreen, LeftGreen, StrightGreen, RightGreen};
 
-#define after_cur_step(_eventState, _signalType)                           \
-    do {                                                                   \
-        index = state->state_time_speed.count++;                           \
-        state->state_time_speed.tab[index].eventState = _eventState;       \
-        state->state_time_speed.tab[index].timing.startTime_option = TRUE; \
-        state->state_time_speed.tab[index].timing.startTime = offset;      \
-        printf("%d ", offset);                                             \
-        offset += signal_status->plan[i]._signalType;                      \
-        state->state_time_speed.tab[index].timing.minEndTime = offset;     \
-        printf("%d ,", offset);                                            \
+#define to_TimeMark(tmark) \
+    ((timeinfo->tm_min * 60 + timeinfo->tm_sec + (tmark) + 3600) % 3600) * 10
+
+#define after_cur_step(_eventState, _offset_signalTime, extra_func)                 \
+    do {                                                                            \
+        index = state->state_time_speed.count++;                                    \
+        state->state_time_speed.tab[index].eventState = _eventState;                \
+        state->state_time_speed.tab[index].timing_option = TRUE;                    \
+        state->state_time_speed.tab[index].timing.startTime_option = TRUE;          \
+        state->state_time_speed.tab[index].timing.startTime = to_TimeMark(offset);  \
+        printf("%d ", offset);                                                      \
+        _offset_signalTime;                                                         \
+        extra_func;                                                                 \
+        state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset); \
+        printf("%d ,", offset);                                                     \
     } while (0)
 
 #define run_a_cycle()                                                   \
@@ -78,44 +83,35 @@ const uint8_t signal_mask_arr[] = {RroundHeadGreen, LeftGreen, StrightGreen, Rig
         }                                                               \
     } while (0)
 
-static void inline spat_set_state(MovementState *state, traffic_signal_status_t *signal_status, MovementPhaseState greenType, int i)
+static void inline spat_set_state(MovementState *state, traffic_signal_status_t *signal_status, MovementPhaseState greenType, int i, struct tm *timeinfo)
 {
     state->state_time_speed.count = 0;
     int cur_subphase = signal_status->SubPhaseID - 1;
+    int index = state->state_time_speed.count;
+    state->state_time_speed.tab[index].timing_option = TRUE;
+    state->state_time_speed.tab[index].timing.startTime_option = TRUE;
     if (i == cur_subphase) {
-        int index = state->state_time_speed.count++;
-        int offset = signal_status->StepSec;
-        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
-        state->state_time_speed.tab[index].timing.minEndTime = offset;
-        printf("%d ", offset);
-
         if (signal_status->StepID == 1 || signal_status->StepID == 2 || signal_status->StepID == 3) {
-            state->state_time_speed.tab[index].eventState = greenType;
-            state->state_time_speed.tab[index].timing.startTime = -(signal_status->plan[i].Green - signal_status->StepSec);
-            printf("%d ,", -(signal_status->plan[i].Green - signal_status->StepSec));
+            int offset = -(signal_status->plan[i].Green - signal_status->StepSec);
 
-            after_cur_step(MovementPhaseState_protected_clearance, Yellow);
-            after_cur_step(MovementPhaseState_stop_And_Remain, AllRed);
+            after_cur_step(greenType, offset = signal_status->StepSec, );
+            after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status->plan[i].Yellow, );
+            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status->plan[i].AllRed, run_a_cycle());
         } else if (signal_status->StepID == 4) {
-            state->state_time_speed.tab[index].eventState = MovementPhaseState_protected_clearance;
-            state->state_time_speed.tab[index].timing.startTime = -(signal_status->plan[i].Yellow - signal_status->StepSec);
-            printf("%d ,", -(signal_status->plan[i].Yellow - signal_status->StepSec));
+            int offset = -(signal_status->plan[i].Yellow - signal_status->StepSec);
 
-            after_cur_step(MovementPhaseState_stop_And_Remain, AllRed);
-            run_a_cycle();
-            after_cur_step(greenType, Green);
-
+            after_cur_step(MovementPhaseState_protected_clearance, offset = signal_status->StepSec, );
+            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status->plan[i].AllRed, run_a_cycle());
+            after_cur_step(greenType, offset += signal_status->plan[i].Green, );
         } else if (signal_status->StepID == 5) {
-            state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
-            state->state_time_speed.tab[index].timing.startTime = -(signal_status->plan[i].AllRed - signal_status->StepSec);
-            printf("%d ,", -(signal_status->plan[i].AllRed - signal_status->StepSec));
+            int offset = -(signal_status->plan[i].AllRed - signal_status->StepSec);
 
-            run_a_cycle();
-            after_cur_step(greenType, Green);
-            after_cur_step(MovementPhaseState_protected_clearance, Yellow);
+            after_cur_step(MovementPhaseState_stop_And_Remain, offset = signal_status->StepSec;, run_a_cycle());
+            after_cur_step(greenType, offset += signal_status->plan[i].Green, );
+            after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status->plan[i].Yellow, );
         }
     } else {
-        int index = state->state_time_speed.count++;
+        state->state_time_speed.count++;
         state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
         uint32_t offset = 0;
         offset += signal_status->StepID >= 1 ? signal_status->plan[cur_subphase].Green : 0;
@@ -133,7 +129,7 @@ static void inline spat_set_state(MovementState *state, traffic_signal_status_t 
             offset += signal_status->plan[k].AllRed;
         }
         state->state_time_speed.tab[index].timing.startTime_option = TRUE;
-        state->state_time_speed.tab[index].timing.startTime = -offset;
+        state->state_time_speed.tab[index].timing.startTime = to_TimeMark(-offset);
         printf("*%d ", -offset);
 
         offset = signal_status->StepSec;
@@ -143,11 +139,11 @@ static void inline spat_set_state(MovementState *state, traffic_signal_status_t 
         offset += signal_status->StepID <= 4 ? signal_status->plan[i].AllRed : 0;
 
         run_a_cycle();
-        state->state_time_speed.tab[index].timing.minEndTime = offset;
+        state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
         printf("%d ,", offset);
 
-        after_cur_step(greenType, Green);
-        after_cur_step(MovementPhaseState_protected_clearance, Yellow);
+        after_cur_step(greenType, offset += signal_status->plan[i].Green, );
+        after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status->plan[i].Yellow, );
     }
     printf("\n");
 }
@@ -156,20 +152,17 @@ int spat_msg_update(SPAT *pp_spat)
 {
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
-    if (signal_status.SubPhaseID == 0 || signal_status.StepID == 0)
+    if (signal_status.SubPhaseID == 0 || signal_status.StepID == 0 ||
+        signal_status.SubPhaseCount == 0 || signal_status.SignalCount == 0)
         return -1;
-
-    printf("signal_status.StepSec %d\n", signal_status.StepSec);
-    printf("signal_status.StepID %d\n", signal_status.StepID);
-    printf("signal_status.SubPhaseID %d\n", signal_status.SubPhaseID);
-    printf("signal_status.SubPhaseCount %d\n", signal_status.SubPhaseCount);
 
     IntersectionState *int_state = pp_spat->intersections.tab;
     int_state->revision = (int_state->revision + 1) & 0b1111111;
 
     time_t rawtime;
     time(&rawtime);
-    struct tm *timeinfo = localtime(&rawtime);
+    struct tm result;
+    struct tm *timeinfo = localtime_r(&rawtime, &result);
 
     int_state->timeStamp_option = TRUE;
     int_state->timeStamp = timeinfo->tm_sec * 1000;
@@ -184,70 +177,47 @@ int spat_msg_update(SPAT *pp_spat)
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
             for (int k = 0; k < sizeof(signal_mask_arr); k++) {
-                if (signal_status.phaseorder_plan[i][j].SignalStatus & signal_mask_arr[i] && signalGroupID <= 255) {
+                if (signal_status.phaseorder_plan[i][j].SignalStatus & signal_mask_arr[k] && signalGroupID <= 255) {
                     MovementState *state = &statesList->tab[statesList->count++];
                     state->signalGroup = signalGroupID++;
                     if (k == 0) {
-                        printf("222-----\n");
-                        spat_set_state(state, &signal_status, MovementPhaseState_protected_Movement_Allowed, i);
+                        spat_set_state(state, &signal_status, MovementPhaseState_permissive_Movement_Allowed, i, timeinfo);
                     } else {
-                        printf("333-----\n");
-                        spat_set_state(state, &signal_status, MovementPhaseState_protected_Movement_Allowed, i);
+                        spat_set_state(state, &signal_status, MovementPhaseState_protected_Movement_Allowed, i, timeinfo);
                     }
                 }
             }
         }
     }
+    if (statesList->count == 0)
+        return -1;
     return 1;
 }
 
-void print_spat(SPAT **pp_spat)
+void spat_printf(SPAT *pp_spat)
 {
-    IntersectionState *int_state = (*pp_spat)->intersections.tab;
+    IntersectionState *int_state = pp_spat->intersections.tab;
     printf("nowtime : %d\n", int_state->timeStamp);
     printf("moy : %d\n", int_state->moy);
     printf("region : %d\n", int_state->id.region);
     printf("id : %d\n", int_state->id.id);
     for (int i = 0; i < int_state->states.count; i++) {
-        printf("sigmalGroup : %d\n", int_state->states.tab[i].signalGroup);
+        MovementState *state = &int_state->states.tab[i];
+        printf("\nsigmalGroup : %d %d\n", state->signalGroup, state->state_time_speed.count);
 
-        if (int_state->states.tab[i].state_time_speed.tab[0].timing_option) {
-            if (int_state->states.tab[i]
-                    .state_time_speed.tab[0]
-                    .timing.startTime_option)
-                printf("green startTime : %d\n", int_state->states.tab[i]
-                                                     .state_time_speed.tab[0]
-                                                     .timing.startTime);
-            printf("green minEndTime : %d\n", int_state->states.tab[i]
-                                                  .state_time_speed.tab[0]
-                                                  .timing.minEndTime);
-            printf("\n");
-        }
-
-        if (int_state->states.tab[i].state_time_speed.tab[1].timing_option) {
-            if (int_state->states.tab[i]
-                    .state_time_speed.tab[1]
-                    .timing.startTime_option)
-                printf("yellow startTime : %d\n", int_state->states.tab[i]
-                                                      .state_time_speed.tab[1]
-                                                      .timing.startTime);
-            printf("yellow minEndTime : %d\n", int_state->states.tab[i]
-                                                   .state_time_speed.tab[1]
-                                                   .timing.minEndTime);
-            printf("\n");
-        }
-
-        if (int_state->states.tab[i].state_time_speed.tab[2].timing_option) {
-            if (int_state->states.tab[i]
-                    .state_time_speed.tab[2]
-                    .timing.startTime_option)
-                printf("red startTime : %d\n", int_state->states.tab[i]
-                                                   .state_time_speed.tab[2]
-                                                   .timing.startTime);
-            printf("red minEndTime : %d\n", int_state->states.tab[i]
-                                                .state_time_speed.tab[2]
-                                                .timing.minEndTime);
-            printf("\n");
+        for (int j = 0; j < state->state_time_speed.count; j++) {
+            if (state->state_time_speed.tab[j].timing_option == TRUE) {
+                if (state->state_time_speed.tab[j].eventState == MovementPhaseState_permissive_Movement_Allowed)
+                    printf("round green\n");
+                else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_protected_Movement_Allowed)
+                    printf("arrow green\n");
+                else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_protected_clearance)
+                    printf("yallow\n");
+                else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_stop_And_Remain)
+                    printf("red\n");
+                printf(" startTime : %d ", state->state_time_speed.tab[j].timing.startTime);
+                printf(" minEndTime : %d\n", state->state_time_speed.tab[j].timing.minEndTime);
+            }
         }
     }
 }
