@@ -11,7 +11,7 @@
 
 TIB_config_object_t TIB_config = {
     .MAP_packet_transfer_speed = 1,
-    .SPaT_packet_transfer_speed = 1,
+    .SPaT_packet_transfer_speed = 10,
     .TIB_dontSend2TC = 1,
     .lane_list = {0},
     .connectsTo_list = {0},
@@ -59,6 +59,21 @@ int TIB_config_init()
                 }
             } else {
                 return TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
+            }
+        }
+
+        // SPaT_packet_transfer_speed
+        if (strstr(buf, "SPaT_packet_transfer_speed ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    TIB_config.SPaT_packet_transfer_speed = uint8_t_val;
+                    log_file_write("config: SPaT_packet_transfer_speed = %d", TIB_config.SPaT_packet_transfer_speed);
+                    continue;
+                } else {
+                    return TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
+                }
+            } else {
+                return TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
             }
         }
 

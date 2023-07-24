@@ -66,11 +66,9 @@ const uint8_t signal_mask_arr[] = {RroundHeadGreen, LeftGreen, StrightGreen, Rig
         state->state_time_speed.tab[index].timing_option = TRUE;                    \
         state->state_time_speed.tab[index].timing.startTime_option = TRUE;          \
         state->state_time_speed.tab[index].timing.startTime = to_TimeMark(offset);  \
-        printf("%d ", offset);                                                      \
         _offset_signalTime;                                                         \
         extra_func;                                                                 \
         state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset); \
-        printf("%d ,", offset);                                                     \
     } while (0)
 
 #define run_a_cycle()                                                   \
@@ -130,7 +128,6 @@ static void inline spat_set_state(MovementState *state, traffic_signal_status_t 
         }
         state->state_time_speed.tab[index].timing.startTime_option = TRUE;
         state->state_time_speed.tab[index].timing.startTime = to_TimeMark(-offset);
-        printf("*%d ", -offset);
 
         offset = signal_status->StepSec;
         offset += signal_status->StepID <= 1 ? signal_status->plan[i].PedGreenFlash : 0;
@@ -140,12 +137,10 @@ static void inline spat_set_state(MovementState *state, traffic_signal_status_t 
 
         run_a_cycle();
         state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
-        printf("%d ,", offset);
 
         after_cur_step(greenType, offset += signal_status->plan[i].Green, );
         after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status->plan[i].Yellow, );
     }
-    printf("\n");
 }
 
 int spat_msg_update(SPAT *pp_spat)

@@ -39,8 +39,9 @@ typedef struct MAP_config_connectsTo {
 typedef enum TIB_config_err {
     TIB_CONFIG_ACCEPT = 0,
     TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED = -1,
-    TIB_CONFIG_INVALID = -2,
-    TIB_CONFIG_INVALID_OPEN_FILE = -3,
+    TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED = -2,
+    TIB_CONFIG_INVALID = -3,
+    TIB_CONFIG_INVALID_OPEN_FILE = -4,
 } TIB_config_err_t;
 
 #define COMPASS_NUM 8
