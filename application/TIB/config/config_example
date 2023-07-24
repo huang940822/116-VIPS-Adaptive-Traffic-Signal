@@ -84,3 +84,16 @@ LaneSet_ConnectsTo_table_start
 14, 0,             1, 3,  0
 15, 0,             1, 4,  1, 8
 LaneSet_ConnectsTo_table_end
+
+# SignalGroupID 0 ~ 255
+# IngressAngle 車輛駛入的角度 
+# 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北
+# SignalGreenType 
+# 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
+SignalGroupID_table_start 0
+# SignalGroupID, IngressAngle, SignalGreenType
+1, 0, 0
+2, 4, 0
+3, 2, 0
+4, 6, 0
+SignalGroupID_mapping_table_end

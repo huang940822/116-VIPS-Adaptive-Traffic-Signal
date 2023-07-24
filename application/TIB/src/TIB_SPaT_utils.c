@@ -1,9 +1,11 @@
-#include "TIB_SPaT_utils.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include "TIB_SPaT_utils.h"
+#include "TIB_utils.h"
 #include "config.h"
 #include "log.h"
 
@@ -50,10 +52,6 @@ int spat_msg_init(SPAT **pp_spat)
     return 0;
 }
 
-#define RroundHeadGreen 0b00000100
-#define LeftGreen 0b00001000
-#define StrightGreen 0b00010000
-#define RightGreen 0b00100000
 const uint8_t signal_mask_arr[] = {RroundHeadGreen, LeftGreen, StrightGreen, RightGreen};
 
 #define to_TimeMark(tmark) \
