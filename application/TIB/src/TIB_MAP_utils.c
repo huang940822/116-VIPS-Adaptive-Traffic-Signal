@@ -6,6 +6,7 @@
 
 #include "TIB_MAP_utils.h"
 #include "TIB_config.h"
+#include "TIB_utils.h"
 #include "config.h"
 #include "error_code_user.h"
 #include "j2735_codec.h"
@@ -97,11 +98,6 @@ void map_connectTo_clean(MapData *map)
     }
 }
 
-#define RroundHeadGreen 0b00000100
-#define LeftGreen 0b00001000
-#define StrightGreen 0b00010000
-#define RightGreen 0b00100000
-
 void map_signal_group(MapData *map)
 {
     traffic_signal_status_t signal_status;
@@ -109,13 +105,6 @@ void map_signal_group(MapData *map)
 
     map_connectTo_clean(map);
     LaneList *laneSet = &map->intersections.tab->laneSet;
-
-    int map_table[COMPASS_NUM] = {0};
-    for (uint8_t mask = 1, i = 0, j = 0; mask != 0; mask = mask << 1, j++) {
-        if (mask & signal_status.SignalMap) {
-            map_table[i++] = j;
-        }
-    }
 
 #define set_compass_connectsTo(compass)                                         \
     do {                                                                        \
@@ -132,7 +121,7 @@ void map_signal_group(MapData *map)
 
 #define search_signal_compass(signalMask, setFunc)                                   \
     do {                                                                             \
-        if (signal_status.phaseorder_plan[i][j].SignalStatus & signalMask &&         \
+        if (greenSignalMap[i] & signalMask &&         \
             signalGroupID <= 255) {                                                  \
             for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {              \
                 MAP_config_connectsTo_t *config_connectTo =                          \
@@ -142,27 +131,39 @@ void map_signal_group(MapData *map)
                     setFunc                                                          \
                 }                                                                    \
             }                                                                        \
-            ++signalGroupID;                                                         \
         }                                                                            \
     } while (0)
 
-    int signalGroupID = 1;
-    for (int i = 0; i < signal_status.SubPhaseCount; i++) {
-        for (int j = 0; j < signal_status.SignalCount; j++) {
-            struct list_head *head = &TIB_config.MAP_lane_compass[map_table[j]];
-            MAP_config_lane_t *config_lane, *safe;
-            list_for_each_entry_safe(config_lane, safe, head, compass_node)
-            {
-                GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
-                search_signal_compass(RroundHeadGreen, set_compass_connectsTo(left_laneId);
-                                      set_compass_connectsTo(stright_laneId);
-                                      set_compass_connectsTo(right_laneId););
-                search_signal_compass(LeftGreen, set_compass_connectsTo(left_laneId););
-                search_signal_compass(StrightGreen, set_compass_connectsTo(stright_laneId););
-                search_signal_compass(RightGreen, set_compass_connectsTo(right_laneId););
-            }
+    uint8_t greenSignalMap[COMPASS_NUM] = {0};
+    if (get_signalGroupMap(&signal_status, greenSignalMap) < 0)
+        return;
+
+    int map_table[COMPASS_NUM] = {0};
+    for (uint8_t mask = 1, i = 0, j = 0; mask != 0; mask = mask << 1, j++) {
+        if (mask & signal_status.SignalMap) {
+            map_table[i++] = j;
         }
     }
+
+    int signalGroupID = 1;
+    for (int i = 0; i < signal_status.SignalCount && i < COMPASS_NUM; i++) {
+        if (greenSignalMap[i] == 0)
+            continue;
+        struct list_head *head = &TIB_config.MAP_lane_compass[map_table[i]];
+        MAP_config_lane_t *config_lane, *safe;
+        list_for_each_entry_safe(config_lane, safe, head, compass_node)
+        {
+            GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
+            search_signal_compass(RroundHeadGreen, set_compass_connectsTo(left_laneId);
+                                  set_compass_connectsTo(stright_laneId);
+                                  set_compass_connectsTo(right_laneId););
+            search_signal_compass(LeftGreen, set_compass_connectsTo(left_laneId););
+            search_signal_compass(StrightGreen, set_compass_connectsTo(stright_laneId););
+            search_signal_compass(RightGreen, set_compass_connectsTo(right_laneId););
+        }
+        ++signalGroupID;
+    }
+
 #undef set_compass_connectsTo
 #undef search_signal_compass
 }
@@ -171,7 +172,6 @@ void map_msg_update(MapData *map)
 {
     map->intersections.tab->revision++;
     map->intersections.tab->revision &= 0b1111111;
-
     map_signal_group(map);
 }
 

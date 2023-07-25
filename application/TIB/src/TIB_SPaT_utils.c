@@ -52,8 +52,6 @@ int spat_msg_init(SPAT **pp_spat)
     return 0;
 }
 
-const uint8_t signal_mask_arr[] = {RroundHeadGreen, LeftGreen, StrightGreen, RightGreen};
-
 #define to_TimeMark(tmark) \
     ((timeinfo->tm_min * 60 + timeinfo->tm_sec + (tmark) + 3600) % 3600) * 10
 
