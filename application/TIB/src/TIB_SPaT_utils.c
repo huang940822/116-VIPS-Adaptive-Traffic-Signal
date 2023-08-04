@@ -82,6 +82,7 @@ int spat_msg_update(SPAT *pp_spat)
 
 #define to_TimeMark(tmark) \
     ((timeinfo->tm_min * 60 + timeinfo->tm_sec + (tmark) + 3600) % 3600) * 10
+#define next_subphase(subPhaseId) ((subPhaseId + 1) % signal_status.SubPhaseCount)
 
 #define after_cur_step(_eventState, _offset_signalTime, _extra_func)                \
     do {                                                                            \
@@ -100,18 +101,18 @@ int spat_msg_update(SPAT *pp_spat)
 //
 #define increase_offset_red_signal()                                                     \
     do {                                                                                 \
-        for (int k = (cur_subphase + 1) % signal_status.SubPhaseCount, t = 0;            \
+        for (int k = next_subphase(cur_subphase), t = 0;                                 \
              !(signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j]) && \
              t < signal_status.SubPhaseCount;                                            \
              k = (k + 1) % signal_status.SubPhaseCount, ++t) {                           \
             offset += signal_status.plan[k].Green;                                       \
             offset += signal_status.plan[k].Yellow;                                      \
             offset += signal_status.plan[k].AllRed;                                      \
-            cur_subphase = (cur_subphase + 1) % signal_status.SubPhaseCount;             \
+            cur_subphase = next_subphase(cur_subphase);                                  \
         }                                                                                \
     } while (0)
 
-#define increase_offset_green_signal()                                                 \
+#define leading_subphase_signal()                                                      \
     do {                                                                               \
         for (int k = cur_subphase, t = 0;                                              \
              signal_status.plan[k].Yellow == 0 && signal_status.plan[k].AllRed == 0 && \
@@ -119,8 +120,21 @@ int spat_msg_update(SPAT *pp_spat)
              ++t) {                                                                    \
             k = (k + 1) % signal_status.SubPhaseCount;                                 \
             offset += signal_status.plan[k].Green;                                     \
-            cur_subphase = (cur_subphase + 1) % signal_status.SubPhaseCount;           \
+            cur_subphase = next_subphase(cur_subphase);                                \
         }                                                                              \
+    } while (0)
+
+#define lagging_subphase_signal()                                                                    \
+    do {                                                                                             \
+        for (int k = cur_subphase, t = 0;                                                            \
+             signal_status.plan[k].AllRed == 0 && signal_status.plan[k].Yellow != 0 &&               \
+             signal_status.phaseorder_plan[next_subphase(k)][i].SignalStatus & signal_mask_arr[j] && \
+             t < signal_status.SubPhaseCount;                                                        \
+             ++t) {                                                                                  \
+            k = (k + 1) % signal_status.SubPhaseCount;                                               \
+            offset += (signal_status.plan[k].Green + signal_status.plan[k].Yellow);                  \
+            cur_subphase = next_subphase(cur_subphase);                                              \
+        }                                                                                            \
     } while (0)
 
     int signalGroupID = 1;
@@ -149,7 +163,8 @@ int spat_msg_update(SPAT *pp_spat)
                     printf("---++\n");
                     int green_offset = 0;
                     for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount, t = 0;
-                         signal_status.plan[k].Yellow == 0 && signal_status.plan[k].AllRed == 0 && t < signal_status.SubPhaseCount;
+                         signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j] &&
+                         signal_status.plan[k].AllRed == 0 && t < signal_status.SubPhaseCount;
                          ++t) {
                         offset += signal_status.plan[k].Green;
                         k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
@@ -167,21 +182,38 @@ int spat_msg_update(SPAT *pp_spat)
                         green_offset += signal_status.StepID <= 2 ? signal_status.plan[cur_subphase].PedRed : 0;
 
                         printf("green %d ", cur_subphase);
-                        after_cur_step(greenType, offset = signal_status.StepSec + green_offset, increase_offset_green_signal());
+                        after_cur_step(greenType, offset = signal_status.StepSec + green_offset, leading_subphase_signal(); lagging_subphase_signal(););
                         printf("yellow %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                         printf("red %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
                         break;
                     case 4:
-                        offset = -(signal_status.plan[cur_subphase].Yellow - signal_status.StepSec);
+                        // 遲閉
+                        if (signal_status.plan[cur_subphase].AllRed == 0 && signal_status.plan[cur_subphase].Yellow != 0 &&
+                            signal_status.phaseorder_plan[next_subphase(cur_subphase)][i].SignalStatus & signal_mask_arr[j]) {
+                            offset += signal_status.plan[cur_subphase].PedRed;
+                            offset += signal_status.plan[cur_subphase].PedGreenFlash;
+                            offset += signal_status.plan[cur_subphase].PreGreen;
+                            offset = signal_status.StepSec - offset;
 
-                        printf("yellow %d ", cur_subphase);
-                        after_cur_step(MovementPhaseState_protected_clearance, offset = signal_status.StepSec, );
-                        printf("red %d ", cur_subphase);
-                        after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
-                        printf("green %d ", cur_subphase);
-                        after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, increase_offset_green_signal());
+                            cur_subphase = next_subphase(cur_subphase);
+                            printf("green %d ", cur_subphase);
+                            after_cur_step(greenType, offset = signal_status.StepSec + signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+                            printf("yellow %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
+                            printf("red %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+                        } else {
+                            offset = -(signal_status.plan[cur_subphase].Yellow - signal_status.StepSec);
+
+                            printf("yellow %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_protected_clearance, offset = signal_status.StepSec, );
+                            printf("red %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+                            printf("green %d ", cur_subphase);
+                            after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+                        }
                         break;
                     case 5:
                         offset = -(signal_status.plan[cur_subphase].AllRed - signal_status.StepSec);
@@ -189,7 +221,7 @@ int spat_msg_update(SPAT *pp_spat)
                         printf("red %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_stop_And_Remain, offset = signal_status.StepSec;, increase_offset_red_signal());
                         printf("green %d ", cur_subphase);
-                        after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, increase_offset_green_signal());
+                        after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                         printf("yellow %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                     }
@@ -226,15 +258,21 @@ int spat_msg_update(SPAT *pp_spat)
 
                     printf("%d\n", offset);
                     state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
-                    cur_subphase = (cur_subphase + 1) % signal_status.SubPhaseCount;
+                    cur_subphase = next_subphase(cur_subphase);
                     printf("green %d ", cur_subphase);
-                    after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, increase_offset_green_signal());
+                    after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                     printf("yellow %d ", cur_subphase);
                     after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                 }
             }
         }
     }
+#undef to_TimeMark
+#undef next_subphase
+#undef after_cur_step
+#undef increase_offset_red_signal
+#undef leading_subphase_signal
+#undef lagging_subphase_signal
     if (statesList->count == 0)
         return -1;
     return 1;
