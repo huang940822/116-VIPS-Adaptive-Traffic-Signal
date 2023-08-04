@@ -145,24 +145,26 @@ int spat_msg_update(SPAT *pp_spat)
                 state->signalGroup = signalGroupID++;
 
                 if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
+                    int y = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
                     printf("---++\n");
                     int green_offset = 0;
                     for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount, t = 0;
                          signal_status.plan[k].Yellow == 0 && signal_status.plan[k].AllRed == 0 && t < signal_status.SubPhaseCount;
                          ++t) {
-                        k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
                         offset += signal_status.plan[k].Green;
+                        k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
                     }
                     switch (signal_status.StepID) {
-                    case 1:
-                        offset += signal_status.plan[cur_subphase].PreGreen;
-                        green_offset += signal_status.plan[cur_subphase].PedGreenFlash;
-                    case 2:
-                        offset += signal_status.plan[cur_subphase].PedGreenFlash;
-                        green_offset += signal_status.plan[cur_subphase].PedRed;
                     case 3:
                         offset += signal_status.plan[cur_subphase].PedRed;
+                    case 2:
+                        offset += signal_status.plan[cur_subphase].PedGreenFlash;
+                    case 1:
+                        offset += signal_status.plan[cur_subphase].PreGreen;
                         offset = signal_status.StepSec - offset;
+
+                        green_offset += signal_status.StepID <= 1 ? signal_status.plan[cur_subphase].PedGreenFlash : 0;
+                        green_offset += signal_status.StepID <= 2 ? signal_status.plan[cur_subphase].PedRed : 0;
 
                         printf("green %d ", cur_subphase);
                         after_cur_step(greenType, offset = signal_status.StepSec + green_offset, increase_offset_green_signal());
@@ -224,6 +226,7 @@ int spat_msg_update(SPAT *pp_spat)
 
                     printf("%d\n", offset);
                     state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                    cur_subphase = (cur_subphase + 1) % signal_status.SubPhaseCount;
                     printf("green %d ", cur_subphase);
                     after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, increase_offset_green_signal());
                     printf("yellow %d ", cur_subphase);
