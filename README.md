@@ -137,4 +137,22 @@ sudo systemctl status middleware.service
 * Make use of Heartbeat package to build the RSU's connection with OSlink.
     * Packages which sent from port number **10001** will be regarded as Heartbeat packages.
 
+# VMS - Variable-message sign
+Program ID 255 is the black image.
+## EVSP Reserved Program ID
+Program ID 245~254.
+From approach north increasing clockwise at id 245.<br>
+
+Relationship to the image:
+```
+245 -> forward.gif
+246 -> leftward.gif
+247 -> backward.gif
+248 -> rightward.gif
+```
+
+
+
+
+
 
