@@ -10,6 +10,7 @@
 
 #define LANE_MAX_NUMBER 5
 #define DIRECTION_MAX_NUMBER 8
+#define TIB_TABLE_DELIM ","
 
 int TIB_config_init();
 
@@ -38,10 +39,12 @@ typedef struct MAP_config_connectsTo {
 /* Return codes of config */
 typedef enum TIB_config_err {
     TIB_CONFIG_ACCEPT = 0,
-    TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED = -1,
-    TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED = -2,
-    TIB_CONFIG_INVALID = -3,
-    TIB_CONFIG_INVALID_OPEN_FILE = -4,
+    TIB_CONFIG_INVALID_OPEN_FILE = -1,
+    TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED = -2,
+    TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED = -3,
+    TIB_CONFIG_LaneSet_table_INVALID = -4,
+    TIB_CONFIG_LaneSet_ConnectsTo_table_INVALID = -5,
+    TIB_CONFIG_SignalGroupID_table_INVALID = -6,
 } TIB_config_err_t;
 
 #define COMPASS_NUM 8
@@ -52,13 +55,17 @@ typedef enum TIB_config_err {
     }
 
 typedef struct TIB_config_object {
-    vector_t(MAP_config_lane_t) lane_list;
-    vector_t(MAP_config_connectsTo_t) connectsTo_list;
+    uint8_t TIB_dontSend2TC;
     uint8_t MAP_packet_transfer_speed;
     uint8_t SPaT_packet_transfer_speed;
+    vector_t(MAP_config_lane_t) lane_list;
+    vector_t(MAP_config_connectsTo_t) connectsTo_list;
     // N NE E SE S S W NW
     struct list_head MAP_lane_compass[COMPASS_NUM];
-    uint8_t TIB_dontSend2TC;
+
+    // 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北
+    // 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
+    uint8_t signalGroupId_table[8][5];
 } TIB_config_object_t;
 
 void print_config_map(MapData *map, char *buf, int buf_len);

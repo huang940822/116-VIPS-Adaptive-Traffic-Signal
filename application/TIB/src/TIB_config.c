@@ -34,12 +34,12 @@ int TIB_config_init()
     uint8_t uint8_t_val;
     double double_val;
 
-#define FreeAndReturnInvalid(v)                  \
+#define FreeAndReturnInvalid(v, errorType)       \
     do {                                         \
         vector_free(TIB_config.lane_list);       \
         vector_free(TIB_config.connectsTo_list); \
         vector_free(v);                          \
-        return TIB_CONFIG_INVALID;               \
+        return TIB_CONFIG_##errorType##_INVALID; \
     } while (0);
 
     while (!feof(fp)) {
@@ -103,7 +103,7 @@ int TIB_config_init()
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
-                    return TIB_CONFIG_INVALID;
+                    return TIB_CONFIG_LaneSet_table_INVALID;
 
                 if (strstr(buf, "LaneSet_table_end")) {
                     break;
@@ -111,26 +111,24 @@ int TIB_config_init()
 
                 vector_t(char *) str_arr;
                 vector_init(str_arr);
-                read_string_arr_from_config_line(buf, &str_arr, ",");
+                read_string_arr_from_config_line(buf, &str_arr, TIB_TABLE_DELIM);
                 MAP_config_lane_t config_lane = {0};
 
                 // laneId ~ node_count
                 if (str_arr.size < 6)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
 
                 int index = 0;
                 // laneId
-                char *substr = vector_at(str_arr, index);
-                index++;
+                char *substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
                 if (int_val != TIB_config.lane_list.size)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
                 config_lane.config_laneID = int_val;
 
                 // compasss
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 int compass = 0;
                 const char *compass_order[] = COMPASS_ORDER;
                 for (compass = 0; compass < COMPASS_NUM; compass++) {
@@ -139,48 +137,44 @@ int TIB_config_init()
                 }
 
                 // lane_direction
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (strstr(substr, "egress")) {
                     config_lane.direction = LaneDirection_egressPath;
                 } else if (strstr(substr, "ingress")) {
                     config_lane.direction = LaneDirection_ingressPath;
                 } else {
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
                 }
 
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hhd", &config_lane.approach) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
                 // lane_index
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hhd", &config_lane.lane_index) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
 
                 // node_count
                 int node_count;
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
 
                 if (str_arr.size < index + (node_count * 2))
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
                 vector_init(config_lane.node_list);
                 for (int i = 0; i < node_count; i++) {
                     MAP_Node_t node;
                     substr = vector_at(str_arr, index + (i * 2));
                     if (substr == NULL || sscanf(substr, "%lf", &node.lat) != 1) {
                         vector_free(config_lane.node_list);
-                        FreeAndReturnInvalid(str_arr);
+                        FreeAndReturnInvalid(str_arr, LaneSet_table);
                     }
 
                     substr = vector_at(str_arr, index + (i * 2) + 1);
                     if (substr == NULL || sscanf(substr, "%lf", &node.lon) != 1) {
                         vector_free(config_lane.node_list);
-                        FreeAndReturnInvalid(str_arr);
+                        FreeAndReturnInvalid(str_arr, LaneSet_table);
                     }
                     vector_push_back(config_lane.node_list, node);
                 }
@@ -199,36 +193,34 @@ int TIB_config_init()
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
-                    return TIB_CONFIG_INVALID;
+                    return TIB_CONFIG_LaneSet_ConnectsTo_table_INVALID;
 
                 if (strstr(buf, "LaneSet_ConnectsTo_table_end")) {
                     break;
                 }
                 vector_t(char *) str_arr;
                 vector_init(str_arr);
-                read_string_arr_from_config_line(buf, &str_arr, ",");
+                read_string_arr_from_config_line(buf, &str_arr, TIB_TABLE_DELIM);
 
                 MAP_config_connectsTo_t connectsTo;
 
                 int index = 0;
                 if (str_arr.size < index + 2)
-                    FreeAndReturnInvalid(str_arr);
-                char *substr = vector_at(str_arr, index);
-                index++;
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
+                char *substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                 if (uint8_t_val >= TIB_config.lane_list.size || uint8_t_val < 0)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                 connectsTo.config_laneID = uint8_t_val;
 
                 int connect_count = 0;
                 // left
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &connect_count) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                 if (connect_count < 0 || str_arr.size < index + connect_count + 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
 
                 vector_init(connectsTo.left_laneId);
                 for (int i = index; i < index + connect_count; i++) {
@@ -236,19 +228,18 @@ int TIB_config_init()
                     if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1 ||
                         uint8_t_val >= TIB_config.lane_list.size) {
                         vector_free(connectsTo.left_laneId);
-                        FreeAndReturnInvalid(str_arr);
+                        FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                     }
                     vector_push_back(connectsTo.left_laneId, uint8_t_val);
                 }
                 index += connect_count;
 
                 // stright
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &connect_count) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                 if (connect_count < 0 || str_arr.size < index + connect_count + 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
 
                 vector_init(connectsTo.stright_laneId);
                 for (int i = index; i < index + connect_count; i++) {
@@ -257,19 +248,18 @@ int TIB_config_init()
                         uint8_t_val >= TIB_config.lane_list.size) {
                         vector_free(connectsTo.left_laneId);
                         vector_free(connectsTo.stright_laneId);
-                        FreeAndReturnInvalid(str_arr);
+                        FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                     }
                     vector_push_back(connectsTo.stright_laneId, uint8_t_val);
                 }
                 index += connect_count;
 
                 // right
-                substr = vector_at(str_arr, index);
-                index++;
+                substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &connect_count) != 1)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                 if (connect_count < 0 || str_arr.size < index + connect_count)
-                    FreeAndReturnInvalid(str_arr);
+                    FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
 
                 vector_init(connectsTo.right_laneId);
                 for (int i = index; i < index + connect_count; i++) {
@@ -279,12 +269,51 @@ int TIB_config_init()
                         vector_free(connectsTo.left_laneId);
                         vector_free(connectsTo.stright_laneId);
                         vector_free(connectsTo.right_laneId);
-                        FreeAndReturnInvalid(str_arr);
+                        FreeAndReturnInvalid(str_arr, LaneSet_ConnectsTo_table);
                     }
                     vector_push_back(connectsTo.right_laneId, uint8_t_val);
                 }
                 vector_free(str_arr);
                 vector_push_back(TIB_config.connectsTo_list, connectsTo);
+            }
+        }
+
+        if (strstr(buf, "SignalGroupID_table_start")) {
+            memset(TIB_config.signalGroupId_table, 0, sizeof(TIB_config.signalGroupId_table));
+            while (!feof(fp)) {
+                buf = read_line(read_buf, sizeof(read_buf), fp);
+                if (buf == NULL)
+                    return TIB_CONFIG_SignalGroupID_table_INVALID;
+
+                if (strstr(buf, "SignalGroupID_mapping_table_end")) {
+                    break;
+                }
+                vector_t(char *) str_arr;
+                vector_init(str_arr);
+                read_string_arr_from_config_line(buf, &str_arr, TIB_TABLE_DELIM);
+                // SignalGroupID ~ SignalGreenType
+                if (str_arr.size < 3)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table);
+
+                int index = 0;
+                uint8_t signalGroupId = 0, ingressAngle, SignalGreenType;
+                // SignalGroupID
+                char *substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%hhd", &signalGroupId) != 1 || signalGroupId == 0)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table);
+
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%hhd", &ingressAngle) != 1 || ingressAngle > 7)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table);
+
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%hhd", &SignalGreenType) != 1 || SignalGreenType > 4)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table);
+
+                // 已經有重複的
+                if (TIB_config.signalGroupId_table[ingressAngle][SignalGreenType])
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table);
+                TIB_config.signalGroupId_table[ingressAngle][SignalGreenType] = signalGroupId;
             }
         }
     }

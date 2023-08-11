@@ -124,7 +124,8 @@ int TIB_on_registration(void *arg)
     /* read map confile file*/
     int ret = TIB_config_init();
     if (ret != 0) {
-        log_file_write_fatal_error("error map reading config file: %d", ret);
+        printf("error TIB reading config file: %d\n", ret);
+        log_file_write_fatal_error("error TIB reading config file: %d", ret);
     }
     /* MAP msg init */
     map_msg_init(&map);
