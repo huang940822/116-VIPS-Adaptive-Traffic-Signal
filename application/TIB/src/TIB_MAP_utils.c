@@ -151,17 +151,20 @@ void map_signal_group(MapData *map)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
             signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RroundHeadGreenIndex];
-            search_signal_compass(RroundHeadGreenMask, set_compass_connectsTo(left_laneId);
-                                  set_compass_connectsTo(stright_laneId);
-                                  set_compass_connectsTo(right_laneId););
+            if (signalGroupID)  // signalGroupID == 0 代表沒有在 config 裡面被定義
+                search_signal_compass(RroundHeadGreenMask, set_compass_connectsTo(left_laneId);
+                                      set_compass_connectsTo(stright_laneId);
+                                      set_compass_connectsTo(right_laneId););
             signalGroupID = TIB_config.signalGroupId_table[map_table[i]][LeftGreenIndex];
-            search_signal_compass(LeftGreenMask, set_compass_connectsTo(left_laneId););
+            if (signalGroupID)
+                search_signal_compass(LeftGreenMask, set_compass_connectsTo(left_laneId););
             signalGroupID = TIB_config.signalGroupId_table[map_table[i]][StrightGreenIndex];
-            search_signal_compass(StrightGreenMask, set_compass_connectsTo(stright_laneId););
+            if (signalGroupID)
+                search_signal_compass(StrightGreenMask, set_compass_connectsTo(stright_laneId););
             signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RightGreenIndex];
-            search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
+            if (signalGroupID)
+                search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
         }
-        ++signalGroupID;
     }
 
 #undef set_compass_connectsTo

@@ -285,7 +285,7 @@ int TIB_config_init()
                 if (buf == NULL)
                     return TIB_CONFIG_SignalGroupID_table_INVALID;
 
-                if (strstr(buf, "SignalGroupID_mapping_table_end")) {
+                if (strstr(buf, "SignalGroupID_table_end")) {
                     break;
                 }
                 vector_t(char *) str_arr;
