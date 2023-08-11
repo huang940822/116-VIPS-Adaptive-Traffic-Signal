@@ -150,15 +150,15 @@ void map_signal_group(MapData *map)
         list_for_each_entry_safe(config_lane, safe, head, compass_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][0];
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RroundHeadGreenIndex];
             search_signal_compass(RroundHeadGreenMask, set_compass_connectsTo(left_laneId);
                                   set_compass_connectsTo(stright_laneId);
                                   set_compass_connectsTo(right_laneId););
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][1];
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][LeftGreenIndex];
             search_signal_compass(LeftGreenMask, set_compass_connectsTo(left_laneId););
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][2];
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][StrightGreenIndex];
             search_signal_compass(StrightGreenMask, set_compass_connectsTo(stright_laneId););
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][3];
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RightGreenIndex];
             search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
         }
         ++signalGroupID;

@@ -10,7 +10,7 @@
     X(RightGreen, 3)
 
 typedef enum GreenMask {
-#define X(a, b) a##Mask = 1 << b,
+#define X(a, b) a##Mask = 1 << (b + 2),
     GreenSignalTable
 #undef X
 } GreenMask_t;
