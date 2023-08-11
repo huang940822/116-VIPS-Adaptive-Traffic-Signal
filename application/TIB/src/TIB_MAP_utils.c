@@ -121,7 +121,7 @@ void map_signal_group(MapData *map)
 
 #define search_signal_compass(signalMask, setFunc)                                   \
     do {                                                                             \
-        if (greenSignalMap[i] & signalMask &&         \
+        if (greenSignalMap[i] & signalMask &&                                        \
             signalGroupID <= 255) {                                                  \
             for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {              \
                 MAP_config_connectsTo_t *config_connectTo =                          \
@@ -134,18 +134,14 @@ void map_signal_group(MapData *map)
         }                                                                            \
     } while (0)
 
-    uint8_t greenSignalMap[COMPASS_NUM] = {0};
+    uint8_t greenSignalMap[COMPASS_NUM];
+    int map_table[COMPASS_NUM];
     if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
         return;
+    if (get_map_table(&signal_status, map_table) < 0)
+        return;
 
-    int map_table[COMPASS_NUM] = {0};
-    for (uint8_t mask = 1, i = 0, j = 0; mask != 0; mask = mask << 1, j++) {
-        if (mask & signal_status.SignalMap) {
-            map_table[i++] = j;
-        }
-    }
-
-    int signalGroupID = 1;
+    int signalGroupID = 0;
     for (int i = 0; i < signal_status.SignalCount && i < COMPASS_NUM; i++) {
         if (greenSignalMap[i] == 0)
             continue;
@@ -154,12 +150,16 @@ void map_signal_group(MapData *map)
         list_for_each_entry_safe(config_lane, safe, head, compass_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
-            search_signal_compass(RroundHeadGreen, set_compass_connectsTo(left_laneId);
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][0];
+            search_signal_compass(RroundHeadGreenMask, set_compass_connectsTo(left_laneId);
                                   set_compass_connectsTo(stright_laneId);
                                   set_compass_connectsTo(right_laneId););
-            search_signal_compass(LeftGreen, set_compass_connectsTo(left_laneId););
-            search_signal_compass(StrightGreen, set_compass_connectsTo(stright_laneId););
-            search_signal_compass(RightGreen, set_compass_connectsTo(right_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][1];
+            search_signal_compass(LeftGreenMask, set_compass_connectsTo(left_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][2];
+            search_signal_compass(StrightGreenMask, set_compass_connectsTo(stright_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][3];
+            search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
         }
         ++signalGroupID;
     }
