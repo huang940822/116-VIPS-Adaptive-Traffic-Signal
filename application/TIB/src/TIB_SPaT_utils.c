@@ -77,7 +77,7 @@ int spat_msg_update(SPAT *pp_spat)
     statesList->count = 0;  // clean statesList
 
     uint8_t greenSignalMap[COMPASS_NUM] = {0};
-    if (get_signalGroupMap(&signal_status, greenSignalMap) < 0)
+    if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
         return -1;
 
 #define to_TimeMark(tmark) \

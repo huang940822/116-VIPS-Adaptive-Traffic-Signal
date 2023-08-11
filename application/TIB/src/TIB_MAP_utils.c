@@ -135,7 +135,7 @@ void map_signal_group(MapData *map)
     } while (0)
 
     uint8_t greenSignalMap[COMPASS_NUM] = {0};
-    if (get_signalGroupMap(&signal_status, greenSignalMap) < 0)
+    if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
         return;
 
     int map_table[COMPASS_NUM] = {0};

@@ -1,6 +1,8 @@
 #ifndef TIB_UTILS_H
 #define TIB_UTILS_H
 
+#include "TIB_config.h"
+
 #define RroundHeadGreen 0b00000100
 #define LeftGreen 0b00001000
 #define StrightGreen 0b00010000
@@ -8,13 +10,8 @@
 
 #define GreenMask (RroundHeadGreen | LeftGreen | StrightGreen | RightGreen)
 
-typedef struct TIB_SignalGroupID {
-    int signalIndex; // 按照 5F3C 的順序
-    int signalGroupID;
-    uint8_t compass;
-} TIB_SignalGroupID_t;
-
-int get_signalGroupMap(traffic_signal_status_t *signal_status, uint8_t greenSignalMap[8]);
+int get_map_table(traffic_signal_status_t *signal_status, int map_table[COMPASS_NUM]);
+int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSignalMap[COMPASS_NUM]);
 
 extern const uint8_t signal_mask_arr[4];
 
