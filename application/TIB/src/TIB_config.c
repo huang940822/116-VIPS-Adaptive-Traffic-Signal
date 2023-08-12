@@ -303,7 +303,12 @@ int TIB_config_init()
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table);
 
                 substr = vector_at(str_arr, index++);
-                if (substr == NULL || sscanf(substr, "%hhd", &ingressAngle) != 1 || ingressAngle > 7)
+                const char *compass_order[] = COMPASS_ORDER;
+                for (ingressAngle = 0; ingressAngle < COMPASS_NUM; ingressAngle++) {
+                    if (strcmp(compass_order[ingressAngle], substr) == 0)
+                        break;
+                }
+                if (ingressAngle >= COMPASS_NUM)
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table);
 
                 substr = vector_at(str_arr, index++);

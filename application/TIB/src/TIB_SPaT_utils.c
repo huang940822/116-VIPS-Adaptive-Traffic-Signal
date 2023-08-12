@@ -140,7 +140,12 @@ int spat_msg_update(SPAT *pp_spat)
         }                                                                                            \
     } while (0)
 
-    int signalGroupID = 1;
+    int map_table[COMPASS_NUM];
+    if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
+        return -1;
+    if (get_map_table(&signal_status, map_table) < 0)
+        return -1;
+
     SPaT_debug("----------\n");
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         SPaT_debug("plan %d %d %d %d %d %d\n", i + 1, signal_status.plan[i].PreGreen, signal_status.plan[i].PedGreenFlash,
@@ -152,14 +157,15 @@ int spat_msg_update(SPAT *pp_spat)
     SPaT_debug("StepSec %d\n", signal_status.StepSec);
     for (int i = 0; i < signal_status.SignalCount; i++) {
         for (int j = 0; j < sizeof(signal_mask_arr); j++) {
-            if (greenSignalMap[i] & signal_mask_arr[j] && signalGroupID <= 255) {
+            if (greenSignalMap[i] & signal_mask_arr[j]) {
                 MovementState *state = &statesList->tab[statesList->count++];
-                // 是不是圓頭綠
+                // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
                 MovementPhaseState greenType = j == 0 ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
                 int index = 0, cur_subphase = signal_status.SubPhaseID - 1, offset = 0;
 
                 state->state_time_speed.count = 0;
-                state->signalGroup = signalGroupID++;
+
+                state->signalGroup = TIB_config.signalGroupId_table[map_table[i]][j];
 
                 if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
                     int y = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;

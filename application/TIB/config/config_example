@@ -3,13 +3,12 @@
 
 # SPaT packet tranfer speed
 # default 10 Hz
-SPaT_packet_transfer_speed 10
+SPaT_packet_transfer_speed 1
 
 # MAP packet tranfer speed
 # default 1 Hz
 MAP_packet_transfer_speed 1
-
-TIB_dontSend2TC 1
+MAP_dontSend2TC 1
 
 # 從北開始順時針 先離開路口再進入路口 從內車道到外車道
 
@@ -20,8 +19,9 @@ TIB_dontSend2TC 1
 # ID. The lane ID, in conjunction with the intersection ID, forms a regionally unique way to address a specific lane in that 
 # region. 
 
-# compass 為行車行人的行駛方向, 如果是離開 (egress) 可以不用填, 填 X
-# N 北向 W 西向 S 南向 E 東向 NE 東北向 SN 東南向 SE 西南向 NW 西北向
+# compass N 北向 W 西向 S 南向 E 東向 
+# NE 東北向 SN 東南向 SE 西南向 NW 西北向
+# 為了提供 signalGroupId
 
 # LaneDirection egress 是離開, ingress 是進入
 # Use: The LaneDirection data element is used to denote the allowed direction of travel over a lane object. By convention, 
@@ -84,15 +84,15 @@ LaneSet_ConnectsTo_table_start
 15, 0,             1, 4,  1, 8
 LaneSet_ConnectsTo_table_end
 
-# SignalGroupID 1 ~ 255
-# IngressAngle 車輛駛入的角度 
-# 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北
+# SignalGroupID 0 ~ 255
+# Compass 車輛駛入的方向
+# N 向北  NE 向東北  E 向東  SE 向東南  S 向南  WS 向西南  W 向西  NW 向西北
 # SignalGreenType 
 # 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
-SignalGroupID_table_start
-# SignalGroupID, IngressAngle, SignalGreenType
-1, 0, 0
-2, 4, 0
-3, 2, 0
-4, 6, 0
+SignalGroupID_table_start 0
+# SignalGroupID, Compass, SignalGreenType
+1, N, 0
+2, S, 0
+3, E, 0
+4, W, 0
 SignalGroupID_table_end
