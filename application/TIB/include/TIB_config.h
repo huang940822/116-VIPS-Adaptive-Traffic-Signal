@@ -23,10 +23,10 @@ typedef struct MAP_config_lane {
     struct list_head compass_node;
     vector_t(MAP_Node_t) node_list;
     int32_t config_laneID;
-    LaneDirection direction;
+    uint8_t direction;  // bit string 0 ingress 1 egress
     uint8_t approach;
     uint8_t lane_index;
-    void *lane_ptr;
+    uint8_t compass;
 } MAP_config_lane_t;
 
 typedef struct MAP_config_connectsTo {
@@ -61,6 +61,7 @@ typedef struct TIB_config_object {
     vector_t(MAP_config_lane_t) lane_list;
     vector_t(MAP_config_connectsTo_t) connectsTo_list;
     // N NE E SE S S W NW
+    // 只有是車道 並且是 ingress
     struct list_head MAP_lane_compass[COMPASS_NUM];
 
     // 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北

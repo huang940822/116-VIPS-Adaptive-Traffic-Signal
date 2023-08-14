@@ -183,7 +183,7 @@ void trim_space(char *str)
     while (isspace(*start))
         start++;
 
-    while (isspace(*end) && end > start)
+    while (end > start && isspace(*end))
         end--;
 
     *(end + 1) = '\0';

@@ -129,19 +129,21 @@ int TIB_config_init()
 
                 // compasss
                 substr = vector_at(str_arr, index++);
-                int compass = 0;
                 const char *compass_order[] = COMPASS_ORDER;
-                for (compass = 0; compass < COMPASS_NUM; compass++) {
-                    if (strcmp(compass_order[compass], substr) == 0)
+                for (config_lane.compass = 0; config_lane.compass < COMPASS_NUM; config_lane.compass++) {
+                    if (strcmp(compass_order[config_lane.compass], substr) == 0)
                         break;
                 }
 
                 // lane_direction
                 substr = vector_at(str_arr, index++);
                 if (strstr(substr, "egress")) {
-                    config_lane.direction = LaneDirection_egressPath;
+                    config_lane.direction |= 1 << LaneDirection_egressPath;
                 } else if (strstr(substr, "ingress")) {
-                    config_lane.direction = LaneDirection_ingressPath;
+                    config_lane.direction |= 1 << LaneDirection_ingressPath;
+                } else if (strstr(substr, "both")) {
+                    config_lane.direction |= 1 << LaneDirection_egressPath;
+                    config_lane.direction |= 1 << LaneDirection_ingressPath;
                 } else {
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
                 }
@@ -160,30 +162,46 @@ int TIB_config_init()
                 if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
 
-                if (str_arr.size < index + (node_count * 2))
+                if (str_arr.size < index + node_count)
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
                 vector_init(config_lane.node_list);
+                vector_t(char *) str_arr_tmp;
+                vector_init(str_arr_tmp);
                 for (int i = 0; i < node_count; i++) {
                     MAP_Node_t node;
-                    substr = vector_at(str_arr, index + (i * 2));
-                    if (substr == NULL || sscanf(substr, "%lf", &node.lat) != 1) {
+                    substr = vector_at(str_arr, index++);
+                    read_string_arr_from_config_line(substr, &str_arr_tmp, " ");
+                    if (str_arr_tmp.size != 2) {
+                        vector_free(str_arr_tmp);
                         vector_free(config_lane.node_list);
                         FreeAndReturnInvalid(str_arr, LaneSet_table);
                     }
 
-                    substr = vector_at(str_arr, index + (i * 2) + 1);
+                    substr = vector_at(str_arr_tmp, 0);
                     if (substr == NULL || sscanf(substr, "%lf", &node.lon) != 1) {
+                        vector_free(str_arr_tmp);
+                        vector_free(config_lane.node_list);
+                        FreeAndReturnInvalid(str_arr, LaneSet_table);
+                    }
+
+                    substr = vector_at(str_arr_tmp, 1);
+                    if (substr == NULL || sscanf(substr, "%lf", &node.lat) != 1) {
+                        vector_free(str_arr_tmp);
                         vector_free(config_lane.node_list);
                         FreeAndReturnInvalid(str_arr, LaneSet_table);
                     }
                     vector_push_back(config_lane.node_list, node);
+                    str_arr_tmp.size = 0;
                 }
+                vector_free(str_arr_tmp);
                 vector_free(str_arr);
                 vector_push_back(TIB_config.lane_list, config_lane);
-                MAP_config_lane_t *lane = &vector_at(TIB_config.lane_list, TIB_config.lane_list.size - 1);
-                INIT_LIST_HEAD(&lane->compass_node);
-                if (compass < COMPASS_NUM) {
-                    list_add_tail(&lane->compass_node, &TIB_config.MAP_lane_compass[compass]);
+            }
+            for (int i = 0; i < TIB_config.lane_list.size; i++) {
+                MAP_config_lane_t *lane = &vector_at(TIB_config.lane_list, i);
+                INIT_LIST_HEAD(&(lane->compass_node));
+                if (lane->compass < COMPASS_NUM) {
+                    list_add_tail(&lane->compass_node, &TIB_config.MAP_lane_compass[lane->compass]);
                 }
             }
         }
@@ -319,6 +337,7 @@ int TIB_config_init()
                 if (TIB_config.signalGroupId_table[ingressAngle][SignalGreenType])
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table);
                 TIB_config.signalGroupId_table[ingressAngle][SignalGreenType] = signalGroupId;
+                vector_free(str_arr);
             }
         }
     }
