@@ -27,6 +27,9 @@ typedef struct MAP_config_lane {
     uint8_t approach;
     uint8_t lane_index;
     uint8_t compass;
+    LaneTypeAttributes_choice laneType;
+    uint16_t lane_attributes;
+    uint8_t shared_with;
 } MAP_config_lane_t;
 
 typedef struct MAP_config_connectsTo {

@@ -206,14 +206,14 @@ int TIB_config_init()
             }
         }
 
-        if (strstr(buf, "LaneSet_ConnectsTo_table_start")) {
+        if (strstr(buf, "LaneSet_connectsTo_table_start")) {
             vector_init(TIB_config.connectsTo_list);
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
                 if (buf == NULL)
                     return TIB_CONFIG_LaneSet_ConnectsTo_table_INVALID;
 
-                if (strstr(buf, "LaneSet_ConnectsTo_table_end")) {
+                if (strstr(buf, "LaneSet_connectsTo_table_end")) {
                     break;
                 }
                 vector_t(char *) str_arr;
