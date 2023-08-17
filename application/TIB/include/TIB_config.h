@@ -11,6 +11,7 @@
 #define LANE_MAX_NUMBER 5
 #define DIRECTION_MAX_NUMBER 8
 #define TIB_TABLE_DELIM ","
+#define TIB_FIELD_DELIM " "
 
 int TIB_config_init();
 
@@ -27,7 +28,7 @@ typedef struct MAP_config_lane {
     uint8_t approach;
     uint8_t lane_index;
     uint8_t compass;
-    LaneTypeAttributes_choice laneType;
+    LaneTypeAttributes_choice lane_type;
     uint16_t lane_attributes;
     uint8_t shared_with;
 } MAP_config_lane_t;

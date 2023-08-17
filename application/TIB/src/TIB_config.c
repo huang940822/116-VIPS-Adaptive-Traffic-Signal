@@ -109,7 +109,7 @@ int TIB_config_init()
                     break;
                 }
 
-                vector_t(char *) str_arr;
+                vector_t(char *) str_arr, str_arr_tmp;
                 vector_init(str_arr);
                 read_string_arr_from_config_line(buf, &str_arr, TIB_TABLE_DELIM);
                 MAP_config_lane_t config_lane = {0};
@@ -148,13 +148,59 @@ int TIB_config_init()
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
                 }
 
+                // ApproachId
                 substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hhd", &config_lane.approach) != 1)
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
+
                 // lane_index
                 substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hhd", &config_lane.lane_index) != 1)
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
+
+                // SharedWith
+                substr = vector_at(str_arr, index++);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                for (int i = 0; i < str_arr_tmp.size; i++) {
+                    substr = vector_at(str_arr_tmp, i);
+                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
+                        vector_free(str_arr_tmp);
+                        FreeAndReturnInvalid(str_arr, LaneSet_table);
+                    }
+                    config_lane.shared_with |= 1 << uint8_t_val;
+                }
+                vector_free(str_arr_tmp);
+
+                // LaneType
+                substr = vector_at(str_arr, index++);
+                if (strstr(substr, "vehicle")) {
+                    config_lane.lane_type = LaneTypeAttributes_vehicle;
+                } else if (strstr(substr, "crosswalk")) {
+                    config_lane.lane_type = LaneTypeAttributes_crosswalk;
+                } else if (strstr(substr, "bikeLane")) {
+                    config_lane.lane_type = LaneTypeAttributes_bikeLane;
+                } else if (strstr(substr, "sidewalk")) {
+                    config_lane.lane_type = LaneTypeAttributes_sidewalk;
+                } else if (strstr(substr, "trackedVehicle")) {
+                    config_lane.lane_type = LaneTypeAttributes_trackedVehicle;
+                } else {
+                    FreeAndReturnInvalid(str_arr, LaneSet_table);
+                }
+
+                // LaneAttributes
+                substr = vector_at(str_arr, index++);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                for (int i = 0; i < str_arr_tmp.size; i++) {
+                    substr = vector_at(str_arr_tmp, i);
+                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
+                        vector_free(str_arr_tmp);
+                        FreeAndReturnInvalid(str_arr, LaneSet_table);
+                    }
+                    config_lane.lane_attributes |= 1 << uint8_t_val;
+                }
+                vector_free(str_arr_tmp);
 
                 // node_count
                 int node_count;
@@ -165,12 +211,12 @@ int TIB_config_init()
                 if (str_arr.size < index + node_count)
                     FreeAndReturnInvalid(str_arr, LaneSet_table);
                 vector_init(config_lane.node_list);
-                vector_t(char *) str_arr_tmp;
+
                 vector_init(str_arr_tmp);
                 for (int i = 0; i < node_count; i++) {
                     MAP_Node_t node;
                     substr = vector_at(str_arr, index++);
-                    read_string_arr_from_config_line(substr, &str_arr_tmp, " ");
+                    read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
                     if (str_arr_tmp.size != 2) {
                         vector_free(str_arr_tmp);
                         vector_free(config_lane.node_list);
