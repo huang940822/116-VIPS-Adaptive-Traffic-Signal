@@ -63,7 +63,7 @@ int main()
     /* log init */
     log_file_init();  //一個timer被created
 
-    log_file_write("version : v2.3");
+    log_file_write("version : v2.4");
 
     /* read config file*/
     ret = config_init();
@@ -123,7 +123,7 @@ int main()
 
     /* application service registration */
     app_obj_t *app_arr[] = {
-        &MMP,
+        // &MMP,
         &EVSP,
         &TSP,
         // &CPS,
