@@ -1,4 +1,6 @@
 # RSU_Controller_master
+
+(new branch for testing the support for external app)
 ## Compiling Environment
 
 1. Installing Make and GCC9
