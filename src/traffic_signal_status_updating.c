@@ -477,7 +477,7 @@ uint16_t get_current_second()
 uint8_t get_SubPhaseCount()
 {
     pthread_mutex_lock(&mutex_signal_status);
-    uint16_t SubPhaseCount = signal_status.SubPhaseCount;
+    uint8_t SubPhaseCount = signal_status.SubPhaseCount;
     pthread_mutex_unlock(&mutex_signal_status);
     return SubPhaseCount;
 }
@@ -485,7 +485,7 @@ uint8_t get_SubPhaseCount()
 uint8_t get_SignalCount()
 {
     pthread_mutex_lock(&mutex_signal_status);
-    uint16_t SignalCount = signal_status.SignalCount;
+    uint8_t SignalCount = signal_status.SignalCount;
     pthread_mutex_unlock(&mutex_signal_status);
     return SignalCount;
 }
