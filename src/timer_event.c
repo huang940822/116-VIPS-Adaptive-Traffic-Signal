@@ -29,7 +29,7 @@ extern uint8_t flag_switch2nextStep;
 extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
-static unsigned int count = 0;
+static unsigned int _0F42_count = 0;
 void timer_event_handler(__sigval_t value)
 {
     if (*(uint8_t *) value.sival_ptr ==
@@ -57,14 +57,13 @@ void timer_event_handler(__sigval_t value)
         temp_ack_seq = tsc_5F44();
         // WAIT_ACK_LOOP
         command_buf_polling();
-        if (count == 0) {
+        if (_0F42_count == 0) {
             temp_ack_seq = tsc_0F42();  //查詢日期、時間
             WAIT_ACK_LOOP
-            count++;
+            _0F42_count++;
         } else {
-            count++;
-            if (count == 7200)
-                count = 0;
+            _0F42_count++;
+            _0F42_count %= 3600;
         }
         if(flag_PhaseOrder == true){
             temp_ack_seq = tsc_5F43();

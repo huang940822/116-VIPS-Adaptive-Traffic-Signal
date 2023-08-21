@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "byte_processing.h"
 #include "com_packet_processing.h"
@@ -78,7 +79,7 @@ void packet_5FCC(traffic_signal_packet_t *packet)
                 .PreTimeCompensated = signal_status.StepSec;
             printf("phase changed and pretime for phase %d is %d\r\n",
                    signal_status.SubPhaseID, signal_status.StepSec);
-            log_file_write("signal_status.plan[%d].PreTimeCompensated:%d\r\n",signal_status.SubPhaseID - 1,signal_status.plan[signal_status.SubPhaseID - 1].PreTimeCompensated);
+            log_file_write("signal_status.plan[%d].PreTimeCompensated:%d\r\n", signal_status.SubPhaseID - 1, signal_status.plan[signal_status.SubPhaseID - 1].PreTimeCompensated);
         }
     }
 
@@ -374,7 +375,6 @@ void packet_0FC2(traffic_signal_packet_t *packet)
     memset(log_content, 0, sizeof(log_content));
 
     pthread_mutex_lock(&mutex_signal_status);
-
     signal_status.Year = packet->INFO[2];
     signal_status.Month = packet->INFO[3];
     signal_status.Day = packet->INFO[4];
@@ -382,16 +382,17 @@ void packet_0FC2(traffic_signal_packet_t *packet)
     signal_status.Hour = packet->INFO[6];
     signal_status.Min = packet->INFO[7];
     signal_status.Sec = packet->INFO[8];
-
-    // printf("%d/%d/%d/%d %d:%d:%d\r\n",signal_status.Year,
-    //                                 signal_status.Month,
-    //                                 signal_status.Day,
-    //                                 signal_status.Week,
-    //                                 signal_status.Hour,
-    //                                 signal_status.Min,
-    //                                 signal_status.Sec);
-
+    struct timeval tv;
+    struct tm timeinfo;
+    gettimeofday(&tv, NULL);
+    localtime_r(&tv.tv_sec, &timeinfo);
+    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
+             "signal packet info: 0FC2\n %hhd-%hhd-%hhd_%hhd:%hhd:%hhd week %hhd\n offset %d",
+             signal_status.Year, signal_status.Month, signal_status.Day,
+             signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week,
+             ((signal_status.Hour - timeinfo.tm_hour) * 60 + signal_status.Min - timeinfo.tm_min) * 60 + signal_status.Sec - timeinfo.tm_sec);
     pthread_mutex_unlock(&mutex_signal_status);
+    log_file_write(log_content);
     return;
 }
 

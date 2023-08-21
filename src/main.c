@@ -63,7 +63,7 @@ int main()
     /* log init */
     log_file_init();  //一個timer被created
 
-    log_file_write("version : v2.4");
+    log_file_write("version : v2.4.1");
 
     /* read config file*/
     ret = config_init();
