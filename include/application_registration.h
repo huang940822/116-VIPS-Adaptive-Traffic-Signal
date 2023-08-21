@@ -4,6 +4,14 @@ extern uint8_t app_num;
 extern app_obj_t app_list;
 extern event_callback_t callback_list[EVENT_TYPE_NUMBER];
 
+/* since now dispatcher and ea_app_proxy,
+ * both might read/write app_list, we add a mutex_lock */ 
+extern pthread_mutex_t mutex_app_list;
+
+/* since now dispatcher, ea_app_proxy, command_buf_send(), 
+ * all might read/write callback_list, we add a mutex_lock */
+extern pthread_mutex_t mutex_callback_list;
+
 int app_register(app_obj_t *);
 void app_list_print();
 void event_callback_print();

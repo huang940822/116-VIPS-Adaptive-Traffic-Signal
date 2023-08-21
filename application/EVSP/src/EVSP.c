@@ -40,7 +40,7 @@ app_obj_t EVSP = {
     .on_traffic_signal_command_tx = NULL,
     .on_registration = &EVSP_on_registration,
     .next = NULL,
-    .dontSend2TC = 1,
+    .dontSend2TC = 0,
 };
 
 

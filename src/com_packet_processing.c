@@ -306,6 +306,10 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         app_section.com_id = msg->handle_id;
     }
 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *current = &callback_list[EVENT_CLOUD_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_app_id && 
@@ -314,6 +318,8 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
 
     if (read_buf.content != NULL) {
         free(read_buf.content);
@@ -420,6 +426,10 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     get_payload(&app_section, msgf);
     
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id &&
@@ -428,6 +438,9 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
+
     // free resource just
     if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
@@ -488,6 +501,11 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 
         read_buf.index += 16;
     }
+
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_app_id && 
@@ -500,6 +518,9 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
+
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }

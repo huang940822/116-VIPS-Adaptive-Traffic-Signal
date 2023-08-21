@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "application_registration.h"
 #include "error_status.h"
@@ -11,6 +12,14 @@
 uint8_t app_num;
 app_obj_t app_list;
 event_callback_t callback_list[EVENT_TYPE_NUMBER];
+
+/* since now dispatcher and ea_app_proxy,
+ * both might read/write app_list, we add a mutex_lock */ 
+pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
+
+/* since now dispatcher, ea_app_proxy, command_buf_send(), 
+ * all might read/write callback_list, we add a mutex_lock */
+pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
 /*****************************************************************************
 ** Function:    event_callback_new
@@ -54,6 +63,10 @@ void event_callback_msg_id_insert(event_type_t event_type,
                            char *name, int priority, DSRCmsgID msg_id,
                            int (*callback)(void *))
 {
+    /* since now dispatcher, ea_app_proxy, command_buf_send() 
+     * all might read/write callback_list we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
+
     event_callback_t *previous = &callback_list[event_type];
     event_callback_t *current = previous->next;
     event_callback_t *event_callback = NULL;
@@ -72,6 +85,8 @@ void event_callback_msg_id_insert(event_type_t event_type,
         current = current->next;
     }
     previous->next = event_callback_new(name, priority, event_callback_id_msg_id, msg_id, callback);
+
+    pthread_mutex_unlock(&mutex_callback_list);
 }
 /*****************************************************************************
 ** Function:    event_callback_insert
@@ -85,6 +100,10 @@ void event_callback_insert(event_callback_t *head,
                            app_obj_t *app,
                            int (*callback)(void *))
 {
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+     * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
+
     event_callback_t *previous = head;
     event_callback_t *current = head->next;
     event_callback_t *event_callback = NULL;
@@ -109,6 +128,8 @@ void event_callback_insert(event_callback_t *head,
         current = current->next;
     }
     previous->next = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
+
+    pthread_mutex_unlock(&mutex_callback_list);
 }
 
 /*****************************************************************************
@@ -121,6 +142,10 @@ void event_callback_insert(event_callback_t *head,
 ******************************************************************************/
 int app_obj_insert(app_obj_t *app)
 {
+    /* since now dispatcher and ea_app_proxy,
+     * both might read/write app_list, we add a mutex_lock */ 
+    pthread_mutex_lock(&mutex_app_list); 
+
     app_obj_t *current = app_list.next;
     uint8_t num = 0;
 
@@ -152,6 +177,9 @@ int app_obj_insert(app_obj_t *app)
 
     num++;
     current->next = app;
+
+    pthread_mutex_unlock(&mutex_app_list); 
+
     return num;
 }
 
@@ -237,6 +265,10 @@ void event_callback_print()
              "callback_list[EVENT_TYPE_NAME]:",
              "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+     * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
+
     event_callback_t *current;
     for (int i = 0; i < EVENT_TYPE_NUMBER; i++) {
         current = &callback_list[i];
@@ -305,11 +337,18 @@ void event_callback_print()
             }
         }
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
+
     log_file_write(log_content);
 }
 
 void app_list_print()
-{
+{   
+    /* since now dispatcher and ea_app_proxy,
+     * both might read/write app_list, we add a mutex_lock */ 
+    pthread_mutex_lock(&mutex_app_list); 
+
     app_obj_t *current = app_list.next;
 
     if (current == NULL) {
@@ -320,5 +359,8 @@ void app_list_print()
         printf("%s\n", current->name);
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_app_list); 
+
     return;
 }

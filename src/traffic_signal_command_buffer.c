@@ -89,6 +89,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     // EVSP.dontSend2TC = 0;
     uint16_t current_sec_residual = get_current_second();
 
+    /* 未來如果要去 撈 app_list, 記得前後要包 mutex_app_list */
     switch (config.signal_controller_manufacturer) {
     case CHENG_LONG:
         if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
@@ -298,13 +299,19 @@ void command_buf_send(tsc_command_object_t *command_obj,
     command.effect_time = command_obj->effect_time;
     memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
 
-    // 執行callback 完全不管app_id了 event signal packet tx
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
+
+    // 執行callback 完全不管 app_id 了 event signal packet tx
     // goto TSP_report_command()
     event_callback_t *current = &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     while (current->next != NULL) {
         current->next->callback((void *) &command);
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_callback_list); 
 }
 // In order to enable the commands in the commmand buffer to be sent to the
 // traffic signal controller at an appropriate time.
