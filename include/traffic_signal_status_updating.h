@@ -7,7 +7,6 @@
 
 #define SEM_SIGNAL_STATUS_TIMEOUT 999
 
-
 extern sem_t sem_signal_status;
 
 void packet_5FCC(traffic_signal_packet_t *packet);

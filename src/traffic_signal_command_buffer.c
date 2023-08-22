@@ -313,6 +313,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
 
     pthread_mutex_unlock(&mutex_callback_list); 
 }
+
 // In order to enable the commands in the commmand buffer to be sent to the
 // traffic signal controller at an appropriate time.
 void command_buf_polling()

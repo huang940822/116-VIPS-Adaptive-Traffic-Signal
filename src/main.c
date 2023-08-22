@@ -19,6 +19,7 @@
 #include "byte_processing.h"
 #include "config.h"
 #include "dispatcher.h"
+#include "external_app_proxy.h"
 #include "error_code_user.h"
 #include "error_status.h"
 #include "j2735_codec.h"
@@ -55,14 +56,17 @@ void sigintHandler(int sig_num)
 
 int main()
 {
+    /* handling unexpected SIGINT signal */
     signal(SIGINT, sigintHandler);
 
     /* Start server */
     int ret = 0;
 
     /* log init */
+    /* inside this function, a timer will be created */
+    /* when the timer expired, we will updata the handling log-file name,
+       that is, we create a new log file. */
     log_file_init();  //一個timer被created
-
     log_file_write("version : v2.4");
 
     /* read config file*/
@@ -70,18 +74,18 @@ int main()
     if (ret != CONFIG_ACCEPT) {
         log_file_write_fatal_error("error reading config file: %d", ret);
     }
+
     /*read vms config file*/
     ret = vms_config_init();
     if (ret != VMS_CONFIG_ACCEPT) {
         log_file_write_fatal_error("error reading vms config file: %d", ret);
     }
+
     // init dsrc error detect
     dsrc_error_detect_init();
+    
     // init tc fail detect
     tc_5fcc_error_detect_init();
-
-    printf("query tc firmware version\r\n");
-    flag_query_firm_ver = true;
 
     // /* taffic signal packet serial port init */
     traffic_signal_port_init();
@@ -107,19 +111,22 @@ int main()
     }
 
     /* command buffer init & command buffer polling timer event*/
+    printf("query tc firmware version\r\n");
     command_buf_init();  //這裡面又一個timer被created
+    flag_query_firm_ver = true;
 
-    /* traffic signal status report timer event */  //這裡是幹麻看不懂 r2v???
-    if (config.signal_status_report_active) {
-        timer_t traffic_signal_status_report_timer_id;
-        uint8_t traffic_signal_status_report_timer_num =
-            TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT;
+    /* 這個 timer 現在沒在用了，
+       相關功能(即 TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT) 移置 MAP 與 SPaT */
+    // if (config.signal_status_report_active) {
+    //     timer_t traffic_signal_status_report_timer_id;
+    //     uint8_t traffic_signal_status_report_timer_num =
+    //         TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT;
 
-        create_timer(&traffic_signal_status_report_timer_id,
-                     &traffic_signal_status_report_timer_num,
-                     timer_event_handler);
-        set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
-    }
+    //     create_timer(&traffic_signal_status_report_timer_id,
+    //                  &traffic_signal_status_report_timer_num,
+    //                  timer_event_handler);
+    //     set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
+    // }
 
     /* application service registration */
     app_obj_t *app_arr[] = {
@@ -131,6 +138,9 @@ int main()
         // &MAP,
         // &SPM,
     };
+    
+    /* 注意有些 app 的 on_registration() 會 create timer */
+    /* 已知的有 MAP, TSP(預計會改至 MMP), */
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {
         ret = app_register(app_arr[i]);
@@ -158,12 +168,23 @@ int main()
         perror("main: pthread_create");
         exit(errno);
     }
-    J2735Config cfg;
-    ret = j2735_init(&cfg);
-    if (!IS_SUCCESS(ret)) {
-        printf("Fail to init J2735\n");
-        return -1;
+
+    /* Packet dispatcher */
+    pthread_t external_app_proxy_thread;
+    ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_handler, NULL);
+    if (ret != 0) {
+        log_file_write_fatal_error("error creating external_app_proxy_thread: %d", ret);
+        perror("main: pthread_create");
+        exit(errno);
     }
+
+    // /* 已知目前使用 j2735 的 library 目前其實不需要先呼叫 j2735_init() */ 
+    // J2735Config cfg;
+    // ret = j2735_init(&cfg);
+    // if (!IS_SUCCESS(ret)) {
+    //     printf("Fail to init J2735\n");
+    //     return -1;
+    // }
     
     /* Start server */
     com_layer_init(NULL);

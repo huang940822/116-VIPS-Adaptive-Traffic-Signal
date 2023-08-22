@@ -111,6 +111,14 @@ typedef enum signalstatus {
     PEDESTRIAN_RED = 128,
 } SignalStatus_t;
 
+typedef struct external_app_info_type {
+    pid_t pid;              //process id
+    int notify_fd;          //unix socket fd to notify the app
+    int interact_fd;        //app will use this socket fd to call middleware-api
+    int heartbeat_rc;       //heartbeat record, updated each time app send packet 
+    uint8_t req_prio;       //request priority, the actuall priority is in app_obj_t
+} ea_info_t;
+
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
     uint8_t dontSend2TC;
@@ -126,6 +134,8 @@ typedef struct application_object {
     int (*on_camera_packet_rx)(void *);
     int (*on_traffic_signal_command_tx)(void *);
     int (*on_registration)(void *);
+    int (*on_middle_restart)(void *);
+    ea_info_t *ea_info_p;   //if this is not NULL, indicate this is an external app
     struct application_object *next;
 } app_obj_t;
 
