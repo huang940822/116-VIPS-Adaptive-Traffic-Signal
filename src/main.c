@@ -63,9 +63,6 @@ int main()
     int ret = 0;
 
     /* log init */
-    /* inside this function, a timer will be created */
-    /* when the timer expired, we will updata the handling log-file name,
-       that is, we create a new log file. */
     log_file_init();  //一個timer被created
     log_file_write("version : v2.4");
 
@@ -115,18 +112,8 @@ int main()
     command_buf_init();  //這裡面又一個timer被created
     flag_query_firm_ver = true;
 
-    /* 這個 timer 現在沒在用了，
-       相關功能(即 TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT) 移置 MAP 與 SPaT */
-    // if (config.signal_status_report_active) {
-    //     timer_t traffic_signal_status_report_timer_id;
-    //     uint8_t traffic_signal_status_report_timer_num =
-    //         TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT;
-
-    //     create_timer(&traffic_signal_status_report_timer_id,
-    //                  &traffic_signal_status_report_timer_num,
-    //                  timer_event_handler);
-    //     set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
-    // }
+    /* TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT 已移置 MAP 與 SPaT */
+    /* create_timer(); set_timer(); */
 
     /* application service registration */
     app_obj_t *app_arr[] = {
@@ -169,7 +156,7 @@ int main()
         exit(errno);
     }
 
-    /* Packet dispatcher */
+    /* external application proxy */
     pthread_t external_app_proxy_thread;
     ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_handler, NULL);
     if (ret != 0) {
