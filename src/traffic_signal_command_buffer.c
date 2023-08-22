@@ -65,10 +65,6 @@ void command_buf_clear()
 void command_buf_send(tsc_command_object_t *command_obj,
                       uint8_t current_SubPhaseID)
 {
-    if (config.log_command_buffer) {
-        log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
-    }
-
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
     sem_timedwait_millsecs(
@@ -106,6 +102,10 @@ void command_buf_send(tsc_command_object_t *command_obj,
         }
     } else {
         log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+    }
+
+    if (config.log_command_buffer) {
+        log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }
 
     switch (config.signal_controller_manufacturer) {
