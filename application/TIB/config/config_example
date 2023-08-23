@@ -133,16 +133,17 @@ LaneSet_table_start
 23, X, both,    3, 4, 6,       sidewalk, 2 3, 2, 120.29078 22.92432, 120.28989 22.92396
 LaneSet_table_end
 
-# laneId 對應 LaneSet_table 的 laneId, 只會有 ingress 的 laneId
-# 後面接著 左轉 (LeftconnectingLane), 直走 (StrightconnectingLane), 右轉 (RightconnectingLane) 的 laneIdSet
-# 三個都會包含一個 laneIdCount 後面接著 laneId 陣列
+# LaneID 對應 LaneSet_table 的 LaneID, 只會有 ingress 的 LaneID
+# 後面接著 左轉 (LeftConnectingLane), 直走 (StrightConnectingLane), 右轉 (RightConnectingLane) 的 LaneIDSet
+# 三個都會包含一個 LaneIDCount 後面接著 LaneID 陣列
 # Use: The ConnectsToList data structure is used in the generic lane descriptions to provide a sequence of other defined 
 # lanes to which each lane connects beyond its stop point. See the Connection data frame entry for details. Note that this 
 # data frame is not used in some lane object types.
 
 LaneSet_connectsTo_table_start
-# laneId, LeftconnectingLane, ..., StrightconnectingLane, ..., RightconnectingLane, ...
+# LaneID, LeftConnectingLane, ..., StrightConnectingLane, ..., RightConnectingLane, ...
 2,  3, 4, 5, 6,    1, 12, 3, 16, 17, 18
+3,  0,             1, 13, 0
 8,  1, 12,         1, 16, 0
 9,  0,             1, 17, 0
 10, 0,             1, 18, 1, 0
@@ -157,10 +158,14 @@ LaneSet_connectsTo_table_end
 # N 向北  NE 向東北  E 向東  SE 向東南  S 向南  WS 向西南  W 向西  NW 向西北
 # SignalGreenType 
 # 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
-SignalGroupID_table_start 0
+SignalGroupID_table_start
 # SignalGroupID, Compass, SignalGreenType
 1, N, 0
 2, S, 0
 3, E, 0
 4, W, 0
+5, N, 4
+6, S, 4
+7, E, 4
+8, W, 4
 SignalGroupID_table_end

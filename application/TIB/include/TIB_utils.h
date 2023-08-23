@@ -7,7 +7,8 @@
     X(RroundHeadGreen, 0) \
     X(LeftGreen, 1)       \
     X(StrightGreen, 2)    \
-    X(RightGreen, 3)
+    X(RightGreen, 3)      \
+    X(PedestrianGreen, 4)
 
 typedef enum GreenMask {
 #define X(a, b) a##Mask = 1 << (b + 2),

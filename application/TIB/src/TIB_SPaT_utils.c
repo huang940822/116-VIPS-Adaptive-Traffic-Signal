@@ -11,8 +11,8 @@
 
 SPAT *p_spat;
 
-// #define SPaT_debug(...) printf(__VA_ARGS__)
-#define SPaT_debug(...) ;
+#define SPaT_debug(...) printf(__VA_ARGS__)
+// #define SPaT_debug(...) ;
 
 static void dump_mem(void *data, int len)
 {
@@ -159,133 +159,215 @@ int spat_msg_update(SPAT *pp_spat)
         for (int j = 0; j < sizeof(signal_mask_arr); j++) {
             if (greenSignalMap[i] & signal_mask_arr[j]) {
                 MovementState *state = &statesList->tab[statesList->count++];
-                // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
-                MovementPhaseState greenType = j == 0 ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
+                MovementPhaseState greenType, yellowType;
                 int index = 0, cur_subphase = signal_status.SubPhaseID - 1, offset = 0;
 
                 state->state_time_speed.count = 0;
-
                 state->signalGroup = TIB_config.signalGroupId_table[map_table[i]][j];
+                if (signal_mask_arr[j] != PedestrianGreenMask) {
+                    // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
+                    greenType = signal_mask_arr[j] == RroundHeadGreenMask ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
+                    if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
+                        SPaT_debug("---++\n");
+                        // 早開
+                        for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount, t = 0;
+                             signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j] &&
+                             signal_status.plan[k].AllRed == 0 && t < signal_status.SubPhaseCount;
+                             ++t) {
+                            offset += signal_status.plan[k].Green;
+                            k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
+                        }
 
-                if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
-                    int y = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
-                    SPaT_debug("---++\n");
-                    int green_offset = 0;
-                    for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount, t = 0;
-                         signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j] &&
-                         signal_status.plan[k].AllRed == 0 && t < signal_status.SubPhaseCount;
-                         ++t) {
-                        offset += signal_status.plan[k].Green;
-                        k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
-                    }
-                    switch (signal_status.StepID) {
-                    case 3:
-                        offset += signal_status.plan[cur_subphase].PedRed;
-                    case 2:
-                        offset += signal_status.plan[cur_subphase].PedGreenFlash;
-                    case 1:
-                        offset += signal_status.plan[cur_subphase].PreGreen;
-                        offset = signal_status.StepSec - offset;
-
-                        green_offset += signal_status.StepID <= 1 ? signal_status.plan[cur_subphase].PedGreenFlash : 0;
-                        green_offset += signal_status.StepID <= 2 ? signal_status.plan[cur_subphase].PedRed : 0;
-
-                        SPaT_debug("green %d ", cur_subphase);
-                        after_cur_step(greenType, offset = signal_status.StepSec + green_offset, leading_subphase_signal(); lagging_subphase_signal(););
-                        SPaT_debug("yellow %d ", cur_subphase);
-                        after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
-                        SPaT_debug("red %d ", cur_subphase);
-                        after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
-                        break;
-                    case 4:
-                        // 遲閉
-                        if (signal_status.plan[cur_subphase].AllRed == 0 && signal_status.plan[cur_subphase].Yellow != 0 &&
-                            signal_status.phaseorder_plan[next_subphase(cur_subphase)][i].SignalStatus & signal_mask_arr[j]) {
+                        int green_offset = signal_status.plan[cur_subphase].PedGreenFlash + signal_status.plan[cur_subphase].PedRed;
+                        switch (signal_status.StepID) {
+                        case 3:
                             offset += signal_status.plan[cur_subphase].PedRed;
+                            green_offset = 0;
+                        case 2:
                             offset += signal_status.plan[cur_subphase].PedGreenFlash;
+                            green_offset -= signal_status.plan[cur_subphase].PedGreenFlash;
+                        case 1:
                             offset += signal_status.plan[cur_subphase].PreGreen;
                             offset = signal_status.StepSec - offset;
 
-                            cur_subphase = next_subphase(cur_subphase);
                             SPaT_debug("green %d ", cur_subphase);
-                            after_cur_step(greenType, offset = signal_status.StepSec + signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+                            after_cur_step(greenType, offset = signal_status.StepSec + green_offset, leading_subphase_signal(); lagging_subphase_signal(););
                             SPaT_debug("yellow %d ", cur_subphase);
                             after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                             SPaT_debug("red %d ", cur_subphase);
                             after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
-                        } else {
-                            offset = -(signal_status.plan[cur_subphase].Yellow - signal_status.StepSec);
+                            break;
+                        case 4:
+                            // 遲閉
+                            if (signal_status.plan[cur_subphase].AllRed == 0 && signal_status.plan[cur_subphase].Yellow != 0 &&
+                                signal_status.phaseorder_plan[next_subphase(cur_subphase)][i].SignalStatus & signal_mask_arr[j]) {
+                                offset += signal_status.plan[cur_subphase].PedRed;
+                                offset += signal_status.plan[cur_subphase].PedGreenFlash;
+                                offset += signal_status.plan[cur_subphase].PreGreen;
+                                offset = signal_status.StepSec - offset;
 
-                            SPaT_debug("yellow %d ", cur_subphase);
-                            after_cur_step(MovementPhaseState_protected_clearance, offset = signal_status.StepSec, );
+                                cur_subphase = next_subphase(cur_subphase);
+                                SPaT_debug("green %d ", cur_subphase);
+                                after_cur_step(greenType, offset = signal_status.StepSec + signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+                                SPaT_debug("yellow %d ", cur_subphase);
+                                after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
+                                SPaT_debug("red %d ", cur_subphase);
+                                after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+                            } else {
+                                offset = -(signal_status.plan[cur_subphase].Yellow - signal_status.StepSec);
+
+                                SPaT_debug("yellow %d ", cur_subphase);
+                                after_cur_step(MovementPhaseState_protected_clearance, offset = signal_status.StepSec, );
+                                SPaT_debug("red %d ", cur_subphase);
+                                after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+                                SPaT_debug("green %d ", cur_subphase);
+                                after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+                            }
+                            break;
+                        case 5:
+                            offset = -(signal_status.plan[cur_subphase].AllRed - signal_status.StepSec);
+
                             SPaT_debug("red %d ", cur_subphase);
-                            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+                            after_cur_step(MovementPhaseState_stop_And_Remain, offset = signal_status.StepSec;, increase_offset_red_signal());
                             SPaT_debug("green %d ", cur_subphase);
                             after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+                            SPaT_debug("yellow %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                         }
-                        break;
-                    case 5:
-                        offset = -(signal_status.plan[cur_subphase].AllRed - signal_status.StepSec);
+                    } else {
+                        SPaT_debug("---\n");
+                        state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
+                        offset += signal_status.StepID >= 1 ? signal_status.plan[cur_subphase].PreGreen : 0;
+                        offset += signal_status.StepID >= 2 ? signal_status.plan[cur_subphase].PedGreenFlash : 0;
+                        offset += signal_status.StepID >= 3 ? signal_status.plan[cur_subphase].PedRed : 0;
+                        offset += signal_status.StepID >= 4 ? signal_status.plan[cur_subphase].Yellow : 0;
+                        offset += signal_status.StepID >= 5 ? signal_status.plan[cur_subphase].AllRed : 0;
 
-                        SPaT_debug("red %d ", cur_subphase);
-                        after_cur_step(MovementPhaseState_stop_And_Remain, offset = signal_status.StepSec;, increase_offset_red_signal());
+                        offset -= signal_status.StepSec;
+                        offset += signal_status.plan[cur_subphase].AllRed;
+                        for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
+                             !(signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j]);
+                             k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount) {
+                            offset += signal_status.plan[k].Green;
+                            offset += signal_status.plan[k].Yellow;
+                            offset += signal_status.plan[k].AllRed;
+                        }
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        SPaT_debug("red %d %d ", cur_subphase, -offset);
+                        state->state_time_speed.tab[index].timing.startTime = to_TimeMark(-offset);
+
+                        offset = signal_status.StepSec;
+                        offset += (signal_status.StepID <= 1 ? signal_status.plan[cur_subphase].PedGreenFlash : 0);
+                        offset += (signal_status.StepID <= 2 ? signal_status.plan[cur_subphase].PedRed : 0);
+                        offset += (signal_status.StepID <= 3 ? signal_status.plan[cur_subphase].Yellow : 0);
+                        offset += (signal_status.StepID <= 4 ? signal_status.plan[cur_subphase].AllRed : 0);
+
+                        increase_offset_red_signal();
+
+                        SPaT_debug("%d\n", offset);
+                        state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                        cur_subphase = next_subphase(cur_subphase);
                         SPaT_debug("green %d ", cur_subphase);
                         after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                         SPaT_debug("yellow %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                     }
                 } else {
-                    SPaT_debug("---\n");
-                    state->state_time_speed.count++;
-                    state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
-                    offset += signal_status.StepID >= 1 ? signal_status.plan[cur_subphase].PreGreen : 0;
-                    offset += signal_status.StepID >= 2 ? signal_status.plan[cur_subphase].PedGreenFlash : 0;
-                    offset += signal_status.StepID >= 3 ? signal_status.plan[cur_subphase].PedRed : 0;
-                    offset += signal_status.StepID >= 4 ? signal_status.plan[cur_subphase].Yellow : 0;
-                    offset += signal_status.StepID >= 5 ? signal_status.plan[cur_subphase].AllRed : 0;
+                    if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
+                        SPaT_debug("---++**\n");
+                        int red_offset = signal_status.plan[cur_subphase].PedRed + signal_status.plan[cur_subphase].AllRed;
+                        switch (signal_status.StepID) {
+                        case 1:
+                            offset = -(signal_status.plan[cur_subphase].PreGreen - signal_status.StepSec);
+                            SPaT_debug("green %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_permissive_Movement_Allowed, offset = signal_status.StepSec, );
+                            SPaT_debug("green flash %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].PedGreenFlash, );
+                            SPaT_debug("red %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].Yellow + red_offset, increase_offset_red_signal());
+                            break;
+                        case 2:
+                            offset = -signal_status.plan[cur_subphase].PedGreenFlash - signal_status.StepSec;
+                            SPaT_debug("green flash %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_protected_clearance, offset = signal_status.StepSec, );
+                            SPaT_debug("red %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].Yellow + red_offset, increase_offset_red_signal());
+                            SPaT_debug("green %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_permissive_Movement_Allowed, offset += signal_status.plan[cur_subphase].PreGreen, );
+                            break;
+                        case 5:
+                            offset += signal_status.plan[cur_subphase].AllRed;
+                            red_offset = 0;
+                        case 4:
+                            offset += signal_status.plan[cur_subphase].Yellow;
+                            red_offset -= signal_status.plan[cur_subphase].PedRed;
+                        case 3:
+                            offset += signal_status.plan[cur_subphase].PedRed;
+                            offset = signal_status.StepSec - offset;
+                            SPaT_debug("red %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_stop_And_Remain, offset = signal_status.StepSec + red_offset, increase_offset_red_signal());
+                            SPaT_debug("green %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_permissive_Movement_Allowed, offset = signal_status.StepSec, );
+                            SPaT_debug("green flash %d ", cur_subphase);
+                            after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].PedGreenFlash, );
+                        default:
+                            break;
+                        }
+                    } else {
+                        SPaT_debug("---**\n");
+                        state->state_time_speed.count++;
+                        state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
 
-                    offset -= signal_status.StepSec;
-                    offset += signal_status.plan[cur_subphase].AllRed;
-                    for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
-                         !(signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j]);
-                         k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount) {
-                        offset += signal_status.plan[k].Green;
-                        offset += signal_status.plan[k].Yellow;
-                        offset += signal_status.plan[k].AllRed;
+                        offset += signal_status.StepID >= 1 ? signal_status.plan[cur_subphase].PreGreen : 0;
+                        offset += signal_status.StepID >= 2 ? signal_status.plan[cur_subphase].PedGreenFlash : 0;
+                        offset += signal_status.StepID >= 3 ? signal_status.plan[cur_subphase].PedRed : 0;
+                        offset += signal_status.StepID >= 4 ? signal_status.plan[cur_subphase].Yellow : 0;
+                        offset += signal_status.StepID >= 5 ? signal_status.plan[cur_subphase].AllRed : 0;
+
+                        offset -= signal_status.StepSec;
+                        offset += signal_status.plan[cur_subphase].AllRed;
+                        for (int k = (cur_subphase - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount;
+                             !(signal_status.phaseorder_plan[k][i].SignalStatus & signal_mask_arr[j]);
+                             k = (k - 1 + signal_status.SubPhaseCount) % signal_status.SubPhaseCount) {
+                            offset += signal_status.plan[k].Green;
+                            offset += signal_status.plan[k].Yellow;
+                            offset += signal_status.plan[k].AllRed;
+                        }
+                        state->state_time_speed.tab[index].timing.startTime_option = TRUE;
+                        SPaT_debug("red %d %d ", cur_subphase, -offset);
+                        state->state_time_speed.tab[index].timing.startTime = to_TimeMark(-offset);
+
+                        offset = signal_status.StepSec;
+                        offset += (signal_status.StepID <= 1 ? signal_status.plan[cur_subphase].PedGreenFlash : 0);
+                        offset += (signal_status.StepID <= 2 ? signal_status.plan[cur_subphase].PedRed : 0);
+                        offset += (signal_status.StepID <= 3 ? signal_status.plan[cur_subphase].Yellow : 0);
+                        offset += (signal_status.StepID <= 4 ? signal_status.plan[cur_subphase].AllRed : 0);
+
+                        increase_offset_red_signal();
+
+                        SPaT_debug("%d\n", offset);
+                        state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                        cur_subphase = next_subphase(cur_subphase);
+                        SPaT_debug("green %d ", cur_subphase);
+                        after_cur_step(MovementPhaseState_permissive_Movement_Allowed, offset += signal_status.plan[cur_subphase].PreGreen, );
+                        SPaT_debug("green flash %d ", cur_subphase);
+                        after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].PedGreenFlash, );
                     }
-                    state->state_time_speed.tab[index].timing.startTime_option = TRUE;
-                    SPaT_debug("red %d %d ", cur_subphase, -offset);
-                    state->state_time_speed.tab[index].timing.startTime = to_TimeMark(-offset);
-
-                    offset = signal_status.StepSec;
-                    offset += (signal_status.StepID <= 1 ? signal_status.plan[cur_subphase].PedGreenFlash : 0);
-                    offset += (signal_status.StepID <= 2 ? signal_status.plan[cur_subphase].PedRed : 0);
-                    offset += (signal_status.StepID <= 3 ? signal_status.plan[cur_subphase].Yellow : 0);
-                    offset += (signal_status.StepID <= 4 ? signal_status.plan[cur_subphase].AllRed : 0);
-
-                    increase_offset_red_signal();
-
-                    SPaT_debug("%d\n", offset);
-                    state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
-                    cur_subphase = next_subphase(cur_subphase);
-                    SPaT_debug("green %d ", cur_subphase);
-                    after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
-                    SPaT_debug("yellow %d ", cur_subphase);
-                    after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                 }
             }
         }
     }
+    if (statesList->count == 0)
+        return -1;
+    return 1;
+}
 #undef to_TimeMark
 #undef next_subphase
 #undef after_cur_step
 #undef increase_offset_red_signal
 #undef leading_subphase_signal
 #undef lagging_subphase_signal
-    if (statesList->count == 0)
-        return -1;
-    return 1;
-}
 
 void spat_printf(SPAT *pp_spat)
 {
