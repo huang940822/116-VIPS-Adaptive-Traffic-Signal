@@ -14,7 +14,7 @@
 #include <sys/epoll.h> // for epoll_create1()
 
 #include "log.h"
-#include "eap_inner_implementation.h"
+#include "external_app_proxy_inner.h"
 #include "external_app_proxy.h"
 
 #define MAX_CLIENTS 200

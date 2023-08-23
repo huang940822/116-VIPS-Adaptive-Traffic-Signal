@@ -1,24 +1,29 @@
-#ifndef EAP_INNER_IMPLEMENTATION_H
-#define EAP_INNER_IMPLEMENTATION_H
+#ifndef EXTERNAL_APP_PROXY_INNER_H
+#define EXTERNAL_APP_PROXY_INNER_H
 
 #include <stdio.h>
 #include <stdint.h>
 
-#include "ea_external_app_proxy.h"
-#include "ea_traffic_signal_command_buffer.h"
+#include "external_app_proxy.h"
+#include "traffic_signal_command_buffer.h"
 
-int32_t connect_to_proxy();
-int32_t disconnect_from_proxy();
-int32_t send_to_proxy( void* req_packet_p, size_t packet_size);
-int32_t read_from_proxy( void* ret_packet_p, size_t packet_size);
+int32_t interact_fd_connect_to_proxy();
+int32_t interact_fd_disconnect_from_proxy();
+int32_t interact_fd_read_from_proxy( void* ret_packet_p, size_t req_packet_size);
+int32_t interact_fd_send_to_proxy( void* packet_p, size_t packet_size);
+
+int32_t notify_fd_connect_to_proxy();
+int32_t notify_fd_disconnect_from_proxy();
+int32_t notify_fd_read_from_proxy( void* ret_packet_p, size_t req_packet_size);
+int32_t notify_fd_send_to_proxy( void* packet_p, size_t packet_size);
 
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
 
 enum ea_packet_type_define_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
+    EA_PACKET_TYPE_REG,     /*register*/
     EA_PACKET_TYPE_REQ,     /*requeset*/
     EA_PACKET_TYPE_ACK,     /*ack*/
-    EA_PACKET_TYPE_REG,     /*register*/
     EA_PACKET_TYPE_NM_NTF,  /*normal notify*/
     EA_PACKET_TYPE_SP_NTF,  /*special notify*/
     EA_PACKET_TYPE_HEARTB,  /*heartbeat*/
@@ -27,13 +32,34 @@ enum ea_packet_type_define_enum{
     NUM_OF_EA_PACKET_TYPE,  
 };
 
-#define API_ID_OF(api_name) API_ID_ ## api_name
-#define API_ID_OF(api_name) API_ID_ ## api_name
+#define BIT_SHIFT_OF(callback_name) BIT_SHIFT_ ## callback_name
+enum ea_callback_register_bit_shift_define_enum{
+    BIT_SHIFT_OF(reserved) = 0,                  /* reserved */
+    BIT_SHIFT_OF(on_OBU_packet_rx),              /* on_OBU_packet_rx */
+    BIT_SHIFT_OF(on_OBU_packet_tx),              /* on_OBU_packet_tx */
+    BIT_SHIFT_OF(on_RSU_packet_rx),              /* on_RSU_packet_rx */
+    BIT_SHIFT_OF(on_RSU_packet_tx),              /* on_RSU_packet_tx */
+    BIT_SHIFT_OF(on_cloud_packet_rx),            /* on_cloud_packet_rx */
+    BIT_SHIFT_OF(on_cloud_packet_tx),            /* on_cloud_packet_tx */
+    BIT_SHIFT_OF(on_camera_packet_rx),           /* on_camera_packet_rx */
+    BIT_SHIFT_OF(on_traffic_signal_command_tx),  /* on_traffic_signal_command_tx */
+    BIT_SHIFT_OF(on_registration),               /* on_registration */
+    BIT_SHIFT_OF(on_middle_restart),             /* on_middle_restart */
 
+    /* this tag should always be at the last*/
+    NUM_OF_BIT_SHIFT_DEFINE,  
+};
+
+
+#define API_ID_OF(api_name) API_ID_ ## api_name
 enum api_id_define_enum{
     /* since '0' is a special number, we reserve it for future expansion */
     API_ID_OF(special_reserved_id) = 0,
     
+    /* ea_external_app_proxy.h */
+    API_ID_OF(remote_app_registration),
+    API_ID_OF(app_main_loop_start),
+
     /* ea_application_registration.h */
     API_ID_OF(event_callback_msg_id_insert),
     
@@ -107,7 +133,7 @@ struct REQ_PACKET_TYPE(event_callback_msg_id_insert){
 struct ACK_PACKET_TYPE(event_callback_msg_id_insert){
     uint32_t packet_type;
     int ret_val;
-}ack_packet;
+};
 
 struct REQ_PACKET_TYPE(cloud_packet_tx){
     uint32_t packet_type;
@@ -243,7 +269,7 @@ struct REQ_PACKET_TYPE(vms_request_start){
 struct ACK_PACKET_TYPE(vms_request_start){
     uint32_t packet_type;
     int ret_val;
-}ack_packet;
+};
 
 struct REQ_PACKET_TYPE(vms_request_end){
     uint32_t packet_type;
@@ -255,7 +281,7 @@ struct REQ_PACKET_TYPE(vms_request_end){
 struct ACK_PACKET_TYPE(vms_request_end){
     uint32_t packet_type;
     int ret_val;
-}ack_packet;
+};
 
 struct REQ_PACKET_TYPE(get_traffic_signal_status){
     uint32_t packet_type;
@@ -482,4 +508,4 @@ struct ACK_PACKET_TYPE(get_prev_SubPhaseID){
     } payload;
 };
 
-#endif  /* EAP_INNER_IMPLEMENTATION_H */
+#endif  /* EXTERNAL_APP_PROXY_INNER_H */
