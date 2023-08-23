@@ -11,8 +11,8 @@
 
 SPAT *p_spat;
 
-#define SPaT_debug(...) printf(__VA_ARGS__)
-// #define SPaT_debug(...) ;
+// #define SPaT_debug(...) printf(__VA_ARGS__)
+#define SPaT_debug(...) ;
 
 static void dump_mem(void *data, int len)
 {

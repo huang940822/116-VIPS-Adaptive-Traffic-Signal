@@ -1,7 +1,14 @@
 #ifndef TIB_UTILS_H
 #define TIB_UTILS_H
 
-#include "TIB_config.h"
+#include "typedefine.h"
+
+#define COMPASS_NUM 8
+// const char *conpass_order[] = COMPASS_ORDER;
+#define COMPASS_ORDER                              \
+    {                                              \
+        "N", "NE", "E", "SE", "S", "SW", "W", "NW" \
+    }
 
 #define GreenSignalTable  \
     X(RroundHeadGreen, 0) \

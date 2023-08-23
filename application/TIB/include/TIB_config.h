@@ -1,6 +1,7 @@
 #ifndef TIB_CONFIG_H
 #define TIB_CONFIG_H
 
+#include "TIB_utils.h"
 #include "j2735_data_component.h"
 #include "list.h"
 #include "typedefine.h"
@@ -51,13 +52,6 @@ typedef enum TIB_config_err {
     TIB_CONFIG_SignalGroupID_table_INVALID = -6,
 } TIB_config_err_t;
 
-#define COMPASS_NUM 8
-// const char *conpass_order[] = COMPASS_ORDER;
-#define COMPASS_ORDER                              \
-    {                                              \
-        "N", "NE", "E", "SE", "S", "SW", "W", "NW" \
-    }
-
 typedef struct TIB_config_object {
     uint8_t TIB_dontSend2TC;
     uint8_t MAP_packet_transfer_speed;
@@ -67,10 +61,12 @@ typedef struct TIB_config_object {
     // N NE E SE S S W NW
     // 只有是車道 並且是 ingress
     struct list_head MAP_lane_compass[COMPASS_NUM];
+    // 人行道的方向
+    struct list_head MAP_sidewalk_compass[COMPASS_NUM];
 
     // 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北
     // 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
-    uint8_t signalGroupId_table[8][5];
+    uint8_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
 } TIB_config_object_t;
 
 void print_config_map(MapData *map, char *buf, int buf_len);

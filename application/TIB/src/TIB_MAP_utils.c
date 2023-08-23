@@ -150,11 +150,13 @@ void map_signal_group(MapData *map)
         return;
 
     int signalGroupID = 0;
+
     for (int i = 0; i < signal_status.SignalCount && i < COMPASS_NUM; i++) {
         if (greenSignalMap[i] == 0)
             continue;
         struct list_head *head = &TIB_config.MAP_lane_compass[map_table[i]];
         MAP_config_lane_t *config_lane, *safe;
+        // 一般車道
         list_for_each_entry_safe(config_lane, safe, head, compass_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
@@ -172,6 +174,15 @@ void map_signal_group(MapData *map)
             signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RightGreenIndex];
             if (signalGroupID)
                 search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
+        }
+        head = &TIB_config.MAP_sidewalk_compass[map_table[i]];
+        // 行人道
+        list_for_each_entry_safe(config_lane, safe, head, compass_node)
+        {
+            GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
+            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][PedestrianGreenIndex];
+            if (signalGroupID)
+                search_signal_compass(LeftGreenMask, set_compass_connectsTo(stright_laneId););
         }
     }
 

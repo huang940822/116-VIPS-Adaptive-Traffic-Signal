@@ -95,10 +95,13 @@ int TIB_config_init()
 
         // LaneSet_table
         if (strstr(buf, "LaneSet_table_start")) {
-            vector_init(TIB_config.lane_list);
-            for (int i = 0; i < COMPASS_NUM; i++)
-                INIT_LIST_HEAD(&TIB_config.MAP_lane_compass[i]);
             const char delim[] = ",";
+
+            vector_init(TIB_config.lane_list);
+            for (int i = 0; i < COMPASS_NUM; i++) {
+                INIT_LIST_HEAD(&TIB_config.MAP_lane_compass[i]);
+                INIT_LIST_HEAD(&TIB_config.MAP_sidewalk_compass[i]);
+            }
 
             while (!feof(fp)) {
                 buf = read_line(read_buf, sizeof(read_buf), fp);
@@ -246,8 +249,10 @@ int TIB_config_init()
             for (int i = 0; i < TIB_config.lane_list.size; i++) {
                 MAP_config_lane_t *lane = &vector_at(TIB_config.lane_list, i);
                 INIT_LIST_HEAD(&(lane->compass_node));
-                if (lane->compass < COMPASS_NUM) {
+                if (lane->compass < COMPASS_NUM && lane->lane_type == LaneTypeAttributes_vehicle && lane->direction & (1 << LaneDirection_ingressPath)) {
                     list_add_tail(&lane->compass_node, &TIB_config.MAP_lane_compass[lane->compass]);
+                } else if (lane->compass < COMPASS_NUM && lane->lane_type == LaneTypeAttributes_sidewalk) {
+                    list_add_tail(&lane->compass_node, &TIB_config.MAP_sidewalk_compass[lane->compass]);
                 }
             }
         }
