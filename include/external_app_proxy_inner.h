@@ -7,52 +7,58 @@
 #include "external_app_proxy.h"
 #include "traffic_signal_command_buffer.h"
 
+/* below are only used in library functions used by external application 
+   middleware itself will not use */
 int32_t interact_fd_connect_to_proxy();
 int32_t interact_fd_disconnect_from_proxy();
-int32_t interact_fd_read_from_proxy( void* ret_packet_p, size_t req_packet_size);
-int32_t interact_fd_send_to_proxy( void* packet_p, size_t packet_size);
-
+int32_t interact_fd_read_from_proxy(void* ret_packet_p, size_t req_packet_size);
+int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
 int32_t notify_fd_connect_to_proxy();
 int32_t notify_fd_disconnect_from_proxy();
-int32_t notify_fd_read_from_proxy( void* ret_packet_p, size_t req_packet_size);
-int32_t notify_fd_send_to_proxy( void* packet_p, size_t packet_size);
+int32_t notify_fd_read_from_proxy(void* ret_packet_p, size_t req_packet_size);
+int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
+/* above */
+
+/* below are only used by middleware itself */
+int32_t read_from_unix_socket_fd(int socket_fd, void* ret_packet_p, size_t req_packet_size);
+int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
+/* above */
 
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
 
-enum ea_packet_type_define_enum{
+enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
-    EA_PACKET_TYPE_REG,     /*register*/
-    EA_PACKET_TYPE_REQ,     /*requeset*/
-    EA_PACKET_TYPE_ACK,     /*ack*/
-    EA_PACKET_TYPE_NM_NTF,  /*normal notify*/
-    EA_PACKET_TYPE_SP_NTF,  /*special notify*/
-    EA_PACKET_TYPE_HEARTB,  /*heartbeat*/
+    EA_PACKET_TYPE_REGI,        /*register*/
+    EA_PACKET_TYPE_REQ,         /*requeset*/
+    EA_PACKET_TYPE_ACK,         /*ack*/
+    EA_PACKET_TYPE_NM_NTF,      /*normal notify*/
+    EA_PACKET_TYPE_SP_NTF,      /*special notify*/
+    EA_PACKET_TYPE_HEARTBEAT,   /*heartbeat*/
 
     /* this tag should always be at the last*/
-    NUM_OF_EA_PACKET_TYPE,  
+    NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
 
 #define BIT_SHIFT_OF(callback_name) BIT_SHIFT_ ## callback_name
-enum ea_callback_register_bit_shift_define_enum{
-    BIT_SHIFT_OF(reserved) = 0,                  /* reserved */
-    BIT_SHIFT_OF(on_OBU_packet_rx),              /* on_OBU_packet_rx */
-    BIT_SHIFT_OF(on_OBU_packet_tx),              /* on_OBU_packet_tx */
-    BIT_SHIFT_OF(on_RSU_packet_rx),              /* on_RSU_packet_rx */
-    BIT_SHIFT_OF(on_RSU_packet_tx),              /* on_RSU_packet_tx */
-    BIT_SHIFT_OF(on_cloud_packet_rx),            /* on_cloud_packet_rx */
-    BIT_SHIFT_OF(on_cloud_packet_tx),            /* on_cloud_packet_tx */
-    BIT_SHIFT_OF(on_camera_packet_rx),           /* on_camera_packet_rx */
-    BIT_SHIFT_OF(on_traffic_signal_command_tx),  /* on_traffic_signal_command_tx */
-    BIT_SHIFT_OF(on_registration),               /* on_registration */
-    BIT_SHIFT_OF(on_middle_restart),             /* on_middle_restart */
+enum ea_callback_func_bit_shift_definition_enum{
+    /* currently using the matching definition from enum event_type */
+    BIT_SHIFT_OF(on_OBU_packet_rx) = EVENT_OBU_PACKET_RX, 
+    BIT_SHIFT_OF(on_OBU_packet_tx) = EVENT_OBU_PACKET_TX,
+    BIT_SHIFT_OF(on_RSU_packet_rx) = EVENT_RSU_PACKET_RX, 
+    BIT_SHIFT_OF(on_RSU_packet_tx) = EVENT_RSU_PACKET_TX,
+    BIT_SHIFT_OF(on_cloud_packet_rx) = EVENT_CLOUD_PACKET_RX,
+    BIT_SHIFT_OF(on_cloud_packet_tx) = EVENT_CLOUD_PACKET_TX,
+    BIT_SHIFT_OF(on_traffic_signal_command_tx) = EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
+    BIT_SHIFT_OF(on_camera_packet_rx) = EVENT_CAMERA_PACKET_RX,
+    BIT_SHIFT_OF(on_registration) = EVENT_REGISTRATION, 
+    BIT_SHIFT_OF(on_middleware_restart) = EVENT_MIDDLEWARE_RESTART,
 
     /* this tag should always be at the last*/
-    NUM_OF_BIT_SHIFT_DEFINE,  
+    NUM_OF_BIT_SHIFT_DEFININITION,  
 };
 
-
 #define API_ID_OF(api_name) API_ID_ ## api_name
-enum api_id_define_enum{
+enum ea_callback_api_id_definition_enum{
     /* since '0' is a special number, we reserve it for future expansion */
     API_ID_OF(special_reserved_id) = 0,
     
@@ -106,18 +112,36 @@ enum api_id_define_enum{
     API_ID_OF(get_prev_SubPhaseID),
 
     /* this tag should always be at the last*/
-    NUM_OF_API_ID,  
+    NUM_OF_API_ID_DEFININITION,  
 };
 
-// #define API_ID_OF(special_reserved) 0
-// #define API_ID_OF(event_callback_msg_id_insert) 1
-// #define API_ID_OF(cloud_packet_tx) 2
-// #define API_ID_OF(OBU_packet_tx) 3
-// #define API_ID_OF(OBU_j2735_tx) 4
-// #define API_ID_OF(remote_com_send_OBU) 5
+struct _proxy_notify_packet_t {
+    uint32_t packet_type;
+    uint32_t callback_mask;
+    uint32_t payload_len;
+};
 
 #define REQ_PACKET_TYPE(api_name) _## api_name ## _req_packet_t
 #define ACK_PACKET_TYPE(api_name) _## api_name ## _ack_packet_t
+
+struct REQ_PACKET_TYPE(remote_app_registration){
+    uint32_t packet_type;
+    uint32_t api_id;
+    struct {
+        char name[APP_NAME_MAX_LEN];
+        uint32_t callback_register_mask;
+        uint8_t id;
+        uint8_t priority;
+        uint8_t is_notify_channel;  /* otherwise, it's interact-channel*/
+    } payload;
+};
+struct ACK_PACKET_TYPE(remote_app_registration){
+    uint32_t packet_type;
+    int ret_val;
+    struct {
+        uint8_t current_dontSend2TC;
+    } payload;
+};
 
 struct REQ_PACKET_TYPE(event_callback_msg_id_insert){
     uint32_t packet_type;

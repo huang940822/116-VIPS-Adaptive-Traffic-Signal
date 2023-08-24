@@ -1,7 +1,13 @@
 #ifndef EXTERNAL_APP_PROXY_H
 #define EXTERNAL_APP_PROXY_H
 
-enum ea_err_define_enum{
+#include <stdio.h>
+#include <stdint.h>
+
+#include <typedefine.h>
+
+/* this enum should be the same as in ea_external_app_proxy.h */
+enum ea_err_definition_enum{
     EA_ERR_OK = 0,
     EA_ERR_SOCKET_CREATE,
     EA_ERR_SOCKET_CONNECT,
@@ -14,10 +20,20 @@ enum ea_err_define_enum{
     EA_ERR_MEMORY_LIB,
     EA_ERR_COM_IO,
 
+    EA_ERR_PACKET_TYPE_NOT_MATCH,
+    EA_ERR_UNKNOWN_CALLBACK_BIT_FROM_MW,
+    EA_ERR_CALLBACK_NOT_REGISTER_TO_MW,
+    EA_ERR_CALLBACK_NOT_DEFINED_BY_APP,
+    EA_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM,
+    EA_ERR_BAD_CALLBACKMASK_FROM_MW,
+    EA_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER,
+    EA_ERR_BAD_API_ID_BEFORE_REGISTER,
+    EA_ERR_APP_ID_ALREADY_REGISTER,
+    
     /* this tag should always be at the last*/
     NUM_OF_EA_ERR_DEF,
 };
 
-void* external_app_proxy_handler();
+void *external_app_proxy_handler();
 
 #endif  /* EXTERNAL_APP_PROXY_H */
