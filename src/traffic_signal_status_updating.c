@@ -76,8 +76,8 @@ void packet_5FCC(traffic_signal_packet_t *packet)
         } else if (FirstSwitchFlag == 2) {
             signal_status.plan[signal_status.SubPhaseID - 1]
                 .PreTimeCompensated = signal_status.StepSec;
-            printf("phase changed and pretime for phase %d is %d\r\n",
-                   signal_status.SubPhaseID, signal_status.StepSec);
+            // printf("phase changed and pretime for phase %d is %d\r\n",
+            //        signal_status.SubPhaseID, signal_status.StepSec);
             log_file_write("signal_status.plan[%d].PreTimeCompensated:%d\r\n",signal_status.SubPhaseID - 1,signal_status.plan[signal_status.SubPhaseID - 1].PreTimeCompensated);
         }
     }
@@ -104,7 +104,7 @@ void packet_5FCC(traffic_signal_packet_t *packet)
         // printf("command_buf_empty:%d\r\n",check_command_buf_empty());
         if (pretime_sent_count == 0 && check_command_buf_empty()) {
             log_file_write("5FCC: execute go back to pretime at step 4\r\n");
-            printf("5FCC updating: set pretime!\r\n");
+            // printf("5FCC updating: set pretime!\r\n");
             // tsc_pretime();
             flag_pretime = true;
         }
@@ -363,6 +363,38 @@ void packet_5FC3(traffic_signal_packet_t *packet)
     log_file_write(log_content);
 
     pthread_mutex_unlock(&mutex_signal_status);
+    return;
+}
+
+void packet_5FC6(traffic_signal_packet_t *packet) {
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    pthread_mutex_lock(&mutex_signal_status);
+
+    signal_status.SegmentType = packet->INFO[2];
+    signal_status.SegmentCount = packet->INFO[3];
+    
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "\nSegmentType:%d SegmentCount:%d\r\n",
+             signal_status.SegmentType, signal_status.SegmentCount);
+
+    for (int i = 0; i < signal_status.SegmentCount; i++) {
+        signal_status.allday_plan[i].Hour = packet->INFO[4 + 3 * i];
+        signal_status.allday_plan[i].Min = packet->INFO[5 + 3 * i];
+        signal_status.allday_plan[i].PlanID = packet->INFO[6 + 3 * i];
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "Hour:%d Min:%d PlanID:%d\r\n",
+                 signal_status.allday_plan[i].Hour,
+                 signal_status.allday_plan[i].Min,
+                 signal_status.allday_plan[i].PlanID);
+    }
+
+    log_file_write(log_content);
+    pthread_mutex_unlock(&mutex_signal_status);
+
     return;
 }
 
