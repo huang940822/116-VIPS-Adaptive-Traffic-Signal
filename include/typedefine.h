@@ -20,6 +20,7 @@
 #define STATIC_APP_PRIVATE_SPACE_CAPACITY 256
 #define PHASE_COUNT_MAX_NUM 8
 #define SIGNAL_COUNT_MAX_NUM 8  // 岔路數目
+#define PLANID_MAX_NUM 48 
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 #define PROGRAM_NAME_LEN 100
@@ -85,6 +86,7 @@ typedef enum timer_event_type {
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING = 1,
     TIMER_EVENT_LOG_FILE_NAME_UPDATE = 2,
     TIMER_EVENT_DSRC_SEND = 3,
+    TIMER_EVENT_ENFORCE_PRETIME = 4,
     // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
@@ -231,6 +233,12 @@ typedef struct phaseorder_plan {
     uint8_t SignalStatus;
 } phaseorder_plan_t;
 
+typedef struct AllDay_plan {
+    uint8_t Hour;
+    uint8_t Min;
+    uint8_t PlanID;
+} AllDay_plan_t;
+
 typedef struct traffic_signal_status {
     // 5F CC
     uint8_t ControlStrategy;
@@ -264,6 +272,9 @@ typedef struct traffic_signal_status {
 
     uint8_t control_status;
 
+    uint8_t SegmentType;
+    uint8_t SegmentCount;
+    AllDay_plan_t allday_plan[PLANID_MAX_NUM];
 } traffic_signal_status_t;
 
 typedef struct msg_buf {

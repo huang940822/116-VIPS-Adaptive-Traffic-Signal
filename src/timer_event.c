@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "OBU_record_processing.h"
 #include "application_registration.h"
@@ -30,6 +31,7 @@ extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
 static unsigned int count = 0;
+struct tm *localTime;
 void timer_event_handler(__sigval_t value)
 {
     if (*(uint8_t *) value.sival_ptr ==
@@ -47,7 +49,9 @@ void timer_event_handler(__sigval_t value)
         pthread_mutex_lock(&mutex_uart_comple_protect);
         // printf("get in uart mutex\r\n");
         // pthread_mutex_lock(&mutex_rs232_write);
+        static uint8_t flag_query_allday_plan = true;
         uint8_t temp_ack_seq;
+
         temp_ack_seq = tsc_5F48();  //查詢目前時制計劃內容
         // WAIT_ACK_LOOP
         temp_ack_seq = tsc_5F4C();  //查詢號控器目前時相及步階
@@ -57,6 +61,7 @@ void timer_event_handler(__sigval_t value)
         temp_ack_seq = tsc_5F44();
         // WAIT_ACK_LOOP
         command_buf_polling();
+
         if (count == 0) {
             temp_ack_seq = tsc_0F42();  //查詢日期、時間
             WAIT_ACK_LOOP
@@ -109,33 +114,14 @@ void timer_event_handler(__sigval_t value)
                 "step sec higher than 255 happens and switch to next step "
                 "forcelly!!\r\n");
         }
-        // if(compensation_flag == true){
-        //     // get_compensation_buffer(compensation_buffer);
-        //     for(int i =0;i<SUBPHASEID_NUM;i++){
-        //         printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
-        //     }
-        //     compensation_flag = false;
-        // }
-        // for(int i = 0;i<SUBPHASEID_NUM;i++){
-        //     compensation_buffer[i] = 0;
-        // }
-        // traffic_signal_status_t signal_status;
-        // get_traffic_signal_status(&signal_status);
-        // if(signal_status.plan[0].PreGreen != 0){
-        //     // compensation_buffer[0] = 18;
-        //     compensation_buffer[1] = 30;
-        //     // compensation_buffer[2] = 0;
-        //     if(flag == true){
-        //         if(config.traffic_compensation_method == 3){
-        //             traffic_compensation_method3();
-        //         }else if (config.traffic_compensation_method == 2){
-        //             traffic_compensation_method2();
-        //         }else{
-        //             traffic_compensation_method1();
-        //         }
-        //         flag = false;
-        //     }
-        // }
+        if (flag_query_allday_plan == true) {
+            time_t currentTime;
+            time(&currentTime);
+            localTime = localtime(&currentTime);
+            temp_ack_seq = tsc_5F46(localTime->tm_wday);
+            WAIT_ACK_LOOP
+            flag_query_allday_plan = false;
+        }
 
         pthread_mutex_unlock(&mutex_uart_comple_protect);
         // printf("leave uart write mutex\r\n");
@@ -148,6 +134,34 @@ void timer_event_handler(__sigval_t value)
         }
 
         log_file_name_update();
+    } else if (*(uint8_t *) value.sival_ptr ==
+               TIMER_EVENT_ENFORCE_PRETIME) {
+        time_t currentTime;
+        time(&currentTime);
+        localTime = localtime(&currentTime);
+        int hour = localTime->tm_hour;        
+        int minute = localTime->tm_min;       
+        int second = localTime->tm_sec;
+
+        traffic_signal_status_t signal_status;
+        get_traffic_signal_status(&signal_status);
+        uint16_t cycle_time = signal_status.CycleTime;
+
+        for (int i = 0; i < signal_status.SegmentCount; i++) {
+            uint8_t planHour = signal_status.allday_plan[i].Hour;
+            uint8_t planMin = signal_status.allday_plan[i].Min;
+            // 80 110 140
+            // 6:50 + 160s 
+            int timeDiff = (planHour - localTime->tm_hour) * 3600 + (planMin - localTime->tm_min) * 60;
+            // printf("Approaching PlanID %d - Time Remaining: %d seconds\n", signal_status.allday_plan[i].PlanID, timeDiff);
+            // config
+            if (timeDiff >= -600 && timeDiff <= 30) {
+                tsc_pretime();
+                command_buf_clear();
+                log_file_write("Enforce to pretime control_strategy\r\n");
+                log_file_write("command buffer clear\r\n");
+            }
+        }
     }
     // 在thread pool 中傳 bsm 的 timer
     // else if (*(uint8_t *) value.sival_ptr == TIMER_EVENT_DSRC_SEND) {
