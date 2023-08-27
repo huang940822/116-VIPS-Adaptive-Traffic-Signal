@@ -4,37 +4,31 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "external_app_proxy.h"
+#include "typedefine.h"
 #include "traffic_signal_command_buffer.h"
 
-/* below are only used in library functions used by external application 
-   middleware itself will not use */
+/* functions below are only used in library used by external application */
+/* middleware itself will not use */
 int32_t interact_fd_connect_to_proxy();
 int32_t interact_fd_disconnect_from_proxy();
-int32_t interact_fd_read_from_proxy(void* ret_packet_p, size_t req_packet_size);
+int32_t interact_fd_read_from_proxy(void* packet_p, size_t packet_size);
 int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
 int32_t notify_fd_connect_to_proxy();
 int32_t notify_fd_disconnect_from_proxy();
-int32_t notify_fd_read_from_proxy(void* ret_packet_p, size_t req_packet_size);
+int32_t notify_fd_read_from_proxy(void* packet_p, size_t packet_size);
 int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
-/* above */
-
-/* below are only used by middleware itself */
-int32_t read_from_unix_socket_fd(int socket_fd, void* ret_packet_p, size_t req_packet_size);
-int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
-/* above */
-
-#define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
+/* functions above ... */
 
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
-    EA_PACKET_TYPE_REGI,        /*register*/
-    EA_PACKET_TYPE_REQ,         /*requeset*/
-    EA_PACKET_TYPE_ACK,         /*ack*/
-    EA_PACKET_TYPE_NM_NTF,      /*normal notify*/
-    EA_PACKET_TYPE_SP_NTF,      /*special notify*/
-    EA_PACKET_TYPE_HEARTBEAT,   /*heartbeat*/
-
+    EA_PACKET_TYPE_REGI,            /*register*/
+    EA_PACKET_TYPE_NTF_UPDATE = 0,  /*notify channel update*/
+    EA_PACKET_TYPE_REQ,             /*requeset*/
+    EA_PACKET_TYPE_ACK,             /*ack*/
+    EA_PACKET_TYPE_NM_NTF,          /*normal notify*/
+    EA_PACKET_TYPE_SP_NTF,          /*special notify*/
+    EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
+    EA_PACKET_TYPE_PROXY,           /*used by proxy library*/
     /* this tag should always be at the last*/
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
@@ -56,6 +50,28 @@ enum ea_callback_func_bit_shift_definition_enum{
     /* this tag should always be at the last*/
     NUM_OF_BIT_SHIFT_DEFININITION,  
 };
+
+typedef struct _packet_from_proxy_header_t {
+    uint32_t packet_type;
+    uint32_t callback_mask;
+    uint32_t payload_len;
+}packet_from_proxy_header_t;
+
+typedef struct _ack_from_proxy_header_t {
+    uint32_t packet_type;
+    int ret_val;
+    //uint32_t payload_len;   /* current version do not need */
+}ack_from_proxy_header_t;
+
+typedef struct _packet_to_proxy_header_t {
+    uint32_t packet_type;
+    uint32_t api_id;
+    //uint32_t payload_len;     /* current version do not need */
+}packet_to_proxy_header_t;
+
+typedef struct _packet_to_proxy_hearbeat_t {
+    uint32_t appID;
+}packet_to_proxy_hearbeat_t;
 
 #define API_ID_OF(api_name) API_ID_ ## api_name
 enum ea_callback_api_id_definition_enum{
@@ -115,421 +131,247 @@ enum ea_callback_api_id_definition_enum{
     NUM_OF_API_ID_DEFININITION,  
 };
 
-struct _proxy_notify_packet_t {
-    uint32_t packet_type;
-    uint32_t callback_mask;
-    uint32_t payload_len;
+#define REQ_PAYLOAD_TYPE(api_name) _## api_name ## _req_payload_t
+#define ACK_PAYLOAD_TYPE(api_name) _## api_name ## _ack_payload_t
+
+struct REQ_PAYLOAD_TYPE(remote_app_registration){
+    char name[APP_NAME_MAX_LEN];
+    uint8_t id;
+    uint8_t priority;
+    uint8_t dontSend2TC;
+    uint32_t callback_register_mask;
+    pid_t pid;
+};
+struct ACK_PAYLOAD_TYPE(remote_app_registration){
+    ;
 };
 
-#define REQ_PACKET_TYPE(api_name) _## api_name ## _req_packet_t
-#define ACK_PACKET_TYPE(api_name) _## api_name ## _ack_packet_t
-
-struct REQ_PACKET_TYPE(remote_app_registration){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        char name[APP_NAME_MAX_LEN];
-        uint32_t callback_register_mask;
-        uint8_t id;
-        uint8_t priority;
-        uint8_t is_notify_channel;  /* otherwise, it's interact-channel*/
-    } payload;
+struct REQ_PAYLOAD_TYPE(event_callback_msg_id_insert){
+    event_type_t event_type;
+    char name[APP_NAME_MAX_LEN];
+    int priority;
+    DSRCmsgID msg_id;
+    //int (*callback)(void *);  /* current version no need to send this */
 };
-struct ACK_PACKET_TYPE(remote_app_registration){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t current_dontSend2TC;
-    } payload;
+struct ACK_PAYLOAD_TYPE(event_callback_msg_id_insert){
+    ;
 };
 
-struct REQ_PACKET_TYPE(event_callback_msg_id_insert){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        event_type_t event_type;
-        char name[APP_NAME_MAX_LEN];
-        int priority;
-        DSRCmsgID msg_id;
-        //int (*callback)(void *);  //middleware will use a special CB
-    } payload;
+struct REQ_PAYLOAD_TYPE(cloud_packet_tx){
+    uint16_t len;
+    uint8_t service_id;
+    unsigned char* specific_field_p;
 };
-struct ACK_PACKET_TYPE(event_callback_msg_id_insert){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(cloud_packet_tx){
+    ;
 };
 
-struct REQ_PACKET_TYPE(cloud_packet_tx){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        uint16_t len;
-        uint8_t service_id;
-        unsigned char* specific_field_p;
-    } payload;
+struct REQ_PAYLOAD_TYPE(remote_com_send_OBU){
+    int buf_len;
+    uint8_t *buf;
 };
-struct ACK_PACKET_TYPE(cloud_packet_tx){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(remote_com_send_OBU){
+    ;
 };
 
-struct REQ_PACKET_TYPE(remote_com_send_OBU){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        int buf_len;
-        uint8_t *buf;
-    } payload;
+struct REQ_PAYLOAD_TYPE(get_config_RSU_id){
+    ;
 };
-struct ACK_PACKET_TYPE(remote_com_send_OBU){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(get_config_RSU_id){
+    uint32_t RSU_id;
 };
 
-struct REQ_PACKET_TYPE(get_config_RSU_id){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_config_RSU_lat){
+    ;
 };
-struct ACK_PACKET_TYPE(get_config_RSU_id){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint32_t RSU_id;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_config_RSU_lat){
+    double RSU_lat;
 };
 
-struct REQ_PACKET_TYPE(get_config_RSU_lat){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_config_RSU_lon){
+    ;
 };
-struct ACK_PACKET_TYPE(get_config_RSU_lat){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        double RSU_lat;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_config_RSU_lon){
+    double RSU_lon;
 };
 
-struct REQ_PACKET_TYPE(get_config_RSU_lon){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_config_RSU_name){
+    ;
 };
-struct ACK_PACKET_TYPE(get_config_RSU_lon){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        double RSU_lon;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_config_RSU_name){
+    char RSU_name_arr[RSU_NAME_MAX_LEN];
 };
 
-struct REQ_PACKET_TYPE(get_config_RSU_name){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_config_RSU_region){
+    ;
 };
-struct ACK_PACKET_TYPE(get_config_RSU_name){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        char RSU_name_arr[RSU_NAME_MAX_LEN];
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_config_RSU_region){
+    uint32_t RSU_region;
 };
 
-struct REQ_PACKET_TYPE(get_config_RSU_region){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_config_RSU_elev){
+    ;
 };
-struct ACK_PACKET_TYPE(get_config_RSU_region){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint32_t RSU_region;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_config_RSU_elev){
+    double RSU_elev;
 };
 
-struct REQ_PACKET_TYPE(get_config_RSU_elev){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(command_buf_insert_effect_time){
+    tsc_command_t tsc_cmd;
 };
-struct ACK_PACKET_TYPE(get_config_RSU_elev){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        double RSU_elev;
-    } payload;
+struct ACK_PAYLOAD_TYPE(command_buf_insert_effect_time){
+    ;
 };
 
-struct REQ_PACKET_TYPE(command_buf_insert_effect_time){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        tsc_command_t tsc_cmd;
-    } payload;
+struct REQ_PAYLOAD_TYPE(command_buf_insert_adjustment){
+    tsc_command_t tsc_cmd;
 };
-struct ACK_PACKET_TYPE(command_buf_insert_effect_time){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(command_buf_insert_adjustment){
+    ;
 };
 
-struct REQ_PACKET_TYPE(command_buf_insert_adjustment){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        tsc_command_t tsc_cmd;
-    } payload;
+struct REQ_PAYLOAD_TYPE(vms_request_start){
+    uint8_t id;
+    uint8_t priority;
 };
-struct ACK_PACKET_TYPE(command_buf_insert_adjustment){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(vms_request_start){
+    ;
 };
 
-struct REQ_PACKET_TYPE(vms_request_start){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        uint8_t id;
-        uint8_t priority;
-    } payload;
+struct REQ_PAYLOAD_TYPE(vms_request_end){
+    uint8_t id;
 };
-struct ACK_PACKET_TYPE(vms_request_start){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(vms_request_end){
+    ;
 };
 
-struct REQ_PACKET_TYPE(vms_request_end){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        uint8_t id;
-    } payload;
+struct REQ_PAYLOAD_TYPE(get_traffic_signal_status){
+    ;
 };
-struct ACK_PACKET_TYPE(vms_request_end){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(get_traffic_signal_status){
+    traffic_signal_status_t ts_status;
 };
 
-struct REQ_PACKET_TYPE(get_traffic_signal_status){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_current_traffic_signal_status){
+    ;
 };
-struct ACK_PACKET_TYPE(get_traffic_signal_status){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        traffic_signal_status_t ts_status;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_current_traffic_signal_status){
+    traffic_signal_status_t cur_ts_status;
 };
 
-struct REQ_PACKET_TYPE(get_current_traffic_signal_status){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_current_phase){
+    ;
 };
-struct ACK_PACKET_TYPE(get_current_traffic_signal_status){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        traffic_signal_status_t cur_ts_status;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_current_phase){
+    uint8_t phase;
 };
 
-struct REQ_PACKET_TYPE(get_current_phase){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_current_step){
+    ;
 };
-struct ACK_PACKET_TYPE(get_current_phase){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t phase;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_current_step){
+    uint8_t step;
 };
 
-struct REQ_PACKET_TYPE(get_current_step){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_current_second){
+    ;
 };
-struct ACK_PACKET_TYPE(get_current_step){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t step;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_current_second){
+    uint16_t second;
 };
 
-struct REQ_PACKET_TYPE(get_current_second){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_SubPhaseCount){
+    ;
 };
-struct ACK_PACKET_TYPE(get_current_second){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint16_t second;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_SubPhaseCount){
+    uint8_t SubPhaseCount;
 };
 
-struct REQ_PACKET_TYPE(get_SubPhaseCount){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_SignalCount){
+    ;
 };
-struct ACK_PACKET_TYPE(get_SubPhaseCount){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t SubPhaseCount;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_SignalCount){
+    uint8_t SignalCount;
 };
 
-struct REQ_PACKET_TYPE(get_SignalCount){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_plan_id){
+    ;
 };
-struct ACK_PACKET_TYPE(get_SignalCount){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t SignalCount;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_plan_id){
+    uint8_t plan_id;
 };
 
-struct REQ_PACKET_TYPE(get_plan_id){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_control_status){
+    ;
 };
-struct ACK_PACKET_TYPE(get_plan_id){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t plan_id;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_control_status){
+    uint8_t ctrl_status;
 };
 
-struct REQ_PACKET_TYPE(get_control_status){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_PhaseOrder){
+    ;
 };
-struct ACK_PACKET_TYPE(get_control_status){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t ctrl_status;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_PhaseOrder){
+    uint8_t PhaseOrder;
 };
 
-struct REQ_PACKET_TYPE(get_PhaseOrder){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_remaining_time){
+    uint8_t phase;
+    uint8_t step;
+    uint16_t second;
 };
-struct ACK_PACKET_TYPE(get_PhaseOrder){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t PhaseOrder;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_remaining_time){
+    uint16_t remaining_time;
 };
 
-struct REQ_PACKET_TYPE(get_remaining_time){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        uint8_t phase;
-        uint8_t step;
-        uint16_t second;
-    } payload;
+struct REQ_PAYLOAD_TYPE(get_SignalStatus){
+    uint8_t SubPhaseCount_index;
+    uint8_t SignalCount_index;
 };
-struct ACK_PACKET_TYPE(get_remaining_time){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint16_t remaining_time;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_SignalStatus){
+    uint8_t SignalStatus;
 };
 
-struct REQ_PACKET_TYPE(get_SignalStatus){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        uint8_t SubPhaseCount_index;
-        uint8_t SignalCount_index;
-    } payload;
+struct REQ_PAYLOAD_TYPE(get_total_compensation_second){
+    ;
 };
-struct ACK_PACKET_TYPE(get_SignalStatus){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t SignalStatus;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_total_compensation_second){
+    int16_t total_cps_sec;
 };
 
-struct REQ_PACKET_TYPE(get_total_compensation_second){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_compensation_buffer){
+    ;
 };
-struct ACK_PACKET_TYPE(get_total_compensation_second){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        int16_t total_cps_sec;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_compensation_buffer){
+    int16_t compensation_buffer[SUBPHASEID_NUM];
 };
 
-struct REQ_PACKET_TYPE(get_compensation_buffer){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(set_control_status){
+    uint8_t control_status;
 };
-struct ACK_PACKET_TYPE(get_compensation_buffer){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        int16_t compensation_buffer[SUBPHASEID_NUM];
-    } payload;
+struct ACK_PAYLOAD_TYPE(set_control_status){
+    ;
 };
 
-struct REQ_PACKET_TYPE(set_control_status){
-    uint32_t packet_type;
-    uint32_t api_id;
-    struct {
-        uint8_t control_status;
-    } payload;
+struct REQ_PAYLOAD_TYPE(get_original_tc_health_status){
+    ;
 };
-struct ACK_PACKET_TYPE(set_control_status){
-    uint32_t packet_type;
-    int ret_val;
+struct ACK_PAYLOAD_TYPE(get_original_tc_health_status){
+    uint16_t ori_tc_health_status;
 };
 
-struct REQ_PACKET_TYPE(get_original_tc_health_status){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_next_SubPhaseID){
+    ;
 };
-struct ACK_PACKET_TYPE(get_original_tc_health_status){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint16_t ori_tc_health_status;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_next_SubPhaseID){
+    uint8_t next_SubPhaseID;
 };
 
-struct REQ_PACKET_TYPE(get_next_SubPhaseID){
-    uint32_t packet_type;
-    uint32_t api_id;
+struct REQ_PAYLOAD_TYPE(get_prev_SubPhaseID){
+    ;
 };
-struct ACK_PACKET_TYPE(get_next_SubPhaseID){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t next_SubPhaseID;
-    } payload;
-};
-
-struct REQ_PACKET_TYPE(get_prev_SubPhaseID){
-    uint32_t packet_type;
-    uint32_t api_id;
-};
-struct ACK_PACKET_TYPE(get_prev_SubPhaseID){
-    uint32_t packet_type;
-    int ret_val;
-    struct {
-        uint8_t prev_SubPhaseID;
-    } payload;
+struct ACK_PAYLOAD_TYPE(get_prev_SubPhaseID){
+    uint8_t prev_SubPhaseID;
 };
 
 #endif  /* EXTERNAL_APP_PROXY_INNER_H */

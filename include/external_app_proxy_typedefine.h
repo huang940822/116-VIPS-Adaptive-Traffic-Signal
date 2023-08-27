@@ -1,13 +1,9 @@
-#ifndef EXTERNAL_APP_PROXY_H
-#define EXTERNAL_APP_PROXY_H
+#ifndef EXTERNAL_APP_PROXY_TYPEDEFINE_H
+#define EXTERNAL_APP_PROXY_TYPEDEFINE_H
 
-#include <stdio.h>
-#include <stdint.h>
+/* this file should be the same as in server side (i.e., middleware) */
 
-#include <typedefine.h>
-
-/* this enum should be the same as in ea_external_app_proxy.h */
-enum ea_err_definition_enum{
+enum ea_err_definition_enum {
     EA_ERR_OK = 0,
     EA_ERR_SOCKET_CREATE,
     EA_ERR_SOCKET_CONNECT,
@@ -26,14 +22,14 @@ enum ea_err_definition_enum{
     EA_ERR_CALLBACK_NOT_DEFINED_BY_APP,
     EA_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM,
     EA_ERR_BAD_CALLBACKMASK_FROM_MW,
-    EA_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER,
     EA_ERR_BAD_API_ID_BEFORE_REGISTER,
-    EA_ERR_APP_ID_ALREADY_REGISTER,
+    EA_ERR_BAD_CHANNEL_FROM_APP,
+    EA_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER,
+    EA_ERR_BAD_PACKET_TYPE_REGISTER_ORDER,
+    EA_ERR_BAD_PACKET_TYPE_FROM_INTERACT_CHANNEL,
     
-    /* this tag should always be at the last*/
+    /* this tag should always be at the last */
     NUM_OF_EA_ERR_DEF,
 };
 
-void *external_app_proxy_handler();
-
-#endif  /* EXTERNAL_APP_PROXY_H */
+#endif  /* EXTERNAL_APP_PROXY_TYPEDEFINE_H */

@@ -1,3 +1,6 @@
+#ifndef APPLICATION_REGISTRATION_H
+#define APPLICATION_REGISTRATION_H
+
 #include "typedefine.h"
 
 extern uint8_t app_num;
@@ -12,7 +15,7 @@ extern pthread_mutex_t mutex_app_list;
  * all might read/write callback_list, we add a mutex_lock */
 extern pthread_mutex_t mutex_callback_list;
 
-int app_register(app_obj_t *);
+int app_register(app_obj_t *app);
 void app_list_print();
 void event_callback_print();
 void event_callback_msg_id_insert(event_type_t event_type,
@@ -27,3 +30,5 @@ typedef enum app_register_err {
     APP_REGISTER_DUPLICATE_APP_NAME = -4,
     APP_REGISTER_DUPLICATE_APP_ID = -5
 } app_register_err_t;
+
+#endif  /* APPLICATION_REGISTRATION_H */

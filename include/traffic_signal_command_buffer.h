@@ -1,3 +1,7 @@
+#ifndef TRAFFIC_SIGNAL_COMMAND_BUFFER_H
+#define TRAFFIC_SIGNAL_COMMAND_BUFFER_H
+
+#include "pthread.h"
 #include "typedefine.h"
 
 #define SUBPHASEID_NUM 8
@@ -32,3 +36,5 @@ typedef enum command_buf_err {
     IMPROPER_EFFECT_TIME = -10,
     INCOMP_TSPDONOTHING=-11,
 } command_buf_err_t;
+
+#endif  /* TRAFFIC_SIGNAL_COMMAND_BUFFER_H */

@@ -77,6 +77,7 @@ typedef enum event_type {
     EVENT_TRAFFIC_SIGNAL_COMMAND_TX = 6,
     EVENT_CAMERA_PACKET_RX = 7,
     EVENT_REGISTRATION = 8,
+    EVENT_MIDDLEWARE_RESTART,   /* enum will auto increase */ 
     EVENT_TYPE_NUMBER
 } event_type_t;
 
@@ -115,7 +116,7 @@ typedef struct external_app_info_type {
     pid_t pid;              //process id of the external application    
     int notify_fd;          //middleware use this socket_fd to notify the app
     int interact_fd;        //app will use this socket_fd to call middleware-api
-    int heartbeat_rc;       //heartbeat record, updated each time app send req to MW
+    uint8_t heartbeat_rc;       //heartbeat record, updated each time app send req to MW
 } ea_info_t;
 
 typedef struct application_object {
