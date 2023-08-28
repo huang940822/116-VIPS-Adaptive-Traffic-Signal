@@ -296,7 +296,10 @@ void conn_accept_TCP_handler(struct ae_event_loop *event_loop,
     cfd = net_TCP_accept(serv->err_info, fd, ip_addr, sizeof ip_addr, &cport);
     if (cfd == -1)
         return;
+
     printf("Connected from %s:%d\n", ip_addr, cport);
+    log_file_write("Connected from %s:%d\n", ip_addr, cport);
+
     if (net_non_block(NULL, cfd) < 0) {
         fprintf(stderr, "fail to set client fd to be nonblock: %d\n", fd);
         close(fd);
@@ -323,8 +326,9 @@ void conn_accept_TCP_handler(struct ae_event_loop *event_loop,
         comm_dict_add(serv->broker->client_dict, client, client->com_id);
     if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
                              conn_read_from_client_TCP, client) == AE_ERR) {
-        fprintf(stderr, "create socket readable event error, close fd: %d\n",
-                fd);
+        fprintf(stderr, "create socket readable event error, close fd: %d\n", fd);
+        log_file_write_fatal_error("TCP create socket readable event error, close fd: %d\n", fd);
+
         comm_dict_delete(serv->broker->client_dict, client->com_id);
         conn_free_client(client);
     }
@@ -457,7 +461,7 @@ void conn_write_to_client_TCP(struct ae_event_loop *event_loop,
     //     ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
     //     return;
     // }
-    //送資料出去
+    // 送資料出去
     int written = client->handle->send_fn(client);
 
     pthread_mutex_lock(&client->write_buffer->mutex);
@@ -466,9 +470,9 @@ void conn_write_to_client_TCP(struct ae_event_loop *event_loop,
     }
     pthread_mutex_unlock(&client->write_buffer->mutex);
 
-    //都送出去了 所以可以清掉這個com event?
-    // if (get_buffer_size(wbuffer) == 0)
-    // 	ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
+    // 都送出去了 所以可以清掉這個com event?
+    //  if (get_buffer_size(wbuffer) == 0)
+    //  	ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
     ae_delete_comm_event(client->el, client->fd, AE_WRITABLE);
 }
 void conn_read_from_client_UDP(struct ae_event_loop *event_loop,
@@ -488,15 +492,15 @@ void conn_read_from_SMART_AVI_UDP(struct ae_event_loop *event_loop,
                                   void *clientData,
                                   int mask)
 {
-    # if CPS_DEBUG > 0
-        double timestamp;
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        timestamp = (double)(tv.tv_sec % 60) + tv.tv_usec / 1e6f;
-        if (cnt < CPS_DEBUG)
-            tsmp[cnt] = timestamp;
-        
-    # endif
+#if CPS_DEBUG > 0
+    double timestamp;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    timestamp = (double) (tv.tv_sec % 60) + tv.tv_usec / 1e6f;
+    if (cnt < CPS_DEBUG)
+        tsmp[cnt] = timestamp;
+
+#endif
     client_t *client = (client_t *) clientData;
     comm_server_t *serv = (comm_server_t *) event_loop->server;
     ssize_t readn = client->handle->recv_fn(client);
