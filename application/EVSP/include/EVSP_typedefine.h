@@ -2,6 +2,8 @@
 #define EVSP_TYPEDEFINE_H
 
 #include "typedefine.h"
+#include <sys/types.h>
+#include <stdbool.h>
 
 #define EVSP_PHASE_MAX 8
 #define MIN_GREEN 5

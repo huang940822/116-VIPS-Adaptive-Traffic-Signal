@@ -22,7 +22,7 @@ int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
     EA_PACKET_TYPE_REGI,            /*register*/
-    EA_PACKET_TYPE_NTF_UPDATE = 0,  /*notify channel update*/
+    EA_PACKET_TYPE_NTF_UPDATE,      /*notify channel update*/
     EA_PACKET_TYPE_REQ,             /*requeset*/
     EA_PACKET_TYPE_ACK,             /*ack*/
     EA_PACKET_TYPE_NM_NTF,          /*normal notify*/
