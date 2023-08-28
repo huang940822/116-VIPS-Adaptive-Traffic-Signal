@@ -320,6 +320,29 @@ uint8_t tsc_0F42()
     return ret;
 }
 
+// query plan of all day
+uint8_t tsc_5F46(uint8_t WeekDay) 
+{
+    traffic_signal_packet_t *packet;
+    Malloc(packet, MAX_PACKET_LEN, "tsc_5F46");
+
+    signal_packet_init;
+
+    packet->SEQ = get_seq_num();
+    packet->LEN[0] = QUERY_SEGMENT_PLAN_LEN0_VAL;
+    packet->LEN[1] = QUERY_SEGMENT_PLAN_LEN1_VAL;
+    packet->INFO[0] = 0x5F;
+    packet->INFO[1] = 0x46;
+    packet->INFO[2] = 0xFF;
+    packet->INFO[3] = WeekDay;
+
+    uint8_t ret = TC_packet_tx(packet, "signal packet tx: 5F46");
+    if (packet != NULL) {
+        free(packet);
+    }
+    return ret;
+}
+
 // countdown on
 uint8_t tsc_countdown_on(uint8_t machine_type)
 {

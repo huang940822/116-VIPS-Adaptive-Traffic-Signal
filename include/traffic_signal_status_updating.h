@@ -13,6 +13,7 @@ void packet_5FCC(traffic_signal_packet_t *packet);
 void packet_5FC8(traffic_signal_packet_t *packet);
 void packet_5FC4(traffic_signal_packet_t *packet);
 void packet_5FC5(traffic_signal_packet_t *packet);
+void packet_5FC6(traffic_signal_packet_t *packet);
 
 void packet_5F0C(traffic_signal_packet_t *packet);
 void packet_5FC3(traffic_signal_packet_t *packet);

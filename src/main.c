@@ -84,6 +84,15 @@ int main()
     // init tc fail detect
     tc_5fcc_error_detect_init();
 
+    /* Enforce to pretime controlstrategy timer */
+    timer_t enforce_pretime_timer_id;
+    uint8_t enforce_pretime_timer_num = TIMER_EVENT_ENFORCE_PRETIME;
+
+    create_timer(&enforce_pretime_timer_id,
+                 &enforce_pretime_timer_num,
+                 timer_event_handler);
+    set_timer(enforce_pretime_timer_id, 1, 0, 4, 0);
+
     // /* taffic signal packet serial port init */
     traffic_signal_port_init();
 
