@@ -20,11 +20,11 @@
 
 #include "external_app_proxy_inner.h"
 #include "external_app_proxy_typedefine.h"
+#include "external_app_proxy_api_wrapper.h"
 #include "external_app_proxy_server.h"
 
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
-#define MAX_CLIENTS 200
-#define EPOLL_MAX_EVENTS 32
+#define EPOLL_MAX_EVENTS 64
 
 /* The backlog argument defines the maximum length to which the
  * queue of pending connections for sockfd may grow. 
@@ -33,31 +33,48 @@
 
 static int unix_listen_fd;  //only one, used for accepting new client
 static int ep_fd;           //fd for epoll
+static uint8_t proxy_cur_heartbeat;
 
+int external_app_proxy_notify_callback(void* info);
+uint8_t get_current_eap_heartbeat_rc();
+void *external_app_proxy_handler();
 int32_t read_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
 app_obj_t* find_duplicate_id_app_obj( uint8_t req_id );
-int handle_new_client_register(int client_fd);
+int handle_new_client_fd_accepted(int client_fd);
 int handle_remote_client_request(int client_fd);
-int handle_app_register( app_obj_t* app_p,
-                         struct REQ_PAYLOAD_TYPE(remote_app_registration) *payload_p,
-                         bool duplicate_flag);
-int handle_heartbeat_from_app(int client_fd);
-int handle_request_by_api_id(int client_fd, uint32_t api_id);
-void set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask);
+int inner_handle_app_register( app_obj_t* app_p, void* payload_p, bool duplicate_flag);
+int inner_handle_heartbeat_from_app(int client_fd);
+int inner_handle_request_by_api_id(int client_fd, uint32_t api_id);
 uint8_t get_current_eap_heartbeat_rc();
+void increase_eap_heartbeat_rc();
+/* NOTICE, if you add new callback, you NEED to update function below */
+void set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask);
+/* above are function declarations */
 
-
+//TODO
 int external_app_proxy_notify_callback( void* info )
 {
     ;
 }
 
-/* the main server thread */
+uint8_t get_current_eap_heartbeat_rc()
+{
+    return proxy_cur_heartbeat;
+}
+
+void increase_eap_heartbeat_rc()
+{
+    /* unsigned type will auto round up */
+    /* since we compare heartbeat with a threshold much larger than 1,
+     * I think it's ok to not protect it by mutex */
+    proxy_cur_heartbeat += 1;   
+}
+
+/* the main external_app_proxy server thread */
 void *external_app_proxy_handler()
 {   
     /* create a unix domain socket with MY_UNIX_SOCKET_PATH 
-
      * unlink, if socket already exists */
     struct stat statbuf;
     if( stat (MY_UNIX_SOCKET_PATH, &statbuf) == 0) {
@@ -106,7 +123,6 @@ void *external_app_proxy_handler()
         log_file_write_fatal_error("external_app_proxy_handler: epoll_ctl");
         fprintf(stderr, "err: external_app_proxy_handler: epoll_ctl\n");
     }
-
     
     struct epoll_event ev_arr[EPOLL_MAX_EVENTS];    
     int client_fd;       //temporary store client that we are communicating with.
@@ -144,7 +160,7 @@ void *external_app_proxy_handler()
                 new_ev.data.fd = client_fd;
 				epoll_ctl(ep_fd, EPOLL_CTL_ADD, client_fd, &new_ev);
 
-                handle_new_client_register(client_fd);
+                handle_new_client_fd_accepted(client_fd);
 			}
             else{   /* existed client */
                     
@@ -163,7 +179,81 @@ void *external_app_proxy_handler()
     fprintf(stderr, "err: external_app_proxy_handler: thread unexpected exit\n");
 }
 
-int handle_new_client_register(int client_fd)
+int handle_remote_client_request(int client_fd)
+{
+    int ret;
+    packet_to_proxy_header_t header;
+    ack_from_proxy_header_t ack_packet;
+    memset(&ack_packet, 0, sizeof(ack_packet));
+    ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+
+    ret = read_from_unix_socket_fd( client_fd, &header, sizeof(header));
+    if (ret != 0) {
+        return -1;
+    }
+
+    /* header error-check */
+    if ( header.packet_type != EA_PACKET_TYPE_REQ 
+         && header.packet_type != EA_PACKET_TYPE_HEARTBEAT) 
+    {
+        ack_packet.ret_val = EA_ERR_BAD_PACKET_TYPE_FROM_INTERACT_CHANNEL;
+        ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
+        return ret;
+    }
+
+    if ( header.packet_type == EA_PACKET_TYPE_HEARTBEAT ) {
+        ret = handle_heartbeat_from_app(client_fd);
+    }
+    else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
+        ret = handle_request_by_api_id(client_fd, header.api_id);
+    }
+    return ret;
+}
+
+/* this function will use wrapper_fp_arr, which will send unix packet to external app */
+static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
+{   
+    if ( client_fd == 0 ){
+        fprintf(stderr, "err: handle_request_by_api_id: client_fd == 0\n");
+        return -1;
+    }
+    if ( api_id == API_ID_OF(special_reserved_id) ){
+        fprintf(stderr, "err: handle_request_by_api_id: api_id == %d\n", API_ID_OF(special_reserved_id));
+        return -1;
+    }
+    if ( api_id >= NUM_OF_API_ID_DEFININITION ){
+        fprintf(stderr, "err: handle_request_by_api_id: api_id >= %d\n", NUM_OF_API_ID_DEFININITION);
+        return -1;
+    }
+    if ( api_id == API_ID_OF(remote_app_registration) ){
+        fprintf(stderr, "err: handle_request_by_api_id: api_id == %d\n", API_ID_OF(remote_app_registration));
+        return -1;
+    }
+    if ( api_id == API_ID_OF(app_main_loop_start) ){
+        fprintf(stderr, "err: handle_request_by_api_id: api_id == %d\n", API_ID_OF(app_main_loop_start));
+        return -1;
+    }
+
+    /* call the related wrapper function by its api_id */
+    int ret;
+    ret = (*wrapper_fp_arr[api_id])(client_fd);
+    // maybe log the ret value
+    return ret;
+}
+
+static inline int inner_handle_heartbeat_from_app(int client_fd)
+{
+    int ret;
+    packet_to_proxy_hearbeat_t heartbeat_packet;
+    ret = read_from_unix_socket_fd( client_fd, &heartbeat_packet, sizeof(heartbeat_packet));
+    if (ret != 0) {
+        return -1;
+    }
+    update_external_app_heartbeat_by_appID(heartbeat_packet.appID);
+    return 0;
+}
+
+int handle_new_client_fd_accepted(int client_fd)
 {
     int ret;
     packet_to_proxy_header_t header;
@@ -226,71 +316,23 @@ int handle_new_client_register(int client_fd)
     return 0;
 }
 
-int handle_remote_client_request(int client_fd){
-    
-    int ret;
-    packet_to_proxy_header_t header;
-    ack_from_proxy_header_t ack_packet;
-    memset(&ack_packet, 0, sizeof(ack_packet));
-    ack_packet.packet_type = EA_PACKET_TYPE_ACK;
-
-    ret = read_from_unix_socket_fd( client_fd, &header, sizeof(header));
-    if (ret != 0) {
-        return -1;
-    }
-
-    /* header error-check */
-    if ( header.packet_type != EA_PACKET_TYPE_REQ 
-         && header.packet_type != EA_PACKET_TYPE_HEARTBEAT) 
-    {
-        ack_packet.ret_val = EA_ERR_BAD_PACKET_TYPE_FROM_INTERACT_CHANNEL;
-        ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-        return ret;
-    }
-
-    if( header.packet_type == EA_PACKET_TYPE_HEARTBEAT ){
-        ret = handle_heartbeat_from_app(client_fd);
-    }
-    else{   /* header.packet_type == EA_PACKET_TYPE_REQ */
-        ret = handle_request_by_api_id(client_fd, header.api_id);
-    }
-    return ret;
-}
-
-int handle_app_register( app_obj_t* app_p,
-                         struct REQ_PAYLOAD_TYPE(remote_app_registration) *payload_p,
-                         bool duplicate_flag)
+int inner_handle_app_register( app_obj_t* app_p, void *payload_p, bool duplicate_flag)
 {   
     int ret = 0;
+    struct REQ_PAYLOAD_TYPE(remote_app_registration) *pl_p 
+        = (struct REQ_PAYLOAD_TYPE(remote_app_registration)*)(payload_p);
     if(!duplicate_flag){
         /* a brand new app register */
-        strncpy( app_p->name, payload_p->name, APP_NAME_MAX_LEN);
-        app_p->dontSend2TC = payload_p->dontSend2TC;
-        app_p->id = payload_p->id;
-        app_p->priority = payload_p->priority;
-        set_external_app_callback_by_mask(app_p, payload_p->callback_register_mask);
-        ret = app_register(app_p);
+        strncpy( app_p->name, pl_p->name, APP_NAME_MAX_LEN);
+        app_p->dontSend2TC = pl_p->dontSend2TC;
+        app_p->id = pl_p->id;
+        app_p->priority = pl_p->priority;
+        set_external_app_callback_by_mask(app_p, pl_p->callback_register_mask);
+        ret = app_register(app_p);  /* func*/
     }
     
-    update_external_app_pid(app_p, payload_p->pid);
-
+    update_external_app_pid(app_p, pl_p->pid);
     return ret;
-}
-
-
-int handle_heartbeat_from_app(int client_fd){
-    int ret;
-    packet_to_proxy_hearbeat_t heartbeat_packet;
-    ret = read_from_unix_socket_fd( client_fd, &heartbeat_packet, sizeof(heartbeat_packet));
-    if (ret != 0) {
-        return -1;
-    }
-    update_external_app_heartbeat_by_appID(heartbeat_packet.appID);
-    return 0;
-}
-
-int handle_request_by_api_id(int client_fd, uint32_t api_id){
-    int ret;
 }
 
 /* NOTICE, if you add new callback, you NEED to update this function */
@@ -326,11 +368,6 @@ void set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask)
     if( mask |= ( 0x1 << BIT_SHIFT_OF(on_middleware_restart) ) ){
         app_obj_p->on_middleware_restart = external_app_proxy_notify_callback;
     }
-}
-
-uint8_t get_current_eap_heartbeat_rc(){
-    //todo
-    return 0;
 }
 
 /* below are only used by middleware itself */

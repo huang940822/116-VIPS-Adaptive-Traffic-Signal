@@ -177,7 +177,9 @@ void command_buf_send(tsc_command_object_t *command_obj,
         break;
 
     case SHAN_ZHU:
-        if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+        /*old: (using TSP.id)->這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!! */
+        /*new: (2023/08/28) currently depend on "enum application_id", which still might no the best way */ 
+        if (command_obj->app_id == TSP_ID) {  
             if (TSP.dontSend2TC == 1) {
                 printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
@@ -189,7 +191,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
                 break;
             }
 
-        } else if (command_obj->app_id == EVSP.id) {
+        } else if (command_obj->app_id == EVSP_ID) {
             if (EVSP.dontSend2TC == 1) {
                 log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
@@ -230,7 +232,9 @@ void command_buf_send(tsc_command_object_t *command_obj,
         break;
 
     case SHAN_ZHU_M:
-        if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
+        /*old: (using TSP.id)->這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!! */
+        /*new: (2023/08/28) currently depend on "enum application_id", which still might no the best way */ 
+        if (command_obj->app_id == TSP_ID) {  
             if (TSP.dontSend2TC == 1) {
                 printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
@@ -241,7 +245,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
                 log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
                 break;
             }
-        } else if (command_obj->app_id == EVSP.id) {
+        } else if (command_obj->app_id == EVSP_ID) {
             if (EVSP.dontSend2TC == 1) {
                 log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
                 break;
