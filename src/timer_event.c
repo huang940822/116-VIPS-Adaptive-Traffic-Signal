@@ -31,6 +31,7 @@ extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
 static unsigned int _0F42_count = 0;
+struct tm *localTime;
 void timer_event_handler(__sigval_t value)
 {
     if (*(uint8_t *) value.sival_ptr ==
