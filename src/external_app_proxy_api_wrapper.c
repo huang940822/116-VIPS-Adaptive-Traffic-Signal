@@ -354,6 +354,32 @@ int WRAPPER_FUNC_OF(vms_request_end)(int client_fd)
     return ret;
 }
 
+int WRAPPER_FUNC_OF(vms_sync_evsp_prog)(int client_fd)
+{
+    int ret;
+    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
+    ack_from_proxy_header_t ack_packet;
+    ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+
+    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
+    ack_payload.RSU_id = config.RSU_id;
+
+    ack_packet.ret_val = EA_ERR_OK;
+
+    ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
+    if (ret != 0) {
+        ;//maybe log err
+        return ret;
+    }
+
+    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    if (ret != 0) {
+        ;//maybe log err
+    }
+    return ret;
+}
+
+
 
 /* traffic_signal_status_updating.h */
 int WRAPPER_FUNC_OF(get_traffic_signal_status)(int client_fd)
@@ -808,7 +834,7 @@ int WRAPPER_FUNC_OF(get_prev_SubPhaseID)(int client_fd)
 
 
 
-eap_api_wrapper_fp wrapper_fp_arr[NUM_OF_API_ID_DEFININITION]{
+eap_api_wrapper_fp wrapper_fp_arr[NUM_OF_API_ID_DEFININITION] = {
     /* application_registration.h */
     [API_ID_OF(event_callback_msg_id_insert)] = WRAPPER_FUNC_OF(event_callback_msg_id_insert),
 
@@ -831,6 +857,7 @@ eap_api_wrapper_fp wrapper_fp_arr[NUM_OF_API_ID_DEFININITION]{
     /* vms.h */    
     [API_ID_OF(vms_request_start)] = WRAPPER_FUNC_OF(vms_request_start),
     [API_ID_OF(vms_request_end)] = WRAPPER_FUNC_OF(vms_request_end),
+    [API_ID_OF(vms_sync_evsp_prog)] = WRAPPER_FUNC_OF(vms_sync_evsp_prog),
 
     /* traffic_signal_status_updating.h */
     [API_ID_OF(get_traffic_signal_status)] = WRAPPER_FUNC_OF(get_traffic_signal_status),

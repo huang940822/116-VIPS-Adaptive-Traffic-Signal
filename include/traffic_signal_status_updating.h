@@ -51,4 +51,4 @@ uint8_t get_prev_SubPhaseID();
 
 void sem_timedwait_millsecs(sem_t *sem, long msecs);
 
-#endif
+#endif  /* TRAFFIC_SIGNAL_STATUS_UPDATING_H */

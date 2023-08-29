@@ -95,6 +95,21 @@ void vms_request_end(uint8_t id)
     pthread_mutex_unlock(&VMS_request_priority_mutex);
 }
 
+int vms_sync_evsp_prog(ea_info_t *ea_info_p, uint8_t *evsp_prog_p){
+    
+    if( evsp_prog_p ){
+        return -1;
+    }
+    /* ea_info_p will only be checked on external_app side library */
+
+    /* TODO: since NOW external _app_proxy and vms_thread will both access evsp_prog[], 
+     * depend on the behavior you observed, there might need a mutex-lock here */
+    for(int i =0; i < RTM_MAX; ++i ){
+        evsp_prog[i] = evsp_prog_p[i];
+    }
+    return 0;
+}
+
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
 {
     // 寫入 program_id.txt

@@ -2,6 +2,8 @@
 #define TIMER_EVENT_H
 
 #include "typedefine.h"
+#include <time.h>
+#include <sys/types.h>
 
 void timer_event_handler();
 int create_timer(timer_t *timer_id,
@@ -14,4 +16,4 @@ int set_timer(timer_t timer_id,
               uint32_t initial_nsec);
 int delete_timer(timer_t timer_id);
 
-#endif
+#endif  /* TIMER_EVENT_H */

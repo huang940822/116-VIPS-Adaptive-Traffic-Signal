@@ -43,13 +43,13 @@ int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size
 app_obj_t* find_duplicate_id_app_obj( uint8_t req_id );
 int handle_new_client_fd_accepted(int client_fd);
 int handle_remote_client_request(int client_fd);
-int inner_handle_app_register( app_obj_t* app_p, void* payload_p, bool duplicate_flag);
-int inner_handle_heartbeat_from_app(int client_fd);
-int inner_handle_request_by_api_id(int client_fd, uint32_t api_id);
+static inline int inner_handle_app_register( app_obj_t* app_p, void* payload_p, bool duplicate_flag);
+static inline int inner_handle_heartbeat_from_app(int client_fd);
+static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id);
 uint8_t get_current_eap_heartbeat_rc();
 void increase_eap_heartbeat_rc();
 /* NOTICE, if you add new callback, you NEED to update function below */
-void set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask);
+static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask);
 /* above are function declarations */
 
 //TODO
@@ -202,10 +202,10 @@ int handle_remote_client_request(int client_fd)
     }
 
     if ( header.packet_type == EA_PACKET_TYPE_HEARTBEAT ) {
-        ret = handle_heartbeat_from_app(client_fd);
+        ret = inner_handle_heartbeat_from_app(client_fd);
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
-        ret = handle_request_by_api_id(client_fd, header.api_id);
+        ret = inner_handle_request_by_api_id(client_fd, header.api_id);
     }
     return ret;
 }
@@ -296,7 +296,7 @@ int handle_new_client_fd_accepted(int client_fd)
             else{
                 fprintf( stdout, "%s using id:%d is already registered\n", payload.name, payload.id);
                 reset_external_app_both_fd(handling_app_p, client_fd);  /*this will set notify_fd 0*/
-                handle_app_register(handling_app_p, &payload, true);
+                inner_handle_app_register(handling_app_p, &payload, true);
             }
         }
         else{   /* notify_fd == 0 */
@@ -308,7 +308,7 @@ int handle_new_client_fd_accepted(int client_fd)
         handling_app_p = calloc( 1, sizeof(app_obj_t) );
         handling_app_p->ea_info_p = calloc( 1, sizeof(ea_info_t) );
         reset_external_app_both_fd(handling_app_p, client_fd);  /*this will set notify_fd 0*/
-        handle_app_register(handling_app_p, &payload, false);
+        inner_handle_app_register(handling_app_p, &payload, false);
     }
 
     ack_packet.ret_val = EA_ERR_OK;
@@ -316,7 +316,7 @@ int handle_new_client_fd_accepted(int client_fd)
     return 0;
 }
 
-int inner_handle_app_register( app_obj_t* app_p, void *payload_p, bool duplicate_flag)
+static inline int inner_handle_app_register( app_obj_t* app_p, void *payload_p, bool duplicate_flag)
 {   
     int ret = 0;
     struct REQ_PAYLOAD_TYPE(remote_app_registration) *pl_p 
@@ -327,7 +327,7 @@ int inner_handle_app_register( app_obj_t* app_p, void *payload_p, bool duplicate
         app_p->dontSend2TC = pl_p->dontSend2TC;
         app_p->id = pl_p->id;
         app_p->priority = pl_p->priority;
-        set_external_app_callback_by_mask(app_p, pl_p->callback_register_mask);
+        inner_set_external_app_callback_by_mask(app_p, pl_p->callback_register_mask);
         ret = app_register(app_p);  /* func*/
     }
     
@@ -336,7 +336,7 @@ int inner_handle_app_register( app_obj_t* app_p, void *payload_p, bool duplicate
 }
 
 /* NOTICE, if you add new callback, you NEED to update this function */
-void set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask)
+static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask)
 {
     if( mask |= ( 0x1 << BIT_SHIFT_OF(on_OBU_packet_rx) ) ){
         app_obj_p->on_OBU_packet_rx = external_app_proxy_notify_callback;

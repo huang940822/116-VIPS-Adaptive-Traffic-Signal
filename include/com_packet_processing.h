@@ -1,3 +1,6 @@
+#ifndef COM_PACKET_PROCESSING_H
+#define COM_PACKET_PROCESSING_H
+
 #include "buffer.h"
 #include "typedefine.h"
 
@@ -32,3 +35,5 @@ typedef enum packet_processing_err {
     PACKET_INVALID_SEVICE_ID = -4,
     PACKET_INVALID_VEHICLE_TYPE = -5
 } packet_processing_err_t;
+
+#endif /* COM_PACKET_PROCESSING_H */

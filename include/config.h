@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 #include "typedefine.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
 #define VMS_CONFIG_FILE FILE_PATH "config/vms_config.txt"
@@ -101,4 +104,5 @@ char *read_line(char *read_buf, int read_buf_len, FILE *fp);
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
 // val 的長度使用 MAX_CONFIG_VARIABLE_LEN
 bool read_string_from_config_line(char *config_line, char *val);
-#endif
+
+#endif /* CONFIG_H */

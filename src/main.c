@@ -19,7 +19,7 @@
 #include "byte_processing.h"
 #include "config.h"
 #include "dispatcher.h"
-#include "external_app_proxy.h"
+#include "external_app_proxy_server.h"
 #include "error_code_user.h"
 #include "error_status.h"
 #include "j2735_codec.h"
@@ -34,6 +34,7 @@
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
 #include "typedefine.h"
+
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;

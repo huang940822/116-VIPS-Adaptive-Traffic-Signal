@@ -106,7 +106,8 @@ void command_buf_send(tsc_command_object_t *command_obj,
         } else {
             log_file_write("not TSP either EVSP is sent to TC machine\r\n");
         }
-
+    }
+    
     if (config.log_command_buffer) {
         log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }

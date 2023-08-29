@@ -6,6 +6,7 @@
 
 #include "typedefine.h"
 #include "traffic_signal_command_buffer.h"
+#include "vms.h"
 
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
@@ -28,7 +29,8 @@ enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_NM_NTF,          /*normal notify*/
     EA_PACKET_TYPE_SP_NTF,          /*special notify*/
     EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
-    EA_PACKET_TYPE_PROXY,           /*used by proxy library*/
+    EA_PACKET_TYPE_PROXY,           /*used by proxy library for special usage*/
+    EA_PACKET_TYPE_PING,            /*used by proxy library for ping testing*/
     /* this tag should always be at the last*/
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
@@ -106,7 +108,8 @@ enum ea_callback_api_id_definition_enum{
     /* ea_vms.h */
     API_ID_OF(vms_request_start),
     API_ID_OF(vms_request_end),
-
+    API_ID_OF(vms_sync_evsp_prog),
+    
     /* ea_traffic_signal_status_updating.h */
     API_ID_OF(get_traffic_signal_status),
     API_ID_OF(get_current_traffic_signal_status),
@@ -244,6 +247,15 @@ struct REQ_PAYLOAD_TYPE(vms_request_end){
 struct ACK_PAYLOAD_TYPE(vms_request_end){
     ;
 };
+
+struct REQ_PAYLOAD_TYPE(vms_sync_evsp_prog){
+    uint8_t evsp_prog[RTM_MAX];
+};
+struct ACK_PAYLOAD_TYPE(vms_sync_evsp_prog){
+    ;
+};
+
+
 
 struct REQ_PAYLOAD_TYPE(get_traffic_signal_status){
     ;
