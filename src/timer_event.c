@@ -134,33 +134,6 @@ void timer_event_handler(__sigval_t value)
         }
 
         log_file_name_update();
-    } else if (*(uint8_t *) value.sival_ptr ==
-               TIMER_EVENT_ENFORCE_PRETIME) {
-        time_t currentTime;
-        struct tm localTime;
-
-        time(&currentTime);
-        localtime_r(&currentTime, &localTime);
-
-        traffic_signal_status_t signal_status;
-        get_traffic_signal_status(&signal_status);
-        uint16_t cycle_time = signal_status.CycleTime;
-
-        for (int i = 0; i < signal_status.SegmentCount; i++) {
-            uint8_t planHour = signal_status.allday_plan[i].Hour;
-            uint8_t planMin = signal_status.allday_plan[i].Min;
-            // 80 110 140
-            // 6:50 + 160s
-            int timeDiff = (planHour - localTime.tm_hour) * 3600 + (planMin - localTime.tm_min) * 60;
-            // printf("Approaching PlanID %d - Time Remaining: %d seconds\n", signal_status.allday_plan[i].PlanID, timeDiff);
-            // config
-            if (timeDiff >= -600 && timeDiff <= 30) {
-                tsc_pretime();
-                command_buf_clear();
-                log_file_write("Enforce to pretime control_strategy\r\n");
-                log_file_write("command buffer clear\r\n");
-            }
-        }
     }
     // 在thread pool 中傳 bsm 的 timer
     // else if (*(uint8_t *) value.sival_ptr == TIMER_EVENT_DSRC_SEND) {
