@@ -89,9 +89,9 @@ enum ea_callback_api_id_definition_enum{
     
     /* ea_com_packet_processing.h */
     API_ID_OF(cloud_packet_tx),
-    // API_ID_OF(OBU_packet_tx),
-    // API_ID_OF(OBU_j2735_tx),
-    API_ID_OF(remote_com_send_OBU),
+    API_ID_OF(OBU_j2735_tx),
+    API_ID_OF(OBU_packet_tx),
+    API_ID_OF(remote_com_send),
     
     /* ea_config.h */
     API_ID_OF(get_config_RSU_id),
@@ -163,17 +163,29 @@ struct ACK_PAYLOAD_TYPE(event_callback_msg_id_insert){
 struct REQ_PAYLOAD_TYPE(cloud_packet_tx){
     uint16_t len;
     uint8_t service_id;
-    unsigned char* specific_field_p;
 };
 struct ACK_PAYLOAD_TYPE(cloud_packet_tx){
     ;
 };
 
-struct REQ_PAYLOAD_TYPE(remote_com_send_OBU){
+struct REQ_PAYLOAD_TYPE(OBU_j2735_tx){
     int buf_len;
-    uint8_t *buf;
 };
-struct ACK_PAYLOAD_TYPE(remote_com_send_OBU){
+struct ACK_PAYLOAD_TYPE(OBU_j2735_tx){
+    ;
+};
+
+struct REQ_PAYLOAD_TYPE(OBU_packet_tx){
+    int buf_len;
+};
+struct ACK_PAYLOAD_TYPE(OBU_packet_tx){
+    ;
+};
+
+struct REQ_PAYLOAD_TYPE(remote_com_send){
+    int buf_len;
+};
+struct ACK_PAYLOAD_TYPE(remote_com_send){
     ;
 };
 

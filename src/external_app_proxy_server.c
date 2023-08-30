@@ -214,23 +214,23 @@ int handle_remote_client_request(int client_fd)
 static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
 {   
     if ( client_fd == 0 ){
-        fprintf(stderr, "err: handle_request_by_api_id: client_fd == 0\n");
+        fprintf(stderr, "err: inner_handle_request_by_api_id: client_fd == 0\n");
         return -1;
     }
     if ( api_id == API_ID_OF(special_reserved_id) ){
-        fprintf(stderr, "err: handle_request_by_api_id: api_id == %d\n", API_ID_OF(special_reserved_id));
+        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(special_reserved_id));
         return -1;
     }
     if ( api_id >= NUM_OF_API_ID_DEFININITION ){
-        fprintf(stderr, "err: handle_request_by_api_id: api_id >= %d\n", NUM_OF_API_ID_DEFININITION);
+        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id >= %d\n", NUM_OF_API_ID_DEFININITION);
         return -1;
     }
     if ( api_id == API_ID_OF(remote_app_registration) ){
-        fprintf(stderr, "err: handle_request_by_api_id: api_id == %d\n", API_ID_OF(remote_app_registration));
+        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(remote_app_registration));
         return -1;
     }
     if ( api_id == API_ID_OF(app_main_loop_start) ){
-        fprintf(stderr, "err: handle_request_by_api_id: api_id == %d\n", API_ID_OF(app_main_loop_start));
+        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(app_main_loop_start));
         return -1;
     }
 
