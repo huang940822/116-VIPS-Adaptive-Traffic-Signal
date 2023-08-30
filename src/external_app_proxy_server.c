@@ -17,10 +17,12 @@
 #include "typedefine.h"
 #include "application_registration.h"
 #include "application_helper.h"
+#include "config.h"
 
 #include "external_app_proxy_inner.h"
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_api_wrapper.h"
+#include "external_app_proxy_callback_wrapper.h"
 #include "external_app_proxy_server.h"
 
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
@@ -51,12 +53,6 @@ void increase_eap_heartbeat_rc();
 /* NOTICE, if you add new callback, you NEED to update function below */
 static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask);
 /* above are function declarations */
-
-//TODO
-int external_app_proxy_notify_callback( void* info )
-{
-    ;
-}
 
 uint8_t get_current_eap_heartbeat_rc()
 {
@@ -210,7 +206,7 @@ int handle_remote_client_request(int client_fd)
     return ret;
 }
 
-/* this function will use wrapper_fp_arr, which will send unix packet to external app */
+/* this function will use api_wrapper_fp_arr, which will send unix packet to external app */
 static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
 {   
     if ( client_fd == 0 ){
@@ -236,7 +232,7 @@ static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
 
     /* call the related wrapper function by its api_id */
     int ret;
-    ret = (*wrapper_fp_arr[api_id])(client_fd);
+    ret = (*api_wrapper_fp_arr[api_id])(client_fd);
     // maybe log the ret value
     return ret;
 }
@@ -256,6 +252,7 @@ static inline int inner_handle_heartbeat_from_app(int client_fd)
 int handle_new_client_fd_accepted(int client_fd)
 {
     int ret;
+    bool is_notify_fd = 0;
     packet_to_proxy_header_t header;
     ack_from_proxy_header_t ack_packet;
     memset(&ack_packet, 0, sizeof(ack_packet));
@@ -302,6 +299,7 @@ int handle_new_client_fd_accepted(int client_fd)
         else{   /* notify_fd == 0 */
             fprintf( stdout, "%s using id:%d updating notify channel\n", payload.name, payload.id);
             update_external_app_notify_fd(handling_app_p, client_fd);
+            is_notify_fd = 1;
         }
     }
     else{
@@ -313,6 +311,19 @@ int handle_new_client_fd_accepted(int client_fd)
 
     ack_packet.ret_val = EA_ERR_OK;
     send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
+
+    if(is_notify_fd){
+        /* we update the remote config at second connection (i.e., update notify_fd) */
+        struct ACK_PAYLOAD_TYPE(remote_app_registration) ack_payload;
+        ack_payload.RSU_id = config.RSU_id;
+        ack_payload.RSU_lat = config.RSU_lat;
+        ack_payload.RSU_lon = config.RSU_lon;
+        ack_payload.RSU_lat = config.RSU_lat;
+        ack_payload.RSU_region = config.RSU_region;
+        strncpy(ack_payload.RSU_name, config.RSU_name, RSU_NAME_MAX_LEN);
+        send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    }
+
     return 0;
 }
 
@@ -338,35 +349,38 @@ static inline int inner_handle_app_register( app_obj_t* app_p, void *payload_p, 
 /* NOTICE, if you add new callback, you NEED to update this function */
 static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask)
 {
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_OBU_packet_rx) ) ){
-        app_obj_p->on_OBU_packet_rx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_OBU_packet_rx) ) ){
+        app_obj_p->on_OBU_packet_rx = callback_wrapper_fp_arr[EVENT_OBU_PACKET_RX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_OBU_packet_tx) ) ){
-        app_obj_p->on_OBU_packet_tx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_OBU_packet_tx) ) ){
+        app_obj_p->on_OBU_packet_tx = callback_wrapper_fp_arr[EVENT_OBU_PACKET_TX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_RSU_packet_rx) ) ){
-        app_obj_p->on_RSU_packet_rx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_RSU_packet_rx) ) ){
+        app_obj_p->on_RSU_packet_rx = callback_wrapper_fp_arr[EVENT_RSU_PACKET_RX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_RSU_packet_tx) ) ){
-        app_obj_p->on_RSU_packet_tx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_RSU_packet_tx) ) ){
+        app_obj_p->on_RSU_packet_tx = callback_wrapper_fp_arr[EVENT_RSU_PACKET_TX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_cloud_packet_rx) ) ){
-        app_obj_p->on_cloud_packet_rx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_cloud_packet_rx) ) ){
+        app_obj_p->on_cloud_packet_rx = callback_wrapper_fp_arr[EVENT_CLOUD_PACKET_RX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_cloud_packet_tx) ) ){
-        app_obj_p->on_cloud_packet_tx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_cloud_packet_tx) ) ){
+        app_obj_p->on_cloud_packet_tx = callback_wrapper_fp_arr[EVENT_CLOUD_PACKET_TX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_traffic_signal_command_tx) ) ){
-        app_obj_p->on_traffic_signal_command_tx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_traffic_signal_command_tx) ) ){
+        app_obj_p->on_traffic_signal_command_tx = callback_wrapper_fp_arr[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_camera_packet_rx) ) ){
-        app_obj_p->on_camera_packet_rx = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_camera_packet_rx) ) ){
+        app_obj_p->on_camera_packet_rx = callback_wrapper_fp_arr[EVENT_CAMERA_PACKET_RX];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_registration) ) ){
-        app_obj_p->on_registration = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_registration) ) ){
+        /* since for external application,
+           the on_registration callback will be directly called at client side 
+           we just IGNORE the on_registration callback at server side */
+        //app_obj_p->on_registration = callback_wrapper_fp_arr[EVENT_REGISTRATION];
     }
-    if( mask |= ( 0x1 << BIT_SHIFT_OF(on_middleware_restart) ) ){
-        app_obj_p->on_middleware_restart = external_app_proxy_notify_callback;
+    if( mask |= ( 0x1 << BIT_SHIFT_FOR(on_middleware_restart) ) ){
+        app_obj_p->on_middleware_restart = callback_wrapper_fp_arr[EVENT_MIDDLEWARE_RESTART];
     }
 }
 

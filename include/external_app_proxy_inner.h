@@ -10,10 +10,12 @@
 
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
+int32_t is_interact_fd_linked();
 int32_t interact_fd_connect_to_proxy();
 int32_t interact_fd_disconnect_from_proxy();
 int32_t interact_fd_read_from_proxy(void* packet_p, size_t packet_size);
 int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
+int32_t is_notify_fd_linked();
 int32_t notify_fd_connect_to_proxy();
 int32_t notify_fd_disconnect_from_proxy();
 int32_t notify_fd_read_from_proxy(void* packet_p, size_t packet_size);
@@ -35,19 +37,19 @@ enum ea_packet_type_definition_enum{
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
 
-#define BIT_SHIFT_OF(callback_name) BIT_SHIFT_ ## callback_name
+#define BIT_SHIFT_FOR(callback_name) BIT_SHIFT_ ## callback_name
 enum ea_callback_func_bit_shift_definition_enum{
     /* currently using the matching definition from enum event_type */
-    BIT_SHIFT_OF(on_OBU_packet_rx) = EVENT_OBU_PACKET_RX, 
-    BIT_SHIFT_OF(on_OBU_packet_tx) = EVENT_OBU_PACKET_TX,
-    BIT_SHIFT_OF(on_RSU_packet_rx) = EVENT_RSU_PACKET_RX, 
-    BIT_SHIFT_OF(on_RSU_packet_tx) = EVENT_RSU_PACKET_TX,
-    BIT_SHIFT_OF(on_cloud_packet_rx) = EVENT_CLOUD_PACKET_RX,
-    BIT_SHIFT_OF(on_cloud_packet_tx) = EVENT_CLOUD_PACKET_TX,
-    BIT_SHIFT_OF(on_traffic_signal_command_tx) = EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
-    BIT_SHIFT_OF(on_camera_packet_rx) = EVENT_CAMERA_PACKET_RX,
-    BIT_SHIFT_OF(on_registration) = EVENT_REGISTRATION, 
-    BIT_SHIFT_OF(on_middleware_restart) = EVENT_MIDDLEWARE_RESTART,
+    BIT_SHIFT_FOR(on_OBU_packet_rx) = EVENT_OBU_PACKET_RX, 
+    BIT_SHIFT_FOR(on_OBU_packet_tx) = EVENT_OBU_PACKET_TX,
+    BIT_SHIFT_FOR(on_RSU_packet_rx) = EVENT_RSU_PACKET_RX, 
+    BIT_SHIFT_FOR(on_RSU_packet_tx) = EVENT_RSU_PACKET_TX,
+    BIT_SHIFT_FOR(on_cloud_packet_rx) = EVENT_CLOUD_PACKET_RX,
+    BIT_SHIFT_FOR(on_cloud_packet_tx) = EVENT_CLOUD_PACKET_TX,
+    BIT_SHIFT_FOR(on_traffic_signal_command_tx) = EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
+    BIT_SHIFT_FOR(on_camera_packet_rx) = EVENT_CAMERA_PACKET_RX,
+    BIT_SHIFT_FOR(on_registration) = EVENT_REGISTRATION, 
+    BIT_SHIFT_FOR(on_middleware_restart) = EVENT_MIDDLEWARE_RESTART,
 
     /* this tag should always be at the last*/
     NUM_OF_BIT_SHIFT_DEFININITION,  
@@ -146,7 +148,12 @@ struct REQ_PAYLOAD_TYPE(remote_app_registration){
     pid_t pid;
 };
 struct ACK_PAYLOAD_TYPE(remote_app_registration){
-    ;
+    uint32_t RSU_id;
+    double RSU_lat;
+    double RSU_lon;
+    char RSU_name[RSU_NAME_MAX_LEN];
+    double RSU_elev;
+    uint32_t RSU_region;
 };
 
 struct REQ_PAYLOAD_TYPE(event_callback_msg_id_insert){
@@ -176,7 +183,7 @@ struct ACK_PAYLOAD_TYPE(OBU_j2735_tx){
 };
 
 struct REQ_PAYLOAD_TYPE(OBU_packet_tx){
-    int buf_len;
+    uint16_t write_buf_len;
 };
 struct ACK_PAYLOAD_TYPE(OBU_packet_tx){
     ;
@@ -266,8 +273,6 @@ struct REQ_PAYLOAD_TYPE(vms_sync_evsp_prog){
 struct ACK_PAYLOAD_TYPE(vms_sync_evsp_prog){
     ;
 };
-
-
 
 struct REQ_PAYLOAD_TYPE(get_traffic_signal_status){
     ;

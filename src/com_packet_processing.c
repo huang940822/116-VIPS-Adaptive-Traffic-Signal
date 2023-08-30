@@ -20,6 +20,7 @@
 #include "timer_event.h"
 #include "traffic_signal_packet_rx.h"
 #include "typedefine.h"
+#include "external_app_proxy_callback_wrapper.h"
 
 #include "error_code_user.h"
 #include "j2735_codec.h"
@@ -313,7 +314,9 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     event_callback_t *current = &callback_list[EVENT_CLOUD_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_app_id && 
-            common_field.service_id == current->next->event_callback_id.u.app_id) {
+            common_field.service_id == current->next->event_callback_id.u.app_id) 
+        {
+            proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) &app_section);  // what com_id for?
         }
         current = current->next;
@@ -434,6 +437,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id &&
             msgf->messageId == current->next->event_callback_id.u.msg_id) {
+            eap_handing_app = current->
             current->next->callback((void *) &app_section);
         }
         current = current->next;

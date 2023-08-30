@@ -4,6 +4,7 @@
 #include <string.h>
 #include <pthread.h>
 
+#include "typedefine.h"
 #include "application_registration.h"
 #include "error_status.h"
 #include "log.h"
@@ -32,22 +33,33 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
 {
     event_callback_t *event_callback =
         (event_callback_t *) malloc(sizeof(event_callback_t));
+        
+    app_obj_t* app_obj_p;
+
     if (event_callback == NULL) {
         set_memory_error();
         log_file_write_fatal_error("event_callback_new: malloc");
         perror("event_callback_new: malloc");
         exit(errno);
-    } else {
-        clear_memory_error();
-        strncpy(event_callback->name, name, APP_NAME_MAX_LEN);
-
-        event_callback->event_callback_id.choice = id_chioce;
-        event_callback->event_callback_id.u.app_id = id;
-        event_callback->priority = priority;
-        event_callback->callback = callback;
-        event_callback->next = NULL;
-        return event_callback;
     }
+
+    app_obj_p = get_app_obj_by_name(name);
+    if(!app_obj_p){
+        log_file_write_fatal_error("event_callback_new: get_app_obj_by_name() find no matching app");
+        perror("event_callback_new: get_app_obj_by_name() find no matching app");
+        exit(errno);
+    }
+
+    clear_memory_error();
+    strncpy(event_callback->name, name, APP_NAME_MAX_LEN);
+    event_callback->event_callback_id.choice = id_chioce;
+    event_callback->event_callback_id.u.app_id = id;
+    event_callback->priority = priority;
+    event_callback->callback = callback;
+    event_callback->next = NULL;
+    event_callback->app_obj_p = app_obj_p;
+
+    return event_callback;
 }
 /*****************************************************************************
 ** Function:    event_callback_msg_id_insert
@@ -254,6 +266,33 @@ int app_register(app_obj_t *app)
 
         return APP_REGISTER_ACCEPT;
     }
+}
+
+/* this function assume the caller have grabbed the mutex_callback_list  */
+app_obj_t* get_app_obj_by_name(char* name_p){
+    // check app name
+    if ( !name_p ){
+        return NULL;
+    }
+
+    if ( strlen(name_p) == 0 ) {
+        return NULL;
+    }
+
+    app_obj_t *current = app_list.next;
+    if (current == NULL) {      
+        return NULL;   /* empty list */
+    }
+    else{
+        /* traverse to last node */
+        while (current != NULL) {
+            if ( strncmp(current->name, name_p, APP_NAME_MAX_LEN) == 0) {
+                return current;
+            }
+            current = current->next;
+        }
+    }
+    return NULL;   /* empty list */
 }
 
 void event_callback_print()
