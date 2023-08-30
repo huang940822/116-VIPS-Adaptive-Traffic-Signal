@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "OBU_record_processing.h"
 #include "application_registration.h"
@@ -31,7 +31,7 @@ extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
 static unsigned int _0F42_count = 0;
-struct tm *localTime;
+
 void timer_event_handler(__sigval_t value)
 {
     if (*(uint8_t *) value.sival_ptr ==
@@ -52,24 +52,24 @@ void timer_event_handler(__sigval_t value)
         static uint8_t flag_query_allday_plan = true;
         uint8_t temp_ack_seq;
 
-        temp_ack_seq = tsc_5F48();  //查詢目前時制計劃內容
+        temp_ack_seq = tsc_5F48();  // 查詢目前時制計劃內容
         // WAIT_ACK_LOOP
-        temp_ack_seq = tsc_5F4C();  //查詢號控器目前時相及步階
+        temp_ack_seq = tsc_5F4C();  // 查詢號控器目前時相及步階
         // WAIT_ACK_LOOP
-        temp_ack_seq = tsc_5F45();  //查詢時制計劃之設定內容
+        temp_ack_seq = tsc_5F45();  // 查詢時制計劃之設定內容
         // WAIT_ACK_LOOP
         temp_ack_seq = tsc_5F44();
         // WAIT_ACK_LOOP
         command_buf_polling();
         if (_0F42_count == 0) {
-            temp_ack_seq = tsc_0F42();  //查詢日期、時間
+            temp_ack_seq = tsc_0F42();  // 查詢日期、時間
             WAIT_ACK_LOOP
             _0F42_count++;
         } else {
             _0F42_count++;
             _0F42_count %= 3600;
         }
-        if(flag_PhaseOrder == true){
+        if (flag_PhaseOrder == true) {
             temp_ack_seq = tsc_5F43();
             WAIT_ACK_LOOP
             flag_PhaseOrder = false;
@@ -98,13 +98,13 @@ void timer_event_handler(__sigval_t value)
             WAIT_ACK_LOOP
             flag_query_firm_ver = false;
         }
-        //當發生655xx秒數時 強制切到下一個step
+        // 當發生655xx秒數時 強制切到下一個step
         if (flag_switch2nextStep == true) {
             // traffic_signal_status_t signal_status;
             // get_traffic_signal_status(&signal_status);
             temp_ack_seq = tsc_dynamic();
             WAIT_ACK_LOOP
-            //下0 讓step1立刻結束
+            // 下0 讓step1立刻結束
             temp_ack_seq = tsc_switch();
             WAIT_ACK_LOOP
             flag_switch2nextStep = false;
@@ -114,9 +114,11 @@ void timer_event_handler(__sigval_t value)
         }
         if (flag_query_allday_plan == true) {
             time_t currentTime;
+            struct tm localTime;
+
             time(&currentTime);
-            localTime = localtime(&currentTime);
-            temp_ack_seq = tsc_5F46(localTime->tm_wday);
+            localtime_r(&currentTime, &localTime);
+            temp_ack_seq = tsc_5F46(localTime.tm_wday);
             WAIT_ACK_LOOP
             flag_query_allday_plan = false;
         }
@@ -135,11 +137,10 @@ void timer_event_handler(__sigval_t value)
     } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_ENFORCE_PRETIME) {
         time_t currentTime;
+        struct tm localTime;
+
         time(&currentTime);
-        localTime = localtime(&currentTime);
-        int hour = localTime->tm_hour;        
-        int minute = localTime->tm_min;       
-        int second = localTime->tm_sec;
+        localtime_r(&currentTime, &localTime);
 
         traffic_signal_status_t signal_status;
         get_traffic_signal_status(&signal_status);
@@ -149,8 +150,8 @@ void timer_event_handler(__sigval_t value)
             uint8_t planHour = signal_status.allday_plan[i].Hour;
             uint8_t planMin = signal_status.allday_plan[i].Min;
             // 80 110 140
-            // 6:50 + 160s 
-            int timeDiff = (planHour - localTime->tm_hour) * 3600 + (planMin - localTime->tm_min) * 60;
+            // 6:50 + 160s
+            int timeDiff = (planHour - localTime.tm_hour) * 3600 + (planMin - localTime.tm_min) * 60;
             // printf("Approaching PlanID %d - Time Remaining: %d seconds\n", signal_status.allday_plan[i].PlanID, timeDiff);
             // config
             if (timeDiff >= -600 && timeDiff <= 30) {
@@ -199,17 +200,17 @@ int create_timer(timer_t *timer_id,
      * sigev_notify_function,並傳入 sigev_value 作為參數 */
 
     evp.sigev_value.sival_ptr =
-        signal_value;                             //用於標識定時器
+        signal_value;                             // 用於標識定時器
                                                   //(這和timerid有什麼區別？回調函數可以獲得)
-    evp.sigev_notify = SIGEV_THREAD;              //線程通知的方式，派駐新線程
-    evp.sigev_notify_function = notify_function;  //線程函數地址
+    evp.sigev_notify = SIGEV_THREAD;              // 線程通知的方式，派駐新線程
+    evp.sigev_notify_function = notify_function;  // 線程函數地址
     if (timer_create(CLOCK_REALTIME, &evp, timer_id) == -1) {
         log_file_write_fatal_error("create_timer: timer_create");
         perror("create_timer: timer_create");
         exit(errno);
     } else {
         if (signal_value != NULL && config.log_middleware_timer_event == 1) {
-            log_file_write("timer event: create timer with signal value(%d)",  *(uint8_t *) signal_value);
+            log_file_write("timer event: create timer with signal value(%d)", *(uint8_t *) signal_value);
         }
         return 0;
     }
