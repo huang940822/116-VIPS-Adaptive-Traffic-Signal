@@ -162,7 +162,7 @@ typedef struct event_callback {
     uint8_t priority;
     int (*callback)(void *);
     struct event_callback *next;
-    app_obj_t *app_obj_p
+    app_obj_t *app_obj_p;
 } event_callback_t;
 
 typedef struct OBU_record_common_field {

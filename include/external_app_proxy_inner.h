@@ -58,7 +58,6 @@ enum ea_callback_func_bit_shift_definition_enum{
 typedef struct _packet_from_proxy_header_t {
     uint32_t packet_type;
     uint32_t callback_mask;
-    uint32_t payload_len;
 }packet_from_proxy_header_t;
 
 typedef struct _ack_from_proxy_header_t {

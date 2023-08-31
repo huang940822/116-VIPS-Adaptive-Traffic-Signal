@@ -25,6 +25,33 @@
 
 app_obj_t* proxy_handling_app_p;
 
+#define EAP_CALLBACK_WRAPPER_OF(event_name) event_name ## _wrapper_callback
+
+/* NOTICE, if you add new event callback, you NEED to add a related wrapper function */
+int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_rx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_tx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_registration)(void *app_section);
+int EAP_CALLBACK_WRAPPER_OF(on_middleware_restart)(void *app_section);
+
+/* NOTICE, if you add new event callback, you NEED to add a entry for the reconstruct function */
+eap_callback_wrapper_fp callback_wrapper_fp_arr[EVENT_TYPE_NUMBER] = {
+    [EVENT_OBU_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx),
+    [EVENT_OBU_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx),
+    [EVENT_RSU_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_rx),
+    [EVENT_RSU_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_tx),
+    [EVENT_CLOUD_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx),
+    [EVENT_CLOUD_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx),
+    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx),
+    [EVENT_CAMERA_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx),
+    [EVENT_REGISTRATION] = EAP_CALLBACK_WRAPPER_OF(on_registration),
+    [EVENT_MIDDLEWARE_RESTART] = EAP_CALLBACK_WRAPPER_OF(on_middleware_restart),
+};
 
 static inline int eap_callback_wrapper_checker(void *app_section, char* func_name)
 {
@@ -39,27 +66,40 @@ static inline int eap_callback_wrapper_checker(void *app_section, char* func_nam
         return -1;
     }
     if( proxy_handling_app_p->ea_info_p == 0){
-        fprintf(stderr,"%s: be called when the app is not external\n");
-        log_file_write_fatal_error("%s: be called when the app is not external\n");
+        fprintf(stderr,"%s: be called when the app is not external\n", func_name);
+        log_file_write_fatal_error("%s: be called when the app is not external\n", func_name);
         return -1;
     }
     return 0;
 }
 
-#define EAP_CALLBACK_WRAPPER_OF(event_name) event_name ## _wrapper_callback
+
+/* below are all the wrapper functions for all event callback */
+/* NOTICE, if you add new event callback, you NEED to add a related wrapper function */
 
 int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
-{
+{   
+    /* DANGER!!! 
+       Since the V2R_app_section_t object containing TOO-MUCH data in one single structure,
+       current version of  "EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)"
+       ONLY wrap the NEEDED information for "EVSP" !!! .
+
+       If future version need to pass more information to external app,
+       (e.g., TSP need other entry in the V2R_app_section_t)
+       use send_to_unix_socket_fd() to send more data,
+       and make sure the "send" action of this wrapper-function
+       "MATCH" the "read" action of "RECONSTRUCT_PAYLOAD_FUNC_OF(on_OBU_packet_rx)"
+       in the file of external_app_proxy_client.c, used by external app.
+    */
     int ret;
     if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_rx)") ){
         return ret;
     }
-
+    V2R_app_section_t* app_section_p = (V2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.payload_len = sizeof(V2R_app_section_t);
     header.callback_mask = 0;   /* reset first */
     header.callback_mask |= ( 0x1 << BIT_SHIFT_FOR(on_OBU_packet_rx) );
 
@@ -72,7 +112,8 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, &app_section, header.payload_len);
+    /* send toppest level structure */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(V2R_app_section_t));
     if(ret){
         fprintf(stderr,"WRAPPER_OF(on_OBU_packet_rx): "
                        "send app_section ret:%d\n", ret);
@@ -80,21 +121,67 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
             "WRAPPER_OF(on_OBU_packet_rx):send app_section ret:%d\n", ret);
         return ret;
     }
+
+    /* since there are inner structure inside, we send them here, one-by-one 
+      the "read" action of "RECONSTRUCT_PAYLOAD_FUNC_OF(on_OBU_packet_rx)"
+       in the file of external_app_proxy_client.c, used by external app, 
+       MUST "MATCH" the "send" action of these below 
+    */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_OBU_packet_rx): "
+                       "send app_section_p->payload ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_OBU_packet_rx):send app_section_p->payload ret:%d\n", ret);
+        return ret;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p->OBU_object , sizeof(OBU_object_t));
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_OBU_packet_rx): "
+                       "send app_section_p->OBU_object ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_OBU_packet_rx):send app_section_p->OBU_object ret:%d\n", ret);
+        return ret;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, 
+                                 app_section_p->OBU_object->private_space, 
+                                 sizeof(app_private_space_t));
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_OBU_packet_rx): "
+                       "send OBU_object->private_space ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_OBU_packet_rx):send OBU_object->private_space ret:%d\n", ret);
+        return ret;
+    }
+
     return ret;
 }
 
 int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
 {
+        /* DANGER!!! 
+       Since the V2R_app_section_t object containing TOO-MUCH data in one single structure,
+       current version of  "EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)"
+       ONLY wrap the NEEDED information for "EVSP" !!! .
+
+       If future version need to pass more information to external app,
+       (e.g., TSP need other entry in the V2R_app_section_t)
+       use send_to_unix_socket_fd() to send more data,
+       and make sure the "send" action of this wrapper-function
+       "MATCH" the "read" action of "RECONSTRUCT_PAYLOAD_FUNC_OF(on_OBU_packet_tx)"
+       in the file of external_app_proxy_client.c, used by external app.
+    */
     int ret;
     if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_tx)") ){
         return ret;
     }
-
+    V2R_app_section_t* app_section_p = (V2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.payload_len = sizeof(V2R_app_section_t);
     header.callback_mask = 0;   /* reset first */
     header.callback_mask |= ( 0x1 << BIT_SHIFT_FOR(on_OBU_packet_tx) );
 
@@ -107,7 +194,8 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, &app_section, header.payload_len);
+    /* send toppest level structure */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(V2R_app_section_t));
     if(ret){
         fprintf(stderr,"WRAPPER_OF(on_OBU_packet_tx): "
                        "send app_section ret:%d\n", ret);
@@ -115,6 +203,41 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
             "WRAPPER_OF(on_OBU_packet_tx):send app_section ret:%d\n", ret);
         return ret;
     }
+
+    /* since there are inner structure inside, we send them here, one-by-one 
+      the "read" action of "RECONSTRUCT_PAYLOAD_FUNC_OF(on_OBU_packet_tx)"
+       in the file of external_app_proxy_client.c, used by external app, 
+       MUST "MATCH" the "send" action of these below 
+    */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_OBU_packet_tx): "
+                       "send app_section_p->payload ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_OBU_packet_tx):send app_section_p->payload ret:%d\n", ret);
+        return ret;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p->OBU_object , sizeof(OBU_object_t));
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_OBU_packet_tx): "
+                       "send app_section_p->OBU_object ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_OBU_packet_tx):send app_section_p->OBU_object ret:%d\n", ret);
+        return ret;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, 
+                                 app_section_p->OBU_object->private_space, 
+                                 sizeof(app_private_space_t));
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_OBU_packet_tx): "
+                       "send OBU_object->private_space ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_OBU_packet_tx):send OBU_object->private_space ret:%d\n", ret);
+        return ret;
+    }
+
     return ret;
 }
 
@@ -144,11 +267,11 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
         return ret;
     }
 
+    C2R_app_section_t* app_section_p = (C2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.payload_len = sizeof(C2R_app_section_t);
     header.callback_mask = 0;   /* reset first */
     header.callback_mask |= ( 0x1 << BIT_SHIFT_FOR(on_cloud_packet_rx) );
 
@@ -161,7 +284,8 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, &app_section, header.payload_len);
+    /* send toppest level structure */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(C2R_app_section_t));
     if(ret){
         fprintf(stderr,"WRAPPER_OF(on_cloud_packet_rx): "
                        "send app_section ret:%d\n", ret);
@@ -169,20 +293,32 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
             "WRAPPER_OF(on_cloud_packet_rx):send app_section ret:%d\n", ret);
         return ret;
     }
+
+    /* since there are inner structure inside, we send them here */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_cloud_packet_rx): "
+                       "send app_section_p->payload ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_cloud_packet_rx):send app_section_p->payload ret:%d\n", ret);
+        return ret;
+    }
+    
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section){
+int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
+{
     int ret;
     if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_tx)") ){
         return ret;
     }
 
+    C2R_app_section_t* app_section_p = (C2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.payload_len = sizeof(C2R_app_section_t);
     header.callback_mask = 0;   /* reset first */
     header.callback_mask |= ( 0x1 << BIT_SHIFT_FOR(on_cloud_packet_tx) );
 
@@ -195,14 +331,26 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section){
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, &app_section, header.payload_len);
+    /* send toppest level structure */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(C2R_app_section_t));
     if(ret){
-        fprintf(stderr,"WRAPPER_OF(on_cloud_packet_rx): "
+        fprintf(stderr,"WRAPPER_OF(on_cloud_packet_tx): "
                        "send app_section ret:%d\n", ret);
         log_file_write_fatal_error(
-            "WRAPPER_OF(on_cloud_packet_rx):send app_section ret:%d\n", ret);
+            "WRAPPER_OF(on_cloud_packet_tx):send app_section ret:%d\n", ret);
         return ret;
     }
+
+    /* since there are inner structure inside, we send them here */
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
+    if(ret){
+        fprintf(stderr,"WRAPPER_OF(on_cloud_packet_tx): "
+                       "send app_section_p->payload ret:%d\n", ret);
+        log_file_write_fatal_error(
+            "WRAPPER_OF(on_cloud_packet_tx):send app_section_p->payload ret:%d\n", ret);
+        return ret;
+    }
+    
     return ret;
 }
 
@@ -228,7 +376,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_registration)(void *app_section)
     return -1;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_middle_restart)(void *app_section)
+int EAP_CALLBACK_WRAPPER_OF(on_middleware_restart)(void *app_section)
 {   
     /* for current version of middleware 
        on_middle_restart() will NOT send data via app_section
@@ -252,9 +400,8 @@ int EAP_CALLBACK_WRAPPER_OF(on_middle_restart)(void *app_section)
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.payload_len = 0;
     header.callback_mask = 0;   /* reset first */
-    header.callback_mask |= ( 0x1 << BIT_SHIFT_FOR(on_middle_restart) );
+    header.callback_mask |= ( 0x1 << BIT_SHIFT_FOR(on_middleware_restart) );
 
     ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
     if(ret){
@@ -266,21 +413,3 @@ int EAP_CALLBACK_WRAPPER_OF(on_middle_restart)(void *app_section)
     }
     return ret;
 }
-
-
-
-eap_callback_wrapper_fp callback_wrapper_fp_arr[EVENT_TYPE_NUMBER] = {
-    [EVENT_OBU_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx),
-    [EVENT_OBU_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx),
-    [EVENT_RSU_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_rx),
-    [EVENT_RSU_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_tx),
-    [EVENT_CLOUD_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx),
-    [EVENT_CLOUD_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx),
-    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx),
-    [EVENT_CAMERA_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx),
-    [EVENT_REGISTRATION] = EAP_CALLBACK_WRAPPER_OF(on_registration),
-    [EVENT_MIDDLEWARE_RESTART] = EAP_CALLBACK_WRAPPER_OF(on_middle_restart),
-};
-
-
-

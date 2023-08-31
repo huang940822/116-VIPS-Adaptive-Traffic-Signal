@@ -22,6 +22,8 @@ pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
  * all might read/write callback_list, we add a mutex_lock */
 pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
+app_obj_t* get_app_obj_by_name(char* name_p);
+
 /*****************************************************************************
 ** Function:    event_callback_new
 ** Description: Create a new event callback node.

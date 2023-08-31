@@ -18,6 +18,7 @@
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
 #include "external_app_proxy_api_wrapper.h"
+#include "external_app_proxy_callback_wrapper.h"
 
 #define WRAPPER_FUNC_OF(api_name) api_name ## _wrapper_func
 
@@ -37,7 +38,7 @@ int WRAPPER_FUNC_OF(event_callback_msg_id_insert)(int client_fd)
                                  payload.name, 
                                  payload.priority, 
                                  payload.msg_id, 
-                                 external_app_proxy_notify_callback );
+                                 callback_wrapper_fp_arr[payload.event_type] );
 
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
@@ -113,7 +114,7 @@ int WRAPPER_FUNC_OF(OBU_j2735_tx)(int client_fd)
     /* call the actual function */
     /* HERE is a SPECIAL case: since the data is already pre-processed at client side 
      * we direcly use com_send() */
-    int ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
+    ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("WRAPPER_FUNC_OF(OBU_j2735_tx): com_send");
         ack_packet.ret_val = EA_ERR_COM_IO;
@@ -156,7 +157,7 @@ int WRAPPER_FUNC_OF(OBU_packet_tx)(int client_fd)
     /* call the actual function */
     /* HERE is a SPECIAL case: since the data is already pre-processed at client side 
      * we direcly use com_send() */
-    int ret = com_send(GENERAL_COM_ID, write_buf_content, payload.write_buf_len);
+    ret = com_send(GENERAL_COM_ID, write_buf_content, payload.write_buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("WRAPPER_FUNC_OF(OBU_packet_tx): com_send");
         ack_packet.ret_val = EA_ERR_COM_IO;
@@ -199,7 +200,7 @@ int WRAPPER_FUNC_OF(remote_com_send)(int client_fd)
     /* call the actual function */
     /* HERE is a SPECIAL case: since the data is already pre-processed at client side 
      * we direcly use com_send() */
-    int ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
+    ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("WRAPPER_FUNC_OF(remote_com_send): com_send");
         ack_packet.ret_val = EA_ERR_COM_IO;
@@ -225,7 +226,7 @@ int WRAPPER_FUNC_OF(remote_com_send)(int client_fd)
 int WRAPPER_FUNC_OF(get_config_RSU_id)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
-       so this WRAPPER_FUNC should never be called in this version */
+       so this WRAPPER_FUNC should never be called */
     return 0;
 
     // int ret;
@@ -254,7 +255,7 @@ int WRAPPER_FUNC_OF(get_config_RSU_id)(int client_fd)
 int WRAPPER_FUNC_OF(get_config_RSU_lat)(int client_fd)
 {   
     /* current version will update remote RSU config when registered, 
-       so this WRAPPER_FUNC should never be called in this version */
+       so this WRAPPER_FUNC should never be called */
     return 0;
 
     // int ret;
@@ -283,7 +284,7 @@ int WRAPPER_FUNC_OF(get_config_RSU_lat)(int client_fd)
 int WRAPPER_FUNC_OF(get_config_RSU_lon)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
-       so this WRAPPER_FUNC should never be called in this version */
+       so this WRAPPER_FUNC should never be called */
     return 0;
 
     int ret;
@@ -312,7 +313,7 @@ int WRAPPER_FUNC_OF(get_config_RSU_lon)(int client_fd)
 int WRAPPER_FUNC_OF(get_config_RSU_name)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
-       so this WRAPPER_FUNC should never be called in this version */
+       so this WRAPPER_FUNC should never be called */
     return 0;
 
     // int ret;
@@ -340,7 +341,7 @@ int WRAPPER_FUNC_OF(get_config_RSU_name)(int client_fd)
 int WRAPPER_FUNC_OF(get_config_RSU_region)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
-       so this WRAPPER_FUNC should never be called in this version */
+       so this WRAPPER_FUNC should never be called */
     return 0;
 
     int ret;
@@ -369,7 +370,7 @@ int WRAPPER_FUNC_OF(get_config_RSU_region)(int client_fd)
 int WRAPPER_FUNC_OF(get_config_RSU_elev)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
-       so this WRAPPER_FUNC should never be called in this version */
+       so this WRAPPER_FUNC should never be called */
     return 0;
 
     // int ret;
@@ -400,50 +401,68 @@ int WRAPPER_FUNC_OF(get_config_RSU_elev)(int client_fd)
 int WRAPPER_FUNC_OF(command_buf_insert_effect_time)(int client_fd)
 {
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
+    struct REQ_PAYLOAD_TYPE(command_buf_insert_effect_time) payload;   
+    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(command_buf_insert_effect_time): "
+                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
-
-    ack_packet.ret_val = EA_ERR_OK;
+    /* call the actual function */
+    ret = command_buf_insert_effect_time( &payload.tsc_cmd );
+    if (ret != 0) {
+        log_file_write("WRAPPER_FUNC_OF(command_buf_insert_effect_time)");
+        ack_packet.ret_val = EA_ERR_ACTUAL_FUNCTION_ERR;
+    }
+    else{
+        ack_packet.ret_val = EA_ERR_OK;
+    }
 
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-    if (ret != 0) {
-        ;//maybe log err
-        return ret;
-    }
-
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(command_buf_insert_effect_time): "
+                        "send ack_packet to client_fd:%d, ret = %d\n", client_fd, ret);
     if (ret != 0) {
         ;//maybe log err
     }
+    
+    /* no ack_payload for this api */
     return ret;
 }
 
 int WRAPPER_FUNC_OF(command_buf_insert_adjustment)(int client_fd)
 {
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
+    struct REQ_PAYLOAD_TYPE(command_buf_insert_adjustment) payload;   
+    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(command_buf_insert_adjustment): "
+                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
-
-    ack_packet.ret_val = EA_ERR_OK;
+    /* call the actual function */
+    ret = command_buf_insert_adjustment( &payload.tsc_cmd );
+    if (ret != 0) {
+        log_file_write("WRAPPER_FUNC_OF(command_buf_insert_adjustment)");
+        ack_packet.ret_val = EA_ERR_ACTUAL_FUNCTION_ERR;
+    }
+    else{
+        ack_packet.ret_val = EA_ERR_OK;
+    }
 
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-    if (ret != 0) {
-        ;//maybe log err
-        return ret;
-    }
-
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(command_buf_insert_adjustment): "
+                        "send ack_packet to client_fd:%d, ret = %d\n", client_fd, ret);
     if (ret != 0) {
         ;//maybe log err
     }
+    
+    /* no ack_payload for this api */
     return ret;
 }
 
@@ -452,75 +471,86 @@ int WRAPPER_FUNC_OF(command_buf_insert_adjustment)(int client_fd)
 int WRAPPER_FUNC_OF(vms_request_start)(int client_fd)
 {
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
+    struct REQ_PAYLOAD_TYPE(vms_request_start) payload;   
+    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(vms_request_start): "
+                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+
+    /* call the actual function */
+    vms_request_start(payload.id, payload.priority);
+
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
-
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
-
     ack_packet.ret_val = EA_ERR_OK;
 
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-    if (ret != 0) {
-        ;//maybe log err
-        return ret;
-    }
-
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(vms_request_start): "
+                        "send ack_packet to client_fd:%d, ret = %d\n", client_fd, ret);
     if (ret != 0) {
         ;//maybe log err
     }
+    
+    /* no ack_payload for this api */
     return ret;
 }
 
 int WRAPPER_FUNC_OF(vms_request_end)(int client_fd)
 {
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
+    struct REQ_PAYLOAD_TYPE(vms_request_end) payload;   
+    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(vms_request_end): "
+                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+
+    /* call the actual function */
+    vms_request_end(payload.id);
+
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
-
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
-
     ack_packet.ret_val = EA_ERR_OK;
 
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-    if (ret != 0) {
-        ;//maybe log err
-        return ret;
-    }
-
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(vms_request_end): "
+                        "send ack_packet to client_fd:%d, ret = %d\n", client_fd, ret);
     if (ret != 0) {
         ;//maybe log err
     }
+    
+    /* no ack_payload for this api */
     return ret;
 }
 
 int WRAPPER_FUNC_OF(vms_sync_evsp_prog)(int client_fd)
 {
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
+    struct REQ_PAYLOAD_TYPE(vms_sync_evsp_prog) payload;   
+    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(vms_sync_evsp_prog): "
+                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+
+    /* do the actual update */
+    for(size_t i = 0; i < RTM_MAX; ++i){
+        evsp_prog[i] = payload.evsp_prog[i];
+    }
+
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
-
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
-
     ack_packet.ret_val = EA_ERR_OK;
 
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-    if (ret != 0) {
-        ;//maybe log err
-        return ret;
-    }
-
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "WRAPPER_FUNC_OF(vms_sync_evsp_prog): "
+                        "send ack_packet to client_fd:%d, ret = %d\n", client_fd, ret);
     if (ret != 0) {
         ;//maybe log err
     }
+    
+    /* no ack_payload for this api */
     return ret;
 }
 

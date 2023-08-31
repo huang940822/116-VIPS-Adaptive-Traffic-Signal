@@ -346,6 +346,7 @@ static inline int inner_handle_app_register( app_obj_t* app_p, void *payload_p, 
     return ret;
 }
 
+/* the callback_wrapper_fp_arr[] will be used by "despather", "indirectly" */
 /* NOTICE, if you add new callback, you NEED to update this function */
 static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint32_t mask)
 {
