@@ -11,53 +11,68 @@
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
 int32_t is_interact_fd_linked();
-int32_t interact_fd_connect_to_proxy();
 int32_t interact_fd_disconnect_from_proxy();
-int32_t interact_fd_read_from_proxy(void* packet_p, size_t packet_size);
+int32_t interact_fd_connect_to_proxy();
+int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size);
 int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
+
 int32_t is_notify_fd_linked();
-int32_t notify_fd_connect_to_proxy();
 int32_t notify_fd_disconnect_from_proxy();
-int32_t notify_fd_read_from_proxy(void* packet_p, size_t packet_size);
+int32_t notify_fd_connect_to_proxy();
+int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size);
 int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
 /* functions above ... */
 
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
-    EA_PACKET_TYPE_REGI,            /*register*/
+    EA_PACKET_TYPE_REGISTER,        /*register, will update intetact channel */
     EA_PACKET_TYPE_NTF_UPDATE,      /*notify channel update*/
     EA_PACKET_TYPE_REQ,             /*requeset*/
     EA_PACKET_TYPE_ACK,             /*ack*/
     EA_PACKET_TYPE_NM_NTF,          /*normal notify*/
     EA_PACKET_TYPE_SP_NTF,          /*special notify*/
     EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
-    EA_PACKET_TYPE_PROXY,           /*used by proxy library for special usage*/
-    EA_PACKET_TYPE_PING,            /*used by proxy library for ping testing*/
+    EA_PACKET_TYPE_PROXY,           /*current version not used yet, used by proxy library for special usage*/
+    EA_PACKET_TYPE_PING,            /*current version not used yet, used by proxy library for ping testing*/
     /* this tag should always be at the last*/
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
 
-#define BIT_SHIFT_FOR(callback_name) BIT_SHIFT_ ## callback_name
-enum ea_callback_func_bit_shift_definition_enum{
-    /* currently using the matching definition from enum event_type */
-    BIT_SHIFT_FOR(on_OBU_packet_rx) = EVENT_OBU_PACKET_RX, 
-    BIT_SHIFT_FOR(on_OBU_packet_tx) = EVENT_OBU_PACKET_TX,
-    BIT_SHIFT_FOR(on_RSU_packet_rx) = EVENT_RSU_PACKET_RX, 
-    BIT_SHIFT_FOR(on_RSU_packet_tx) = EVENT_RSU_PACKET_TX,
-    BIT_SHIFT_FOR(on_cloud_packet_rx) = EVENT_CLOUD_PACKET_RX,
-    BIT_SHIFT_FOR(on_cloud_packet_tx) = EVENT_CLOUD_PACKET_TX,
-    BIT_SHIFT_FOR(on_traffic_signal_command_tx) = EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
-    BIT_SHIFT_FOR(on_camera_packet_rx) = EVENT_CAMERA_PACKET_RX,
-    BIT_SHIFT_FOR(on_registration) = EVENT_REGISTRATION, 
-    BIT_SHIFT_FOR(on_middleware_restart) = EVENT_MIDDLEWARE_RESTART,
+// #define BIT_SHIFT_FOR(callback_name) BIT_SHIFT_ ## callback_name
+// enum ea_callback_func_bit_shift_definition_enum{
+//     /* currently using the matching definition from enum event_type */
+//     BIT_SHIFT_FOR(on_OBU_packet_rx) = EVENT_OBU_PACKET_RX, 
+//     BIT_SHIFT_FOR(on_OBU_packet_tx) = EVENT_OBU_PACKET_TX,
+//     BIT_SHIFT_FOR(on_RSU_packet_rx) = EVENT_RSU_PACKET_RX, 
+//     BIT_SHIFT_FOR(on_RSU_packet_tx) = EVENT_RSU_PACKET_TX,
+//     BIT_SHIFT_FOR(on_cloud_packet_rx) = EVENT_CLOUD_PACKET_RX,
+//     BIT_SHIFT_FOR(on_cloud_packet_tx) = EVENT_CLOUD_PACKET_TX,
+//     BIT_SHIFT_FOR(on_traffic_signal_command_tx) = EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
+//     BIT_SHIFT_FOR(on_camera_packet_rx) = EVENT_CAMERA_PACKET_RX,
+//     BIT_SHIFT_FOR(on_registration) = EVENT_REGISTRATION, 
+//     BIT_SHIFT_FOR(on_middleware_restart) = EVENT_MIDDLEWARE_RESTART,
 
-    /* this tag should always be at the last*/
-    NUM_OF_BIT_SHIFT_DEFININITION,  
-};
+//     /* this tag should always be at the last*/
+//     NUM_OF_BIT_SHIFT_DEFININITION,  
+// };
+
+#define REGI_BIT(callback_name) callback_name ## _regi_bit
+typedef struct _callback_register_mask_t {
+    unsigned REGI_BIT(on_OBU_packet_rx): 1;
+    unsigned REGI_BIT(on_OBU_packet_tx): 1;
+    unsigned REGI_BIT(on_RSU_packet_rx): 1;
+    unsigned REGI_BIT(on_RSU_packet_tx): 1;
+    unsigned REGI_BIT(on_cloud_packet_rx): 1;
+    unsigned REGI_BIT(on_cloud_packet_tx): 1;
+    unsigned REGI_BIT(on_traffic_signal_command_tx): 1;
+    unsigned REGI_BIT(on_camera_packet_rx): 1;
+    unsigned REGI_BIT(on_registration): 1;
+    unsigned REGI_BIT(on_middleware_restart): 1;
+} callback_regi_mask_t;
 
 typedef struct _packet_from_proxy_header_t {
     uint32_t packet_type;
-    uint32_t callback_mask;
+    event_type_t callback_event;
 }packet_from_proxy_header_t;
 
 typedef struct _ack_from_proxy_header_t {
@@ -75,6 +90,8 @@ typedef struct _packet_to_proxy_header_t {
 typedef struct _packet_to_proxy_hearbeat_t {
     uint32_t appID;
 }packet_to_proxy_hearbeat_t;
+
+
 
 #define API_ID_OF(api_name) API_ID_ ## api_name
 enum ea_callback_api_id_definition_enum{
@@ -134,6 +151,27 @@ enum ea_callback_api_id_definition_enum{
     /* this tag should always be at the last*/
     NUM_OF_API_ID_DEFININITION,  
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #define REQ_PAYLOAD_TYPE(api_name) _## api_name ## _req_payload_t
 #define ACK_PAYLOAD_TYPE(api_name) _## api_name ## _ack_payload_t
