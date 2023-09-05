@@ -20,7 +20,7 @@
 #include "external_app_proxy_api_wrapper.h"
 #include "external_app_proxy_callback_wrapper.h"
 
-#define WRAPPER_FUNC_OF(api_name) api_name ## _wrapper_func
+#define WRAPPER_FUNC_OF(api_name) api_name ## api_wrapper
 
 /* application_registration.h */
 int WRAPPER_FUNC_OF(event_callback_msg_id_insert)(int client_fd)

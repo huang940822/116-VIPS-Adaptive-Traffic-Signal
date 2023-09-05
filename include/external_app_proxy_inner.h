@@ -8,6 +8,12 @@
 #include "traffic_signal_command_buffer.h"
 #include "vms.h"
 
+/* since application might implement multi-thread program, ,
+ * we add a mutex_lock to serialize their usage of the same channel */ 
+/* these mutex should only be used in library function provided for external app client */
+extern pthread_mutex_t mutex_notify_fd = PTHREAD_MUTEX_INITIALIZER;
+extern pthread_mutex_t mutex_interact_fd = PTHREAD_MUTEX_INITIALIZER;
+
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
 int32_t is_interact_fd_linked();
@@ -16,6 +22,7 @@ int32_t interact_fd_connect_to_proxy();
 int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size);
 int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
 
+int32_t add_notify_fd_to_epoll(int* ep_fd);
 int32_t is_notify_fd_linked();
 int32_t notify_fd_disconnect_from_proxy();
 int32_t notify_fd_connect_to_proxy();
@@ -38,60 +45,51 @@ enum ea_packet_type_definition_enum{
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
 
-// #define BIT_SHIFT_FOR(callback_name) BIT_SHIFT_ ## callback_name
-// enum ea_callback_func_bit_shift_definition_enum{
-//     /* currently using the matching definition from enum event_type */
-//     BIT_SHIFT_FOR(on_OBU_packet_rx) = EVENT_OBU_PACKET_RX, 
-//     BIT_SHIFT_FOR(on_OBU_packet_tx) = EVENT_OBU_PACKET_TX,
-//     BIT_SHIFT_FOR(on_RSU_packet_rx) = EVENT_RSU_PACKET_RX, 
-//     BIT_SHIFT_FOR(on_RSU_packet_tx) = EVENT_RSU_PACKET_TX,
-//     BIT_SHIFT_FOR(on_cloud_packet_rx) = EVENT_CLOUD_PACKET_RX,
-//     BIT_SHIFT_FOR(on_cloud_packet_tx) = EVENT_CLOUD_PACKET_TX,
-//     BIT_SHIFT_FOR(on_traffic_signal_command_tx) = EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
-//     BIT_SHIFT_FOR(on_camera_packet_rx) = EVENT_CAMERA_PACKET_RX,
-//     BIT_SHIFT_FOR(on_registration) = EVENT_REGISTRATION, 
-//     BIT_SHIFT_FOR(on_middleware_restart) = EVENT_MIDDLEWARE_RESTART,
-
-//     /* this tag should always be at the last*/
-//     NUM_OF_BIT_SHIFT_DEFININITION,  
-// };
-
-#define REGI_BIT(callback_name) callback_name ## _regi_bit
-typedef struct _callback_register_mask_t {
-    unsigned REGI_BIT(on_OBU_packet_rx): 1;
-    unsigned REGI_BIT(on_OBU_packet_tx): 1;
-    unsigned REGI_BIT(on_RSU_packet_rx): 1;
-    unsigned REGI_BIT(on_RSU_packet_tx): 1;
-    unsigned REGI_BIT(on_cloud_packet_rx): 1;
-    unsigned REGI_BIT(on_cloud_packet_tx): 1;
-    unsigned REGI_BIT(on_traffic_signal_command_tx): 1;
-    unsigned REGI_BIT(on_camera_packet_rx): 1;
-    unsigned REGI_BIT(on_registration): 1;
-    unsigned REGI_BIT(on_middleware_restart): 1;
-} callback_regi_mask_t;
-
 typedef struct _packet_from_proxy_header_t {
     uint32_t packet_type;
     event_type_t callback_event;
+    pid_t pid;
 }packet_from_proxy_header_t;
 
 typedef struct _ack_from_proxy_header_t {
     uint32_t packet_type;
     int ret_val;
-    //uint32_t payload_len;   /* current version do not need */
+    pid_t pid;
 }ack_from_proxy_header_t;
 
 typedef struct _packet_to_proxy_header_t {
     uint32_t packet_type;
     uint32_t api_id;
-    //uint32_t payload_len;     /* current version do not need */
+    pid_t pid;
 }packet_to_proxy_header_t;
 
-typedef struct _packet_to_proxy_hearbeat_t {
+typedef struct _hearbeat_to_proxy_t {
+    uint32_t packet_type;
     uint32_t appID;
-}packet_to_proxy_hearbeat_t;
+}hearbeat_to_proxy_t;
 
+typedef struct _app_registration_payload_t {
+    char name[APP_NAME_MAX_LEN];
+    uint8_t id;
+    uint8_t priority;
+    uint8_t dontSend2TC;
+    uint64_t callback_register_mask;
+    pid_t pid;
+} app_registration_payload_t;
 
+typedef struct _notify_update_payload_t {
+    uint8_t id;
+    pid_t pid;
+} notify_update_payload_t;
+
+typedef struct _notify_update_ack_payload_t {
+    uint32_t RSU_id;
+    double RSU_lat;
+    double RSU_lon;
+    char RSU_name[RSU_NAME_MAX_LEN];
+    double RSU_elev;
+    uint32_t RSU_region;
+} notify_update_ack_payload_t;
 
 #define API_ID_OF(api_name) API_ID_ ## api_name
 enum ea_callback_api_id_definition_enum{

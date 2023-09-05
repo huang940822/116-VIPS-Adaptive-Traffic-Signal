@@ -33,6 +33,7 @@
  * Reference: https://man7.org/linux/man-pages/man2/listen.2.html */
 #define MY_BACKLOG 20
 
+static int current_errno;
 static int unix_listen_fd;  //only one, used for accepting new client
 static int ep_fd;           //fd for epoll
 static uint8_t proxy_cur_heartbeat;
@@ -51,11 +52,47 @@ static inline int inner_handle_heartbeat_from_app(int client_fd);
 static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id);
 uint8_t get_current_eap_heartbeat_rc();
 void increase_eap_heartbeat_rc();
+int check_all_external_app_heartbeat();
 
-/* NOTICE, if you add new callback, you NEED to update function below */
-static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint64_t mask);
-
-/* above are functions declarations */
+/* the callback_wrapper_fp_arr[] will be used by "despather", "indirectly" */
+/* NOTICE, if you add new callback, you NEED to update this function */
+static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint64_t mask)
+{
+    if( mask |= ( 0x1 << EVENT_OBU_PACKET_RX ) ){
+        app_obj_p->on_OBU_packet_rx = callback_wrapper_fp_arr[EVENT_OBU_PACKET_RX];
+    }
+    if( mask |= ( 0x1 << EVENT_OBU_PACKET_TX ) ){
+        app_obj_p->on_OBU_packet_tx = callback_wrapper_fp_arr[EVENT_OBU_PACKET_TX];
+    }
+    if( mask |= ( 0x1 << EVENT_RSU_PACKET_RX ) ){
+        app_obj_p->on_RSU_packet_rx = callback_wrapper_fp_arr[EVENT_RSU_PACKET_RX];
+    }
+    if( mask |= ( 0x1 << EVENT_RSU_PACKET_TX ) ){
+        app_obj_p->on_RSU_packet_tx = callback_wrapper_fp_arr[EVENT_RSU_PACKET_TX];
+    }
+    if( mask |= ( 0x1 << EVENT_CLOUD_PACKET_RX ) ){
+        app_obj_p->on_cloud_packet_rx = callback_wrapper_fp_arr[EVENT_CLOUD_PACKET_RX];
+    }
+    if( mask |= ( 0x1 << EVENT_CLOUD_PACKET_TX ) ){
+        app_obj_p->on_cloud_packet_tx = callback_wrapper_fp_arr[EVENT_CLOUD_PACKET_TX];
+    }
+    if( mask |= ( 0x1 << EVENT_TRAFFIC_SIGNAL_COMMAND_TX ) ){
+        app_obj_p->on_traffic_signal_command_tx = callback_wrapper_fp_arr[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
+    }
+    if( mask |= ( 0x1 << EVENT_CAMERA_PACKET_RX ) ){
+        app_obj_p->on_camera_packet_rx = callback_wrapper_fp_arr[EVENT_CAMERA_PACKET_RX];
+    }
+    if( mask |= ( 0x1 << EVENT_REGISTRATION ) ){
+        /* since for external application,
+           the on_registration callback will be directly called at client side 
+           we just IGNORE the on_registration callback at server side */
+        //app_obj_p->on_registration = callback_wrapper_fp_arr[EVENT_REGISTRATION];
+        ; //do nothing in current version
+    }
+    if( mask |= ( 0x1 << EVENT_MIDDLEWARE_RESTART ) ){
+        app_obj_p->on_middleware_restart = callback_wrapper_fp_arr[EVENT_MIDDLEWARE_RESTART];
+    }
+}
 
 uint8_t get_current_eap_heartbeat_rc()
 {
@@ -70,10 +107,10 @@ void increase_eap_heartbeat_rc()
     proxy_cur_heartbeat += 1;   
 }
 
-/* the main external_app_proxy server thread */
+/* the external_app_proxy server "main thread" */
 void *external_app_proxy_handler()
 {   
-    /* create a unix domain socket with MY_UNIX_SOCKET_PATH 
+    /* step0: create a unix domain socket with MY_UNIX_SOCKET_PATH 
      * unlink, if socket already exists */
     struct stat statbuf;
     if( stat (MY_UNIX_SOCKET_PATH, &statbuf) == 0) {
@@ -237,13 +274,19 @@ static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
     int ret;
     ret = (*api_wrapper_fp_arr[api_id])(client_fd);
     // maybe log the ret value
+    
+    //TODO
+    if( ret == EA_ERR_SOCKET_DISCONNECT ){
+        ;  //maybe de-register the app
+    }
+
     return ret;
 }
 
 static inline int inner_handle_heartbeat_from_app(int client_fd)
 {
     int ret;
-    packet_to_proxy_hearbeat_t heartbeat_packet;
+    hearbeat_to_proxy_t heartbeat_packet;
     ret = read_from_unix_socket_fd( client_fd, &heartbeat_packet, sizeof(heartbeat_packet));
     if (ret != 0) {
         return -1;
@@ -376,51 +419,22 @@ static inline int inner_handle_app_register( app_obj_t* app_p, void *payload_p)
     return app_register(app_p);  /* using existed function in application_registration.c */
 }
 
-/* the callback_wrapper_fp_arr[] will be used by "despather", "indirectly" */
-/* NOTICE, if you add new callback, you NEED to update this function */
-static inline void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint64_t mask)
+//TODO
+int check_all_external_app_heartbeat()
 {
-    if( mask |= ( 0x1 << EVENT_OBU_PACKET_RX ) ){
-        app_obj_p->on_OBU_packet_rx = callback_wrapper_fp_arr[EVENT_OBU_PACKET_RX];
-    }
-    if( mask |= ( 0x1 << EVENT_OBU_PACKET_TX ) ){
-        app_obj_p->on_OBU_packet_tx = callback_wrapper_fp_arr[EVENT_OBU_PACKET_TX];
-    }
-    if( mask |= ( 0x1 << EVENT_RSU_PACKET_RX ) ){
-        app_obj_p->on_RSU_packet_rx = callback_wrapper_fp_arr[EVENT_RSU_PACKET_RX];
-    }
-    if( mask |= ( 0x1 << EVENT_RSU_PACKET_TX ) ){
-        app_obj_p->on_RSU_packet_tx = callback_wrapper_fp_arr[EVENT_RSU_PACKET_TX];
-    }
-    if( mask |= ( 0x1 << EVENT_CLOUD_PACKET_RX ) ){
-        app_obj_p->on_cloud_packet_rx = callback_wrapper_fp_arr[EVENT_CLOUD_PACKET_RX];
-    }
-    if( mask |= ( 0x1 << EVENT_CLOUD_PACKET_TX ) ){
-        app_obj_p->on_cloud_packet_tx = callback_wrapper_fp_arr[EVENT_CLOUD_PACKET_TX];
-    }
-    if( mask |= ( 0x1 << EVENT_TRAFFIC_SIGNAL_COMMAND_TX ) ){
-        app_obj_p->on_traffic_signal_command_tx = callback_wrapper_fp_arr[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
-    }
-    if( mask |= ( 0x1 << EVENT_CAMERA_PACKET_RX ) ){
-        app_obj_p->on_camera_packet_rx = callback_wrapper_fp_arr[EVENT_CAMERA_PACKET_RX];
-    }
-    if( mask |= ( 0x1 << EVENT_REGISTRATION ) ){
-        /* since for external application,
-           the on_registration callback will be directly called at client side 
-           we just IGNORE the on_registration callback at server side */
-        //app_obj_p->on_registration = callback_wrapper_fp_arr[EVENT_REGISTRATION];
-        ; //do nothing in current version
-    }
-    if( mask |= ( 0x1 << EVENT_MIDDLEWARE_RESTART ) ){
-        app_obj_p->on_middleware_restart = callback_wrapper_fp_arr[EVENT_MIDDLEWARE_RESTART];
-    }
+    
 }
 
-/* below are only used by middleware itself */
+
+
 int32_t recv_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size)
 {    
-    int ret = 0;
-    if( ( ret = recv(socket_fd, packet_p, packet_size, 0)) == -1){
+    int ret = recv(socket_fd, packet_p, packet_size, 0);
+
+    if( ret == 0){  /* meaning that remote client might close the fd */
+        return EA_ERR_SOCKET_DISCONNECT;
+    }
+    else if (ret  < 0){
         char* errno_str = strerror(errno);
         if( !errno_str ) 
             errno_str = "undefined/zero errno";
@@ -433,11 +447,16 @@ int32_t recv_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_si
 int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size)
 {
     int ret = 0;
+    errno = 0;
     if( (ret = send(socket_fd, packet_p, packet_size, MSG_NOSIGNAL)) == -1){
-        char* errno_str = strerror(errno);
+        current_errno = errno;
+        char* errno_str = strerror(current_errno);
         if( !errno_str ) 
             errno_str = "undefined/zero errno";
         fprintf(stderr, "send_to_unix_socket_fd: send() ret -1, errno is %s\n", errno_str);
+        if( errno == -EPIPE){
+            return EA_ERR_SOCKET_DISCONNECT;
+        }
         return EA_ERR_SOCKET_SEND;
     }
     return ret;
