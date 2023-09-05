@@ -39,21 +39,7 @@ pthread_mutex_t mutex_interact_fd = PTHREAD_MUTEX_INITIALIZER;
 static int notify_fd;
 static int interact_fd; 
 static int current_errno;
-
-int32_t add_notify_fd_to_epoll(int* ep_fd)
-{
-    /* add add notify_fd to epoll using epoll_ctl(EPOLL_CTL_ADD) */
-    /* no need to reserve struct epoll_event after epoll_ctl() */
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = notify_fd;
-
-    if(epoll_ctl( *ep_fd, EPOLL_CTL_ADD, notify_fd, &ev)){
-        log_file_write_with_errno("add_notify_fd_to_epoll: epoll_ctl");
-        return EA_ERR_NOTIFY_FD_ADD_TO_EPOLL;
-    }
-    return EA_ERR_OK;
-}
+static uint32_t register_app_id;
 
 static inline int32_t modify_socket_fd_block_setting(int socket_fd, bool set_to_block){
     
@@ -76,7 +62,34 @@ static inline int32_t modify_socket_fd_block_setting(int socket_fd, bool set_to_
 
 /* below are only used in library functions used by external application,
    middleware itself will not use */
-int32_t is_interact_fd_linked(){
+
+void set_register_app_id(uint32_t app_id)
+{
+    register_app_id = app_id;
+}
+
+uint32_t get_register_app_id()
+{
+    return register_app_id;
+}
+
+int32_t add_notify_fd_to_epoll(int* ep_fd)
+{
+    /* add add notify_fd to epoll using epoll_ctl(EPOLL_CTL_ADD) */
+    /* no need to reserve struct epoll_event after epoll_ctl() */
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = notify_fd;
+
+    if(epoll_ctl( *ep_fd, EPOLL_CTL_ADD, notify_fd, &ev)){
+        log_file_write_with_errno("add_notify_fd_to_epoll: epoll_ctl");
+        return EA_ERR_NOTIFY_FD_ADD_TO_EPOLL;
+    }
+    return EA_ERR_OK;
+}
+
+int32_t is_interact_fd_linked()
+{
     return interact_fd == 0;
 }
 
@@ -196,7 +209,8 @@ int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size)
     return ret;
 }
 
-int32_t is_notify_fd_linked(){
+int32_t is_notify_fd_linked()
+{
     return notify_fd == 0; 
 }
 

@@ -192,7 +192,7 @@ typedef struct OBU_record_ring {
 
 typedef struct application_private_space {
     uint8_t static_space[STATIC_APP_PRIVATE_SPACE_CAPACITY];
-    uint8_t *dynamic_space;
+    //uint8_t *dynamic_space;   //not in use currently
 } app_private_space_t;
 
 typedef enum {
@@ -204,12 +204,12 @@ typedef enum {
 
 typedef struct OBU_object {
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
-    vehicle_type_t vehicle_type;
-    OBU_object_status status;
+    vehicle_type_t vehicle_type;    //enum type
+    OBU_object_status status;       //enum type
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
-    struct OBU_object *prev;
-    struct OBU_object *next;
+    struct OBU_object *prev;    //should not pass to external app
+    struct OBU_object *next;    //should not pass to external app
 } OBU_object_t;
 
 typedef struct traffic_signal_packet {
@@ -329,16 +329,16 @@ typedef struct V2R_common_field {
 typedef struct C2R_app_section {
     uint32_t payload_len;
     char *payload;
-    uint8_t com_id;
+    //uint8_t com_id;
 } C2R_app_section_t;
 
 typedef struct V2R_app_section {
     uint32_t payload_len;
     char *payload;
-    uint8_t com_id;
+    //uint8_t com_id;
     OBU_object_t *OBU_object;
     DSRCmsgID msgID;
-    void *data;
+    void *data;     //use j2735 lib to encode and decodes
 } V2R_app_section_t;
 
 typedef struct tsc_command {

@@ -14,6 +14,7 @@
 #include "traffic_signal_status_updating.h"
 #include "com_io.h"
 #include "ObstacleList.h"
+#include "j2735inc/j2735_codec.h"
 
 #include "external_app_proxy_inner.h"
 #include "external_app_proxy_typedefine.h"
@@ -63,12 +64,38 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
        "MATCH" the "read" action of "RECONSTRUCT_PAYLOAD_FUNC_OF(on_OBU_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret;
-    if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_rx)") ){
+    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_rx)");
+    if( ret ){
         return ret;
     }
-    V2R_app_section_t* app_section_p = (V2R_app_section_t*)app_section;
+
+    /* currently ARG_TYPE_OF(on_OBU_packet_rx) is the same type of V2R_app_section_t 
+     * in future virsion, if you change the ARG_TYPE_OF(on_OBU_packet_rx) definition,
+     * you need to copy the needed sections from V2R_app_section_t to ARG_TYPE_OF(on_OBU_packet_rx)
+    */
+    ARG_TYPE_OF(on_OBU_packet_rx) *app_section_p = (V2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
+
+    int buf_len;
+    uint8_t *buf;
+    J2735CodecErr err;
+    char errmsg_buf[ERR_MSG_SZ];
+
+    MessageFrame msgf;
+    memset(&msgf, 0, sizeof(msgf));
+    memset(&err, 0, sizeof(J2735CodecErr));
+
+    err.msg_size = ERR_MSG_SZ;
+    err.msg = errmsg_buf;
+
+    msgf.messageId = app_section_p->msgID;
+    msgf.u.data = app_section_p->data;
+    buf_len = j2735_msg_encode(&buf, &msgf, &err);
+
+    if (buf_len <= 0) {
+        log_file_write_fatal_error("%s: j2735_msg_encode failed to encode msg\n", __func__);
+        return EA_ERR_J2735_MSG_ENCODE;
+    }
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
@@ -77,14 +104,14 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
     ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
     if(ret){
         simple_fatal_act_logger("send header", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     /* send toppest level structure */
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(V2R_app_section_t));
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(ARG_TYPE_OF(on_OBU_packet_rx)));
     if(ret){
         simple_fatal_act_logger("send app_section", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     /* since there are inner structure inside, we send them here, one-by-one 
@@ -92,16 +119,17 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
        in the file of external_app_proxy_client.c, used by external app, 
        MUST "MATCH" the "send" action of these below 
     */
+
     ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
         simple_fatal_act_logger("send app_section_p->payload", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     ret = send_to_unix_socket_fd(notify_fd, app_section_p->OBU_object , sizeof(OBU_object_t));
     if(ret){
         simple_fatal_act_logger("send app_section_p->OBU_object", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     ret = send_to_unix_socket_fd(notify_fd, 
@@ -109,15 +137,29 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
                                  sizeof(app_private_space_t));
     if(ret){
         simple_fatal_act_logger("send send OBU_object->private_space", ret);
-        return ret;
+        goto need_buf_free;
     }
 
+    ret = send_to_unix_socket_fd(notify_fd, buf_len, sizeof(int));
+    if(ret){
+        simple_fatal_act_logger("send len of buf", ret);
+        goto need_buf_free;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, buf, buf_len);
+    if(ret){
+        simple_fatal_act_logger("send buf", ret);
+        goto need_buf_free;
+    }
+
+need_buf_free: 
+    free(buf);
     return ret;
 }
 
 int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
 {
-        /* DANGER!!! 
+    /* DANGER!!! 
        Since the V2R_app_section_t object containing TOO-MUCH data in one single structure,
        current version of  "EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)"
        ONLY wrap the NEEDED information for "EVSP" !!! .
@@ -129,28 +171,54 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
        "MATCH" the "read" action of "RECONSTRUCT_PAYLOAD_FUNC_OF(on_OBU_packet_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret;
-    if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_tx)") ){
+    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_tx)");
+    if( ret ){
         return ret;
     }
-    V2R_app_section_t* app_section_p = (V2R_app_section_t*)app_section;
+
+    /* currently ARG_TYPE_OF(on_OBU_packet_tx) is the same type of V2R_app_section_t 
+     * in future virsion, if you change the ARG_TYPE_OF(on_OBU_packet_tx) definition,
+     * you need to copy the needed sections from V2R_app_section_t to ARG_TYPE_OF(on_OBU_packet_tx)
+    */
+    ARG_TYPE_OF(on_OBU_packet_tx) *app_section_p = (V2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
+
+    int buf_len;
+    uint8_t *buf;
+    J2735CodecErr err;
+    char errmsg_buf[ERR_MSG_SZ];
+
+    MessageFrame msgf;
+    memset(&msgf, 0, sizeof(msgf));
+    memset(&err, 0, sizeof(J2735CodecErr));
+
+    err.msg_size = ERR_MSG_SZ;
+    err.msg = errmsg_buf;
+
+    msgf.messageId = app_section_p->msgID;
+    msgf.u.data = app_section_p->data;
+    buf_len = j2735_msg_encode(&buf, &msgf, &err);
+
+    if (buf_len <= 0) {
+        log_file_write_fatal_error("%s: j2735_msg_encode failed to encode msg\n", __func__);
+        return EA_ERR_J2735_MSG_ENCODE;
+    }
 
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_OBU_PACKET_TX; 
+    header.callback_event = EVENT_OBU_PACKET_TX;  
 
     ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
     if(ret){
         simple_fatal_act_logger("send header", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     /* send toppest level structure */
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(V2R_app_section_t));
+    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(ARG_TYPE_OF(on_OBU_packet_tx)));
     if(ret){
         simple_fatal_act_logger("send app_section", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     /* since there are inner structure inside, we send them here, one-by-one 
@@ -158,26 +226,41 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
        in the file of external_app_proxy_client.c, used by external app, 
        MUST "MATCH" the "send" action of these below 
     */
+
     ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
         simple_fatal_act_logger("send app_section_p->payload", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     ret = send_to_unix_socket_fd(notify_fd, app_section_p->OBU_object , sizeof(OBU_object_t));
     if(ret){
         simple_fatal_act_logger("send app_section_p->OBU_object", ret);
-        return ret;
+        goto need_buf_free;
     }
 
     ret = send_to_unix_socket_fd(notify_fd, 
                                  app_section_p->OBU_object->private_space, 
                                  sizeof(app_private_space_t));
     if(ret){
-        simple_fatal_act_logger("send OBU_object->private_space", ret);
-        return ret;
+        simple_fatal_act_logger("send send OBU_object->private_space", ret);
+        goto need_buf_free;
     }
 
+    ret = send_to_unix_socket_fd(notify_fd, buf_len, sizeof(int));
+    if(ret){
+        simple_fatal_act_logger("send len of buf", ret);
+        goto need_buf_free;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, buf, buf_len);
+    if(ret){
+        simple_fatal_act_logger("send buf", ret);
+        goto need_buf_free;
+    }
+
+need_buf_free: 
+    free(buf);
     return ret;
 }
 
@@ -347,7 +430,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
         return ret;
     }
 
-    ObstacleList *obstaclelist_p = (ObstacleList*)app_section;
+    ARG_TYPE_OF(on_camera_packet_rx) *obstaclelist_p = (ObstacleList*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
     packet_from_proxy_header_t header;
@@ -368,7 +451,8 @@ int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
     }
 
     /* since there are inner structure inside, we send them here */
-    ret = send_to_unix_socket_fd(notify_fd, obstaclelist_p->tab , sizeof(Obstacle));
+    ret = send_to_unix_socket_fd(notify_fd, obstaclelist_p->tab,
+                                 (obstaclelist_p->count)*sizeof(Obstacle));
     if(ret){
         simple_fatal_act_logger("send obstaclelist->tab", ret);
         return ret;

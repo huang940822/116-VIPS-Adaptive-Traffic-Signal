@@ -238,9 +238,12 @@ int handle_remote_client_request(int client_fd)
     }
 
     if ( header.packet_type == EA_PACKET_TYPE_HEARTBEAT ) {
+        log_file_write("ea_proxy get heartbeat packet from app ID:%u", header.appID);
         ret = inner_handle_heartbeat_from_app(client_fd);
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
+        log_file_write("ea_proxy get request packet with api id %d:%s from app ID:%u", 
+                        header.api_id, api_id_str_arr[header.api_id], header.appID);
         ret = inner_handle_request_by_api_id(client_fd, header.api_id);
     }
     return ret;
@@ -253,8 +256,8 @@ static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
         fprintf(stderr, "err: inner_handle_request_by_api_id: client_fd == 0\n");
         return -1;
     }
-    if ( api_id == API_ID_OF(special_reserved_id) ){
-        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(special_reserved_id));
+    if ( api_id == API_ID_OF(special_reserved_api_id) ){
+        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(special_reserved_api_id));
         return -1;
     }
     if ( api_id >= NUM_OF_API_ID_DEFININITION ){
@@ -271,13 +274,11 @@ static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
     }
 
     /* call the related wrapper function by its api_id */
-    int ret;
-    ret = (*api_wrapper_fp_arr[api_id])(client_fd);
+    int ret = (*api_wrapper_fp_arr[api_id])(client_fd);
     // maybe log the ret value
     
-    //TODO
     if( ret == EA_ERR_SOCKET_DISCONNECT ){
-        ;  //maybe de-register the app
+        ;  //TODO //maybe de-register the app
     }
 
     return ret;
@@ -422,7 +423,7 @@ static inline int inner_handle_app_register( app_obj_t* app_p, void *payload_p)
 //TODO
 int check_all_external_app_heartbeat()
 {
-    
+    ;
 }
 
 

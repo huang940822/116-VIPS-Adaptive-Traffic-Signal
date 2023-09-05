@@ -17,7 +17,7 @@ uint8_t get_current_eap_heartbeat_rc();
 void *external_app_proxy_handler();
 
 /* below is used by external_app_proxy_api_wrapper.c */
-int32_t read_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
+int32_t recv_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
 
 
