@@ -409,21 +409,24 @@ void command_buf_polling()
             log_file_write("RESUME instruction is executed\r\n");
             printf("RESUME instruction is executed.\r\n");
 
-            report_compensation_time();
-
             switch (config.traffic_compensation_method) {
             case 1:
+                report_compensation_time();
                 traffic_compensation_method1(config.traffic_compensation_cycle_number);
                 break;
             case 2:
+                report_compensation_time();
                 traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
                 break;
             case 3:
+                report_compensation_time();
                 traffic_compensation_method3(config.traffic_compensation_cycle_number);
                 break;
             default:
                 break;
             }
+            // 補償結束清空 compensation buffer
+            compensation_buffer_clear();
             CompensationFlag = false;
         }
     }
