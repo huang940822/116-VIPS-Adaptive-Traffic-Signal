@@ -65,25 +65,9 @@ void command_buf_clear()
 void command_buf_send(tsc_command_object_t *command_obj,
                       uint8_t current_SubPhaseID)
 {
-    traffic_signal_status_t signal_status;
-    get_traffic_signal_status(&signal_status);
-    sem_timedwait_millsecs(
-        &sem_signal_status,
-        SEM_SIGNAL_STATUS_TIMEOUT);  // 有timeout的號誌等待 但是 對應的post在那？
-
-    uint16_t pretime =
-        signal_status.plan[current_SubPhaseID - 1].PreTimeCompensated;
-    int difference = 0;
-    int time = 0;
-    int temp_ack_seq;
-
     uint8_t conpensation_flag = false;
     conpensation_flag = is_in_compensation();
     // 公車來臨若TC正在補償則不做控制
-
-    // EVSP.dontSend2TC = 0;
-    uint16_t current_sec_residual = get_current_second();
-
     if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
         if (TSP.dontSend2TC == 1) {
             printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
@@ -107,6 +91,18 @@ void command_buf_send(tsc_command_object_t *command_obj,
     if (config.log_command_buffer) {
         log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }
+
+    sem_timedwait_millsecs(&sem_signal_status, SEM_SIGNAL_STATUS_TIMEOUT);  // 有timeout的號誌等待 但是 對應的post在那？
+
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+
+    uint16_t pretime = signal_status.plan[current_SubPhaseID - 1].PreTimeCompensated;
+    int difference = 0;
+    int time = 0;
+    int temp_ack_seq;
+
+    uint16_t current_sec_residual = get_current_second();
 
     switch (config.signal_controller_manufacturer) {
     case CHENG_LONG:
@@ -263,6 +259,30 @@ void command_buf_polling()
         return;
     }
 
+    // 在切換日時段前 60 秒與後 10 分鐘停止控制
+    time_t currentTime;
+    struct tm localTime;
+    time(&currentTime);
+    localtime_r(&currentTime, &localTime);
+
+    for (int i = 0; i < signal_status.SegmentCount; i++) {
+        uint8_t planHour = signal_status.allday_plan[i].Hour;
+        uint8_t planMin = signal_status.allday_plan[i].Min;
+
+        // 80 110 140
+        // 6:50 + 160s
+        int timeDiff = (((planHour - localTime.tm_hour) * 60 + (planMin - localTime.tm_min)) * 60) - localTime.tm_sec;
+        // config
+        if (-600 <= timeDiff && timeDiff <= 60) {
+            tsc_pretime();
+            command_buf_clear();
+            compensation_buffer_clear();
+            log_file_write("Enforce to pretime control_strategy\r\n");
+            log_file_write("command buffer clear\r\n");
+            break;
+        }
+    }
+
     uint8_t current_SubPhaseID = signal_status.SubPhaseID;
     uint8_t current_StepID = signal_status.StepID;
     uint16_t current_StepSec = signal_status.StepSec;
@@ -288,7 +308,6 @@ void command_buf_polling()
     }
     memset(log_content, 0, sizeof(log_content));
 
-    // 何時phase會是0 人為設定的？？
     if (prior_SubPhaseID == 0 || current_SubPhaseID == 0) {
         prior_SubPhaseID = current_SubPhaseID;
         prior_StepID = current_StepID;
@@ -296,6 +315,7 @@ void command_buf_polling()
         command_buf_print();
         return;
     }
+
     pthread_mutex_lock(&mutex_command_buf);
     /* cross to next phase */
 
@@ -409,21 +429,24 @@ void command_buf_polling()
             log_file_write("RESUME instruction is executed\r\n");
             printf("RESUME instruction is executed.\r\n");
 
-            report_compensation_time();
-
             switch (config.traffic_compensation_method) {
             case 1:
+                report_compensation_time();
                 traffic_compensation_method1(config.traffic_compensation_cycle_number);
                 break;
             case 2:
+                report_compensation_time();
                 traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
                 break;
             case 3:
+                report_compensation_time();
                 traffic_compensation_method3(config.traffic_compensation_cycle_number);
                 break;
             default:
                 break;
             }
+            // 補償結束清空 compensation buffer
+            compensation_buffer_clear();
             CompensationFlag = false;
         }
     }
