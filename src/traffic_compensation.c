@@ -155,7 +155,6 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
         }
     }
     log_file_write(log_content);
-    compensation_buffer_clear();
 }
 
 void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
@@ -280,7 +279,6 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHAS
         }
     }
     log_file_write(log_content);
-    compensation_buffer_clear();
 }
 /***************
 幹支道明顯的道路
@@ -393,8 +391,6 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
             compensation_time = T;
         }
         log_file_write(log_content);
-        compensation_buffer_clear();
-
     } else if (T < 0) {  // 進行正補償
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
@@ -443,6 +439,5 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
             compensation_time = T;
         }
         log_file_write(log_content);
-        compensation_buffer_clear();
     }
 }
