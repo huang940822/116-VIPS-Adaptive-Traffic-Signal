@@ -72,6 +72,7 @@ void OBU_j2735_tx(DSRCmsgID magId, void *data)
     j2735_buf_free(buf);
     return;
 }
+
 void OBU_packet_tx(uint16_t len,
                    uint8_t service_id,
                    unsigned char *specific_field)
@@ -435,10 +436,19 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
-        if (current->next->event_callback_id.choice == event_callback_id_msg_id &&
-            msgf->messageId == current->next->event_callback_id.u.msg_id) {
+        if (current->next->event_callback_id.choice == event_callback_id_msg_id 
+            && msgf->messageId == current->next->event_callback_id.u.msg_id) 
+        {
             proxy_handling_app_p = current->next->app_obj_p;
-            current->next->callback((void *) &app_section);
+            if(proxy_handling_app_p->ea_info_p){
+                /* for external app, we let ea_library decode by itself */
+                wrapper_var_for_obu_packet_t wrapper_var;
+                wrapper_var.msg_p = msg;
+                wrapper_var.object_p = object;
+                current->next->callback( (void *) (&wrapper_var));
+            }
+            else
+                current->next->callback((void *) &app_section);
         }
         current = current->next;
     }

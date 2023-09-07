@@ -9,7 +9,7 @@
         fprintf(stderr,"%s: %s ret: %d\n",           \
                 __func__, (action_str), (ret_val) ); \
         log_file_write_fatal_error(                  \
-            stderr,"%s: %s ret: %d\n",               \
+            "%s: %s ret: %d\n",                      \
             __func__, (action_str), (ret_val) );     \
     }while(0)
 

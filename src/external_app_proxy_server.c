@@ -48,7 +48,7 @@ app_obj_t* find_duplicate_id_app_obj( uint8_t req_id );
 int handle_new_client_fd_accepted(int client_fd);
 int handle_remote_client_request(int client_fd);
 static inline int inner_handle_app_register( app_obj_t* app_p, void *payload_p);
-static inline int inner_handle_heartbeat_from_app(int client_fd);
+static inline int inner_handle_heartbeat_from_app(uint8_t appID);
 static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id);
 uint8_t get_current_eap_heartbeat_rc();
 void increase_eap_heartbeat_rc();
@@ -220,32 +220,41 @@ int handle_remote_client_request(int client_fd)
     int ret;
     packet_to_proxy_header_t header;
     ack_from_proxy_header_t ack_packet;
-    memset(&ack_packet, 0, sizeof(ack_packet));
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
 
     ret = read_from_unix_socket_fd( client_fd, &header, sizeof(header));
     if (ret != 0) {
-        return -1;
+        if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "%s: read_from_unix_socket_fd header from client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
+        return ret;
     }
 
     /* header error-check */
     if ( header.packet_type != EA_PACKET_TYPE_REQ 
          && header.packet_type != EA_PACKET_TYPE_HEARTBEAT) 
-    {
+    {   
+        ack_from_proxy_header_t ack_packet;
+        ack_packet.packet_type = EA_PACKET_TYPE_ACK;
         ack_packet.ret_val = EA_ERR_BAD_PACKET_TYPE_FROM_INTERACT_CHANNEL;
         ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
-        return ret;
+        if(PRINT_MSG_FOR_DEBUG)
+            fprintf(stdout, "%s: send ack_packet to client_fd:%d, ret = %d\n", 
+                    __func__, client_fd, ret);
+        if (ret != 0) {
+            ;//maybe log err
+        }
     }
-
-    if ( header.packet_type == EA_PACKET_TYPE_HEARTBEAT ) {
+    else if ( header.packet_type == EA_PACKET_TYPE_HEARTBEAT ) {
         log_file_write("ea_proxy get heartbeat packet from app ID:%u", header.appID);
-        ret = inner_handle_heartbeat_from_app(client_fd);
+        ret = inner_handle_heartbeat_from_app(header.appID);
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
         log_file_write("ea_proxy get request packet with api id %d:%s from app ID:%u", 
                         header.api_id, api_id_str_arr[header.api_id], header.appID);
         ret = inner_handle_request_by_api_id(client_fd, header.api_id);
     }
+
     return ret;
 }
 
@@ -284,16 +293,20 @@ static inline int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
     return ret;
 }
 
-static inline int inner_handle_heartbeat_from_app(int client_fd)
-{
-    int ret;
-    hearbeat_to_proxy_t heartbeat_packet;
-    ret = read_from_unix_socket_fd( client_fd, &heartbeat_packet, sizeof(heartbeat_packet));
+static inline int inner_handle_heartbeat_from_app(uint8_t appID)
+{   
+    int ret = update_external_app_heartbeat_by_appID(appID);
+    ack_from_proxy_header_t ack_packet;
+    ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+    ack_packet.ret_val = ret;
+    ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
+    if(PRINT_MSG_FOR_DEBUG)
+        fprintf(stdout, "%s: send ack_packet to client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
     if (ret != 0) {
-        return -1;
+        ;//maybe log err
     }
-    update_external_app_heartbeat_by_appID(heartbeat_packet.appID);
-    return 0;
+    return ret;
 }
 
 int handle_new_client_fd_accepted(int client_fd)

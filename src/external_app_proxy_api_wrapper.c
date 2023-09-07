@@ -13,7 +13,7 @@
 #include "vms.h"
 #include "traffic_signal_status_updating.h"
 #include "com_io.h"
-#include "j2735inc/j2735_codec.h"
+//#include "j2735inc/j2735_codec.h"
 
 #include "external_app_proxy_inner.h"
 #include "external_app_proxy_typedefine.h"
@@ -21,24 +21,25 @@
 #include "external_app_proxy_api_wrapper.h"
 #include "external_app_proxy_callback_wrapper.h"
 
-#define API_WRAPPER_OF(api_name) api_name ## api_wrapper
+#define API_WRAPPER_OF(api_name) api_name ## _api_wrapper
 
 /* application_registration.h */
 int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
 {
     /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
     */
-    int ret;
+    
     struct {
         event_type_t event_type;
         char name[APP_NAME_MAX_LEN];
         int priority;
         DSRCmsgID msg_id;
     } payload;
- 
-    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    
+    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -53,10 +54,10 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
                                  payload.priority, 
                                  payload.msg_id, 
                                  callback_wrapper_fp_arr[payload.event_type] );
-    
+
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
-    ack_packet.ret_val = EA_ERR_OK;     
+    ack_packet.ret_val = EA_ERR_OK;
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: send ack_packet to client_fd:%d, ret = %d\n", 
@@ -64,7 +65,7 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
     if (ret != 0) {
         ;//maybe log err
     }
-    
+
     /* no ack_payload for this api*/
     return ret;
 }
@@ -74,16 +75,16 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
 int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
 {
     /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
+       "MATCH" the "read" and "send" pairs in cloud_packet_tx() in ea_library
     */
-    int ret;
     struct {
         uint16_t len;
         uint8_t service_id;
     }payload;
 
-    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(cloud_packet_tx): " 
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
@@ -92,26 +93,26 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     }
 
     unsigned char specific_field[ payload.len ];
-    ret = read_from_unix_socket_fd(client_fd, specific_field, sizeof(payload.len));
+    ret = recv_from_unix_socket_fd(client_fd, specific_field, sizeof(payload.len));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(cloud_packet_tx): " 
                         "get specific_field from client_fd:%d, ret = %d\n", client_fd, ret);
 
     /* call the actual function */
     /* cloud_packet_tx does not return err-code currently (return void) */
-    cloud_packet_tx(payload.len, payload.service_id, specific_field);
-
+    cloud_packet_tx( payload.len, payload.service_id, specific_field);
+    
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
-    ack_packet.ret_val = EA_ERR_OK; /*currently no other err-code for this api */
+    ack_packet.ret_val = EA_ERR_OK;
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if(PRINT_MSG_FOR_DEBUG)
-        fprintf(stdout, "API_WRAPPER_OF(cloud_packet_tx): "  
-                        "send ack_packet to client_fd:%d, ret = %d\n", client_fd, ret);
+        fprintf(stdout, "%s: send ack_packet to client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
     if (ret != 0) {
         ;//maybe log err
     }
-    
+
     /* no ack_payload for this api*/
     return ret;
 }
@@ -119,8 +120,9 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
 int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
 {
     /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
+       "MATCH" the "read" and "send" pairs in OBU_j2735_tx() in ea_library
     */
     int ret;
     struct {
@@ -173,27 +175,39 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
 
 int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 {
-    int ret;
-    struct REQ_PAYLOAD_TYPE(OBU_packet_tx) payload;   
-    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in OBU_packet_tx() in ea_library
+    */
+    struct {
+        size_t write_buf_len;
+    }payload;
+
+    int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(OBU_packet_tx): "
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+    if( ret ){
+        return ret;
+    }
 
-
-    uint8_t write_buf_content[ payload.write_buf_len ];
-    ret = read_from_unix_socket_fd(client_fd, write_buf_content, sizeof(payload.write_buf_len));
+    uint8_t write_buf[ payload.write_buf_len ];
+    ret = recv_from_unix_socket_fd(client_fd, write_buf, sizeof(payload.write_buf_len));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(OBU_packet_tx): "
                         "get write_buf_content from client_fd:%d, ret = %d\n", client_fd, ret);
-
+    if( ret ){
+        return ret;
+    }
+    
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
 
     /* call the actual function */
     /* HERE is a SPECIAL case: since the data is already pre-processed at client side 
      * we direcly use com_send() */
-    ret = com_send(GENERAL_COM_ID, write_buf_content, payload.write_buf_len);
+    ret = com_send(GENERAL_COM_ID, write_buf, payload.write_buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("API_WRAPPER_OF(OBU_packet_tx): com_send");
         ack_packet.ret_val = EA_ERR_COM_IO;
@@ -216,37 +230,50 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 
 int API_WRAPPER_OF(remote_com_send)(int client_fd)
 {
-    int ret;
-    struct REQ_PAYLOAD_TYPE(remote_com_send) payload;   
-    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in remote_com_send() in ea_library
+    */
+    struct {
+        size_t buf_len;
+    } payload;
+    
+    int ret; 
+    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(remote_com_send): "
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
-
+    if( ret ){
+        return ret;
+    }
 
     uint8_t buf[ payload.buf_len ];
-    ret = read_from_unix_socket_fd(client_fd, buf, sizeof(payload.buf_len));
+    ret = recv_from_unix_socket_fd(client_fd, buf, sizeof(payload.buf_len));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(remote_com_send): "
                         "get buf from client_fd:%d, ret = %d\n", client_fd, ret);
-
+    if( ret ){
+        return ret;
+    }
+    
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
 
     MessageFrame* msgf_p;
-    J2735CodecErr err;
-    Malloc(err.msg, (sizeof(char) * 20), "API_WRAPPER_OF(remote_com_send):" );
-    ret = j2735_msg_decode(&msgf_p, buf, payload.buf_len, &err);
-    if (ret < 0) {
-        ack_packet.ret_val = EA_ERR_COM_IO;
-    }
-    free(err.msg);
+    //J2735CodecErr err;
+    //Malloc(err.msg, (sizeof(char) * 20), "API_WRAPPER_OF(remote_com_send):" );
+    // ret = j2735_msg_decode(&msgf_p, buf, payload.buf_len, &err);
+    // if (ret < 0) {
+    //     ack_packet.ret_val = EA_ERR_COM_IO;
+    // }
+    //free(err.msg);
 
 
     /* call the actual function */
     /* HERE is a SPECIAL case: since the data is already pre-processed at client side 
      * we direcly use com_send() */
-    ret = com_send(GENERAL_COM_ID, msgf_p->u.data, payload.buf_len);
+    ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("API_WRAPPER_OF(remote_com_send): com_send");
         ack_packet.ret_val = EA_ERR_COM_IO;
@@ -254,7 +281,7 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     else{
         ack_packet.ret_val = EA_ERR_OK;
     }
-    J2735_FREE_MSG_FRAME(p_msgf);
+    // J2735_FREE_MSG_FRAME(p_msgf);
 
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if(PRINT_MSG_FOR_DEBUG)
@@ -317,8 +344,9 @@ int API_WRAPPER_OF(get_config_RSU_elev)(int client_fd)
 int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
 {
     /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
+       "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time() in ea_library
     */
     int ret;
     struct {
@@ -370,7 +398,7 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
         tsc_command_t tsc_cmd;
     } payload;
 
-    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(command_buf_insert_adjustment): "
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
@@ -408,12 +436,18 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
 /* vms.h */
 int API_WRAPPER_OF(vms_request_start)(int client_fd)
 {
-    int ret;
-    struct REQ_PAYLOAD_TYPE(vms_request_start) payload;   
-    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    struct {
+        uint8_t id;
+        uint8_t priority;
+    } payload;
+
+    int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(vms_request_start): "
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+    if( ret ){
+        return ret;
+    }
 
     /* call the actual function */
     vms_request_start(payload.id, payload.priority);
@@ -438,7 +472,7 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
 {
     int ret;
     struct REQ_PAYLOAD_TYPE(vms_request_end) payload;   
-    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(vms_request_end): "
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
@@ -464,12 +498,17 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
 
 int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
 {
-    int ret;
-    struct REQ_PAYLOAD_TYPE(vms_sync_evsp_prog) payload;   
-    ret = read_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
+    struct{
+        uint8_t evsp_prog[RTM_MAX];
+    } payload;
+
+    int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
         fprintf(stdout, "API_WRAPPER_OF(vms_sync_evsp_prog): "
                         "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+    if(ret){
+        return ret;
+    }
 
     /* do the actual update */
     for(size_t i = 0; i < RTM_MAX; ++i){
@@ -497,16 +536,23 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
 /* traffic_signal_status_updating.h */
 int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
 {
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in get_traffic_signal_status() in ea_library
+    */
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+    
+    struct {
+        traffic_signal_status_t ts_status;
+    } ack_payload;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
+    /* call the actual function */
+    get_traffic_signal_status( &(ack_payload.ts_status) );
 
     ack_packet.ret_val = EA_ERR_OK;
-
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if (ret != 0) {
         ;//maybe log err
@@ -522,16 +568,23 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
 
 int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
 {
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in get_current_traffic_signal_status() in ea_library
+    */
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+    
+    struct {
+        traffic_signal_status_t cur_ts_status;
+    } ack_payload;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
+    /* call the actual function */
+    get_current_traffic_signal_status( &(ack_payload.cur_ts_status) );
 
     ack_packet.ret_val = EA_ERR_OK;
-
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if (ret != 0) {
         ;//maybe log err
@@ -547,16 +600,23 @@ int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
 
 int API_WRAPPER_OF(get_current_phase)(int client_fd)
 {
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in get_current_phase() in ea_library
+    */
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+    
+    struct {
+        uint8_t phase;
+    } ack_payload;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
+    /* call the actual function */
+    ack_payload.phase =  get_current_phase();
 
     ack_packet.ret_val = EA_ERR_OK;
-
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if (ret != 0) {
         ;//maybe log err
@@ -572,16 +632,23 @@ int API_WRAPPER_OF(get_current_phase)(int client_fd)
 
 int API_WRAPPER_OF(get_current_step)(int client_fd)
 {
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in get_current_step() in ea_library
+    */
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+    
+    struct {
+        uint8_t step;
+    } ack_payload;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
+    /* call the actual function */
+    ack_payload.step =  get_current_step();
 
     ack_packet.ret_val = EA_ERR_OK;
-
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if (ret != 0) {
         ;//maybe log err
@@ -597,16 +664,23 @@ int API_WRAPPER_OF(get_current_step)(int client_fd)
 
 int API_WRAPPER_OF(get_current_second)(int client_fd)
 {
+    /* WARNNING!!! 
+       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in get_current_second() in ea_library
+    */
     int ret;
-    //struct REQ_PAYLOAD_TYPE(get_config_RSU_id) payload;   //no payload from this api
     ack_from_proxy_header_t ack_packet;
     ack_packet.packet_type = EA_PACKET_TYPE_ACK;
+    
+    struct {
+        uint16_t second;
+    } ack_payload;
 
-    struct ACK_PAYLOAD_TYPE(get_config_RSU_id) ack_payload;
-    ack_payload.RSU_id = config.RSU_id;
+    /* call the actual function */
+    ack_payload.second =  get_current_second();
 
     ack_packet.ret_val = EA_ERR_OK;
-
     ret = send_to_unix_socket_fd( client_fd, &ack_packet, sizeof(ack_packet));
     if (ret != 0) {
         ;//maybe log err
