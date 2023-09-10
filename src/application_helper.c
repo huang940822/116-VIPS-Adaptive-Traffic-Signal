@@ -10,7 +10,7 @@
 #include "timer_event.h"
 #include "application_helper.h"
 
-#include "external_app_proxy_inner.h"
+#include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
 
@@ -34,7 +34,6 @@ int reset_external_app_both_fd(app_obj_t *app, int socket_fd)
         ret = -1;
     }
     pthread_mutex_unlock(&mutex_app_list);
-
     return ret;
 }
 

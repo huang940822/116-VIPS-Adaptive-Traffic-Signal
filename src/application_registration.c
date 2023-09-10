@@ -158,6 +158,7 @@ int app_obj_insert(app_obj_t *app)
 {
     /* since now dispatcher and ea_app_proxy,
      * both might read/write app_list, we add a mutex_lock */ 
+    int ret;
     pthread_mutex_lock(&mutex_app_list); 
 
     app_obj_t *current = app_list.next;
@@ -166,16 +167,18 @@ int app_obj_insert(app_obj_t *app)
     /* empty list */
     if (current == NULL) {
         app_list.next = app;
-        return num;
+        goto unlock_ret;
     }
 
     /* traverse to last node */
     while (current->next != NULL) {
         if (strncmp(current->name, app->name, APP_NAME_MAX_LEN) == 0) {
-            return APP_REGISTER_DUPLICATE_APP_NAME;
+            ret = APP_REGISTER_DUPLICATE_APP_NAME;
+            goto unlock_ret;
         }
         if (current->id == app->id) {
-            return APP_REGISTER_DUPLICATE_APP_ID;
+            ret = APP_REGISTER_DUPLICATE_APP_ID;
+            goto unlock_ret;
         }
         num++;
         current = current->next;
@@ -183,17 +186,19 @@ int app_obj_insert(app_obj_t *app)
 
     /* last node */
     if (strncmp(current->name, app->name, APP_NAME_MAX_LEN) == 0) {
-        return APP_REGISTER_DUPLICATE_APP_NAME;
+        ret = APP_REGISTER_DUPLICATE_APP_NAME;
+        goto unlock_ret;
     }
     if (current->id == app->id) {
-        return APP_REGISTER_DUPLICATE_APP_ID;
+        ret = APP_REGISTER_DUPLICATE_APP_ID;
+        goto unlock_ret;
     }
 
     num++;
-    current->next = app;
-
+    ret = num;
+    
+unlock_ret:
     pthread_mutex_unlock(&mutex_app_list); 
-
     return num;
 }
 
@@ -223,7 +228,7 @@ int app_register(app_obj_t *app)
     // insert app in app list
     int ret = app_obj_insert(app);
     if (ret < 0) {
-        // printf("error inserting app in list: %d\n", ret);
+        printf("error inserting app in list: %d\n", ret);
         return ret;
     } else {
         app_num = ret + 1;

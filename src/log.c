@@ -180,3 +180,41 @@ void log_file_write_fatal_error(const char *format, ...)
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
 }
+
+
+int log_file_write_fatal_with_errno(const char *format, ...)
+{   
+    if( ENABLE_FATAL_LOG ){
+        if( SWITCH_FATAL_LOG_TO_PRINT ){
+            char* errno_str = strerror(errno);
+            if( !errno_str ) errno_str = "undefined/zero errno";
+            
+            // timestamp
+            time_t rawtime;
+            struct tm *info;
+            char buffer[20];
+            memset(buffer, 0, sizeof(buffer));
+            time(&rawtime);
+            info = localtime(&rawtime);
+            strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+
+            // content
+            char log_content[LOG_CONTENT_LEN + 1];
+            memset(log_content, 0, sizeof(log_content));
+            va_list list;
+            va_start(list, format);
+            vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
+            va_end(list);
+            
+            fprintf(stderr, "%s\n", buffer);
+            fprintf(stderr, "strerror is %s\n", errno_str);
+            fprintf(stderr, "fatal error: \n%s\n", log_content);
+            fflush(stderr);
+        }
+        else{
+            ;//TODO: log to a file
+        }
+    }
+
+    return 0;
+}

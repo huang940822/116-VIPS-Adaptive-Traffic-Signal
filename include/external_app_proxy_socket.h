@@ -8,31 +8,14 @@
 #include "traffic_signal_command_buffer.h"
 #include "vms.h"
 #include "ObstacleList.h"
+#include "log.h"
+#include "external_app_proxy_typedefine.h"
 
 /* since application might implement multi-thread program, ,
  * we add a mutex_lock to serialize their usage of the same channel */ 
 /* these mutex should only be used in library function provided for external app client */
 extern pthread_mutex_t mutex_notify_fd;
 extern pthread_mutex_t mutex_interact_fd;
-extern char* api_id_str_arr[];
-/* functions below are only used in library used by external application */
-/* middleware itself will not use */
-void set_register_app_id(uint32_t app_id);
-uint32_t get_register_app_id();
-
-int32_t is_interact_fd_linked();
-int32_t interact_fd_disconnect_from_proxy();
-int32_t interact_fd_connect_to_proxy();
-int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size);
-int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
-
-int32_t add_notify_fd_to_epoll(int* ep_fd);
-int32_t is_notify_fd_linked();
-int32_t notify_fd_disconnect_from_proxy();
-int32_t notify_fd_connect_to_proxy();
-int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size);
-int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
-/* functions above ... */
 
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
@@ -51,21 +34,22 @@ enum ea_packet_type_definition_enum{
 
 typedef struct _packet_from_proxy_header_t {
     uint32_t packet_type;
-    event_type_t callback_event;
-    pid_t pid;
-}packet_from_proxy_header_t;
-
-typedef struct _ack_from_proxy_header_t {
-    uint32_t packet_type;
-    int ret_val;
-}ack_from_proxy_header_t;
+    uint32_t seq_num;   //used match heartbeat seq_num
+    union{
+        event_type_t callback_event; //used for notify
+        int ret_val; //used for ack
+    };
+} packet_from_proxy_header_t;
 
 typedef struct _packet_to_proxy_header_t {
     uint32_t packet_type;
-    uint32_t appID;
-    uint32_t api_id;
     pid_t pid;
-}packet_to_proxy_header_t;
+    uint32_t appID;
+    union{
+        uint32_t api_id;    //used for api request
+        uint32_t seq_num;   //used for send heartbeat
+    };
+} packet_to_proxy_header_t;
 
 typedef struct _app_registration_payload_t {
     char name[APP_NAME_MAX_LEN];
@@ -90,25 +74,25 @@ typedef struct _notify_update_ack_payload_t {
     uint32_t RSU_region;
 } notify_update_ack_payload_t;
 
-#define API_ID_OF(api_name) API_ID_ ## api_name
+#define API_ID_OF(api_name)  api_name ## _API_ID
 enum ea_callback_api_id_definition_enum{
     /* since '0' is a special number, we reserve it for future expansion */
     API_ID_OF(special_reserved_api_id) = 0,
     
-    /* ea_external_app_proxy.h */
+    /* external_app_proxy.h */
     API_ID_OF(remote_app_registration),
     API_ID_OF(app_main_loop_start),
 
-    /* ea_application_registration.h */
+    /* application_registration.h */
     API_ID_OF(event_callback_msg_id_insert),
     
-    /* ea_com_packet_processing.h */
+    /* com_packet_processing.h */
     API_ID_OF(cloud_packet_tx),
     API_ID_OF(OBU_j2735_tx),
     API_ID_OF(OBU_packet_tx),
     API_ID_OF(remote_com_send),
     
-    /* ea_config.h */
+    /* config.h */
     API_ID_OF(get_config_RSU_id),
     API_ID_OF(get_config_RSU_lat),
     API_ID_OF(get_config_RSU_lon),
@@ -116,16 +100,17 @@ enum ea_callback_api_id_definition_enum{
     API_ID_OF(get_config_RSU_region),
     API_ID_OF(get_config_RSU_elev),
     
-    /* ea_traffic_signal_command_buffer.h */
+    /* traffic_signal_command_buffer.h */
     API_ID_OF(command_buf_insert_effect_time),
     API_ID_OF(command_buf_insert_adjustment),
     
-    /* ea_vms.h */
+    /* vms.h */
     API_ID_OF(vms_request_start),
     API_ID_OF(vms_request_end),
     API_ID_OF(vms_sync_evsp_prog),
+    API_ID_OF(vms_sync_then_start),
     
-    /* ea_traffic_signal_status_updating.h */
+    /* traffic_signal_status_updating.h */
     API_ID_OF(get_traffic_signal_status),
     API_ID_OF(get_current_traffic_signal_status),
     API_ID_OF(get_current_phase),
@@ -148,5 +133,65 @@ enum ea_callback_api_id_definition_enum{
     /* this tag should always be at the last*/
     NUM_OF_API_ID_DEFININITION,  
 };
-  
+
+extern char* api_id_str_arr[NUM_OF_API_ID_DEFININITION];
+
+/* functions below are only used in library used by external application */
+/* middleware itself will not use */
+void set_register_app_id(uint32_t appID);
+uint32_t get_register_app_id();
+
+// inline int32_t simple_send_request_header_to_proxy(int api_id);
+// inline int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, char* api_name);
+
+int32_t is_interact_fd_linked();
+int32_t interact_fd_disconnect_from_proxy();
+int32_t interact_fd_connect_to_proxy();
+int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size);
+int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
+
+int32_t add_notify_fd_to_epoll(int* ep_fd);
+int32_t is_notify_fd_linked();
+int32_t notify_fd_disconnect_from_proxy();
+int32_t notify_fd_connect_to_proxy();
+int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size);
+int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
+/* functions above ... */
+
+inline __attribute__((always_inline))  
+int32_t simple_send_request_header_to_proxy(int api_id) 
+{   
+    int ret;
+    packet_to_proxy_header_t header;
+    header.packet_type = EA_PACKET_TYPE_REQ;
+    header.appID = get_register_app_id();
+    header.api_id = api_id;
+    ret = interact_fd_send_to_proxy(&header, sizeof(header));
+    log_file_write("%s: send header to proxy, ret = %d", api_id_str_arr[api_id], ret);
+    if(ret!=0){
+        log_file_write_fatal_error("%s: interact_fd_send_to_proxy ret != 0\n");
+    }
+    return ret;
+}
+
+inline __attribute__((always_inline)) 
+int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, char* api_name)
+{
+    int ret;
+    memset(ack_p, 0, sizeof(packet_from_proxy_header_t));
+    ret = interact_fd_recv_from_proxy(ack_p, sizeof(packet_from_proxy_header_t));
+    log_file_write("%s: get ack from proxy, ret = %d", api_name, ret);
+    if(ret!=0){
+        log_file_write_fatal_error("%s: interact_fd_recv_from_proxy ret != 0\n");
+    }
+    else if( ack_p->packet_type != EA_PACKET_TYPE_ACK ){
+        log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK\n");
+        ret = EA_ERR_PACKET_TYPE_NOT_MATCH;
+    }
+    else{
+        ret = EA_ERR_OK;
+    }
+    return ret;
+}
+
 #endif  /* EXTERNAL_APP_PROXY_INNER_H */

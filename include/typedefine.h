@@ -10,6 +10,7 @@
 #include "j2735_map.h"
 #include "j2735_msg.h"
 #include "util.h"
+
 #define FILE_PATH "./"
 #define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
@@ -89,7 +90,7 @@ typedef enum timer_event_type {
     TIMER_EVENT_LOG_FILE_NAME_UPDATE = 2,
     TIMER_EVENT_DSRC_SEND = 3,
     TIMER_EVENT_ENFORCE_PRETIME = 4,
-    // TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
+    //TIMER_EVENT_DSRC_HEARTBIT_DETECT = 4,
     TIMER_EVENT_TYPE_NUMBER
 } timer_event_type_t;
 
@@ -119,7 +120,7 @@ typedef struct external_app_info_type {
     pid_t pid;              //process id of the external application    
     int notify_fd;          //middleware use this socket_fd to notify the app
     int interact_fd;        //app will use this socket_fd to call middleware-api
-    uint8_t heartbeat_rc;       //heartbeat record, updated each time app send req to MW
+    uint8_t heartbeat_rc;   //heartbeat record, updated each time app send req to MW
 } ea_info_t;
 
 typedef struct application_object {

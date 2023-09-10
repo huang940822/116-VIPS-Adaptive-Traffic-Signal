@@ -20,4 +20,10 @@ void log_file_write(const char *format, ...);
 // void log_file_write_fatal_error(char *content);
 void log_file_write_fatal_error(const char *format, ...);
 
+#define ENABLE_LOG 1
+#define ENABLE_FATAL_LOG 1
+#define SWITCH_LOG_TO_PRINT 1
+#define SWITCH_FATAL_LOG_TO_PRINT 1
+int log_file_write_fatal_with_errno(const char *format, ...);
+
 #endif  /* LOG_H */

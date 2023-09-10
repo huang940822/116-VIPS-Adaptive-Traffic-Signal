@@ -16,7 +16,7 @@
 #include "ObstacleList.h"
 //#include "j2735inc/j2735_codec.h"
 
-#include "external_app_proxy_inner.h"
+#include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
 #include "external_app_proxy_callback_wrapper.h"
@@ -26,7 +26,8 @@
 
 app_obj_t* proxy_handling_app_p;
 
-static inline int eap_callback_wrapper_checker(void *app_section, char* func_name)
+static inline __attribute__((always_inline)) 
+int eap_callback_wrapper_checker(void *app_section, char* func_name)
 {
     if(!app_section){
         fprintf(stderr,"%s: app_section be assigned NULL ptr!\n", func_name);
@@ -44,6 +45,15 @@ static inline int eap_callback_wrapper_checker(void *app_section, char* func_nam
         return -1;
     }
     return 0;
+}
+
+static inline __attribute__((always_inline)) 
+int simple_send_notify_header(int fd, event_type_t event)
+{
+    packet_from_proxy_header_t header;
+    header.packet_type = EA_PACKET_TYPE_NM_NTF;
+    header.callback_event = event;  
+    return send_to_unix_socket_fd(fd, &header, sizeof(header));
 }
 
 /* below are all the wrapper functions for all event callback */
@@ -66,44 +76,40 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
     }
 
     /* currently the app_section passed into WRAPPER_OF(on_OBU_packet_rx) 
-       is wrapper_var_for_obu_packet_t* */
-    wrapper_var_for_obu_packet_t* wrapper_var_p = (wrapper_var_for_obu_packet_t*)app_section;
+       is wrapper_arg_for_obu_packet_t* */
+    wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
-    packet_from_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_OBU_PACKET_RX;  
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = simple_send_notify_header(notify_fd, EVENT_OBU_PACKET_RX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->msg_p->msg_len, sizeof(size_t));
+    ret = send_to_unix_socket_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
+    if(ret){
+        simple_fatal_act_logger("send msg_len", ret);
+        return ret;
+    }
+
+    ret = send_to_unix_socket_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
     if(ret){
         simple_fatal_act_logger("send msg", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->msg_p->msg , wrapper_var_p->msg_p->msg_len);
-    if(ret){
-        simple_fatal_act_logger("send msg", ret);
-        goto err_detect;
-    }
-
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->object_p , sizeof(OBU_object_t));
+    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p , sizeof(OBU_object_t));
     if(ret){
         simple_fatal_act_logger("send OBU_object", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->object_p->private_space , sizeof(app_private_space_t));
+    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p->private_space , sizeof(app_private_space_t));
     if(ret){
-        simple_fatal_act_logger("send OBU_object", ret);
-        goto err_detect;
+        simple_fatal_act_logger("send private_space", ret);
+        return ret;
     }
 
-err_detect: 
     return ret;
 }
 
@@ -123,44 +129,40 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
     }
 
     /* currently the app_section passed into WRAPPER_OF(on_OBU_packet_tx) 
-       is wrapper_var_for_obu_packet_t* */
-    wrapper_var_for_obu_packet_t* wrapper_var_p = (wrapper_var_for_obu_packet_t*)app_section;
+       is wrapper_arg_for_obu_packet_t* */
+    wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
-    packet_from_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_OBU_PACKET_RX;  
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = simple_send_notify_header(notify_fd, EVENT_OBU_PACKET_RX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->msg_p->msg_len, sizeof(size_t));
+    ret = send_to_unix_socket_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
     if(ret){
         simple_fatal_act_logger("send msg_len", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->msg_p->msg , wrapper_var_p->msg_p->msg_len);
+    ret = send_to_unix_socket_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
     if(ret){
         simple_fatal_act_logger("send msg", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->object_p , sizeof(OBU_object_t));
+    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p , sizeof(OBU_object_t));
     if(ret){
         simple_fatal_act_logger("send OBU_object", ret);
-        goto err_detect;
+        return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, wrapper_var_p->object_p->private_space , sizeof(app_private_space_t));
+    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p->private_space , sizeof(app_private_space_t));
     if(ret){
         simple_fatal_act_logger("send private_space", ret);
-        goto err_detect;
+        return ret;
     }
 
-err_detect: 
     return ret;
 }
 
@@ -185,85 +187,22 @@ int EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_tx)(void *app_section){
 
 int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
 {
-    int ret;
-    if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_rx)") ){
+    /* DANGER!!! 
+       If future version need to pass more information to external app,
+       use send_to_unix_socket_fd() to send more data,
+       and make sure the "send" action of this wrapper-function
+       "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_rx)"
+       in the file of external_app_proxy_client.c, used by external app.
+    */
+    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_rx)");
+    if( ret ){
         return ret;
     }
 
     C2R_app_section_t* app_section_p = (C2R_app_section_t*)app_section;
-    
-    /* if it is a packet about dontSend2TC , handle it in middleware before send out */
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    msg_buf_t read_buf;
-    read_buf.index = 0;
-    Malloc(read_buf.content, app_section_p->payload_len, "on_cloud_packet_rx");
-    if (read_buf.content == NULL)
-        return -1;
-    memcpy(read_buf.content, app_section_p->payload, app_section_p->payload_len);
-    
-    uint8_t cmd; // read cmd
-    read_uint8_t(&cmd, &read_buf);
-    
-    if (config.log_cloud_packet_rx) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx): SPECIFIC FIELD\n");
-        for (int i = 0; i < app_section_p->payload_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     read_buf.content[i]);
-        }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n");
-    }
-
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx): CMD(%d)", cmd);
-
-    log_file_write(log_content);
-
-    switch (cmd) {
-    case 0: {  // disable/enalbe:1/2
-        uint8_t enableOrdisable = 0;
-        // uint8_t type=0;
-        read_int8_t(&enableOrdisable, &read_buf);
-        // read_int8_t(&type, &read_buf);
-        if (enableOrdisable == 1 &&
-            proxy_handling_app_p->dontSend2TC == 0) 
-        {  // enable/clear command buffer
-            proxy_handling_app_p->dontSend2TC = 1;
-            log_file_write("%s disable\r\n", proxy_handling_app_p->name);
-            printf("evsp disable\r\n");
-        } 
-        else if (enableOrdisable == 2 &&
-                 proxy_handling_app_p->dontSend2TC == 1) 
-        {  // disable command buffer/then stop the command in
-           // command buffer sent to tc machine
-            proxy_handling_app_p->dontSend2TC = 0;
-            //command_buf_clear(); // 永貞和學陽說這裡不應該 clear
-            //log_file_write("evsp enable and command buffer clear\r\n");
-            log_file_write("%s enable\r\n", proxy_handling_app_p->name);
-        } else {
-            log_file_write(
-                "invalid cloud pcket disable/enable packet to tc machine\r\n");
-        }
-    } break;
-    default:
-        break;
-    }
-    
-    if (read_buf.content != NULL) {
-        free(read_buf.content);
-    }
-
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
-    packet_from_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_CLOUD_PACKET_RX; 
 
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = simple_send_notify_header(notify_fd, EVENT_CLOUD_PACKET_RX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
         return ret;
@@ -288,19 +227,22 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
 
 int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
 {
-    int ret;
-    if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_tx)") ){
+    /* DANGER!!! 
+       If future version need to pass more information to external app,
+       use send_to_unix_socket_fd() to send more data,
+       and make sure the "send" action of this wrapper-function
+       "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_tx)"
+       in the file of external_app_proxy_client.c, used by external app.
+    */
+    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_tx)");
+    if( ret ){
         return ret;
     }
 
     C2R_app_section_t* app_section_p = (C2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
-    packet_from_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_CLOUD_PACKET_TX;
-
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = simple_send_notify_header(notify_fd, EVENT_CLOUD_PACKET_RX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
         return ret;
@@ -316,7 +258,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
     /* since there are inner structure inside, we send them here */
     ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
-        simple_fatal_act_logger("send app_section_p->payload", ret);
+        simple_fatal_act_logger("send app_section->payload", ret);
         return ret;
     }
     
@@ -325,19 +267,22 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
 
 int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
 {   
-    int ret;
-    if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_camera_packet_rx)") ){
+    /* DANGER!!! 
+       If future version need to pass more information to external app,
+       use send_to_unix_socket_fd() to send more data,
+       and make sure the "send" action of this wrapper-function
+       "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_rx)"
+       in the file of external_app_proxy_client.c, used by external app.
+    */
+    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_camera_packet_rx)");
+    if( ret ){
         return ret;
     }
 
-    ObstacleList *obstaclelist_p = (ObstacleList*)app_section;
+    ObstacleList* obstaclelist_p = (ObstacleList*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
-    packet_from_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_CAMERA_PACKET_RX;
-
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = simple_send_notify_header(notify_fd, EVENT_CAMERA_PACKET_RX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
         return ret;
@@ -363,19 +308,22 @@ int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
 
 int EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx)(void *app_section)
 {
-    int ret;
-    if( ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_traffic_signal_command_tx)") ){
+    /* DANGER!!! 
+       If future version need to pass more information to external app,
+       use send_to_unix_socket_fd() to send more data,
+       and make sure the "send" action of this wrapper-function
+       "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_traffic_signal_command_tx)"
+       in the file of external_app_proxy_client.c, used by external app.
+    */
+    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_traffic_signal_command_tx)");
+    if( ret ){
         return ret;
     }
 
     traffic_signal_command_arg_t* app_section_p = (traffic_signal_command_arg_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
 
-    packet_from_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = EVENT_TRAFFIC_SIGNAL_COMMAND_TX;
-
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = simple_send_notify_header(notify_fd, EVENT_TRAFFIC_SIGNAL_COMMAND_TX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
         return ret;

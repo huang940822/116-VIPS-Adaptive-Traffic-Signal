@@ -305,7 +305,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         clear_memory_error();
         memcpy(app_section.payload, &msg->msg[read_buf.index],
                app_section.payload_len);
-        app_section.com_id = msg->handle_id;
+        //app_section.com_id = msg->handle_id;
     }
 
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
@@ -381,6 +381,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         log_file_write(log_content);
     }
+
     MessageFrame *msgf = NULL;
     int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
     if (ret < 0) {
@@ -441,11 +442,11 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         {
             proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
-                /* for external app, we let ea_library decode by itself */
-                wrapper_var_for_obu_packet_t wrapper_var;
-                wrapper_var.msg_p = msg;
-                wrapper_var.object_p = object;
-                current->next->callback( (void *) (&wrapper_var));
+                /* for external APP, we let APP decode by itself */
+                wrapper_arg_for_obu_packet_t wrapper_arg;
+                wrapper_arg.msg_p = msg;
+                wrapper_arg.object_p = object;
+                current->next->callback( &wrapper_arg );
             }
             else
                 current->next->callback((void *) &app_section);
