@@ -19,15 +19,12 @@
 #include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
-#include "external_app_proxy_callback_wrapper.h"
-
-/* NOTICE, if you add new callback, you NEED to add a new EAP_CALLBACK_WRAPPER */
-/* and update the callback_wrapper_fp_arr[]  */
+#include "external_app_proxy_callback_forward.h"
 
 app_obj_t* proxy_handling_app_p;
 
 static inline __attribute__((always_inline)) 
-int eap_callback_wrapper_checker(void *app_section, char* func_name)
+int forward_function_parameter_check(void *app_section, char* func_name)
 {
     if(!app_section){
         fprintf(stderr,"%s: app_section be assigned NULL ptr!\n", func_name);
@@ -56,26 +53,30 @@ int simple_send_notify_header(int fd, event_type_t event)
     return send_to_unix_socket_fd(fd, &header, sizeof(header));
 }
 
-/* below are all the wrapper functions for all event callback */
-/* NOTICE, if you add new event callback, you NEED to add a related wrapper function */
-#define EAP_CALLBACK_WRAPPER_OF(event_name) event_name ## _callback_wrapper
 
-int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
+/* NOTICE, if you add new callback, you NEED to add a new EAP_CB_FORWARD_FUNC_OF */
+/* and update the callback_forward_fp_arr[]  */
+
+/* below are all the callback forward functions for all event callback */
+/* NOTICE, if you add new event callback, you NEED to add a related forward function */
+#define EAP_CB_FORWARD_FUNC_OF(event_name) event_name ## _cb_forward_func
+
+int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
 {   
     /* DANGER!!! 
        If future version need to pass more information to external app,
        (e.g., TSP need other entry in the V2R_app_section_t)
        use send_to_unix_socket_fd() to send more data,
-       and make sure the "send" action of this wrapper-function
+       and make sure the "send" action of this forward-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_OBU_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_rx)");
+    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_OBU_packet_rx)");
     if( ret ){
         return ret;
     }
 
-    /* currently the app_section passed into WRAPPER_OF(on_OBU_packet_rx) 
+    /* currently the app_section passed into FORWARD_FUNC_OF(on_OBU_packet_rx) 
        is wrapper_arg_for_obu_packet_t* */
     wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
@@ -113,22 +114,22 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx)(void *app_section)
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
        (e.g., TSP need other entry in the V2R_app_section_t)
        use send_to_unix_socket_fd() to send more data,
-       and make sure the "send" action of this wrapper-function
+       and make sure the "send" action of this forward-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_OBU_packet_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_OBU_packet_tx)");
+    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_OBU_packet_tx)");
     if( ret ){
         return ret;
     }
 
-    /* currently the app_section passed into WRAPPER_OF(on_OBU_packet_tx) 
+    /* currently the app_section passed into FORWARD_FUNC_OF(on_OBU_packet_tx) 
        is wrapper_arg_for_obu_packet_t* */
     wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
@@ -166,26 +167,26 @@ int EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx)(void *app_section)
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_rx)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_rx)(void *app_section)
 {
     /* current version of middleware have not defined 
        the structure of R2R packet, so this callback 
        will not be registered , nor be called */
-    fprintf(stderr,"WRAPPER_OF(on_RSU_packet_rx): should not be called at current verstion\n");
-    log_file_write_fatal_error("WRAPPER_OF(on_RSU_packet_rx): should not be called at current verstion\n");
+    fprintf(stderr,"FORWARD_FUNC_OF(on_RSU_packet_rx): should not be called at current verstion\n");
+    log_file_write_fatal_error("FORWARD_FUNC_OF(on_RSU_packet_rx): should not be called at current verstion\n");
     return -1;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_tx)(void *app_section){
+int EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_tx)(void *app_section){
     /* current version of middleware have not defined 
        the structure of R2R packet, so this callback 
        will not be registered , nor be called */
-    fprintf(stderr,"WRAPPER_OF(on_RSU_packet_tx): should not be called at current verstion\n");
-    log_file_write_fatal_error("WRAPPER_OF(on_RSU_packet_tx): should not be called at current verstion\n");
+    fprintf(stderr,"FORWARD_FUNC_OF(on_RSU_packet_tx): should not be called at current verstion\n");
+    log_file_write_fatal_error("FORWARD_FUNC_OF(on_RSU_packet_tx): should not be called at current verstion\n");
     return -1;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -194,7 +195,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_rx)");
+    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_cloud_packet_rx)");
     if( ret ){
         return ret;
     }
@@ -225,7 +226,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx)(void *app_section)
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -234,7 +235,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_cloud_packet_tx)");
+    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_cloud_packet_tx)");
     if( ret ){
         return ret;
     }
@@ -265,7 +266,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx)(void *app_section)
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
 {   
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -274,7 +275,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_camera_packet_rx)");
+    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_camera_packet_rx)");
     if( ret ){
         return ret;
     }
@@ -306,7 +307,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx)(void *app_section)
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -315,7 +316,7 @@ int EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx)(void *app_section)
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_traffic_signal_command_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = eap_callback_wrapper_checker(app_section, "WRAPPER_OF(on_traffic_signal_command_tx)");
+    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_traffic_signal_command_tx)");
     if( ret ){
         return ret;
     }
@@ -338,19 +339,19 @@ int EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx)(void *app_section)
     return ret;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_registration)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_registration)(void *app_section)
 {
     /* for current version of middleware 
        external application will registered with the help of
        external_app_proxy server/client,
        so this callback should not be called */
 
-    fprintf(stderr,"WRAPPER_OF(on_registration): should not be called at current verstion\n");
-    log_file_write_fatal_error("WRAPPER_OF(on_registration): should not be called at current verstion\n");
+    fprintf(stderr,"FORWARD_FUNC_OF(on_registration): should not be called at current verstion\n");
+    log_file_write_fatal_error("FORWARD_FUNC_OF(on_registration): should not be called at current verstion\n");
     return -1;
 }
 
-int EAP_CALLBACK_WRAPPER_OF(on_middleware_restart)(void *app_section)
+int EAP_CB_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
 {   
     /* for current version of middleware 
        on_middle_restart() will NOT send data via app_section
@@ -360,13 +361,13 @@ int EAP_CALLBACK_WRAPPER_OF(on_middleware_restart)(void *app_section)
     int ret;
     
     if(!proxy_handling_app_p){
-        fprintf(stderr,"WRAPPER_OF(on_middle_restart): proxy_handling_app_p be assigned NULL ptr!\n");
-        log_file_write_fatal_error("WRAPPER_OF(on_middle_restart): proxy_handling_app_p be assigned NULL ptr!");
+        fprintf(stderr,"FORWARD_FUNC_OF(on_middle_restart): proxy_handling_app_p be assigned NULL ptr!\n");
+        log_file_write_fatal_error("FORWARD_FUNC_OF(on_middle_restart): proxy_handling_app_p be assigned NULL ptr!");
         return -1;
     }
     if( proxy_handling_app_p->ea_info_p == 0){
-        fprintf(stderr,"WRAPPER_OF(on_middle_restart): be called when the app is not external\n");
-        log_file_write_fatal_error("WRAPPER_OF(on_middle_restart): be called when the app is not external\n");
+        fprintf(stderr,"FORWARD_FUNC_OF(on_middle_restart): be called when the app is not external\n");
+        log_file_write_fatal_error("FORWARD_FUNC_OF(on_middle_restart): be called when the app is not external\n");
         return -1;
     }
 
@@ -378,25 +379,25 @@ int EAP_CALLBACK_WRAPPER_OF(on_middleware_restart)(void *app_section)
 
     ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
     if(ret){
-        fprintf(stderr,"WRAPPER_OF(on_middleware_restart): "
+        fprintf(stderr,"FORWARD_FUNC_OF(on_middleware_restart): "
                        "send header ret:%d\n", ret);
         log_file_write_fatal_error(
-            "WRAPPER_OF(on_middleware_restart):send header ret:%d\n", ret);
+            "FORWARD_FUNC_OF(on_middleware_restart):send header ret:%d\n", ret);
         return ret;
     }
     return ret;
 }
 
 /* NOTICE, if you add new event callback, you NEED to add a entry for the reconstruct function */
-eap_callback_wrapper_fp callback_wrapper_fp_arr[EVENT_TYPE_NUMBER] = {
-    [EVENT_OBU_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_rx),
-    [EVENT_OBU_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_OBU_packet_tx),
-    [EVENT_RSU_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_rx),
-    [EVENT_RSU_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_RSU_packet_tx),
-    [EVENT_CLOUD_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_rx),
-    [EVENT_CLOUD_PACKET_TX] = EAP_CALLBACK_WRAPPER_OF(on_cloud_packet_tx),
-    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CALLBACK_WRAPPER_OF(on_traffic_signal_command_tx),
-    [EVENT_CAMERA_PACKET_RX] = EAP_CALLBACK_WRAPPER_OF(on_camera_packet_rx),
-    [EVENT_REGISTRATION] = EAP_CALLBACK_WRAPPER_OF(on_registration),
-    [EVENT_MIDDLEWARE_RESTART] = EAP_CALLBACK_WRAPPER_OF(on_middleware_restart),
+eap_callback_forward_fp callback_forward_fp_arr[EVENT_TYPE_NUMBER] = {
+    [EVENT_OBU_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx),
+    [EVENT_OBU_PACKET_TX] = EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx),
+    [EVENT_RSU_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_rx),
+    [EVENT_RSU_PACKET_TX] = EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_tx),
+    [EVENT_CLOUD_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx),
+    [EVENT_CLOUD_PACKET_TX] = EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx),
+    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx),
+    [EVENT_CAMERA_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx),
+    [EVENT_REGISTRATION] = EAP_CB_FORWARD_FUNC_OF(on_registration),
+    [EVENT_MIDDLEWARE_RESTART] = EAP_CB_FORWARD_FUNC_OF(on_middleware_restart),
 };

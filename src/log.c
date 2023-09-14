@@ -207,7 +207,7 @@ int log_file_write_fatal_with_errno(const char *format, ...)
             va_end(list);
             
             fprintf(stderr, "%s\n", buffer);
-            fprintf(stderr, "strerror is %s\n", errno_str);
+            fprintf(stderr, "strerror() shows: %s\n", errno_str);
             fprintf(stderr, "fatal error: \n%s\n", log_content);
             fflush(stderr);
         }

@@ -1,5 +1,5 @@
-#ifndef EXTERNAL_APP_PROXY_INNER_H
-#define EXTERNAL_APP_PROXY_INNER_H
+#ifndef EXTERNAL_APP_PROXY_SOCKET_H
+#define EXTERNAL_APP_PROXY_SOCKET_H
 
 #include <stdio.h>
 #include <stdint.h>
@@ -11,11 +11,8 @@
 #include "log.h"
 #include "external_app_proxy_typedefine.h"
 
-/* since application might implement multi-thread program, ,
- * we add a mutex_lock to serialize their usage of the same channel */ 
-/* these mutex should only be used in library function provided for external app client */
-extern pthread_mutex_t mutex_notify_fd;
-extern pthread_mutex_t mutex_interact_fd;
+#define EAP_CLIENT_PRINT_DEBUG 1
+#define EAP_SERVER_PRINT_DEBUG 1
 
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
@@ -27,17 +24,19 @@ enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_SP_NTF,          /*special notify*/
     EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
     EA_PACKET_TYPE_PROXY,           /*current version not used yet, used by proxy library for special usage*/
-    EA_PACKET_TYPE_PING,            /*current version not used yet, used by proxy library for ping testing*/
     /* this tag should always be at the last*/
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
 
 typedef struct _packet_from_proxy_header_t {
     uint32_t packet_type;
-    uint32_t seq_num;   //used match heartbeat seq_num
     union{
         event_type_t callback_event; //used for notify
-        int ret_val; //used for ack
+        int ret_val; //used for ack return value of api-request
+    };
+    union{
+        uint32_t api_id;    //might used for api-ack 
+        uint32_t seq_num;   //used for heartbeat-ack
     };
 } packet_from_proxy_header_t;
 
@@ -46,8 +45,8 @@ typedef struct _packet_to_proxy_header_t {
     pid_t pid;
     uint32_t appID;
     union{
-        uint32_t api_id;    //used for api request
-        uint32_t seq_num;   //used for send heartbeat
+        uint32_t api_id;    //used when send api-request
+        uint32_t seq_num;   //used when send heartbeat
     };
 } packet_to_proxy_header_t;
 
@@ -78,6 +77,7 @@ typedef struct _notify_update_ack_payload_t {
 enum ea_callback_api_id_definition_enum{
     /* since '0' is a special number, we reserve it for future expansion */
     API_ID_OF(special_reserved_api_id) = 0,
+    API_ID_OF(reserved_id_for_heartbeat_comm),
     
     /* external_app_proxy.h */
     API_ID_OF(remote_app_registration),
@@ -134,64 +134,26 @@ enum ea_callback_api_id_definition_enum{
     NUM_OF_API_ID_DEFININITION,  
 };
 
-extern char* api_id_str_arr[NUM_OF_API_ID_DEFININITION];
+extern char* api_id_str_arr[];
+extern char* ack_ret_val_str_arr[];
+
+/* since application might implement multi-thread program, ,
+ * we add a mutex_lock to serialize their usage of the same channel 
+ * the implementation is based on mutex lock */ 
+void lock_api_request_channel();
+void unlock_api_request_channel();
+void lock_callback_notify_channel();
+void unlock_callback_notify_channel();
 
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
-void set_register_app_id(uint32_t appID);
-uint32_t get_register_app_id();
-
-// inline int32_t simple_send_request_header_to_proxy(int api_id);
-// inline int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, char* api_name);
-
-int32_t is_interact_fd_linked();
-int32_t interact_fd_disconnect_from_proxy();
-int32_t interact_fd_connect_to_proxy();
-int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size);
-int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size);
-
-int32_t add_notify_fd_to_epoll(int* ep_fd);
-int32_t is_notify_fd_linked();
-int32_t notify_fd_disconnect_from_proxy();
-int32_t notify_fd_connect_to_proxy();
-int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size);
-int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size);
+/* recommend middleware-api implementation use functions below  */
+int32_t simple_send_request_header_to_proxy(int api_id);
+int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num);
+int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size);
+int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, int api_id);
+int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size);
 /* functions above ... */
 
-inline __attribute__((always_inline))  
-int32_t simple_send_request_header_to_proxy(int api_id) 
-{   
-    int ret;
-    packet_to_proxy_header_t header;
-    header.packet_type = EA_PACKET_TYPE_REQ;
-    header.appID = get_register_app_id();
-    header.api_id = api_id;
-    ret = interact_fd_send_to_proxy(&header, sizeof(header));
-    log_file_write("%s: send header to proxy, ret = %d", api_id_str_arr[api_id], ret);
-    if(ret!=0){
-        log_file_write_fatal_error("%s: interact_fd_send_to_proxy ret != 0\n");
-    }
-    return ret;
-}
 
-inline __attribute__((always_inline)) 
-int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, char* api_name)
-{
-    int ret;
-    memset(ack_p, 0, sizeof(packet_from_proxy_header_t));
-    ret = interact_fd_recv_from_proxy(ack_p, sizeof(packet_from_proxy_header_t));
-    log_file_write("%s: get ack from proxy, ret = %d", api_name, ret);
-    if(ret!=0){
-        log_file_write_fatal_error("%s: interact_fd_recv_from_proxy ret != 0\n");
-    }
-    else if( ack_p->packet_type != EA_PACKET_TYPE_ACK ){
-        log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK\n");
-        ret = EA_ERR_PACKET_TYPE_NOT_MATCH;
-    }
-    else{
-        ret = EA_ERR_OK;
-    }
-    return ret;
-}
-
-#endif  /* EXTERNAL_APP_PROXY_INNER_H */
+#endif  /* EXTERNAL_APP_PROXY_SOCKET_H */

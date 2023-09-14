@@ -19,7 +19,7 @@
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
 #include "external_app_proxy_api_wrapper.h"
-#include "external_app_proxy_callback_wrapper.h"
+#include "external_app_proxy_callback_forward.h"
 
 static inline __attribute__((always_inline)) 
 int simple_send_ack_to_app(int fd, int ack_ret_val)
@@ -29,9 +29,12 @@ int simple_send_ack_to_app(int fd, int ack_ret_val)
     ack.packet_type = EA_PACKET_TYPE_ACK;
     ack.ret_val = ack_ret_val;
     ret = send_to_unix_socket_fd( fd, &ack, sizeof(ack));
-    if(ret!=0)
-        fprintf(stdout, "%s: send ack to client_fd:%d, ret = %d\n", 
-                __func__, fd, ret);
+    #ifdef EAP_SERVER_PRINT_DEBUG 
+        printf("[EAP msg] for the request, ack.ret_val is:%d -> %s\n", 
+                ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
+    #endif
+    log_file_write("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
+                    ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
     return ret;
 }
 
@@ -66,9 +69,9 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
                                  payload.name, 
                                  payload.priority, 
                                  payload.msg_id, 
-                                 callback_wrapper_fp_arr[payload.event_type] );
+                                 callback_forward_fp_arr[payload.event_type] );
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/
     return ret;
@@ -109,7 +112,7 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     /* cloud_packet_tx does not return err-code currently (return void) */
     cloud_packet_tx( payload.len, payload.service_id, specific_field);
     
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
 
     /* no ack_payload for this api*/
     return ret;
@@ -150,11 +153,11 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     int ack_ret_val;
     ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("API_WRAPPER_OF(OBU_j2735_tx): com_send");
-        ack_ret_val = EA_ERR_COM_IO;
+        log_file_write_fatal_error("%s: com_send() ret:%d\n", __func__, ret);
+        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
-        ack_ret_val = EA_ERR_OK;
+        ack_ret_val = EAL_ERR_OK;
     }
 
     ret = simple_send_ack_to_app(client_fd, ack_ret_val);
@@ -176,8 +179,8 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 
     int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
-        fprintf(stdout, "API_WRAPPER_OF(OBU_packet_tx): "
-                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+        fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
     if( ret ){
         return ret;
     }
@@ -185,8 +188,8 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     uint8_t write_buf[ payload.write_buf_len ];
     ret = recv_from_unix_socket_fd(client_fd, write_buf, sizeof(payload.write_buf_len));
     if(PRINT_MSG_FOR_DEBUG)
-        fprintf(stdout, "API_WRAPPER_OF(OBU_packet_tx): "
-                        "get write_buf_content from client_fd:%d, ret = %d\n", client_fd, ret);
+        fprintf(stdout, "%s: get write_buf_content from client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
     if( ret ){
         return ret;
     }
@@ -197,11 +200,11 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     int ack_ret_val;
     ret = com_send(GENERAL_COM_ID, write_buf, payload.write_buf_len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("API_WRAPPER_OF(OBU_packet_tx): com_send");
-        ack_ret_val = EA_ERR_COM_IO;
+        log_file_write_fatal_error("%s com_send() ret:%d\n", __func__, ret);
+        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
-        ack_ret_val = EA_ERR_OK;
+        ack_ret_val = EAL_ERR_OK;
     }
 
     ret = simple_send_ack_to_app(client_fd, ack_ret_val);
@@ -224,8 +227,8 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     int ret; 
     ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
     if(PRINT_MSG_FOR_DEBUG)
-        fprintf(stdout, "API_WRAPPER_OF(remote_com_send): "
-                        "get payload from client_fd:%d, ret = %d\n", client_fd, ret);
+        fprintf(stdout, "%s get payload from client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
     if( ret ){
         return ret;
     }
@@ -233,8 +236,8 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     uint8_t buf[ payload.buf_len ];
     ret = recv_from_unix_socket_fd(client_fd, buf, sizeof(payload.buf_len));
     if(PRINT_MSG_FOR_DEBUG)
-        fprintf(stdout, "API_WRAPPER_OF(remote_com_send): "
-                        "get buf from client_fd:%d, ret = %d\n", client_fd, ret);
+        fprintf(stdout, "%s get buf from client_fd:%d, ret = %d\n", 
+                __func__, client_fd, ret);
     if( ret ){
         return ret;
     }
@@ -245,11 +248,11 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     int ack_ret_val;
     ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("API_WRAPPER_OF(remote_com_send): com_send");
-        ack_ret_val = EA_ERR_COM_IO;
+        log_file_write_fatal_error("%s com_send() ret:%d\n", __func__, ret);
+        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
-        ack_ret_val = EA_ERR_OK;
+        ack_ret_val = EAL_ERR_OK;
     }
     
     ret = simple_send_ack_to_app(client_fd, ack_ret_val);
@@ -326,13 +329,13 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
     /* call the actual function */
     int ack_ret_val;
     ret = command_buf_insert_effect_time( &payload.tsc_cmd );
-    log_file_write("API_WRAPPER_OF(command_buf_insert_effect_time) call command_buf_insert_effect_time");
+    log_file_write("%s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
     if (ret != 0) {
-        log_file_write("API_WRAPPER_OF(command_buf_insert_effect_time) ret != 0");
-        ack_ret_val = EA_ERR_MIDDLEWARE_API_INTERNAL_ERR;
+        log_file_write("%s: command_buf_insert_effect_time ret: %d\n", __func__, ret);
+        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
     }
     else{
-        ack_ret_val = EA_ERR_OK;
+        ack_ret_val = EAL_ERR_OK;
     }
 
     ret = simple_send_ack_to_app(client_fd, ack_ret_val);
@@ -363,13 +366,13 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
     /* call the actual function */
     int ack_ret_val;
     ret = command_buf_insert_adjustment( &payload.tsc_cmd );
-    log_file_write("API_WRAPPER_OF(command_buf_insert_adjustment) call command_buf_insert_adjustment");
+    log_file_write("%s command_buf_insert_adjustment ret %d\n", __func__, ret);
     if (ret != 0) {
-        log_file_write("API_WRAPPER_OF(command_buf_insert_adjustment)");
-        ack_ret_val = EA_ERR_MIDDLEWARE_API_INTERNAL_ERR;
+        log_file_write("%s command_buf_insert_adjustment ret %d\n", __func__, ret);
+        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
     }
     else{
-        ack_ret_val = EA_ERR_OK;
+        ack_ret_val = EAL_ERR_OK;
     }
 
     ret = simple_send_ack_to_app(client_fd, ack_ret_val);
@@ -403,7 +406,7 @@ int API_WRAPPER_OF(vms_request_start)(int client_fd)
     /* call the actual function */
     vms_request_start(payload.id, payload.priority);
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/
     return ret;
@@ -431,7 +434,7 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
     /* call the actual function */
     vms_request_end(payload.id);
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/
     return ret;
@@ -461,7 +464,7 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
         evsp_prog[i] = payload.evsp_prog[i];
     }
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/
     return ret;
@@ -495,7 +498,7 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
     /* then call the actual function */
     vms_request_start(payload.id, payload.priority);
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/
     return ret;
@@ -517,7 +520,7 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
     /* call the actual function */
     get_traffic_signal_status( &(ack_payload.ts_status) );
     
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -544,7 +547,7 @@ int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
     /* call the actual function */
     get_current_traffic_signal_status( &(ack_payload.cur_ts_status) );
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -571,7 +574,7 @@ int API_WRAPPER_OF(get_current_phase)(int client_fd)
     /* call the actual function */
     ack_payload.phase =  get_current_phase();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -598,7 +601,7 @@ int API_WRAPPER_OF(get_current_step)(int client_fd)
     /* call the actual function */
     ack_payload.step =  get_current_step();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -625,7 +628,7 @@ int API_WRAPPER_OF(get_current_second)(int client_fd)
     /* call the actual function */
     ack_payload.second =  get_current_second();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -652,7 +655,7 @@ int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
     /* call the actual function */
     ack_payload.SubPhaseCount = get_SubPhaseCount();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -679,7 +682,7 @@ int API_WRAPPER_OF(get_SignalCount)(int client_fd)
     /* call the actual function */
     ack_payload.SignalCount = get_SignalCount();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -706,7 +709,7 @@ int API_WRAPPER_OF(get_plan_id)(int client_fd)
     /* call the actual function */
     ack_payload.plan_id = get_plan_id();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -733,7 +736,7 @@ int API_WRAPPER_OF(get_control_status)(int client_fd)
     /* call the actual function */
     ack_payload.ctrl_status = get_control_status();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -760,7 +763,7 @@ int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
     /* call the actual function */
     ack_payload.PhaseOrder = get_PhaseOrder();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -801,7 +804,7 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
     /* call the actual function */
     ack_payload.remaining_time = get_remaining_time(payload.phase, payload.step, payload.second);
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -841,7 +844,7 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
     /* call the actual function */
     ack_payload.SignalStatus = get_SignalStatus(payload.SubPhaseCount_index, payload.SignalCount_index);
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -868,7 +871,7 @@ int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
     /* call the actual function */
     ack_payload.total_cps_sec = get_total_compensation_second();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -895,7 +898,7 @@ int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
     /* call the actual function */
     get_compensation_buffer(ack_payload.compensation_buffer);
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -930,7 +933,7 @@ int API_WRAPPER_OF(set_control_status)(int client_fd)
     /* call the actual function */
     set_control_status(payload.control_status);
 
-    ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
     }
@@ -951,7 +954,7 @@ int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
     /* call the actual function */
     ack_payload.ori_tc_health_status = get_original_tc_health_status();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -978,7 +981,7 @@ int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
     /* call the actual function */
     ack_payload.next_SubPhaseID = get_next_SubPhaseID();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;
@@ -1005,7 +1008,7 @@ int API_WRAPPER_OF(get_prev_SubPhaseID)(int client_fd)
     /* call the actual function */
     ack_payload.prev_SubPhaseID = get_prev_SubPhaseID();
 
-    int ret = simple_send_ack_to_app(client_fd, EA_ERR_OK);
+    int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err
         return ret;

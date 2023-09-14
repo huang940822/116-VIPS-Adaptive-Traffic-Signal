@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <unistd.h>
-#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
-                     // ‘strptime’
+#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function ‘strptime’
 #include <time.h>
 #include "j2735_map.h"
 #include "j2735_msg.h"
@@ -341,6 +340,34 @@ typedef struct V2R_app_section {
     DSRCmsgID msgID;
     void *data;     //use j2735 lib to encode and decodes
 } V2R_app_section_t;
+
+typedef struct V2R_self_defined_section {
+    char obu_name[OBU_NAME_MAX_LEN];
+    uint8_t vehical_type; 
+    //char time_stamp[TIMESTAMP_LEN];
+    time_t time_second;
+    float lon;
+    float lat;
+    uint8_t speed;
+    uint8_t direction;
+    DSRCmsgID msgID;    /* id of bsm or srm */
+    size_t data_len;     /* len of srm_msg or bsm_msg */
+    void* data;          /* srm_msg or bsm_msg */
+    union{
+        struct{  //EVSP
+            uint8_t evsp_on_duty_flag;
+            uint8_t evsp_weight;
+            uint8_t evsp_error_code;
+        };
+
+        struct{  //TSP
+            uint8_t tsp_on_duty_flag;
+            uint8_t tsp_passenger_num;
+        };
+
+        //struct{ }; //for future new app
+    };
+} V2R_self_defined_section_t;
 
 typedef struct tsc_command {
     uint8_t app_id;

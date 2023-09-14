@@ -20,7 +20,7 @@
 #include "timer_event.h"
 #include "traffic_signal_packet_rx.h"
 #include "typedefine.h"
-#include "external_app_proxy_callback_wrapper.h"
+#include "external_app_proxy_callback_forward.h"
 
 #include "error_code_user.h"
 #include "j2735_codec.h"
@@ -542,6 +542,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     }
     return 0;
 }
+
 int Is_Heartbeat(msg_obj_t *msg)
 {
     msg_buf_t read_buf;
@@ -597,3 +598,4 @@ int Is_Heartbeat(msg_obj_t *msg)
     }
     return 0;
 }
+
