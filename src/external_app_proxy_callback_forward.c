@@ -24,21 +24,37 @@
 app_obj_t* proxy_handling_app_p;
 
 static inline __attribute__((always_inline)) 
-int forward_function_parameter_check(void *app_section, char* func_name)
+int forward_function_parameter_check(void *app_section, event_type_t event, char* func_name)
 {
     if(!app_section){
-        fprintf(stderr,"%s: app_section be assigned NULL ptr!\n", func_name);
-        log_file_write_fatal_error("%s: app_section be assigned NULL ptr!", func_name);
+        /* in currnent design of middleware, some of callbacks do not have parameter passed in */
+        /* this error is not fatal for middleware itself, but the app callback will not be called */
+        if( event != EVENT_MIDDLEWARE_RESTART 
+            && event != EVENT_REGISTRATION )
+        {
+            fprintf(stderr,"%s: app_section assigned is NULL ptr!, "
+                           "skip callback parameter forwarding\n", func_name);
+            log_file_write("%s: app_section assigned is NULL ptr!, "
+                           "skip callback parameter forwarding\n", func_name);
+        }
         return -1;
     }
     if(!proxy_handling_app_p){
-        fprintf(stderr,"%s: proxy_handling_app_p be assigned NULL ptr!\n", func_name);
-        log_file_write_fatal_error("%s: proxy_handling_app_p be assigned NULL ptr!", func_name);
+        fprintf(stderr,"%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
+        /* this error is fatal. it should never happend. if detected, check the implementation */
+        log_file_write_fatal_error("%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
         return -1;
     }
     if( proxy_handling_app_p->ea_info_p == 0){
         fprintf(stderr,"%s: be called when the app is not external\n", func_name);
+        /* this error is fatal. it should never happend. if detected, check the implementation */
         log_file_write_fatal_error("%s: be called when the app is not external\n", func_name);
+        return -1;
+    }
+    if( proxy_handling_app_p->ea_info_p->notify_fd == 0){
+        // fprintf(stderr,"%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
+        /* this error is not fatal */
+        log_file_write("%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
         return -1;
     }
     return 0;
@@ -50,7 +66,7 @@ int simple_send_notify_header(int fd, event_type_t event)
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
     header.callback_event = event;  
-    return send_to_unix_socket_fd(fd, &header, sizeof(header));
+    return send_packet_to_unix_sk_fd(fd, &header, sizeof(header));
 }
 
 
@@ -66,16 +82,17 @@ int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
     /* DANGER!!! 
        If future version need to pass more information to external app,
        (e.g., TSP need other entry in the V2R_app_section_t)
-       use send_to_unix_socket_fd() to send more data,
+       use send_packet_to_unix_sk_fd() to send more data,
        and make sure the "send" action of this forward-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_OBU_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_OBU_packet_rx)");
+    int ret = forward_function_parameter_check(app_section, EVENT_OBU_PACKET_RX,
+                                               "FORWARD_FUNC_OF(on_OBU_packet_rx)");
     if( ret ){
         return ret;
     }
-
+    
     /* currently the app_section passed into FORWARD_FUNC_OF(on_OBU_packet_rx) 
        is wrapper_arg_for_obu_packet_t* */
     wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
@@ -87,25 +104,25 @@ int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
     if(ret){
         simple_fatal_act_logger("send msg_len", ret);
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
+    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
     if(ret){
         simple_fatal_act_logger("send msg", ret);
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p , sizeof(OBU_object_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->object_p , sizeof(OBU_object_t));
     if(ret){
         simple_fatal_act_logger("send OBU_object", ret);
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p->private_space , sizeof(app_private_space_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->object_p->private_space , sizeof(app_private_space_t));
     if(ret){
         simple_fatal_act_logger("send private_space", ret);
         return ret;
@@ -119,12 +136,13 @@ int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
     /* DANGER!!! 
        If future version need to pass more information to external app,
        (e.g., TSP need other entry in the V2R_app_section_t)
-       use send_to_unix_socket_fd() to send more data,
+       use send_packet_to_unix_sk_fd() to send more data,
        and make sure the "send" action of this forward-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_OBU_packet_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_OBU_packet_tx)");
+    int ret = forward_function_parameter_check(app_section, EVENT_OBU_PACKET_TX,
+                                               "FORWARD_FUNC_OF(on_OBU_packet_tx)");
     if( ret ){
         return ret;
     }
@@ -140,25 +158,25 @@ int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
     if(ret){
         simple_fatal_act_logger("send msg_len", ret);
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
+    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
     if(ret){
         simple_fatal_act_logger("send msg", ret);
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p , sizeof(OBU_object_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->object_p , sizeof(OBU_object_t));
     if(ret){
         simple_fatal_act_logger("send OBU_object", ret);
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, arg_p->object_p->private_space , sizeof(app_private_space_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->object_p->private_space , sizeof(app_private_space_t));
     if(ret){
         simple_fatal_act_logger("send private_space", ret);
         return ret;
@@ -190,12 +208,13 @@ int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
-       use send_to_unix_socket_fd() to send more data,
+       use send_packet_to_unix_sk_fd() to send more data,
        and make sure the "send" action of this wrapper-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_cloud_packet_rx)");
+    int ret = forward_function_parameter_check(app_section, EVENT_CLOUD_PACKET_RX,
+                                               "FORWARD_FUNC_OF(on_cloud_packet_rx)");
     if( ret ){
         return ret;
     }
@@ -210,14 +229,14 @@ int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
     }
 
     /* send toppest level structure */
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(C2R_app_section_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, app_section_p, sizeof(C2R_app_section_t));
     if(ret){
         simple_fatal_act_logger("send app_section", ret);
         return ret;
     }
 
     /* since there are inner structure inside, we send them here */
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
+    ret = send_packet_to_unix_sk_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
         simple_fatal_act_logger("send app_section->payload", ret);
         return ret;
@@ -230,12 +249,13 @@ int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
-       use send_to_unix_socket_fd() to send more data,
+       use send_packet_to_unix_sk_fd() to send more data,
        and make sure the "send" action of this wrapper-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_cloud_packet_tx)");
+    int ret = forward_function_parameter_check(app_section, EVENT_CLOUD_PACKET_TX,
+                                               "FORWARD_FUNC_OF(on_cloud_packet_tx)");
     if( ret ){
         return ret;
     }
@@ -250,14 +270,14 @@ int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
     }
 
     /* send toppest level structure */
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(C2R_app_section_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, app_section_p, sizeof(C2R_app_section_t));
     if(ret){
         simple_fatal_act_logger("send app_section", ret);
         return ret;
     }
 
     /* since there are inner structure inside, we send them here */
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
+    ret = send_packet_to_unix_sk_fd(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
         simple_fatal_act_logger("send app_section->payload", ret);
         return ret;
@@ -270,12 +290,13 @@ int EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
 {   
     /* DANGER!!! 
        If future version need to pass more information to external app,
-       use send_to_unix_socket_fd() to send more data,
+       use send_packet_to_unix_sk_fd() to send more data,
        and make sure the "send" action of this wrapper-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_cloud_packet_rx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_camera_packet_rx)");
+    int ret = forward_function_parameter_check(app_section, EVENT_CAMERA_PACKET_RX,
+                                               "FORWARD_FUNC_OF(on_camera_packet_rx)");
     if( ret ){
         return ret;
     }
@@ -290,14 +311,14 @@ int EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
     }
 
     /* send toppest level structure */
-    ret = send_to_unix_socket_fd(notify_fd, obstaclelist_p, sizeof(ObstacleList));
+    ret = send_packet_to_unix_sk_fd(notify_fd, obstaclelist_p, sizeof(ObstacleList));
     if(ret){
         simple_fatal_act_logger("send obstaclelist", ret);
         return ret;
     }
 
     /* since there are inner structure inside, we send them here */
-    ret = send_to_unix_socket_fd(notify_fd, obstaclelist_p->tab,
+    ret = send_packet_to_unix_sk_fd(notify_fd, obstaclelist_p->tab,
                                  (obstaclelist_p->count)*sizeof(Obstacle));
     if(ret){
         simple_fatal_act_logger("send obstaclelist->tab", ret);
@@ -311,12 +332,13 @@ int EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
-       use send_to_unix_socket_fd() to send more data,
+       use send_packet_to_unix_sk_fd() to send more data,
        and make sure the "send" action of this wrapper-function
        "MATCH" the "read" action of "RECONSTRUCT_MSG_FUNC_OF(on_traffic_signal_command_tx)"
        in the file of external_app_proxy_client.c, used by external app.
     */
-    int ret = forward_function_parameter_check(app_section, "FORWARD_FUNC_OF(on_traffic_signal_command_tx)");
+    int ret = forward_function_parameter_check(app_section, EVENT_TRAFFIC_SIGNAL_COMMAND_TX,
+                                               "FORWARD_FUNC_OF(on_traffic_signal_command_tx)");
     if( ret ){
         return ret;
     }
@@ -330,7 +352,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd(notify_fd, app_section_p, sizeof(traffic_signal_command_arg_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, app_section_p, sizeof(traffic_signal_command_arg_t));
     if(ret){
         simple_fatal_act_logger("send app_section", ret);
         return ret;
@@ -343,7 +365,8 @@ int EAP_CB_FORWARD_FUNC_OF(on_registration)(void *app_section)
 {
     /* for current version of middleware 
        external application will registered with the help of
-       external_app_proxy server/client,
+       external_app_proxy server/ external_app_proxy client-library,
+       and the on_registration callback will directly be invoked on client side,
        so this callback should not be called */
 
     fprintf(stderr,"FORWARD_FUNC_OF(on_registration): should not be called at current verstion\n");
@@ -377,7 +400,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
     header.callback_event = EVENT_MIDDLEWARE_RESTART;
 
-    ret = send_to_unix_socket_fd(notify_fd, &header, sizeof(header));
+    ret = send_packet_to_unix_sk_fd(notify_fd, &header, sizeof(header));
     if(ret){
         fprintf(stderr,"FORWARD_FUNC_OF(on_middleware_restart): "
                        "send header ret:%d\n", ret);

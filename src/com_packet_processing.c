@@ -442,14 +442,15 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         {
             proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
-                /* for external APP, we let APP decode by itself */
+                /* for external APP */
                 wrapper_arg_for_obu_packet_t wrapper_arg;
                 wrapper_arg.msg_p = msg;
                 wrapper_arg.object_p = object;
                 current->next->callback( &wrapper_arg );
             }
-            else
+            else{ /* original internal APPs */
                 current->next->callback((void *) &app_section);
+            }
         }
         current = current->next;
     }

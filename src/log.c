@@ -182,8 +182,8 @@ void log_file_write_fatal_error(const char *format, ...)
 }
 
 
-int log_file_write_fatal_with_errno(const char *format, ...)
-{   
+int log_file_write_with_errno(const char *format, ...)
+{  
     if( ENABLE_FATAL_LOG ){
         if( SWITCH_FATAL_LOG_TO_PRINT ){
             char* errno_str = strerror(errno);

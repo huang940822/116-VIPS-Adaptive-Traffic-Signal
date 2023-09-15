@@ -19,7 +19,7 @@
 #include "log.h"
 #include "typedefine.h"
 #include "application_registration.h"
-#include "application_helper.h"
+#include "application_management_helper.h"
 #include "config.h"
 
 #include "external_app_proxy_socket.h"
@@ -46,13 +46,12 @@ static struct itimerspec check_heartbeat_its;
 int external_app_proxy_notify_callback(void* info);
 uint8_t get_current_eap_heartbeat_rc();
 void *external_app_proxy_handler();
-int32_t recv_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
-int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
+int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
+int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 app_obj_t* find_duplicate_id_app_obj( uint8_t req_id );
 int handle_new_client_fd_accepted(int client_fd);
 int handle_remote_client_request(int client_fd);
 uint8_t get_current_eap_heartbeat_rc();
-void increase_eap_heartbeat_rc();
 int check_all_external_app_heartbeat();
 
 /* the callback_forward_fp_arr[] will be used by "despather", "indirectly" 
@@ -136,10 +135,86 @@ int set_timer_fd_for_checking_app_hearbeat()
 }
 
 static inline  __attribute__((always_inline))  
+int remove_both_channels_from_proxy_epoll(app_obj_t *app_obj_p)
+{   
+    /* After close the socket fd, 
+     * it will automatically deregister itself from epoll,
+     * so currently we do nothing in this function.
+     * if in later linux version, the behavior of epoll changed,
+     * this function might need to be implemented */
+    return 0;
+}
+
+static inline  __attribute__((always_inline))  
+int unlink_an_external_app(app_obj_t *app_obj_p)
+{
+    int ret;
+    ret = remove_both_channels_from_proxy_epoll(app_obj_p);
+    log_file_write(
+        "[EAP msg] %s call: remove_both_channels_from_proxy_epoll() " 
+        "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+
+    ret = close_both_channels_of_an_external_app(app_obj_p);
+    log_file_write(
+        "[EAP msg] %s call: close_both_channels_of_an_external_app() " 
+        "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+    return ret;
+}
+
+static inline  __attribute__((always_inline))  
 int check_all_external_app_heartbeats()
 {
-    fprintf(stderr, "check_all_external_app_heartbeats(): hi, I'm checking\n");
-    return 0;
+    /* since now dispatcher and ea_app_proxy,
+     * both might read/write app_list, we add a mutex_lock */ 
+    int ret = 0;
+    uint8_t record_diff;
+    pthread_mutex_lock(&mutex_app_list); 
+
+    app_obj_t *current = app_list.next;
+    
+    if (current == NULL) {      
+        ret = 0;   /* empty list */
+    }
+    else{
+        /* traverse to last node */
+        while (current != NULL) {
+            if( current->ea_info_p == 0){
+                /* this app is not external */
+                ;//do nothing
+            }
+            else if( current->ea_info_p->interact_fd == 0 
+                     && current->ea_info_p->notify_fd == 0 )
+            {
+                /* this app already be unlinked */
+                ;//do nothing
+            }
+            else{
+                record_diff = proxy_cur_heartbeat - current->ea_info_p->heartbeat_rc;
+                if ( record_diff > HEARTBEAT_CHECK_ALLOWED_THERSHHOLD ) {
+                    unlink_an_external_app(current);
+
+                    fprintf(stderr,
+                        "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
+                        __func__, current->id, ret);
+                    
+                    log_file_write(
+                        "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
+                        __func__, current->id, ret);
+
+                }
+            }
+            current = current->next;
+        }
+    }
+
+    pthread_mutex_unlock(&mutex_app_list); 
+
+    /* unsigned type will auto round up */
+    /* since we compare heartbeat with a threshold larger than 1,
+     * I think it's ok to not protect "proxy_cur_heartbeat" by mutex */
+    proxy_cur_heartbeat += 1;   
+
+    return ret;
 }
 
 static inline __attribute__((always_inline)) 
@@ -295,7 +370,7 @@ int inner_handle_heartbeat_from_app(int client_fd, packet_to_proxy_header_t *hea
         ack.ret_val = EAL_ERR_OK;
     }
     
-    ret = send_to_unix_socket_fd( client_fd, &ack, sizeof(ack));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
     if(ret != 0){
         fprintf(stderr, "%s: send ack with seq_num:%u to client_fd:%d fail, ret = %d\n", 
                 __func__, ack.seq_num, client_fd, ret);
@@ -321,9 +396,9 @@ int handle_new_client_fd_accepted(int client_fd)
     memset(&ack, 0, sizeof(ack));
     ack.packet_type = EA_PACKET_TYPE_ACK;
 
-    ret = recv_from_unix_socket_fd( client_fd, &header, sizeof(header));
+    ret = recv_packet_from_unix_sk_fd( client_fd, &header, sizeof(header));
     if( ret != 0 ){
-        fprintf( stderr, "%d: recv_from_unix_socket_fd ret: %d\n",__LINE__ , ret);
+        fprintf( stderr, "%d: recv_packet_from_unix_sk_fd ret: %d\n",__LINE__ , ret);
         return ret;
     }
     /* handle header error-check */
@@ -331,13 +406,13 @@ int handle_new_client_fd_accepted(int client_fd)
         && header.packet_type != EA_PACKET_TYPE_NTF_UPDATE)
     {   
         ack.ret_val = EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER;
-        send_to_unix_socket_fd( client_fd, &ack, sizeof(ack));
+        send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
         return 0;
     }
     else if( header.api_id != API_ID_OF(remote_app_registration)){
         fprintf( stderr, "register packet BAD_API_ID\n");
         ack.ret_val = EAL_ERR_BAD_API_ID_BEFORE_REGISTER;
-        send_to_unix_socket_fd( client_fd, &ack, sizeof(ack));
+        send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
         return 0;
     }
     /* then read payload */
@@ -346,13 +421,13 @@ int handle_new_client_fd_accepted(int client_fd)
         /* new registration or re-registration */
         app_registration_payload_t payload;
 
-        if( (ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload)) ) != 0){
-            fprintf( stderr, "%d: recv_from_unix_socket_fd ret: %d\n",__LINE__ , ret);
+        if( (ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload)) ) != 0){
+            fprintf( stderr, "%d: recv_packet_from_unix_sk_fd ret: %d\n",__LINE__ , ret);
             return ret;
         }
 
         app_obj_t* in_middleware_app_p;
-        in_middleware_app_p = find_duplicate_app_obj_by_appID(payload.id);
+        in_middleware_app_p = get_app_obj_by_appID(payload.id);
         if( !in_middleware_app_p ){  /* brand-new app registration */
             Malloc(in_middleware_app_p, sizeof(app_obj_t), "in_middleware_app_p");
             Malloc(in_middleware_app_p->ea_info_p, sizeof(ea_info_t), "in_middleware_app_p->ea_info_p");
@@ -360,19 +435,21 @@ int handle_new_client_fd_accepted(int client_fd)
             if(ret != 0){
                 fprintf( stderr, "inner_handle_app_register ret %d\n", ret);
                 ack.ret_val = EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT;
-                send_to_unix_socket_fd( client_fd, &ack, sizeof(ack));
+                send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
                 return 0;
             }
         }
         
         ret = reset_external_app_both_fd(in_middleware_app_p, client_fd);  /*this will set notify_fd 0*/
+        in_middleware_app_p->ea_info_p->heartbeat_rc = proxy_cur_heartbeat;
         in_middleware_app_p->ea_info_p->pid = payload.pid;
+
 
         packet_from_proxy_header_t ack;
         
         ack.ret_val = EAL_ERR_OK;
-        if( (ret = send_to_unix_socket_fd( client_fd, &ack, sizeof(ack)) ) != 0){
-            fprintf( stderr, "%d: send_to_unix_socket_fd ret: %d\n",__LINE__ , ret);
+        if( (ret = send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack)) ) != 0){
+            fprintf( stderr, "%d: send_packet_to_unix_sk_fd ret: %d\n",__LINE__ , ret);
             return ret;
         }
     }
@@ -382,13 +459,13 @@ int handle_new_client_fd_accepted(int client_fd)
         packet_from_proxy_header_t ntf_ack;
         ntf_ack.packet_type = EA_PACKET_TYPE_ACK;
 
-        if( (ret = recv_from_unix_socket_fd( client_fd, &ntf_payload, sizeof(ntf_payload)) ) != 0){
-            fprintf( stderr, "%d: recv_from_unix_socket_fd ret: %d\n",__LINE__ , ret);
+        if( (ret = recv_packet_from_unix_sk_fd( client_fd, &ntf_payload, sizeof(ntf_payload)) ) != 0){
+            fprintf( stderr, "%d: recv_packet_from_unix_sk_fd ret: %d\n",__LINE__ , ret);
             return ret;
         }
 
         app_obj_t* in_middleware_app_p;
-        in_middleware_app_p = find_duplicate_app_obj_by_appID(ntf_payload.id);
+        in_middleware_app_p = get_app_obj_by_appID(ntf_payload.id);
         if( !in_middleware_app_p ){
             /* NOTIFY PACKET should not come from a new app */
             ntf_ack.ret_val = EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE;
@@ -402,10 +479,11 @@ int handle_new_client_fd_accepted(int client_fd)
         else{
             ntf_ack.ret_val = EAL_ERR_OK;
             update_external_app_notify_fd(in_middleware_app_p, client_fd);
+            in_middleware_app_p->ea_info_p->heartbeat_rc = proxy_cur_heartbeat;
         }
 
-        if( (ret = send_to_unix_socket_fd( client_fd, &ntf_ack, sizeof(ntf_ack)) ) != 0){
-            fprintf( stderr, "%d: send_to_unix_socket_fd ret: %d\n", __LINE__ , ret);
+        if( (ret = send_packet_to_unix_sk_fd( client_fd, &ntf_ack, sizeof(ntf_ack)) ) != 0){
+            fprintf( stderr, "%d: send_packet_to_unix_sk_fd ret: %d\n", __LINE__ , ret);
             return ret;
         }
 
@@ -417,8 +495,8 @@ int handle_new_client_fd_accepted(int client_fd)
             ntf_ack_payload.RSU_elev = config.RSU_elev;
             ntf_ack_payload.RSU_region = config.RSU_region;
             strncpy(ntf_ack_payload.RSU_name, config.RSU_name, RSU_NAME_MAX_LEN);
-            if( (ret = send_to_unix_socket_fd( client_fd, &ntf_ack_payload, sizeof(ntf_ack_payload)) ) != 0){
-                fprintf( stderr, "%d: send_to_unix_socket_fd ret: %d\n", __LINE__ , ret);
+            if( (ret = send_packet_to_unix_sk_fd( client_fd, &ntf_ack_payload, sizeof(ntf_ack_payload)) ) != 0){
+                fprintf( stderr, "%d: send_packet_to_unix_sk_fd ret: %d\n", __LINE__ , ret);
                 return ret;
             }
         }
@@ -432,23 +510,15 @@ uint8_t get_current_eap_heartbeat_rc()
     return proxy_cur_heartbeat;
 }
 
-void increase_eap_heartbeat_rc()
-{
-    /* unsigned type will auto round up */
-    /* since we compare heartbeat with a threshold much larger than 1,
-     * I think it's ok to not protect it by mutex */
-    proxy_cur_heartbeat += 1;   
-}
-
 int handle_remote_client_request(int client_fd)
 {
     int ret;
     packet_to_proxy_header_t header;
 
-    ret = recv_from_unix_socket_fd( client_fd, &header, sizeof(header));
+    ret = recv_packet_from_unix_sk_fd( client_fd, &header, sizeof(header));
     if (ret != 0) {
         if(ret!=0)
-        fprintf(stdout, "%s: recv_from_unix_socket_fd header from client_fd:%d, ret = %d\n", 
+        fprintf(stdout, "%s: recv_packet_from_unix_sk_fd header from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
         if(ret == EAL_ERR_SOCKET_DISCONNECT){
             fprintf(stdout, "%s: close disconnected external app client_fd:%d\n", 
@@ -466,11 +536,10 @@ int handle_remote_client_request(int client_fd)
         packet_from_proxy_header_t ack;
         ack.packet_type = EA_PACKET_TYPE_ACK;
         ack.ret_val = EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE;
-        ret = send_to_unix_socket_fd( client_fd, &ack, sizeof(ack));
-        if(ret!=0)
+        ret = send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
+        if(ret!=0){
             fprintf(stdout, "%s: send ack to client_fd:%d, ret = %d\n", 
                     __func__, client_fd, ret);
-        if (ret != 0) {
             ;//maybe log err
         }
     }
@@ -495,6 +564,25 @@ int handle_remote_client_request(int client_fd)
         ret = inner_handle_request_by_api_id(client_fd, header.api_id);
     }
 
+    if( ret == EAL_ERR_SOCKET_DISCONNECT ){
+        app_obj_t *app_obj_p = get_app_obj_by_unix_socket_fd(client_fd);
+        if(app_obj_p){
+            pthread_mutex_lock(&mutex_app_list); 
+            unlink_an_external_app(app_obj_p);
+            pthread_mutex_unlock(&mutex_app_list); 
+        }
+        else{
+            /* this case should never happend */
+            #ifdef EAP_SERVER_PRINT_DEBUG
+                printf(
+                    "[EAP msg] get_app_obj_by_unix_socket_fd() cannot find matching app with client_fd: %d\n", 
+                    client_fd );
+            #endif
+            log_file_write(
+                "[EAP msg] get_app_obj_by_unix_socket_fd() cannot find matching app with client_fd: %d\n", 
+                client_fd );
+        }
+    }
     return ret;
 }
 
@@ -505,18 +593,18 @@ void *external_app_proxy_handler()
      * unlink, if socket already exists */
     struct stat statbuf;
     if( stat (MY_UNIX_SOCKET_PATH, &statbuf) == 0) {
-        log_file_write("external_app_proxy_handler: MY_UNIX_SOCKET_PATH is already exist");
-        fprintf(stdout, "warn: external_app_proxy_handler: MY_UNIX_SOCKET_PATH is already exist\n");
+        log_file_write("%s: MY_UNIX_SOCKET_PATH is already exist", __func__);
+        fprintf(stdout, "warn: %s: MY_UNIX_SOCKET_PATH is already exist\n", __func__);
         if (unlink (MY_UNIX_SOCKET_PATH) == -1){
-	        log_file_write_fatal_error("external_app_proxy_handler: unlink");
-            fprintf(stderr, "err: external_app_proxy_handler: unlink\n");
+	        log_file_write_fatal_error("%s: unlink", __func__);
+            fprintf(stderr, "err: %s: unlink\n", __func__);
         }
     }
 
     /* step1: create a unix domain socket */
     if( (unix_listen_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
-	    log_file_write_fatal_error("external_app_proxy_handler: socket");
-        fprintf(stderr, "err: external_app_proxy_handler: socket\n");
+	    log_file_write_fatal_error("%s: socket", __func__);
+        fprintf(stderr, "err: $%s: socket\n", __func__);
     }
 
     /* step2: bind the socket to MY_UNIX_SOCKET_PATH */
@@ -526,20 +614,20 @@ void *external_app_proxy_handler()
     sk_addr.sun_family = AF_UNIX;
     strncpy (sk_addr.sun_path, MY_UNIX_SOCKET_PATH, sizeof(sk_addr.sun_path) - 1);
     if( bind(unix_listen_fd, (const struct sockaddr *) &sk_addr, sizeof (struct sockaddr_un)) == -1){
-        log_file_write_fatal_error("external_app_proxy_handler: bind");
-        fprintf(stderr, "err: external_app_proxy_handler: bind\n");
+        log_file_write_fatal_error("%s: bind", __func__);
+        fprintf(stderr, "err: %s: bind\n", __func__);
     }
 
     /* step3: listen using unix_listen_fd */
     if( listen(unix_listen_fd, MY_BACKLOG) == -1){
-        log_file_write_fatal_error("external_app_proxy_handler: listen");
-        fprintf(stderr, "err: external_app_proxy_handler: listen\n");
+        log_file_write_fatal_error("%s: listen", __func__);
+        fprintf(stderr, "err: %s: listen\n", __func__);
     }
 
     /* step4 create epoll fd */
     if( (ep_fd = epoll_create1(0)) == -1){
-        log_file_write_fatal_error("external_app_proxy_handler: epoll_create1");
-        fprintf(stderr, "err: external_app_proxy_handler: epoll_create1\n");
+        log_file_write_fatal_error("%s: epoll_create1", __func__);
+        fprintf(stderr, "err: %s: epoll_create1\n", __func__);
     }
     
     /* step5 add check_heartbeat_timer_fd to epoll using epoll_ctl(EPOLL_CTL_ADD) */
@@ -555,15 +643,15 @@ void *external_app_proxy_handler()
     ev.events = EPOLLIN;
     ev.data.fd = unix_listen_fd;
     if(epoll_ctl(ep_fd, EPOLL_CTL_ADD, unix_listen_fd, &ev)){
-        log_file_write_fatal_error("external_app_proxy_handler: epoll_ctl");
-        fprintf(stderr, "err: external_app_proxy_handler: epoll_ctl\n");
+        log_file_write_fatal_error("%s: epoll_ctl", __func__);
+        fprintf(stderr, "err: %s: epoll_ctl\n", __func__);
     }
     
     struct epoll_event ev_arr[EPOLL_MAX_EVENTS];    
     int client_fd;       //temporary store client that we are communicating with.
     int num_ev_ready;    //number of events which are ready, returned by epoll_wait()
-    log_file_write("external_app_proxy_handler: is ready to enter main loop");
-    fprintf(stdout, "external_app_proxy_handler: is ready to enter main loop\n");
+    log_file_write("%s: is ready to enter main loop\n", __func__);
+    fprintf(stdout, "%s: is ready to enter main loop\n", __func__);
 
     /* step7 start polling connection using epoll_wait */
     while(1){ 
@@ -584,10 +672,8 @@ void *external_app_proxy_handler()
                 (void)read(check_heartbeat_timer_fd, &junk_var, sizeof(junk_var));
                 
                 int ret = check_all_external_app_heartbeats();
-                if( ret ){
-                    log_file_write(
-                        "%s: check_all_external_app_heartbeats() ret %d\n", __func__,  ret);
-                }
+                fprintf(stdout, "[EAP msg] check_all_external_app_heartbeats() ret %d\n",  ret);
+                log_file_write("[EAP msg] check_all_external_app_heartbeats() ret %d\n", ret);
             }
             else if (ev_arr[i].data.fd == unix_listen_fd){    /* new client want to link */
 
@@ -624,24 +710,25 @@ void *external_app_proxy_handler()
     fprintf(stderr, "err: external_app_proxy_handler: thread unexpected exit\n");
 }
 
-int32_t recv_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size)
+int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size)
 {    
     int ret = recv(socket_fd, packet_p, packet_size, 0);
 
-    if( ret == 0 ){  /* meaning that remote client might close the fd */
+    if( ret == 0 ){  /* meaning that remote client close the fd (maybe due to crash) */
         return EAL_ERR_SOCKET_DISCONNECT;
     }
     else if ( ret  < 0 ){
         char* errno_str = strerror(errno);
         if( !errno_str ) 
             errno_str = "undefined/zero errno";
-        fprintf(stderr, "recv_from_unix_socket_fd: recv() ret -1, errno is %s\n", errno_str);
+        fprintf(stderr, "%s: recv() ret -1, strerror() shows: %s\n", __func__, errno_str);
+        log_file_write("%s: recv() ret -1, strerror() shows: %s\n", __func__, errno_str);
         return EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
 
-int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size)
+int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size)
 {
     int ret = 0;
     errno = 0;
@@ -650,8 +737,10 @@ int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size
         char* errno_str = strerror(current_errno);
         if( !errno_str ) 
             errno_str = "undefined/zero errno";
-        fprintf(stderr, "send_to_unix_socket_fd: send() ret -1, errno is %s\n", errno_str);
+        fprintf(stderr, "%s: send() ret -1, strerror() shows: %s\n", __func__, errno_str);
+        log_file_write("%s: send() ret -1, strerror() shows: %s\n", __func__, errno_str);
         if( errno == -EPIPE){
+            /* meaning that remote client close the fd (maybe due to crash) */
             return EAL_ERR_SOCKET_DISCONNECT;
         }
         return EAL_ERR_SOCKET_SYSCALL;

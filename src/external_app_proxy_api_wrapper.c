@@ -28,7 +28,7 @@ int simple_send_ack_to_app(int fd, int ack_ret_val)
     packet_from_proxy_header_t ack;
     ack.packet_type = EA_PACKET_TYPE_ACK;
     ack.ret_val = ack_ret_val;
-    ret = send_to_unix_socket_fd( fd, &ack, sizeof(ack));
+    ret = send_packet_to_unix_sk_fd( fd, &ack, sizeof(ack));
     #ifdef EAP_SERVER_PRINT_DEBUG 
         printf("[EAP msg] for the request, ack.ret_val is:%d -> %s\n", 
                 ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
@@ -55,8 +55,8 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
         DSRCmsgID msg_id;
     } payload;
     
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -91,8 +91,8 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
         uint8_t service_id;
     }payload;
 
-    int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -100,8 +100,8 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     }
 
     unsigned char specific_field[ payload.len ];
-    ret = recv_from_unix_socket_fd(client_fd, specific_field, sizeof(payload.len));
-    if(PRINT_MSG_FOR_DEBUG)
+    ret = recv_packet_from_unix_sk_fd(client_fd, specific_field, sizeof(payload.len));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get specific_field from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -130,8 +130,8 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
         size_t buf_len;
     }payload;
   
-    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
-    if(PRINT_MSG_FOR_DEBUG)
+    ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -139,8 +139,8 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     }
 
     uint8_t buf[ payload.buf_len ];
-    ret = recv_from_unix_socket_fd(client_fd, buf, sizeof(payload.buf_len));
-    if(PRINT_MSG_FOR_DEBUG)
+    ret = recv_packet_from_unix_sk_fd(client_fd, buf, sizeof(payload.buf_len));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -153,7 +153,7 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     int ack_ret_val;
     ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("%s: com_send() ret:%d\n", __func__, ret);
+        log_file_write_fatal_error("err: %s: com_send() ret:%d\n", __func__, ret);
         ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
@@ -177,8 +177,8 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
         size_t write_buf_len;
     }payload;
 
-    int ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -186,8 +186,8 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     }
 
     uint8_t write_buf[ payload.write_buf_len ];
-    ret = recv_from_unix_socket_fd(client_fd, write_buf, sizeof(payload.write_buf_len));
-    if(PRINT_MSG_FOR_DEBUG)
+    ret = recv_packet_from_unix_sk_fd(client_fd, write_buf, sizeof(payload.write_buf_len));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get write_buf_content from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -200,7 +200,7 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     int ack_ret_val;
     ret = com_send(GENERAL_COM_ID, write_buf, payload.write_buf_len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("%s com_send() ret:%d\n", __func__, ret);
+        log_file_write_fatal_error("err: %s com_send() ret:%d\n", __func__, ret);
         ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
@@ -225,8 +225,8 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     } payload;
     
     int ret; 
-    ret = recv_from_unix_socket_fd(client_fd, &payload, sizeof(payload));
-    if(PRINT_MSG_FOR_DEBUG)
+    ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -234,8 +234,8 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     }
 
     uint8_t buf[ payload.buf_len ];
-    ret = recv_from_unix_socket_fd(client_fd, buf, sizeof(payload.buf_len));
-    if(PRINT_MSG_FOR_DEBUG)
+    ret = recv_packet_from_unix_sk_fd(client_fd, buf, sizeof(payload.buf_len));
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s get buf from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -248,7 +248,7 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     int ack_ret_val;
     ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("%s com_send() ret:%d\n", __func__, ret);
+        log_file_write_fatal_error("err: %s com_send() ret:%d\n", __func__, ret);
         ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
@@ -318,8 +318,8 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
         tsc_command_t tsc_cmd;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -331,7 +331,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
     ret = command_buf_insert_effect_time( &payload.tsc_cmd );
     log_file_write("%s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
     if (ret != 0) {
-        log_file_write("%s: command_buf_insert_effect_time ret: %d\n", __func__, ret);
+        log_file_write("err: %s: command_buf_insert_effect_time ret: %d\n", __func__, ret);
         ack_ret_val = EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
     }
     else{
@@ -355,8 +355,8 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
         tsc_command_t tsc_cmd;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -395,8 +395,8 @@ int API_WRAPPER_OF(vms_request_start)(int client_fd)
         uint8_t priority;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -423,8 +423,8 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
         uint8_t id;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -451,8 +451,8 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
         uint8_t evsp_prog[RTM_MAX];
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -483,8 +483,8 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
         uint8_t evsp_prog[RTM_MAX];
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -526,7 +526,7 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -553,7 +553,7 @@ int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -580,7 +580,7 @@ int API_WRAPPER_OF(get_current_phase)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -607,7 +607,7 @@ int API_WRAPPER_OF(get_current_step)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -634,7 +634,7 @@ int API_WRAPPER_OF(get_current_second)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -661,7 +661,7 @@ int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -688,7 +688,7 @@ int API_WRAPPER_OF(get_SignalCount)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -715,7 +715,7 @@ int API_WRAPPER_OF(get_plan_id)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -742,7 +742,7 @@ int API_WRAPPER_OF(get_control_status)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -769,7 +769,7 @@ int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -789,8 +789,8 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
         uint16_t second;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -810,7 +810,7 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -829,8 +829,8 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
         uint8_t SignalCount_index;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -850,7 +850,7 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -877,7 +877,7 @@ int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -904,7 +904,7 @@ int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -922,8 +922,8 @@ int API_WRAPPER_OF(set_control_status)(int client_fd)
         uint8_t control_status;
     } payload;
 
-    int ret = recv_from_unix_socket_fd( client_fd, &payload, sizeof(payload) );
-    if(PRINT_MSG_FOR_DEBUG)
+    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
     if( ret ){
@@ -960,7 +960,7 @@ int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -987,7 +987,7 @@ int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -1014,7 +1014,7 @@ int API_WRAPPER_OF(get_prev_SubPhaseID)(int client_fd)
         return ret;
     }
 
-    ret = send_to_unix_socket_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }

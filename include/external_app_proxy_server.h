@@ -8,7 +8,7 @@
     do{                                              \
         fprintf(stderr,"%s: %s ret: %d\n",           \
                 __func__, (action_str), (ret_val) ); \
-        log_file_write_fatal_error(                  \
+        log_file_write(                              \
             "%s: %s ret: %d\n",                      \
             __func__, (action_str), (ret_val) );     \
     }while(0)
@@ -23,8 +23,8 @@ void *external_app_proxy_handler();
 #define HEARTBEAT_CHECK_ALLOWED_THERSHHOLD  3  
 
 /* below is used by external_app_proxy_api_wrapper.c */
-int32_t recv_from_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
-int32_t send_to_unix_socket_fd(int socket_fd, void* packet_p, size_t packet_size);
+int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
+int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 
 
 #endif  /* EXTERNAL_APP_PROXY_SERVER_H */

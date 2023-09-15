@@ -22,7 +22,35 @@ pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
  * all might read/write callback_list, we add a mutex_lock */
 pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
-app_obj_t* get_app_obj_by_name(char* name_p);
+/* this function assume the caller have grabbed the mutex_callback_list  */
+/* this function assume the caller have grabbed the mutex_callback_list  */
+static inline __attribute__((always_inline)) 
+app_obj_t* get_app_obj_by_name(char* name_p)
+{
+    // check app name
+    if ( !name_p ){
+        return NULL;
+    }
+
+    if ( strlen(name_p) == 0 ) {
+        return NULL;
+    }
+
+    app_obj_t *current = app_list.next;
+    if (current == NULL) {      
+        return NULL;   /* empty list */
+    }
+    else{
+        /* traverse to last node */
+        while (current != NULL) {
+            if ( strncmp(current->name, name_p, APP_NAME_MAX_LEN) == 0) {
+                return current;
+            }
+            current = current->next;
+        }
+    }
+    return NULL;   /* empty list */
+}
 
 /*****************************************************************************
 ** Function:    event_callback_new
@@ -63,6 +91,7 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
 
     return event_callback;
 }
+
 /*****************************************************************************
 ** Function:    event_callback_msg_id_insert
 ** Description: Create a new event callback node.
@@ -273,33 +302,6 @@ int app_register(app_obj_t *app)
 
         return APP_REGISTER_ACCEPT;
     }
-}
-
-/* this function assume the caller have grabbed the mutex_callback_list  */
-app_obj_t* get_app_obj_by_name(char* name_p){
-    // check app name
-    if ( !name_p ){
-        return NULL;
-    }
-
-    if ( strlen(name_p) == 0 ) {
-        return NULL;
-    }
-
-    app_obj_t *current = app_list.next;
-    if (current == NULL) {      
-        return NULL;   /* empty list */
-    }
-    else{
-        /* traverse to last node */
-        while (current != NULL) {
-            if ( strncmp(current->name, name_p, APP_NAME_MAX_LEN) == 0) {
-                return current;
-            }
-            current = current->next;
-        }
-    }
-    return NULL;   /* empty list */
 }
 
 void event_callback_print()

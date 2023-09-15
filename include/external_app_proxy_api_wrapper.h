@@ -3,7 +3,7 @@
 
 #include "external_app_proxy_socket.h"
 
-#define PRINT_MSG_FOR_DEBUG (ret!=0)
+#define PRINT_API_MSG_FOR_DEBUG (ret!=0)
 
 typedef int (*eap_api_wrapper_fp)(int client_fd);
 
