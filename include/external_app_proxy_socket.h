@@ -148,6 +148,7 @@ void unlock_callback_notify_channel();
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
 /* recommend middleware-api implementation use functions below  */
+bool is_proxy_connected();
 int32_t simple_send_request_header_to_proxy(int api_id);
 int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num);
 int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size);

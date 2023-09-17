@@ -36,23 +36,15 @@
  * Reference: https://man7.org/linux/man-pages/man2/listen.2.html */
 #define MY_BACKLOG 20
 
-static int current_errno;
+static int current_errno;   //record errno for failed syscall 
 static int unix_listen_fd;  //only one, used for accepting new client
 static int ep_fd;           //fd for epoll
-static uint8_t proxy_cur_heartbeat;
-static int check_heartbeat_timer_fd;
-static struct itimerspec check_heartbeat_its;
+static uint8_t proxy_cur_heartbeat;    
+static int check_heartbeat_timer_fd;      //timer-fd for check app's heartbeat periodically
+static struct itimerspec check_heartbeat_its;   //itimerspec used for timer-fd above
 
-int external_app_proxy_notify_callback(void* info);
-uint8_t get_current_eap_heartbeat_rc();
-void *external_app_proxy_handler();
 int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
-app_obj_t* find_duplicate_id_app_obj( uint8_t req_id );
-int handle_new_client_fd_accepted(int client_fd);
-int handle_remote_client_request(int client_fd);
-uint8_t get_current_eap_heartbeat_rc();
-int check_all_external_app_heartbeat();
 
 /* the callback_forward_fp_arr[] will be used by "despather", "indirectly" 
  * NOTICE, if you add new callback, you NEED to update 
@@ -150,14 +142,21 @@ int unlink_an_external_app(app_obj_t *app_obj_p)
 {
     int ret;
     ret = remove_both_channels_from_proxy_epoll(app_obj_p);
-    log_file_write(
-        "[EAP msg] %s call: remove_both_channels_from_proxy_epoll() " 
-        "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
-
+    if(ret){
+        log_file_write(
+            "[EAP msg] err: %s call: remove_both_channels_from_proxy_epoll() " 
+            "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+    }
     ret = close_both_channels_of_an_external_app(app_obj_p);
-    log_file_write(
-        "[EAP msg] %s call: close_both_channels_of_an_external_app() " 
-        "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+    if(ret){
+        log_file_write(
+            "[EAP msg] err: %s call: close_both_channels_of_an_external_app() " 
+            "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+
+        /* even the close failed, we still reset the fds, to prevent proxy interact with it */
+        app_obj_p->ea_info_p->interact_fd = 0;  
+        app_obj_p->ea_info_p->notify_fd = 0;
+    }
     return ret;
 }
 
@@ -196,11 +195,9 @@ int check_all_external_app_heartbeats()
                     fprintf(stderr,
                         "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
                         __func__, current->id, ret);
-                    
                     log_file_write(
                         "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
                         __func__, current->id, ret);
-
                 }
             }
             current = current->next;
@@ -209,18 +206,13 @@ int check_all_external_app_heartbeats()
 
     pthread_mutex_unlock(&mutex_app_list); 
 
-    /* unsigned type will auto round up */
-    /* since we compare heartbeat with a threshold larger than 1,
-     * I think it's ok to not protect "proxy_cur_heartbeat" by mutex */
     proxy_cur_heartbeat += 1;   
-
     return ret;
 }
 
 static inline __attribute__((always_inline)) 
 int inner_handle_app_register( app_obj_t* app_p, void *payload_p)
 {   
-    int ret;
     app_registration_payload_t *pl_p = (app_registration_payload_t*)(payload_p);
     strncpy( app_p->name, pl_p->name, APP_NAME_MAX_LEN);
     app_p->dontSend2TC = pl_p->dontSend2TC;
@@ -381,7 +373,12 @@ int inner_handle_heartbeat_from_app(int client_fd, packet_to_proxy_header_t *hea
     return ret;
 }
 
-int handle_new_client_fd_accepted(int client_fd)
+uint8_t get_current_eap_heartbeat_rc()
+{
+    return proxy_cur_heartbeat;
+}
+
+int handle_new_client_accepted(int client_fd)
 {
     /* WARNNING!!
      * make sure the packet you send-to/recv-from proxy client 
@@ -390,7 +387,6 @@ int handle_new_client_fd_accepted(int client_fd)
      */
 
     int ret;
-    bool is_notify_fd = 0;
     packet_to_proxy_header_t header;
     packet_from_proxy_header_t ack;
     memset(&ack, 0, sizeof(ack));
@@ -505,11 +501,6 @@ int handle_new_client_fd_accepted(int client_fd)
     return ret;
 }
 
-uint8_t get_current_eap_heartbeat_rc()
-{
-    return proxy_cur_heartbeat;
-}
-
 int handle_remote_client_request(int client_fd)
 {
     int ret;
@@ -587,14 +578,16 @@ int handle_remote_client_request(int client_fd)
 }
 
 /* the external_app_proxy server "main thread" */
-void *external_app_proxy_handler()
+void *external_app_proxy_main_handler()
 {   
     /* step0: create a unix domain socket with MY_UNIX_SOCKET_PATH 
      * unlink, if socket already exists */
     struct stat statbuf;
     if( stat (MY_UNIX_SOCKET_PATH, &statbuf) == 0) {
-        log_file_write("%s: MY_UNIX_SOCKET_PATH is already exist", __func__);
-        fprintf(stdout, "warn: %s: MY_UNIX_SOCKET_PATH is already exist\n", __func__);
+        log_file_write("[EAP MSG] %s: MY_UNIX_SOCKET_PATH is already exist\n" 
+                       "will call unlink() before re-link\n", __func__);
+        fprintf(stdout, "[EAP MSG] %s: MY_UNIX_SOCKET_PATH is already exist\n" 
+                        "will call unlink() before re-link\n", __func__);
         if (unlink (MY_UNIX_SOCKET_PATH) == -1){
 	        log_file_write_fatal_error("%s: unlink", __func__);
             fprintf(stderr, "err: %s: unlink\n", __func__);
@@ -678,8 +671,8 @@ void *external_app_proxy_handler()
             else if (ev_arr[i].data.fd == unix_listen_fd){    /* new client want to link */
 
                 if( (client_fd = accept(unix_listen_fd, NULL, NULL)) == -1){
-                    log_file_write_fatal_error("external_app_proxy_handler: accept");
-                    fprintf(stderr, "err: external_app_proxy_handler: accept\n");
+                    log_file_write_fatal_error("[EAP msg] err: %s: accept()", __func__);
+                    fprintf(stderr, "[EAP msg] err: %s: accept\n", __func__);
                 }
 
                 //log_file_write("new client_fd to external_app_proxy: %d\n", client_fd);
@@ -691,7 +684,7 @@ void *external_app_proxy_handler()
                 new_ev.data.fd = client_fd;
 				epoll_ctl(ep_fd, EPOLL_CTL_ADD, client_fd, &new_ev);
 
-                handle_new_client_fd_accepted(client_fd);
+                handle_new_client_accepted(client_fd);
 			}
             else{   /* existed client */
                     
@@ -706,8 +699,8 @@ void *external_app_proxy_handler()
     
     } //while (1)
 
-    log_file_write_fatal_error("external_app_proxy_handler: thread unexpected exit");
-    fprintf(stderr, "err: external_app_proxy_handler: thread unexpected exit\n");
+    log_file_write_fatal_error("[EAP msg] err: %s: thread unexpected exit", __func__);
+    fprintf(stderr, "[EAP msg] err: %s: thread unexpected exit\n", __func__);
 }
 
 int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size)

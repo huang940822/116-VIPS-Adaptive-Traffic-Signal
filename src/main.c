@@ -42,26 +42,56 @@ extern uint8_t flag_query_firm_ver;
 
 pthread_mutex_t mutex_uart_comple_protect = PTHREAD_MUTEX_INITIALIZER;
 
+//declaration
+int register_handler_for_unexpected_signal();
 
-void sigintHandler(int sig_num)
+void signalUnExpectedHandler(int sig_num)
 {
-    signal(SIGINT, sigintHandler);
+    //signal(SIGINT, sigintHandler);
+    register_handler_for_unexpected_signal();
     pthread_mutex_lock(&mutex_uart_comple_protect);
-    printf("get in mutex in signal handler\r\n");
-    printf(
-        "\nuart write actions has all be completed before exit from process\n");
+    printf("get in mutex in signal handler for unexpected signal\r\n");
+    printf("the signal number is %d\r\n", sig_num);
+    printf("\nuart write actions has all be completed before exit from process\n");
     fflush(stdout);
     exit(0);
     pthread_mutex_unlock(&mutex_uart_comple_protect);
 }
 
+int register_handler_for_unexpected_signal()
+{   
+    __sighandler_t ret_p = 0;    
+    /* handling unexpected SIGINT signal */
+    ret_p = signal(SIGINT, signalUnExpectedHandler);
+    if(ret_p == SIG_ERR){
+        printf("Err: signal(SIGINT, ...) failed\r\n");
+        return -1;
+    }
+    /* handling unexpected SIGPIPE signal */
+    ret_p = signal(SIGPIPE, signalUnExpectedHandler);
+    if(ret_p == SIG_ERR){
+        printf("Err: signal(SIGPIPE, ...) failed\r\n");
+        return -2;
+    }
+    /* other signal if you want ... */        
+    
+    return 0;
+}
+
 int main()
 {
-    /* handling unexpected SIGINT signal */
-    signal(SIGINT, sigintHandler);
+    int ret = 0;
+
+    //signal(SIGINT, sigintHandler); //old version
+    ret = register_handler_for_unexpected_signal();
+    if(ret){
+        printf("%s, register_handler_for_unexpected_signal() failed\r\n", __func__);
+        printf("return value is %d\r\n", ret);;
+        fflush(stdout);
+        exit(0);
+    }
 
     /* Start server */
-    int ret = 0;
 
     /* log init */
     log_file_init();  //一個timer被created
@@ -167,11 +197,11 @@ int main()
         exit(errno);
     }
 
-    /* external application proxy */
+    /* create external-application-proxy main thread */
     pthread_t external_app_proxy_thread;
-    ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_handler, NULL);
+    ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_main_handler, NULL);
     if (ret != 0) {
-        log_file_write_fatal_error("error creating external_app_proxy_thread: %d", ret);
+        log_file_write_fatal_error("error creating external_app_proxy_main_handler: %d", ret);
         perror("main: pthread_create");
         exit(errno);
     }

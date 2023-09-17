@@ -14,7 +14,7 @@
     }while(0)
 
 uint8_t get_current_eap_heartbeat_rc();
-void *external_app_proxy_handler();
+void *external_app_proxy_main_handler();
 
 #define ENABLE_EXTERNAL_APP_HEARTBEAT_PERIODIC_CHECK 1
 #define HEARTBEAT_CHECK_START_OFFSET_S   10    //send first heartbeat after enter mainloop 10-s
