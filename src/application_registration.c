@@ -37,13 +37,13 @@ app_obj_t* get_app_obj_by_name(char* name_p)
     }
 
     app_obj_t *current = app_list.next;
-    if (current == NULL) {      
+    if (current == NULL) { 
         return NULL;   /* empty list */
     }
     else{
         /* traverse to last node */
         while (current != NULL) {
-            if ( strncmp(current->name, name_p, APP_NAME_MAX_LEN) == 0) {
+            if ( strncmp(current->name, name_p, APP_NAME_MAX_LEN) == 0 ) {
                 return current;
             }
             current = current->next;
@@ -65,7 +65,7 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
         (event_callback_t *) malloc(sizeof(event_callback_t));
         
     app_obj_t* app_obj_p;
-
+    
     if (event_callback == NULL) {
         set_memory_error();
         log_file_write_fatal_error("event_callback_new: malloc");
@@ -171,7 +171,6 @@ void event_callback_insert(event_callback_t *head,
         current = current->next;
     }
     previous->next = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
-
     pthread_mutex_unlock(&mutex_callback_list);
 }
 
@@ -223,6 +222,7 @@ int app_obj_insert(app_obj_t *app)
         goto unlock_ret;
     }
 
+    current->next = app;
     num++;
     ret = num;
     

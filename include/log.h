@@ -2,6 +2,7 @@
 #define LOG_H
 
 #include "typedefine.h"
+#include <time.h> 
 
 #define LOG_DIR FILE_PATH "log/"
 
@@ -14,6 +15,16 @@
 #define ERR_MSG_SZ 128
 #define LOG_CONTENT_LEN 2048
 
+extern struct timespec hb_trc1;
+extern struct timespec hb_trc2;
+
+extern struct timespec trc1;
+extern struct timespec trc2;
+extern struct timespec trc3;
+extern struct timespec trc4;
+extern struct timespec trc5;
+extern struct timespec trc6;
+
 void log_file_init();
 void log_file_name_update();
 void log_file_write(const char *format, ...);
@@ -25,5 +36,10 @@ void log_file_write_fatal_error(const char *format, ...);
 #define SWITCH_LOG_TO_PRINT 1
 #define SWITCH_FATAL_LOG_TO_PRINT 1
 int log_file_write_with_errno(const char *format, ...);
+
+struct timespec get_timespec_diff(struct timespec bgn, struct timespec end);
+uint32_t get_us_diff(struct timespec bgn, struct timespec end);
+void record_current_timespec(struct timespec* now_p);
+void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg);
 
 #endif  /* LOG_H */

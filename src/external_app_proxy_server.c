@@ -25,7 +25,7 @@
 #include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_api_wrapper.h"
-#include "external_app_proxy_callback_forward.h"
+#include "external_app_proxy_callback_msg_forward.h"
 #include "external_app_proxy_server.h"
 
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
@@ -46,45 +46,45 @@ static struct itimerspec check_heartbeat_its;   //itimerspec used for timer-fd a
 int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 
-/* the callback_forward_fp_arr[] will be used by "despather", "indirectly" 
+/* the cbmsg_forward_fp_arr[] will be used by "despather", "indirectly" 
  * NOTICE, if you add new callback, you NEED to update 
  * this function: inner_set_external_app_callback_by_mask() */
 static inline __attribute__((always_inline)) 
 void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint64_t mask)
 {
     if( mask & ( 0x1 << EVENT_OBU_PACKET_RX ) ){
-        app_obj_p->on_OBU_packet_rx = callback_forward_fp_arr[EVENT_OBU_PACKET_RX];
+        app_obj_p->on_OBU_packet_rx = cbmsg_forward_fp_arr[EVENT_OBU_PACKET_RX];
     }
     if( mask & ( 0x1 << EVENT_OBU_PACKET_TX ) ){
-        app_obj_p->on_OBU_packet_tx = callback_forward_fp_arr[EVENT_OBU_PACKET_TX];
+        app_obj_p->on_OBU_packet_tx = cbmsg_forward_fp_arr[EVENT_OBU_PACKET_TX];
     }
     if( mask & ( 0x1 << EVENT_RSU_PACKET_RX ) ){
-        app_obj_p->on_RSU_packet_rx = callback_forward_fp_arr[EVENT_RSU_PACKET_RX];
+        app_obj_p->on_RSU_packet_rx = cbmsg_forward_fp_arr[EVENT_RSU_PACKET_RX];
     }
     if( mask & ( 0x1 << EVENT_RSU_PACKET_TX ) ){
-        app_obj_p->on_RSU_packet_tx = callback_forward_fp_arr[EVENT_RSU_PACKET_TX];
+        app_obj_p->on_RSU_packet_tx = cbmsg_forward_fp_arr[EVENT_RSU_PACKET_TX];
     }
     if( mask & ( 0x1 << EVENT_CLOUD_PACKET_RX ) ){
-        app_obj_p->on_cloud_packet_rx = callback_forward_fp_arr[EVENT_CLOUD_PACKET_RX];
+        app_obj_p->on_cloud_packet_rx = cbmsg_forward_fp_arr[EVENT_CLOUD_PACKET_RX];
     }
     if( mask & ( 0x1 << EVENT_CLOUD_PACKET_TX ) ){
-        app_obj_p->on_cloud_packet_tx = callback_forward_fp_arr[EVENT_CLOUD_PACKET_TX];
+        app_obj_p->on_cloud_packet_tx = cbmsg_forward_fp_arr[EVENT_CLOUD_PACKET_TX];
     }
     if( mask & ( 0x1 << EVENT_TRAFFIC_SIGNAL_COMMAND_TX ) ){
-        app_obj_p->on_traffic_signal_command_tx = callback_forward_fp_arr[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
+        app_obj_p->on_traffic_signal_command_tx = cbmsg_forward_fp_arr[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     }
     if( mask & ( 0x1 << EVENT_CAMERA_PACKET_RX ) ){
-        app_obj_p->on_camera_packet_rx = callback_forward_fp_arr[EVENT_CAMERA_PACKET_RX];
+        app_obj_p->on_camera_packet_rx = cbmsg_forward_fp_arr[EVENT_CAMERA_PACKET_RX];
     }
     if( mask & ( 0x1 << EVENT_REGISTRATION ) ){
         /* since for external application,
            the on_registration callback will be directly called at client side 
            we just IGNORE the on_registration callback at server side */
-        //app_obj_p->on_registration = callback_forward_fp_arr[EVENT_REGISTRATION];
+        //app_obj_p->on_registration = cbmsg_forward_fp_arr[EVENT_REGISTRATION];
         ; //do nothing in current version
     }
     if( mask & ( 0x1 << EVENT_MIDDLEWARE_RESTART ) ){
-        app_obj_p->on_middleware_restart = callback_forward_fp_arr[EVENT_MIDDLEWARE_RESTART];
+        app_obj_p->on_middleware_restart = cbmsg_forward_fp_arr[EVENT_MIDDLEWARE_RESTART];
     }
 }
 
@@ -176,7 +176,7 @@ int check_all_external_app_heartbeats()
     }
     else{
         /* traverse to last node */
-        while (current != NULL) {
+        while (current->next != NULL) {
             if( current->ea_info_p == 0){
                 /* this app is not external */
                 ;//do nothing
@@ -201,6 +201,31 @@ int check_all_external_app_heartbeats()
                 }
             }
             current = current->next;
+        }
+
+        /* last node */
+        if( current->ea_info_p == 0){
+            /* this app is not external */
+            ;//do nothing
+        }
+        else if( current->ea_info_p->interact_fd == 0 
+                    && current->ea_info_p->notify_fd == 0 )
+        {
+            /* this app already be unlinked */
+            ;//do nothing
+        }
+        else{
+            record_diff = proxy_cur_heartbeat - current->ea_info_p->heartbeat_rc;
+            if ( record_diff > HEARTBEAT_CHECK_ALLOWED_THERSHHOLD ) {
+                unlink_an_external_app(current);
+
+                fprintf(stderr,
+                    "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
+                    __func__, current->id, ret);
+                log_file_write(
+                    "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
+                    __func__, current->id, ret);
+            }
         }
     }
 

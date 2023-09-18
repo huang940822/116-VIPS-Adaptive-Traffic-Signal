@@ -159,7 +159,7 @@ int main()
     /* application service registration */
     app_obj_t *app_arr[] = {
         // &MMP,
-        //&EVSP,
+        &EVSP,
         //&TSP,
         // &CPS,
         // &SPaT,

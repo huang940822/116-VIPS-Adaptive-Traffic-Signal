@@ -10,6 +10,16 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
+struct timespec hb_trc1;
+struct timespec hb_trc2;
+
+struct timespec trc1;
+struct timespec trc2;
+struct timespec trc3;
+struct timespec trc4;
+struct timespec trc5;
+struct timespec trc6;
+
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 
 char log_file_name[LOG_FILE_NAME_LEN];
@@ -217,4 +227,56 @@ int log_file_write_with_errno(const char *format, ...)
     }
 
     return 0;
+}
+
+
+struct timespec get_timespec_diff(struct timespec bgn, struct timespec end)
+{
+    struct timespec temp;
+    if ((end.tv_nsec - bgn.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec - bgn.tv_nsec;
+    } 
+    else {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec;
+        temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
+    }
+    return temp;
+}
+
+uint32_t get_us_diff(struct timespec bgn, struct timespec end)
+{
+    struct timespec temp;
+    if ((end.tv_nsec - bgn.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec - bgn.tv_nsec;
+    } 
+    else {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec;
+        temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
+    }
+    return (uint32_t)((temp.tv_sec)*1000000 + (temp.tv_nsec)/1000);
+}
+
+void record_current_timespec(struct timespec* now_p)
+{
+    clock_gettime(CLOCK_MONOTONIC, now_p);
+}
+
+void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg)
+{   
+    if(msg)
+        fprintf(stderr, "%s\n", msg);
+    
+    struct timespec temp;
+    if ((end.tv_nsec - bgn.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec - bgn.tv_nsec;
+    } 
+    else {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec;
+        temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
+    }
+
+    fprintf(stderr, "s: %ld , ns: %ld\n\n", temp.tv_sec, temp.tv_nsec);
 }

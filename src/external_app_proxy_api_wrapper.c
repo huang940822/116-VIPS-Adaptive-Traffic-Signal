@@ -19,7 +19,7 @@
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
 #include "external_app_proxy_api_wrapper.h"
-#include "external_app_proxy_callback_forward.h"
+#include "external_app_proxy_callback_msg_forward.h"
 
 static inline __attribute__((always_inline)) 
 int simple_send_ack_to_app(int fd, int ack_ret_val)
@@ -69,7 +69,7 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
                                  payload.name, 
                                  payload.priority, 
                                  payload.msg_id, 
-                                 callback_forward_fp_arr[payload.event_type] );
+                                 cbmsg_forward_fp_arr[payload.event_type] );
 
     ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     

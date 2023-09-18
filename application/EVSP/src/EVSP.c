@@ -125,12 +125,21 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
-int EVSP_on_OBU_packet_rx(void *arg)
+void before_return_handling()
 {
+    record_current_timespec(&trc6);
+}
+
+int EVSP_on_OBU_packet_rx(void *arg)
+{   
+    record_current_timespec(&trc5);
+
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
     if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
+    {
+        before_return_handling();
         return 0;
-
+    }
     // printf("EVSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -144,9 +153,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 if (srm->requests.tab[i].request.id.id == config.RSU_id)
                     break;
             }
-            if (i == srm->requests.count)
+            if (i == srm->requests.count){
+                before_return_handling();
                 return -1;
-        } else {
+            }
+        } 
+        else{
+            before_return_handling();
             return -1;
         }
     }
@@ -248,6 +261,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         if (read_buf.content != NULL) {
             free(read_buf.content);
         }
+
+        before_return_handling();
         return 0;
     }  // tc箱出現錯誤 直接不做
 
@@ -321,6 +336,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (read_buf.content != NULL) {
                 free(read_buf.content);
             }
+
+            before_return_handling();
             return 0;
         }
 
@@ -453,6 +470,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }
+
+    before_return_handling();
     return 0;
 }
 

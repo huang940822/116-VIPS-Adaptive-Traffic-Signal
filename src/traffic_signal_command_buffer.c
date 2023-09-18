@@ -627,6 +627,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
             pthread_mutex_unlock(&mutex_command_buf);
             return INSERT_ACCEPT;
         } else {
+            pthread_mutex_unlock(&mutex_command_buf);   //20230918
             return IMPROPER_PRIORITY;
         }
     }

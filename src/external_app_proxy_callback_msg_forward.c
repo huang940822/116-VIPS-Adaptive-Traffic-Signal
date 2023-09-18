@@ -19,7 +19,7 @@
 #include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
-#include "external_app_proxy_callback_forward.h"
+#include "external_app_proxy_callback_msg_forward.h"
 
 app_obj_t* proxy_handling_app_p;
 
@@ -70,15 +70,16 @@ int simple_send_notify_header(int fd, event_type_t event)
 }
 
 
-/* NOTICE, if you add new callback, you NEED to add a new EAP_CB_FORWARD_FUNC_OF */
-/* and update the callback_forward_fp_arr[]  */
+/* NOTICE, if you add new callback, you NEED to add a new EAP_CBMSG_FORWARD_FUNC_OF */
+/* and update the cbmsg_forward_fp_arr[]  */
 
 /* below are all the callback forward functions for all event callback */
 /* NOTICE, if you add new event callback, you NEED to add a related forward function */
-#define EAP_CB_FORWARD_FUNC_OF(event_name) event_name ## _cb_forward_func
+#define EAP_CBMSG_FORWARD_FUNC_OF(event_name) event_name ## _cbmsg_forward_func
 
-int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
 {   
+    record_current_timespec(&trc3);
     /* DANGER!!! 
        If future version need to pass more information to external app,
        (e.g., TSP need other entry in the V2R_app_section_t)
@@ -128,10 +129,11 @@ int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
         return ret;
     }
 
+    record_current_timespec(&trc4);
     return ret;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -185,7 +187,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
     return ret;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_rx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_rx)(void *app_section)
 {
     /* current version of middleware have not defined 
        the structure of R2R packet, so this callback 
@@ -195,7 +197,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_rx)(void *app_section)
     return -1;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_tx)(void *app_section){
+int EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_tx)(void *app_section){
     /* current version of middleware have not defined 
        the structure of R2R packet, so this callback 
        will not be registered , nor be called */
@@ -204,7 +206,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_tx)(void *app_section){
     return -1;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -245,7 +247,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
     return ret;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -286,7 +288,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
     return ret;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
 {   
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -328,7 +330,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
     return ret;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
 {
     /* DANGER!!! 
        If future version need to pass more information to external app,
@@ -361,7 +363,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
     return ret;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_registration)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_registration)(void *app_section)
 {
     /* for current version of middleware 
        external application will registered with the help of
@@ -374,7 +376,7 @@ int EAP_CB_FORWARD_FUNC_OF(on_registration)(void *app_section)
     return -1;
 }
 
-int EAP_CB_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
+int EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
 {   
     /* for current version of middleware 
        on_middle_restart() will NOT send data via app_section
@@ -411,16 +413,18 @@ int EAP_CB_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
     return ret;
 }
 
-/* NOTICE, if you add new event callback, you NEED to add a entry for the reconstruct function */
-eap_callback_forward_fp callback_forward_fp_arr[EVENT_TYPE_NUMBER] = {
-    [EVENT_OBU_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_rx),
-    [EVENT_OBU_PACKET_TX] = EAP_CB_FORWARD_FUNC_OF(on_OBU_packet_tx),
-    [EVENT_RSU_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_rx),
-    [EVENT_RSU_PACKET_TX] = EAP_CB_FORWARD_FUNC_OF(on_RSU_packet_tx),
-    [EVENT_CLOUD_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_rx),
-    [EVENT_CLOUD_PACKET_TX] = EAP_CB_FORWARD_FUNC_OF(on_cloud_packet_tx),
-    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CB_FORWARD_FUNC_OF(on_traffic_signal_command_tx),
-    [EVENT_CAMERA_PACKET_RX] = EAP_CB_FORWARD_FUNC_OF(on_camera_packet_rx),
-    [EVENT_REGISTRATION] = EAP_CB_FORWARD_FUNC_OF(on_registration),
-    [EVENT_MIDDLEWARE_RESTART] = EAP_CB_FORWARD_FUNC_OF(on_middleware_restart),
+/* NOTICE, if you add new event callback, you NEED to add a entry for the cbmsg_forward function */
+/* "eap" stands for "external application proxy" */
+/* "cbmsg" stands for "callback message" */
+eap_cbmsg_forward_fp cbmsg_forward_fp_arr[EVENT_TYPE_NUMBER] = {
+    [EVENT_OBU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx),
+    [EVENT_OBU_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx),
+    [EVENT_RSU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_rx),
+    [EVENT_RSU_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_tx),
+    [EVENT_CLOUD_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_rx),
+    [EVENT_CLOUD_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_tx),
+    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_traffic_signal_command_tx),
+    [EVENT_CAMERA_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_camera_packet_rx),
+    [EVENT_REGISTRATION] = EAP_CBMSG_FORWARD_FUNC_OF(on_registration),
+    [EVENT_MIDDLEWARE_RESTART] = EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart),
 };

@@ -20,7 +20,7 @@
 #include "timer_event.h"
 #include "traffic_signal_packet_rx.h"
 #include "typedefine.h"
-#include "external_app_proxy_callback_forward.h"
+#include "external_app_proxy_callback_msg_forward.h"
 
 #include "error_code_user.h"
 #include "j2735_codec.h"
@@ -410,6 +410,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     case VEHICLE_NORMAL:
         object = normal_OBU_record_insert(&record);
         break;
+    default:
+        break;
     }
 
     OBU_object_print();
@@ -439,7 +441,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id 
             && msgf->messageId == current->next->event_callback_id.u.msg_id) 
-        {
+        {   
+            record_current_timespec(&trc1);
             proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
                 /* for external APP */
@@ -447,9 +450,16 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
                 wrapper_arg.msg_p = msg;
                 wrapper_arg.object_p = object;
                 current->next->callback( &wrapper_arg );
+
+                record_current_timespec(&trc2);
+                print_timespec_to_stderr(trc1, trc2, "external: event_handling elapse time");
+                print_timespec_to_stderr(trc3, trc4, "external: msg forwar time");
             }
             else{ /* original internal APPs */
                 current->next->callback((void *) &app_section);
+                record_current_timespec(&trc2);
+                print_timespec_to_stderr(trc1, trc2, "internal: event_handling elapse time");
+                print_timespec_to_stderr(trc5, trc6, "internal: app-observed callback elapse time");
             }
         }
         current = current->next;
