@@ -24,6 +24,57 @@
 app_obj_t* proxy_handling_app_p;
 
 static inline __attribute__((always_inline)) 
+int pre_handling_cloud_packet_before_forwarding(C2R_app_section_t* app_section, app_obj_t* app_obj_p)
+{
+    /* this function is modified from "int EVSP_on_CLOUD_packet_rx(void *arg)" */
+
+    /* since the "dontSend2TC" flag is actually valid inside middleware,
+     * we handle it here before we do forwarding the cloud packet to external APP */
+
+    msg_buf_t read_buf;
+    read_buf.index = 0;
+    Malloc(read_buf.content, app_section->payload_len, "FORWARD_FUNC_OF(on_cloud_packet_rx)");
+    if (read_buf.content == NULL)
+        return -1;
+    memcpy(read_buf.content, app_section->payload, app_section->payload_len);
+    
+    uint8_t cmd;
+    read_uint8_t(&cmd, &read_buf);
+
+    switch (cmd) {
+    case 0: {  // disable/enalbe:1/2
+        uint8_t enableOrdisable = 0;
+        // uint8_t type=0;
+        read_int8_t(&enableOrdisable, &read_buf);
+        // read_int8_t(&type, &read_buf);
+        if (enableOrdisable == 1 &&
+            app_obj_p->dontSend2TC == 0) {  // enable/clear command buffer
+            app_obj_p->dontSend2TC = 1;
+            log_file_write("%s disable\r\n", app_obj_p->name);
+            printf("%s disable\r\n", app_obj_p->name);
+        } 
+        else if (enableOrdisable == 2 
+                 && app_obj_p->dontSend2TC == 1)          
+        {  // disable command buffer/then stop the command in
+           // command buffer sent to tc machine
+            app_obj_p->dontSend2TC = 0;
+            //command_buf_clear();
+            log_file_write("%s enabled\r\n", app_obj_p->name);
+            printf("%s enabled\r\n", app_obj_p->name);
+        } else {
+            log_file_write(
+                "invalid cloud pcket disable/enable packet to tc machine\r\n");
+        }
+        // printf("not implement evsp on cloud rx action yet when cmd is
+        // 0\r\n");
+    } break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+static inline __attribute__((always_inline)) 
 int forward_function_parameter_check(void *app_section, event_type_t event, char* func_name)
 {
     if(!app_section){
@@ -223,6 +274,13 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
 
     C2R_app_section_t* app_section_p = (C2R_app_section_t*)app_section;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
+
+    /* since the "dontSend2TC" flag is actually valid inside middleware,
+     * we handle it here before we do forwarding the cloud packet to external APP */
+    ret = pre_handling_cloud_packet_before_forwarding(app_section_p, proxy_handling_app_p);
+    if( ret ){
+        return ret;
+    }
 
     ret = simple_send_notify_header(notify_fd, EVENT_CLOUD_PACKET_RX);
     if(ret){

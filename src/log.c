@@ -266,7 +266,7 @@ void record_current_timespec(struct timespec* now_p)
 void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg)
 {   
     if(msg)
-        fprintf(stderr, "%s\n", msg);
+        fprintf(stderr, "%s ", msg);
     
     struct timespec temp;
     if ((end.tv_nsec - bgn.tv_nsec)<0) {
