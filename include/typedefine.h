@@ -20,7 +20,7 @@
 #define STATIC_APP_PRIVATE_SPACE_CAPACITY 256
 #define PHASE_COUNT_MAX_NUM 8
 #define SIGNAL_COUNT_MAX_NUM 8  // 岔路數目
-#define PLANID_MAX_NUM 48 
+#define PLANID_MAX_NUM 48
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 #define PROGRAM_NAME_LEN 100
@@ -212,19 +212,30 @@ typedef struct traffic_signal_packet {
 } traffic_signal_packet_t;
 
 typedef struct static_plan {
-    // 5F C5
-    uint16_t Green;
-    // 5F C4
-    uint8_t MinGreen;
-    uint16_t MaxGreen;
-    uint8_t Yellow;
-    uint8_t AllRed;
-    uint8_t PedGreenFlash;
-    uint8_t PedRed;
+    // 不包含步階 1 ，從步階 2 到步階 5
+    union {
+        uint8_t StepArr[4];
+        struct
+        {
+            uint8_t PedGreenFlash;
+            uint8_t PedRed;
+            uint8_t Yellow;
+            uint8_t AllRed;
+        };
+    };
 
     // Green - PedGreenFlash
     uint16_t PreGreen;  // 原始步階1
+    // 時向步階一的正在執行的總秒數
+    // 會因為執行延長、縮短或補償動態改變
+    // 如果沒有被延長或縮短等於 PreGreen
     uint16_t PreTimeCompensated;
+
+    // 5F C5
+    uint16_t Green;
+    // 5F C4
+    uint16_t MaxGreen;
+    uint8_t MinGreen;
 } static_plan_t;
 
 // 是一個 bitString 要對照 enum SignalStatus_t 來看做 flag
@@ -260,6 +271,9 @@ typedef struct traffic_signal_status {
     uint8_t Hour;   // (00~23)
     uint8_t Min;    // (00~59)
     uint8_t Sec;    // (00~59)
+    // TC 與 IPC 相差的秒數 只有比較當天的相差 超過一天不會計算
+    // 正數表示 TC 時間較快 負數表示 IPC 時間較快
+    uint16_t tcTimeOffest;
     // 0F 04
     uint16_t original_tc_health_status;
 

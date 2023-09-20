@@ -105,7 +105,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     uint16_t current_sec_residual = get_current_second();
 
     switch (config.signal_controller_manufacturer) {
-    case CHENG_LONG:
+    case CHENG_LONG: {
         // command_obj->adjusted_time代表這個step現在的時間
         difference = command_obj->effect_time - command_obj->adjusted_time;
         // printf("cmd obj's effect time is %d and adjusted time is %d\r\n", command_obj->effect_time, command_obj->adjusted_time);
@@ -160,8 +160,8 @@ void command_buf_send(tsc_command_object_t *command_obj,
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP
         break;
-
-    case SHAN_ZHU:
+    }
+    case SHAN_ZHU: {
         difference = command_obj->effect_time - command_obj->adjusted_time;
         log_file_write("\ndifference is :%d\r\n", difference);
 
@@ -189,8 +189,8 @@ void command_buf_send(tsc_command_object_t *command_obj,
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP
         break;
-
-    case SHAN_ZHU_M:
+    }
+    case SHAN_ZHU_M: {
         difference = command_obj->effect_time - command_obj->adjusted_time;
         printf("difference:%d\r\n", difference);
         log_file_write("\ndifference is :%d\r\n", difference);
@@ -218,6 +218,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP
         break;
+    }
     default:
         return;  // 不屬於任何一家號控器
         break;

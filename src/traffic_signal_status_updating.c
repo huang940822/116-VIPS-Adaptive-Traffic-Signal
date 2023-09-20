@@ -71,10 +71,13 @@ void packet_5FCC(traffic_signal_packet_t *packet)
 
     // printf("previous phase is %d and current phase is %d\r\n",
     // previous_phase, signal_status.SubPhaseID);
+
     if (previous_phase != signal_status.SubPhaseID) {
         if (FirstSwitchFlag == 1) {  // 第一次換相不取值
             FirstSwitchFlag = 2;
         } else if (FirstSwitchFlag == 2) {
+            // 只有在換時向的第一秒取值
+            // 取這個時向步階一的總秒數
             signal_status.plan[signal_status.SubPhaseID - 1]
                 .PreTimeCompensated = signal_status.StepSec;
             printf("phase changed and pretime for phase %d is %d\r\n",
@@ -283,21 +286,14 @@ void packet_5FC4(traffic_signal_packet_t *packet)
         // 為了初始化被補償的pretime
         if (initialize_flag == true) {
             count_initialize++;
-            // printf("get inside\r\n");
-            if (count_initialize >
-                signal_status.SubPhaseCount * 2) {
+            if (count_initialize > signal_status.SubPhaseCount * 2) {
                 // 2是為了第一次讀出來的值常常是錯誤的
                 // 所以等到第二次讀取才取值
-
-                signal_status.plan[i].PreTimeCompensated =
-                    signal_status.plan[i].PreGreen;
-                // printf("phase %d is %d\r\n", i+1,
-                // signal_status.plan[i].PreTimeCompensated);
+                signal_status.plan[i].PreTimeCompensated = signal_status.plan[i].PreGreen;
             }
         }
     }
-    if (initialize_flag == true &&
-        count_initialize > signal_status.SubPhaseCount * 2) {
+    if (initialize_flag == true && count_initialize > signal_status.SubPhaseCount * 2) {
         initialize_flag = false;
         count_initialize = 0;
     }
@@ -367,7 +363,8 @@ void packet_5FC3(traffic_signal_packet_t *packet)
     return;
 }
 
-void packet_5FC6(traffic_signal_packet_t *packet) {
+void packet_5FC6(traffic_signal_packet_t *packet)
+{
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
@@ -375,7 +372,7 @@ void packet_5FC6(traffic_signal_packet_t *packet) {
 
     signal_status.SegmentType = packet->INFO[2];
     signal_status.SegmentCount = packet->INFO[3];
-    
+
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
              "\nSegmentType:%d SegmentCount:%d\r\n",
@@ -414,15 +411,18 @@ void packet_0FC2(traffic_signal_packet_t *packet)
     signal_status.Hour = packet->INFO[6];
     signal_status.Min = packet->INFO[7];
     signal_status.Sec = packet->INFO[8];
+
     struct timeval tv;
     struct tm timeinfo;
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, &timeinfo);
+    signal_status.tcTimeOffest = ((signal_status.Hour - timeinfo.tm_hour) * 60 + signal_status.Min - timeinfo.tm_min) * 60 +
+                                 signal_status.Sec - timeinfo.tm_sec;
+
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
              "signal packet info: 0FC2\n %hhd-%hhd-%hhd_%hhd:%hhd:%hhd week %hhd\n offset %d",
              signal_status.Year, signal_status.Month, signal_status.Day,
-             signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week,
-             ((signal_status.Hour - timeinfo.tm_hour) * 60 + signal_status.Min - timeinfo.tm_min) * 60 + signal_status.Sec - timeinfo.tm_sec);
+             signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week, signal_status.tcTimeOffest);
     pthread_mutex_unlock(&mutex_signal_status);
     log_file_write(log_content);
     return;
