@@ -24,6 +24,8 @@ extern struct timespec trc3;
 extern struct timespec trc4;
 extern struct timespec trc5;
 extern struct timespec trc6;
+extern struct timespec trc7;
+extern struct timespec trc8;
 
 void log_file_init();
 void log_file_name_update();

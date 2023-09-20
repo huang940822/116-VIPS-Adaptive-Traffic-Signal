@@ -19,6 +19,8 @@ struct timespec trc3;
 struct timespec trc4;
 struct timespec trc5;
 struct timespec trc6;
+struct timespec trc7;
+struct timespec trc8;
 
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 

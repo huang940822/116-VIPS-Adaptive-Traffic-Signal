@@ -395,6 +395,7 @@ int inner_handle_heartbeat_from_app(int client_fd, packet_to_proxy_header_t *hea
         log_file_write("%s: send ack with seq_num:%u to client_fd:%d fail, ret = %d\n", 
                         __func__, ack.seq_num, client_fd, ret);
     }
+
     return ret;
 }
 
@@ -570,7 +571,7 @@ int handle_remote_client_request(int client_fd)
         ret = inner_handle_heartbeat_from_app(client_fd, &header);
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
-        #ifdef EAP_SERVER_PRINT_DEBUG
+        #ifdef MT_SPECIAL_ZERO //EAP_SERVER_PRINT_DEBUG
             printf("[EAP msg] get request packet from appID:%u, api_id:%d ->%s() \n", 
                     header.appID, header.api_id, api_id_str_arr[header.api_id] );
         #endif

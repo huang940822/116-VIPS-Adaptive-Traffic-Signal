@@ -11,38 +11,45 @@ BEGIN {
 }
 
 {
-    if ($1 == "internal:" && $2 == "app-observed" ) 
+    if ($1 == "middleware_internal" ) 
     {
-        value = $10
+        value = $6
+        if(value > 0)
+        {
+            int_total += value
+            int_count += 1
 
-        int_total += value
-        int_count += 1
-
-        if ( value > int_biggest) {
-            int_biggest = value
-        }
-        if ( value < int_smallest) {
-            int_smallest = value
+            if ( value > int_biggest) {
+                int_biggest = value
+            }
+            if ( value < int_smallest) {
+                int_smallest = value
+            }
         }
     }
 
-    if ($1 == "external:" && $2 == "event_handling" ) 
+    if ($1 == "middleware_external"  ) 
     {
-        value = $9
+        value = $6
+        if(value > 0)
+        {
+            ext_total += value
+            ext_count += 1
 
-        ext_total += value
-        ext_count += 1
-
-        if ( value > ext_biggest) {
-            ext_biggest = value
-        }
-        if ( value < ext_smallest) {
-            ext_smallest = value
+            if ( value > ext_biggest) {
+                ext_biggest = value
+            }
+            if ( value < ext_smallest) {
+                ext_smallest = value
+            }
         }
     }
 }
 
 END {
+
+    
+
     int_total /= 1000
     int_biggest /= 1000
     int_smallest /= 1000
@@ -51,6 +58,7 @@ END {
     ext_biggest /= 1000
     ext_smallest /= 1000
 
+    print "middleware_internal"
     print "int Total: ", int_total
     print "int Count: ", int_count
     print "int Average: ", int_total/int_count
@@ -59,6 +67,7 @@ END {
 
     print ""
     
+    print "middleware_external"
     print "ext Total: ", ext_total
     print "ext Count: ", ext_count
     print "ext Average: ", ext_total/ext_count

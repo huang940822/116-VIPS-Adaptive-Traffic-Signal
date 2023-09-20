@@ -210,7 +210,7 @@ void cloud_packet_tx(uint16_t len,
         log_file_write_fatal_error("cloud_packet_tx: com_send");
     }
 
-    usleep(50000);  //直接註解com layer會錯
+    //usleep(50000);  //直接註解com layer會錯  //學陽測試時發現可以註解掉
 
     if (write_buf.content != NULL) {
         free(write_buf.content);
@@ -354,7 +354,6 @@ void get_payload(V2R_app_section_t *app_section, MessageFrame *msgf)
 int OBU_packet_rx_event_handler(msg_obj_t *msg)
 {
     printf("get in obu rx handler\n\r");
-
     // event_callback_t *current_c = &callback_list[EVENT_CAMERA_PACKET_RX];
     // //pthread_t APP_thread;
     // while (current_c->next != NULL) {
@@ -436,36 +435,35 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */
     pthread_mutex_lock(&mutex_callback_list);
-
+    record_current_timespec(&trc3);
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id 
             && msgf->messageId == current->next->event_callback_id.u.msg_id) 
         {   
-            record_current_timespec(&trc1);
             proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
+                record_current_timespec(&trc5);
                 /* for external APP */
                 wrapper_arg_for_obu_packet_t wrapper_arg;
                 wrapper_arg.msg_p = msg;
                 wrapper_arg.object_p = object;
                 current->next->callback( &wrapper_arg );
-
-                record_current_timespec(&trc2);
-                print_timespec_to_stderr(trc1, trc2, "external: event_handling elapse time");
-                print_timespec_to_stderr(trc3, trc4, "external: msg forwar time");
+                record_current_timespec(&trc6);
             }
-            else{ /* original internal APPs */
+            else{ 
+                /* original internal APPs */
                 current->next->callback((void *) &app_section);
-                record_current_timespec(&trc2);
-                print_timespec_to_stderr(trc1, trc2, "internal: event_handling elapse time");
-                print_timespec_to_stderr(trc5, trc6, "internal: app-observed callback elapse time");
             }
         }
         current = current->next;
     }
-
+    record_current_timespec(&trc4);
     pthread_mutex_unlock(&mutex_callback_list);
+
+    print_timespec_to_stderr(trc3, trc4, "middleware_internal");
+    print_timespec_to_stderr(trc5, trc6, "middleware_external");
+    fflush(stderr);
 
     // free resource just
     if (app_section.OBU_object != NULL)

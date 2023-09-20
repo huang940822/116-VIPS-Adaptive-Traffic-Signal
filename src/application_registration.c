@@ -240,7 +240,7 @@ unlock_ret:
 **               <0: registration failed
 ******************************************************************************/
 int app_register(app_obj_t *app)
-{
+{   
     // check app name
     if (strlen(app->name) == 0) {
         return APP_REGISTER_INVALID_APP_NAME;

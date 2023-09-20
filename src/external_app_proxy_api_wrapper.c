@@ -29,7 +29,7 @@ int simple_send_ack_to_app(int fd, int ack_ret_val)
     ack.packet_type = EA_PACKET_TYPE_ACK;
     ack.ret_val = ack_ret_val;
     ret = send_packet_to_unix_sk_fd( fd, &ack, sizeof(ack));
-    #ifdef EAP_SERVER_PRINT_DEBUG 
+    #ifdef MT_SPECIAL_ZERO //EAP_SERVER_PRINT_DEBUG 
         printf("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
                 ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
     #endif
@@ -111,7 +111,7 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     /* call the actual function */
     /* cloud_packet_tx does not return err-code currently (return void) */
     cloud_packet_tx( payload.len, payload.service_id, specific_field);
-    
+
     ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
 
     /* no ack_payload for this api*/
@@ -497,7 +497,6 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
     }
     /* then call the actual function */
     vms_request_start(payload.id, payload.priority);
-
     ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/

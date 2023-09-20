@@ -165,6 +165,11 @@ int main()
         // &SPaT,
         // &MAP,
         // &SPM,
+        // &EVSP1,
+        // &EVSP2,
+        // &EVSP3,
+        // &EVSP4,
+        // &EVSP5,
     };
     
     /* 注意有些 app 的 on_registration() 會 create timer */

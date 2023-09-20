@@ -130,7 +130,6 @@ int simple_send_notify_header(int fd, event_type_t event)
 
 int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
 {   
-    record_current_timespec(&trc3);
     /* DANGER!!! 
        If future version need to pass more information to external app,
        (e.g., TSP need other entry in the V2R_app_section_t)
@@ -180,7 +179,6 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
         return ret;
     }
 
-    record_current_timespec(&trc4);
     return ret;
 }
 

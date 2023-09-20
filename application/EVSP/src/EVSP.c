@@ -43,6 +43,85 @@ app_obj_t EVSP = {
     .dontSend2TC = 0,
 };
 
+app_obj_t EVSP1 = {
+    .name = "EVSP1",
+    .id = 1,
+    .priority = 3,
+    .on_OBU_packet_rx = NULL,
+    .on_OBU_packet_tx = NULL,
+    .on_RSU_packet_rx = NULL,
+    .on_RSU_packet_tx = NULL,
+    .on_cloud_packet_rx = &EVSP_on_CLOUD_packet_rx,
+    .on_cloud_packet_tx = NULL,
+    .on_traffic_signal_command_tx = NULL,
+    .on_registration = &EVSP_on_registration,
+    .next = NULL,
+    .dontSend2TC = 0,
+};
+
+app_obj_t EVSP2 = {
+    .name = "EVSP2",
+    .id = 2,
+    .priority = 3,
+    .on_OBU_packet_rx = NULL,
+    .on_OBU_packet_tx = NULL,
+    .on_RSU_packet_rx = NULL,
+    .on_RSU_packet_tx = NULL,
+    .on_cloud_packet_rx = &EVSP_on_CLOUD_packet_rx,
+    .on_cloud_packet_tx = NULL,
+    .on_traffic_signal_command_tx = NULL,
+    .on_registration = &EVSP_on_registration,
+    .next = NULL,
+    .dontSend2TC = 0,
+};
+
+app_obj_t EVSP3 = {
+    .name = "EVSP3",
+    .id = 3,
+    .priority = 3,
+    .on_OBU_packet_rx = NULL,
+    .on_OBU_packet_tx = NULL,
+    .on_RSU_packet_rx = NULL,
+    .on_RSU_packet_tx = NULL,
+    .on_cloud_packet_rx = &EVSP_on_CLOUD_packet_rx,
+    .on_cloud_packet_tx = NULL,
+    .on_traffic_signal_command_tx = NULL,
+    .on_registration = &EVSP_on_registration,
+    .next = NULL,
+    .dontSend2TC = 0,
+};
+
+app_obj_t EVSP4 = {
+    .name = "EVSP4",
+    .id = 4,
+    .priority = 3,
+    .on_OBU_packet_rx = NULL,
+    .on_OBU_packet_tx = NULL,
+    .on_RSU_packet_rx = NULL,
+    .on_RSU_packet_tx = NULL,
+    .on_cloud_packet_rx = &EVSP_on_CLOUD_packet_rx,
+    .on_cloud_packet_tx = NULL,
+    .on_traffic_signal_command_tx = NULL,
+    .on_registration = &EVSP_on_registration,
+    .next = NULL,
+    .dontSend2TC = 0,
+};
+
+app_obj_t EVSP5 = {
+    .name = "EVSP5",
+    .id = 5,
+    .priority = 3,
+    .on_OBU_packet_rx = NULL,
+    .on_OBU_packet_tx = NULL,
+    .on_RSU_packet_rx = NULL,
+    .on_RSU_packet_tx = NULL,
+    .on_cloud_packet_rx = &EVSP_on_CLOUD_packet_rx,
+    .on_cloud_packet_tx = NULL,
+    .on_traffic_signal_command_tx = NULL,
+    .on_registration = &EVSP_on_registration,
+    .next = NULL,
+    .dontSend2TC = 0,
+};
 
 int EVSP_on_CLOUD_packet_rx(void *arg)
 {
@@ -125,19 +204,11 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
-void before_return_handling()
-{
-    record_current_timespec(&trc6);
-}
-
 int EVSP_on_OBU_packet_rx(void *arg)
 {   
-    record_current_timespec(&trc5);
-
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
     if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
     {
-        before_return_handling();
         return 0;
     }
     // printf("EVSP_on_OBU_packet_rx function\n");
@@ -154,12 +225,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     break;
             }
             if (i == srm->requests.count){
-                before_return_handling();
                 return -1;
             }
         } 
         else{
-            before_return_handling();
             return -1;
         }
     }
@@ -261,8 +330,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
         if (read_buf.content != NULL) {
             free(read_buf.content);
         }
-
-        before_return_handling();
         return 0;
     }  // tc箱出現錯誤 直接不做
 
@@ -336,8 +403,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (read_buf.content != NULL) {
                 free(read_buf.content);
             }
-
-            before_return_handling();
             return 0;
         }
 
@@ -470,13 +535,11 @@ int EVSP_on_OBU_packet_rx(void *arg)
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }
-
-    before_return_handling();
     return 0;
 }
 
 int EVSP_on_registration(void *arg)
-{
+{   
     /* read evsp confile file*/
     int ret = EVSP_config_init();
     if (ret != EVSP_CONFIG_ACCEPT) {
@@ -493,5 +556,6 @@ int EVSP_on_registration(void *arg)
 
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
+    
     return 0;
 }
