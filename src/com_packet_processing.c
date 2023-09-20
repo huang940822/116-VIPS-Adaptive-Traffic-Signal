@@ -25,6 +25,10 @@
 #include "error_code_user.h"
 #include "j2735_codec.h"
 
+//for test
+#include "EVSP.h"
+int cb_counter;
+
 #define CPS_ID 3
 extern threadpool_t *pool;
 
@@ -435,7 +439,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */
     pthread_mutex_lock(&mutex_callback_list);
-    record_current_timespec(&trc3);
+    
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id 
@@ -451,16 +455,18 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
                 current->next->callback( &wrapper_arg );
                 record_current_timespec(&trc6);
             }
-            else{ 
+            else{
+                record_current_timespec(&trc3);
+                evsp_handling_app_p = current->next->app_obj_p;
                 /* original internal APPs */
                 current->next->callback((void *) &app_section);
+                record_current_timespec(&trc4);
             }
         }
         current = current->next;
     }
-    record_current_timespec(&trc4);
+    
     pthread_mutex_unlock(&mutex_callback_list);
-
     print_timespec_to_stderr(trc3, trc4, "middleware_internal");
     print_timespec_to_stderr(trc5, trc6, "middleware_external");
     fflush(stderr);

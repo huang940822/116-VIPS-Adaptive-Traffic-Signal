@@ -27,10 +27,12 @@
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
 
+app_obj_t* evsp_handling_app_p;
+
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = EVSP_ID,
-    .priority = 1,
+    .priority = 3,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
@@ -204,11 +206,19 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
+#define evsp_before_return(ret) do{int aaa = ret;}while(0)
+
+// void evsp_before_return(int ret)
+// {
+//     printf("app_name:%s, cb ret:%d\n", evsp_handling_app_p->name, ret);
+// }
+
 int EVSP_on_OBU_packet_rx(void *arg)
 {   
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
     if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
     {
+        evsp_before_return(1);
         return 0;
     }
     // printf("EVSP_on_OBU_packet_rx function\n");
@@ -225,10 +235,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     break;
             }
             if (i == srm->requests.count){
+                evsp_before_return(2);
                 return -1;
             }
         } 
         else{
+            evsp_before_return(3);
             return -1;
         }
     }
@@ -330,6 +342,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         if (read_buf.content != NULL) {
             free(read_buf.content);
         }
+        evsp_before_return(4);
         return 0;
     }  // tc箱出現錯誤 直接不做
 
@@ -360,8 +373,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
-            command.app_id = EVSP.id;
-            command.app_priority = EVSP.priority;
+            command.app_id = evsp_handling_app_p->id;
+            command.app_priority = evsp_handling_app_p->priority;
+            // command.app_id = EVSP.id;
+            // command.app_priority = EVSP.priority;
             command.target_phase = host_OBU->target_phase;
             strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
             command.phase = command.target_phase;
@@ -383,7 +398,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 insert_command_and_log;
 
                 // 結束 EVSP_VMS_SERVICE
-                vms_request_end(EVSP.id);
+                vms_request_end(evsp_handling_app_p->id);
+                //vms_request_end(EVSP.id);
             }
 
             // 回報碰到觸碰點 id
@@ -403,6 +419,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (read_buf.content != NULL) {
                 free(read_buf.content);
             }
+            evsp_before_return(5);
             return 0;
         }
 
@@ -425,8 +442,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
             EVSP_host_OBU_obj_print();
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
-            command.app_id = EVSP.id;
-            command.app_priority = EVSP.priority;
+            command.app_id = evsp_handling_app_p->id;
+            command.app_priority = evsp_handling_app_p->priority;
+            //command.app_id = EVSP.id;
+            //command.app_priority = EVSP.priority;
             command.target_phase = target_phase;
             strncpy(command.host_OBU_name, app_section->OBU_object->OBU_name,
                     OBU_NAME_MAX_LEN);
@@ -522,7 +541,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     evsp_prog[2] = 245;
                 }
 
-                vms_request_start(EVSP.id, EVSP.priority);
+                vms_request_start(evsp_handling_app_p->id, evsp_handling_app_p->priority);
+                //vms_request_start(EVSP.id, EVSP.priority);
             }
 
             // 回報碰到觸碰點 id
@@ -535,6 +555,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }
+    evsp_before_return(6);
     return 0;
 }
 
@@ -554,8 +575,11 @@ int EVSP_on_registration(void *arg)
     fflush(stdout);
     EVSP_plan_list_print();
 
-    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
-    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, evsp_handling_app_p->name, evsp_handling_app_p->priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
+    event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, evsp_handling_app_p->name, evsp_handling_app_p->priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
+    //event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
+    //event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
     
     return 0;
 }
+

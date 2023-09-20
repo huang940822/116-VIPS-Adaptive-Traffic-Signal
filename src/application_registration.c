@@ -108,8 +108,9 @@ void event_callback_msg_id_insert(event_type_t event_type,
 {
     /* since now dispatcher, ea_app_proxy, command_buf_send() 
      * all might read/write callback_list we add a mutex_lock */
+    
     pthread_mutex_lock(&mutex_callback_list); 
-
+    
     event_callback_t *previous = &callback_list[event_type];
     event_callback_t *current = previous->next;
     event_callback_t *event_callback = NULL;
@@ -122,13 +123,14 @@ void event_callback_msg_id_insert(event_type_t event_type,
             event_callback->next = current;
             previous->next = event_callback;
             // printf("insert callback\n");
-            return;
+            goto unlock_ret;
         }
         previous = current;
         current = current->next;
     }
     previous->next = event_callback_new(name, priority, event_callback_id_msg_id, msg_id, callback);
 
+unlock_ret:
     pthread_mutex_unlock(&mutex_callback_list);
 }
 /*****************************************************************************
@@ -157,7 +159,7 @@ void event_callback_insert(event_callback_t *head,
         if (current->event_callback_id.choice == event_callback_id_app_id &&
              current->event_callback_id.u.app_id == app->id) {
             // printf("callback with same app_id exist\n");
-            return;
+            goto unlock_ret;
         }
         /* priority higher than next node, insert callback here */
         if (current->priority > app->priority) {
@@ -165,12 +167,14 @@ void event_callback_insert(event_callback_t *head,
             event_callback->next = current;
             previous->next = event_callback;
             // printf("insert callback\n");
-            return;
+            goto unlock_ret;
         }
         previous = current;
         current = current->next;
     }
     previous->next = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
+
+unlock_ret:
     pthread_mutex_unlock(&mutex_callback_list);
 }
 
@@ -386,6 +390,7 @@ void event_callback_print()
         }
     }
 
+unlock_ret:
     pthread_mutex_unlock(&mutex_callback_list);
 
     log_file_write(log_content);
@@ -400,7 +405,7 @@ void app_list_print()
     app_obj_t *current = app_list.next;
 
     if (current == NULL) {
-        return;
+        goto unlock_ret;
     }
 
     while (current != NULL) {
@@ -410,5 +415,6 @@ void app_list_print()
 
     pthread_mutex_unlock(&mutex_app_list); 
 
+unlock_ret:
     return;
 }

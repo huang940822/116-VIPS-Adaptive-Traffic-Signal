@@ -73,4 +73,13 @@ END {
     print "ext Average: ", ext_total/ext_count
     print "ext Biggest: ", ext_biggest
     print "ext Smallest: ", ext_smallest
+
+    print ""
+    
+    print "middleware_internal - middleware_external"
+    print " Total: ", int_total - ext_total
+    print " Count: ", int_count - ext_count
+    print " Average: ", int_total/int_count - ext_total/ext_count
+    print " Biggest: ", int_biggest - ext_biggest
+    print " Smallest: ", int_smallest - ext_smallest
 }

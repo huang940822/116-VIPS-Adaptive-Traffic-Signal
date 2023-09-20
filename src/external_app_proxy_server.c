@@ -46,6 +46,40 @@ static struct itimerspec check_heartbeat_its;   //itimerspec used for timer-fd a
 int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 
+
+//declaration
+int my_register_handler_for_unexpected_signal();
+
+void my_signalUnExpectedHandler(int sig_num)
+{
+    printf("get in mutex in signal handler for unexpected signal\r\n");
+    printf("the signal number is %d\r\n", sig_num);
+    printf("\nuart write actions has all be completed before exit from process\n");
+    fflush(stdout);
+    exit(0);
+}
+
+int my_register_handler_for_unexpected_signal()
+{   
+    __sighandler_t ret_p = 0;    
+    /* handling unexpected SIGINT signal */
+    ret_p = signal(SIGINT, my_signalUnExpectedHandler);
+    if(ret_p == SIG_ERR){
+        printf("eapErr: signal(SIGINT, ...) failed\r\n");
+        return -1;
+    }
+    /* handling unexpected SIGPIPE signal */
+    ret_p = signal(SIGPIPE, my_signalUnExpectedHandler);
+    if(ret_p == SIG_ERR){
+        printf("eapErr: signal(SIGPIPE, ...) failed\r\n");
+        return -2;
+    }
+    /* other signal if you want ... */        
+    
+    return 0;
+}
+
+
 /* the cbmsg_forward_fp_arr[] will be used by "despather", "indirectly" 
  * NOTICE, if you add new callback, you NEED to update 
  * this function: inner_set_external_app_callback_by_mask() */
@@ -231,7 +265,8 @@ int check_all_external_app_heartbeats()
 
     pthread_mutex_unlock(&mutex_app_list); 
 
-    proxy_cur_heartbeat += 1;   
+    proxy_cur_heartbeat += 1; 
+unlock_ret:  
     return ret;
 }
 
@@ -600,12 +635,14 @@ int handle_remote_client_request(int client_fd)
                 client_fd );
         }
     }
+unlock_ret:
     return ret;
 }
 
 /* the external_app_proxy server "main thread" */
 void *external_app_proxy_main_handler()
 {   
+    my_register_handler_for_unexpected_signal();
     /* step0: create a unix domain socket with MY_UNIX_SOCKET_PATH 
      * unlink, if socket already exists */
     struct stat statbuf;

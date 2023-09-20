@@ -17,6 +17,8 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "external_app_proxy_callback_msg_forward.h"
+
 // todo: both above should be removed!
 #define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
@@ -297,6 +299,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
     // goto TSP_report_command()
     event_callback_t *current = &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     while (current->next != NULL) {
+        proxy_handling_app_p = current->next->app_obj_p;
         current->next->callback((void *) &command);
         current = current->next;
     }
