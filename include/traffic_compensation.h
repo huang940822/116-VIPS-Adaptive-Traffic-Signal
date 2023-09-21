@@ -11,6 +11,8 @@
 int16_t compensation_buffer[SUBPHASEID_NUM];
 
 void compensation_buffer_clear();
+int16_t get_total_compensation_second();
+
 uint8_t is_in_compensation();
 void traffic_compensation_method1(uint8_t compensation_cyclenum);
 void traffic_compensation_method2(uint8_t compensation_cyclenum,

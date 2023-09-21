@@ -624,17 +624,6 @@ uint8_t get_SignalStatus(uint8_t SubPhaseCount_index, uint8_t SignalCount_index)
     return SignalStatus;
 }
 
-int16_t get_total_compensation_second()
-{
-    pthread_mutex_lock(&mutex_compensation);
-    int16_t total_compensation_second = 0;
-    for (int i = 0; i < SUBPHASEID_NUM; i++) {
-        total_compensation_second += compensation_buffer[i];
-    }
-    pthread_mutex_unlock(&mutex_compensation);
-    return total_compensation_second;
-}
-
 void get_compensation_buffer(int16_t *compensation_buffer)
 {
     pthread_mutex_lock(&mutex_compensation);

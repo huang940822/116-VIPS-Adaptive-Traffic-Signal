@@ -285,6 +285,7 @@ typedef struct traffic_signal_status {
 
     uint8_t control_status;
 
+    // 5F C6
     uint8_t SegmentType;
     uint8_t SegmentCount;
     AllDay_plan_t allday_plan[PLANID_MAX_NUM];

@@ -18,7 +18,6 @@ void compensation_buffer_clear()
 {
     memset(compensation_buffer, 0, sizeof(compensation_buffer));
     printf("\r\ncompensation_buffer is cleared\r\n");
-    printf("total compensation:%d\r\n", get_total_compensation_second());
     log_file_write("compensation_buffer is cleared\r\n");
 }
 
@@ -73,7 +72,7 @@ uint8_t is_in_compensation()
 }
 
 // 取得進行零時零分基準點補償與現在補償的差距
-int get_zero_alignment_compensation_time(traffic_signal_status_t *signal_status)
+static inline int16_t get_alignment_compensation_time(traffic_signal_status_t *signal_status, int alignHour, int alignMin)
 {
     const uint32_t daySec = 86400;
     uint16_t cycleTime, offset, subPhaseID;
@@ -89,7 +88,8 @@ int get_zero_alignment_compensation_time(traffic_signal_status_t *signal_status)
     localtime_r(&tv.tv_sec, &timeinfo);
 
     // 減掉時差 與 加上 與 tc 時間的誤差
-    secInDay = (timeinfo.tm_hour * 60 + timeinfo.tm_min) * 60 + timeinfo.tm_sec - offset + signal_status->tcTimeOffest;
+    secInDay = ((timeinfo.tm_hour - alignHour) * 60 + (timeinfo.tm_min - alignMin)) * 60 +
+               timeinfo.tm_sec - offset + signal_status->tcTimeOffest;
     // 要對齊第一個時向的第一個步階的第一秒
     // 先扣掉經過的時向
     for (int i = 0; i < subPhaseID; i++) {
@@ -124,7 +124,34 @@ int get_zero_alignment_compensation_time(traffic_signal_status_t *signal_status)
     return (cycleTime / 2) < compTime ? -compTime : cycleTime - compTime;
 }
 
-static void inline insert_compensation_command(traffic_signal_status_t *signal_status, int Comp_cyclenum, int cycle_index, uint16_t *subphase_compensation_time)
+static inline int16_t get_total_compensation_second_with_status(traffic_signal_status_t *signal_status)
+{
+    if (config.signal_controller_manufacturer == CHENG_LONG) {
+        struct timeval tv;
+        struct tm timeinfo;
+
+        gettimeofday(&tv, NULL);
+        localtime_r(&tv.tv_sec, &timeinfo);
+        
+        int MinInDay = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+        for (int i = 1; i < signal_status->SegmentCount; i++) {
+            if (MinInDay < (signal_status->allday_plan[i].Hour * 60 + signal_status->allday_plan[i].Min)) {
+                return get_alignment_compensation_time(signal_status, signal_status->allday_plan[i - 1].Hour, signal_status->allday_plan[i - 1].Min);
+            }
+        }
+        return get_alignment_compensation_time(signal_status, signal_status->allday_plan[signal_status->SegmentCount - 1].Hour, signal_status->allday_plan[signal_status->SegmentCount - 1].Min);
+    } else {
+        return get_alignment_compensation_time(signal_status, 0, 0);
+    }
+}
+
+int16_t get_total_compensation_second()
+{
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+    return get_total_compensation_second_with_status(&signal_status);
+}
+static inline void insert_compensation_command(traffic_signal_status_t *signal_status, int Comp_cyclenum, int cycle_index, uint16_t *subphase_compensation_time)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     tsc_command_t command;
@@ -191,7 +218,7 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
 
-    int16_t T = get_total_compensation_second();
+    int16_t T = get_total_compensation_second_with_status(&signal_status);
     uint8_t current_phase = get_current_phase();
     uint8_t current_step = get_current_step();
     uint16_t current_second = get_current_second();
@@ -277,7 +304,7 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHAS
     int cycle_index = 0;
 
     get_traffic_signal_status(&signal_status);
-    total_compensation_time = get_zero_alignment_compensation_time(&signal_status);  // 總補償秒數
+    total_compensation_time = get_total_compensation_second_with_status(&signal_status);  // 總補償秒數
     tmp_comp = total_compensation_time;
 
     memset(log_content, 0, sizeof(log_content));
@@ -387,7 +414,7 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
 
     memset(log_content, 0, sizeof(log_content));
 
-    int16_t T = get_total_compensation_second();
+    int16_t T = get_total_compensation_second_with_status(&signal_status);
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
              "Total compensation second:%d\r\n",

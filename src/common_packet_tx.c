@@ -9,6 +9,7 @@
 #include "config.h"
 #include "error_status.h"
 #include "log.h"
+#include "traffic_compensation.h"
 #include "traffic_signal_status_updating.h"
 
 void common_send_ack(uint8_t cmd, uint8_t status)
@@ -50,7 +51,7 @@ void report_compensation_time()
 
     // 因為補償策略二會需要用到 config.phase_weight 所以一併送去雲端
     for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
-        write_uint8_t((uint8_t)config.phase_weight[i], &write_buf);
+        write_uint8_t((uint8_t) config.phase_weight[i], &write_buf);
     }
     // 先借用 TSP ID
     cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
