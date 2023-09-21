@@ -132,7 +132,7 @@ static inline int16_t get_total_compensation_second_with_status(traffic_signal_s
 
         gettimeofday(&tv, NULL);
         localtime_r(&tv.tv_sec, &timeinfo);
-        
+
         int MinInDay = timeinfo.tm_hour * 60 + timeinfo.tm_min;
         for (int i = 1; i < signal_status->SegmentCount; i++) {
             if (MinInDay < (signal_status->allday_plan[i].Hour * 60 + signal_status->allday_plan[i].Min)) {
@@ -151,6 +151,7 @@ int16_t get_total_compensation_second()
     get_traffic_signal_status(&signal_status);
     return get_total_compensation_second_with_status(&signal_status);
 }
+
 static inline void insert_compensation_command(traffic_signal_status_t *signal_status, int Comp_cyclenum, int cycle_index, uint16_t *subphase_compensation_time)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -200,6 +201,66 @@ static inline void insert_compensation_command(traffic_signal_status_t *signal_s
              "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
              command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
     log_file_write(log_content);
+}
+
+static inline int allocate_compensation_by_weight(traffic_signal_status_t *signal_status, float phase_weight[PHASE_COUNT_MAX_NUM], int compensation_time, int16_t subphase_compensation_time[SUBPHASEID_NUM])
+{
+    int remaining_time = compensation_time;
+    uint16_t preremaining = 0;
+    double weights[SUBPHASEID_NUM] = {0};
+
+    for (int i = 0; i < signal_status->SubPhaseCount; i++)
+        weights[i] = phase_weight[i] * 0.01;
+
+    for (int i = 0; i < signal_status->SubPhaseCount && remaining_time == 0; i++) {
+        int comp_time = ceil(compensation_time * weights[i]);
+        comp_time = comp_time > remaining_time ? remaining_time : comp_time;  // 少於剩餘時間就等於剩餘時間
+
+        int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i] - comp_time;
+        if (effect_time < signal_status->plan[i].MinGreen)
+            effect_time = signal_status->plan[i].MinGreen;
+        else if (effect_time > signal_status->plan[i].MaxGreen)
+            effect_time = signal_status->plan[i].MaxGreen;
+
+        comp_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i] - effect_time;
+        subphase_compensation_time[i] += comp_time;
+        remaining_time -= comp_time;
+    }
+    return remaining_time;
+}
+
+// 平均分配剩餘的補償時間
+static inline void allocate_remaining_time(traffic_signal_status_t *signal_status, int remaining_time, int16_t subphase_compensation_time[SUBPHASEID_NUM])
+{
+    int pre_remaining_time = 0;
+
+    // 會持續分配到剩餘時間為 0 或是無法再分配了
+    while (pre_remaining_time == remaining_time && remaining_time != 0) {
+        float weight[PHASE_COUNT_MAX_NUM] = {0};
+        uint8_t canAdjustNum = 0;
+        // 如果剩餘時間大於 0 要檢查是否已經是 MinGreen 了 反之大於
+        // 然後將還剩餘的時間分配給還可以調整的時向
+        for (int i = 0; i < signal_status->SubPhaseCount; i++) {
+            int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i];
+            if (remaining_time > 0 && effect_time > signal_status->plan[i].MinGreen) {
+                canAdjustNum++;
+            }
+            if (remaining_time < 0 && effect_time < signal_status->plan[i].MaxGreen) {
+                canAdjustNum++;
+            }
+        }
+        for (int i = 0; i < signal_status->SubPhaseCount; i++) {
+            int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i];
+            if (remaining_time > 0 && effect_time > signal_status->plan[i].MinGreen) {
+                weight[i] = 100 / canAdjustNum;
+            }
+            if (remaining_time < 0 && effect_time < signal_status->plan[i].MaxGreen) {
+                weight[i] = 100 / canAdjustNum;
+            }
+        }
+        remaining_time = allocate_compensation_by_weight(signal_status, weight, remaining_time, subphase_compensation_time);
+        pre_remaining_time = remaining_time;
+    }
 }
 
 void traffic_compensation_method1(uint8_t Comp_cyclenum)
@@ -295,13 +356,8 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHAS
     traffic_signal_status_t signal_status;
 
     int16_t total_compensation_time, tmp_comp;
-    int16_t effect_time[SUBPHASEID_NUM];
     int16_t subphase_compensation_time[SUBPHASEID_NUM];
     int16_t cycle_compensations[Comp_cyclenum];  // 一個週期要補償幾秒
-
-
-    int ret = 0;
-    int cycle_index = 0;
 
     get_traffic_signal_status(&signal_status);
     total_compensation_time = get_total_compensation_second_with_status(&signal_status);  // 總補償秒數
@@ -328,48 +384,14 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHAS
     if (total_compensation_time == 0)
         return;
 
-    // initialization
-    memset(effect_time, 0, sizeof(effect_time));
-
     for (int i = 0; i < Comp_cyclenum; i++) {
-        uint16_t remaining_time = cycle_compensations[i], preremaining = 0;
-        double weights[SUBPHASEID_NUM] = {0}, overfill_weight = 0;
-        int compensable = signal_status.SubPhaseCount;
-
         memset(subphase_compensation_time, 0, sizeof(subphase_compensation_time));
-        for (int j = 0; j < signal_status.SubPhaseCount; j++)
-            weights[j] = phase_weight[j] * 0.01;
-
-        // 計算出每個時向要補多少
-        // remaining_time 回補過一輪後還剩下的秒數 會依照比例繼續分給其他的時向
-        while (remaining_time > 0 && preremaining != remaining_time) {
-            for (int j = 0; j < signal_status.SubPhaseCount; j++) {
-                if (weights[j] != 0)
-                    weights[j] += overfill_weight / compensable;
-            }
-
-            cycle_compensations[i] = remaining_time;
-            for (int j = 0; j < signal_status.SubPhaseCount && remaining_time > 0; j++) {
-                int comp_time = ceil(cycle_compensations[i] * weights[j]);
-                int effect_time = signal_status.plan[j].PreTimeCompensated - subphase_compensation_time[j] - comp_time;
-                if (effect_time < signal_status.plan[j].MinGreen || effect_time > signal_status.plan[j].MaxGreen) {
-                    if (effect_time < signal_status.plan[j].MinGreen)
-                        effect_time = signal_status.plan[j].MinGreen;
-                    else
-                        effect_time = signal_status.plan[j].MaxGreen;
-                    overfill_weight += weights[j];
-                    weights[j] = 0;
-                    compensable--;
-                }
-                comp_time = signal_status.plan[j].PreTimeCompensated - subphase_compensation_time[j] - effect_time;
-                subphase_compensation_time[j] += comp_time;
-                remaining_time -= comp_time;
-            }
-        }
-
+        uint16_t remaining_time = allocate_compensation_by_weight(&signal_status, phase_weight, cycle_compensations[i], subphase_compensation_time);
+        allocate_remaining_time(&signal_status, remaining_time, subphase_compensation_time);
         insert_compensation_command(&signal_status, Comp_cyclenum, i, subphase_compensation_time);
     }
 }
+
 /***************
 幹支道明顯的道路
  1. 延長延幹道
@@ -379,9 +401,7 @@ void traffic_compensation_method3(uint8_t Comp_cyclenum)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "start compensation 3\r\n");
+    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "start compensation 3\r\n");
     log_file_write(log_content);
 
     traffic_signal_status_t signal_status;
