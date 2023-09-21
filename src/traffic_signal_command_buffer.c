@@ -32,7 +32,6 @@ uint16_t prior_StepSec = 0;
 timer_t traffic_signal_command_buf_polling_timer_id;
 uint8_t traffic_signal_command_buf_polling_num =
     TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING;
-static uint8_t CompensationInitialFlag = true;
 static uint8_t CompensationFlag = false;
 static uint8_t count = 0;
 // extern pthread_mutex_t mutex_rs232_write;
@@ -119,21 +118,13 @@ void command_buf_send(tsc_command_object_t *command_obj,
             log_file_write("\ndifference has been changed from %d to %d(cheng_long)", original_difference, difference);
         }
 
-        // compensation_buffer_initialization
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-            if (CompensationInitialFlag == true) {
-                get_compensation_buffer(compensation_buffer);
-                CompensationInitialFlag = false;
-            }
-        }
-
         if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) != 0) {
             if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
                 printf("residual:%d\r\n", residual);
-                compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
+                set_compensation_buffer(current_SubPhaseID, difference - residual);
             } else {
-                compensation_buffer[current_SubPhaseID - 1] += difference;
+                set_compensation_buffer(current_SubPhaseID, difference);
             }
         }
 
@@ -165,21 +156,13 @@ void command_buf_send(tsc_command_object_t *command_obj,
         difference = command_obj->effect_time - command_obj->adjusted_time;
         log_file_write("\ndifference is :%d\r\n", difference);
 
-        // compensation_buffer_initialization
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-            if (CompensationInitialFlag == true) {
-                get_compensation_buffer(compensation_buffer);
-                CompensationInitialFlag = false;
-            }
-        }
-
         if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
             if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
                 printf("residual:%d\r\n", residual);
-                compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
+                set_compensation_buffer(current_SubPhaseID, difference - residual);
             } else {
-                compensation_buffer[current_SubPhaseID - 1] += difference;
+                set_compensation_buffer(current_SubPhaseID, difference);
             }
         }
 
@@ -195,21 +178,14 @@ void command_buf_send(tsc_command_object_t *command_obj,
         printf("difference:%d\r\n", difference);
         log_file_write("\ndifference is :%d\r\n", difference);
 
-        // compensation_buffer_initialization
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
-            if (CompensationInitialFlag == true) {
-                get_compensation_buffer(compensation_buffer);
-                CompensationInitialFlag = false;
-            }
-        }
 
         if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) != 0) {
             if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
                 printf("residual:%d\r\n", residual);
-                compensation_buffer[current_SubPhaseID - 1] += (difference - residual);
+                set_compensation_buffer(current_SubPhaseID, difference - residual);
             } else {
-                compensation_buffer[current_SubPhaseID - 1] += difference;
+                set_compensation_buffer(current_SubPhaseID, difference);
             }
         }
         time = command_obj->effect_time;

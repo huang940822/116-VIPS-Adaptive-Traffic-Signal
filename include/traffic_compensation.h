@@ -10,6 +10,7 @@
 
 int16_t compensation_buffer[SUBPHASEID_NUM];
 
+void set_compensation_buffer(int subphaseId, int adjust_time);
 void compensation_buffer_clear();
 int16_t get_total_compensation_second();
 

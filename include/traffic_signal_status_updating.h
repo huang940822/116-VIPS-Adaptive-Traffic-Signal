@@ -37,8 +37,6 @@ uint8_t get_PhaseOrder();
 uint16_t get_remaining_time(uint8_t phase, uint8_t step, uint16_t second);
 uint8_t get_SignalStatus(uint8_t SubPhaseCount_index, uint8_t SignalCount_index);
 
-void get_compensation_buffer(int16_t *);
-
 void set_control_status(uint8_t control_status);
 uint16_t get_original_tc_health_status();
 

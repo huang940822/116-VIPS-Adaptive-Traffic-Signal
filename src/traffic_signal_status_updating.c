@@ -19,9 +19,8 @@
 
 traffic_signal_status_t signal_status;
 traffic_signal_status_t current_signal_status;
-pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_current_signal_status = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex_compensation = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_signal_status;
 static uint16_t pretime_sent_count = 0;
 extern uint8_t flag_pretime;
@@ -31,9 +30,6 @@ uint8_t phase_change_flag = false;
 uint8_t real_pretime = 0;
 static uint8_t FirstSwitchFlag = 0;
 static uint8_t PhaseOrder_initial = true;
-
-// static bool flag = true;
-extern int16_t compensation_buffer[SUBPHASEID_NUM];
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
@@ -86,10 +82,7 @@ void packet_5FCC(traffic_signal_packet_t *packet)
         }
     }
 
-
     previous_phase = signal_status.SubPhaseID;
-
-
 
     if (signal_status.StepSec > 255 && signal_status.StepID == 1) {
         flag_switch2nextStep = true;
@@ -152,11 +145,8 @@ void packet_5FC8(traffic_signal_packet_t *packet)
         current_signal_status.plan[i].Green =
             (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
     }
-    if (FirstSwitchFlag == 0) {
-        for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
-            signal_status.plan[i].PreTimeCompensated = current_signal_status.plan[i].Green;
-        }
-        FirstSwitchFlag = 1;
+    for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
+        signal_status.plan[i].PreTimeCompensated = current_signal_status.plan[i].Green;
     }
     current_signal_status.CycleTime =
         packet->INFO[6 + current_signal_status.SubPhaseCount * 2] << 8 |
@@ -164,10 +154,6 @@ void packet_5FC8(traffic_signal_packet_t *packet)
     current_signal_status.Offset =
         packet->INFO[8 + current_signal_status.SubPhaseCount * 2] << 8 |
         packet->INFO[9 + current_signal_status.SubPhaseCount * 2];
-    // if(flag == true){
-    //     get_compensation_buffer(compensation_buffer);
-    //     flag = false;
-    // }
     if (config.log_signal_packet_info) {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
@@ -261,8 +247,6 @@ void packet_5FC5(traffic_signal_packet_t *packet)
     return;
 }
 
-static uint8_t initialize_flag = true;
-static uint8_t count_initialize = 0;
 /* 5F C4 回報時制計畫基本參數 */
 void packet_5FC4(traffic_signal_packet_t *packet)
 {
@@ -282,22 +266,7 @@ void packet_5FC4(traffic_signal_packet_t *packet)
 
         signal_status.plan[i].PreGreen =
             signal_status.plan[i].Green - signal_status.plan[i].PedGreenFlash;
-
-        // 為了初始化被補償的pretime
-        if (initialize_flag == true) {
-            count_initialize++;
-            if (count_initialize > signal_status.SubPhaseCount * 2) {
-                // 2是為了第一次讀出來的值常常是錯誤的
-                // 所以等到第二次讀取才取值
-                signal_status.plan[i].PreTimeCompensated = signal_status.plan[i].PreGreen;
-            }
-        }
     }
-    if (initialize_flag == true && count_initialize > signal_status.SubPhaseCount * 2) {
-        initialize_flag = false;
-        count_initialize = 0;
-    }
-
 
     if (config.log_signal_packet_info) {
         snprintf(log_content + strlen(log_content),
@@ -623,17 +592,6 @@ uint8_t get_SignalStatus(uint8_t SubPhaseCount_index, uint8_t SignalCount_index)
     return SignalStatus;
 }
 
-void get_compensation_buffer(int16_t *compensation_buffer)
-{
-    pthread_mutex_lock(&mutex_compensation);
-    for (int i = 0; i < SUBPHASEID_NUM; i++) {
-        compensation_buffer[i] =
-            current_signal_status.plan[i].Green - signal_status.plan[i].Green;
-    }
-    pthread_mutex_unlock(&mutex_compensation);
-    return;
-}
-
 void set_control_status(uint8_t control_status)
 {
     pthread_mutex_lock(&mutex_signal_status);
@@ -642,7 +600,6 @@ void set_control_status(uint8_t control_status)
     return;
 }
 
-// 這個函式在幹麻？？ 要廣播給obu現在tc箱的狀況
 void report_plan()
 {
     msg_buf_t write_buf;
