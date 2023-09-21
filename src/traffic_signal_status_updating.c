@@ -453,9 +453,8 @@ void packet_0F04(traffic_signal_packet_t *packet)
     pthread_mutex_unlock(&mutex_signal_status);
 }
 
-// 裡面有些部份看不太懂 為何要用號誌加上mutex保護
 void get_traffic_signal_status(traffic_signal_status_t *traffic_signal_status)
-{  // wait what??
+{
     sem_timedwait_millsecs(&sem_signal_status, SEM_SIGNAL_STATUS_TIMEOUT);
 
     pthread_mutex_lock(&mutex_signal_status);
