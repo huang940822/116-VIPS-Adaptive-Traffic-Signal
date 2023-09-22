@@ -13,6 +13,19 @@
 struct timespec hb_trc1;
 struct timespec hb_trc2;
 
+struct timespec trc_f1b;
+struct timespec trc_f2b;
+struct timespec trc_f3b;
+struct timespec trc_f4b;
+struct timespec trc_f5b;
+struct timespec trc_f6b;
+struct timespec trc_f1e;
+struct timespec trc_f2e;
+struct timespec trc_f3e;
+struct timespec trc_f4e;
+struct timespec trc_f5e;
+struct timespec trc_f6e;
+
 struct timespec trc1;
 struct timespec trc2;
 struct timespec trc3;
@@ -280,5 +293,5 @@ void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* ms
         temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
     }
 
-    fprintf(stderr, "s: %ld , ns: %ld\n\n", temp.tv_sec, temp.tv_nsec);
+    fprintf(stderr, "s: %ld , ns: %ld\n", temp.tv_sec, temp.tv_nsec);
 }

@@ -46,40 +46,6 @@ static struct itimerspec check_heartbeat_its;   //itimerspec used for timer-fd a
 int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 
-
-//declaration
-int my_register_handler_for_unexpected_signal();
-
-void my_signalUnExpectedHandler(int sig_num)
-{
-    printf("get in mutex in signal handler for unexpected signal\r\n");
-    printf("the signal number is %d\r\n", sig_num);
-    printf("\nuart write actions has all be completed before exit from process\n");
-    fflush(stdout);
-    exit(0);
-}
-
-int my_register_handler_for_unexpected_signal()
-{   
-    __sighandler_t ret_p = 0;    
-    /* handling unexpected SIGINT signal */
-    ret_p = signal(SIGINT, my_signalUnExpectedHandler);
-    if(ret_p == SIG_ERR){
-        printf("eapErr: signal(SIGINT, ...) failed\r\n");
-        return -1;
-    }
-    /* handling unexpected SIGPIPE signal */
-    ret_p = signal(SIGPIPE, my_signalUnExpectedHandler);
-    if(ret_p == SIG_ERR){
-        printf("eapErr: signal(SIGPIPE, ...) failed\r\n");
-        return -2;
-    }
-    /* other signal if you want ... */        
-    
-    return 0;
-}
-
-
 /* the cbmsg_forward_fp_arr[] will be used by "despather", "indirectly" 
  * NOTICE, if you add new callback, you NEED to update 
  * this function: inner_set_external_app_callback_by_mask() */
@@ -572,13 +538,7 @@ int handle_remote_client_request(int client_fd)
         if(ret!=0)
         fprintf(stdout, "%s: recv_packet_from_unix_sk_fd header from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
-        if(ret == EAL_ERR_SOCKET_DISCONNECT){
-            fprintf(stdout, "%s: close disconnected external app client_fd:%d\n", 
-                __func__, client_fd);
-            close(client_fd);
-            //de_registrate the app
-        }
-        return ret;
+        goto err_handling;
     }
 
     /* header error-check */
@@ -603,7 +563,10 @@ int handle_remote_client_request(int client_fd)
         log_file_write("[EAP msg] get heartbeat packet from appID:%u, seq_num:%u\n", 
                         header.appID, header.seq_num);
 
+        record_current_timespec(&trc1);
         ret = inner_handle_heartbeat_from_app(client_fd, &header);
+        record_current_timespec(&trc2);
+        print_timespec_to_stderr(trc1, trc2, "inner_handle_heartbeat_from_app");
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
         #ifdef MT_SPECIAL_ZERO //EAP_SERVER_PRINT_DEBUG
@@ -613,8 +576,13 @@ int handle_remote_client_request(int client_fd)
         log_file_write("[EAP msg] get request packet from appID:%u, api_id:%d ->%s() \n", 
                         header.appID, header.api_id, api_id_str_arr[header.api_id] );
 
+        record_current_timespec(&trc1);
         ret = inner_handle_request_by_api_id(client_fd, header.api_id);
+        record_current_timespec(&trc2);
+        print_timespec_to_stderr(trc1, trc2, "inner_handle_request_by_api_id");
     }
+
+err_handling:
 
     if( ret == EAL_ERR_SOCKET_DISCONNECT ){
         app_obj_t *app_obj_p = get_app_obj_by_unix_socket_fd(client_fd);
@@ -635,14 +603,13 @@ int handle_remote_client_request(int client_fd)
                 client_fd );
         }
     }
-unlock_ret:
+
     return ret;
 }
 
 /* the external_app_proxy server "main thread" */
 void *external_app_proxy_main_handler()
 {   
-    my_register_handler_for_unexpected_signal();
     /* step0: create a unix domain socket with MY_UNIX_SOCKET_PATH 
      * unlink, if socket already exists */
     struct stat statbuf;

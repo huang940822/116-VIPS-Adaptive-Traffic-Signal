@@ -160,13 +160,13 @@ int main()
     /* application service registration */
     app_obj_t *app_arr[] = {
         // &MMP,
-        // &EVSP,
+        &EVSP,
         //&TSP,
         // &CPS,
         // &SPaT,
         // &MAP,
         // &SPM,
-         &EVSP1,
+        // &EVSP1,
         //  &EVSP2,
         //  &EVSP3,
         //  &EVSP4,
@@ -177,9 +177,8 @@ int main()
     /* 已知的有 MAP, TSP(預計會改至 MMP), */
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {
-        evsp_handling_app_p = (app_arr[i]);
         printf("handling app_name: %s, id: %d, prio: %d\n",
-               evsp_handling_app_p->name, evsp_handling_app_p->id,  evsp_handling_app_p->priority );
+               app_arr[i]->name, app_arr[i]->id,  app_arr[i]->priority );
         ret = app_register(app_arr[i]);
         if (ret != 0) {
             log_file_write_fatal_error("error registering application: %d (%s)",

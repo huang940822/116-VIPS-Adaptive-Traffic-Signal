@@ -15,6 +15,7 @@ extern app_obj_t* proxy_handling_app_p;
 
 typedef struct _wrapper_arg_for_obu_packet_t{
     msg_obj_t *msg_p;
+    V2R_app_section_t *app_section_p;
     OBU_object_t *object_p;
 } wrapper_arg_for_obu_packet_t;
 

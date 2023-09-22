@@ -18,6 +18,19 @@
 extern struct timespec hb_trc1;
 extern struct timespec hb_trc2;
 
+extern struct timespec trc_f1b;
+extern struct timespec trc_f2b;
+extern struct timespec trc_f3b;
+extern struct timespec trc_f4b;
+extern struct timespec trc_f5b;
+extern struct timespec trc_f6b;
+extern struct timespec trc_f1e;
+extern struct timespec trc_f2e;
+extern struct timespec trc_f3e;
+extern struct timespec trc_f4e;
+extern struct timespec trc_f5e;
+extern struct timespec trc_f6e;
+
 extern struct timespec trc1;
 extern struct timespec trc2;
 extern struct timespec trc3;

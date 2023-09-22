@@ -32,8 +32,7 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     EVSP_timeout_report(value);
 
     // 檢查 EVSP 有沒有關掉 VMS 服務，沒有的話要關掉
-    vms_request_end(evsp_handling_app_p->id);
-    //vms_request_end(EVSP.id);
+    vms_request_end(EVSP.id);
 
     printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
     char log_content[LOG_CONTENT_LEN + 1];
@@ -48,10 +47,8 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
 
     tsc_command_t command;
     memset(&command, 0, sizeof(tsc_command_t));
-    command.app_id = evsp_handling_app_p->id;
-    command.app_priority = evsp_handling_app_p->priority;
-    // command.app_id = EVSP.id;
-    // command.app_priority = EVSP.priority;
+    command.app_id = EVSP.id;
+    command.app_priority = EVSP.priority;
     command.target_phase =
         ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
     strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
@@ -96,8 +93,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     EVSP_timeout_report(value);
     
     // 檢查 EVSP 有沒有關掉 VMS 服務，沒有的話要關掉
-    vms_request_end(evsp_handling_app_p->id);
-    //vms_request_end(EVSP.id);
+    vms_request_end(EVSP.id);
 
     printf("EVSP_host_OBU_list_timeout_timer_handler\n");
     char log_content[LOG_CONTENT_LEN + 1];
@@ -112,10 +108,8 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
 
     tsc_command_t command;
     memset(&command, 0, sizeof(tsc_command_t));
-    command.app_id = evsp_handling_app_p->id;
-    command.app_priority = evsp_handling_app_p->priority;
-    // command.app_id = EVSP.id;
-    // command.app_priority = EVSP.priority;
+    command.app_id = EVSP.id;
+    command.app_priority = EVSP.priority;
     command.target_phase =
         ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
     strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);

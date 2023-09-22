@@ -27,6 +27,7 @@
 
 //for test
 #include "EVSP.h"
+
 int cb_counter;
 
 #define CPS_ID 3
@@ -452,23 +453,24 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
                 wrapper_arg_for_obu_packet_t wrapper_arg;
                 wrapper_arg.msg_p = msg;
                 wrapper_arg.object_p = object;
+                wrapper_arg.app_section_p = &app_section;
                 current->next->callback( &wrapper_arg );
                 record_current_timespec(&trc6);
+                print_timespec_to_stderr(trc5, trc6, "middleware_external");
             }
             else{
                 record_current_timespec(&trc3);
-                evsp_handling_app_p = current->next->app_obj_p;
                 /* original internal APPs */
                 current->next->callback((void *) &app_section);
                 record_current_timespec(&trc4);
+                print_timespec_to_stderr(trc3, trc4, "middleware_internal");
             }
         }
         current = current->next;
     }
     
     pthread_mutex_unlock(&mutex_callback_list);
-    print_timespec_to_stderr(trc3, trc4, "middleware_internal");
-    print_timespec_to_stderr(trc5, trc6, "middleware_external");
+    
     fflush(stderr);
 
     // free resource just

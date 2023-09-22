@@ -329,6 +329,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
     /* call the actual function */
     int ack_ret_val;
     ret = command_buf_insert_effect_time( &payload.tsc_cmd );
+
     log_file_write("%s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
     if (ret != 0) {
         log_file_write("err: %s: command_buf_insert_effect_time ret: %d\n", __func__, ret);
@@ -433,7 +434,6 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
 
     /* call the actual function */
     vms_request_end(payload.id);
-
     ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     
     /* no ack_payload for this api*/
@@ -518,7 +518,7 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
 
     /* call the actual function */
     get_traffic_signal_status( &(ack_payload.ts_status) );
-    
+
     int ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     if (ret != 0) {
         ;//maybe log err

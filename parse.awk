@@ -8,6 +8,41 @@ BEGIN {
     ext_smallest = 1011927840
     ext_total = 0
     ext_count = 0
+
+    trc12_biggest = 0
+    trc12_smallest = 1011927840
+    trc12_total = 0
+    trc12_count = 0
+
+    f1_biggest = 0
+    f1_smallest = 1011927840
+    f1_total = 0
+    f1_count = 0
+
+    f2_biggest = 0
+    f2_smallest = 1011927840
+    f2_total = 0
+    f2_count = 0
+
+    f3_biggest = 0
+    f3_smallest = 1011927840
+    f3_total = 0
+    f3_count = 0
+
+    f4_biggest = 0
+    f4_smallest = 1011927840
+    f4_total = 0
+    f4_count = 0
+
+    f5_biggest = 0
+    f5_smallest = 1011927840
+    f5_total = 0
+    f5_count = 0
+
+    f6_biggest = 0
+    f6_smallest = 1011927840
+    f6_total = 0
+    f6_count = 0
 }
 
 {
@@ -44,11 +79,43 @@ BEGIN {
             }
         }
     }
+
+    if ($1 == "inner_handle_heartbeat_from_app" ) 
+    {
+        value = $6
+        if(value > 0)
+        {
+            f1_total += value
+            f1_count += 1
+
+            if ( value > f1_biggest) {
+                f1_biggest = value
+            }
+            if ( value < f1_smallest) {
+                f1_smallest = value
+            }
+        }
+    }
+
+    if ($1 == "inner_handle_request_by_api_id" ) 
+    {
+        value = $6
+        if(value > 0)
+        {
+            f2_total += value
+            f2_count += 1
+
+            if ( value > f2_biggest) {
+                f2_biggest = value
+            }
+            if ( value < f2_smallest) {
+                f2_smallest = value
+            }
+        }
+    }
 }
 
 END {
-
-    
 
     int_total /= 1000
     int_biggest /= 1000
@@ -57,6 +124,14 @@ END {
     ext_total /= 1000
     ext_biggest /= 1000
     ext_smallest /= 1000
+    
+    f1_total /= 1000
+    f1_biggest /= 1000
+    f1_smallest /= 1000
+
+    f2_total /= 1000
+    f2_biggest /= 1000
+    f2_smallest /= 1000
 
     print "middleware_internal"
     print "int Total: ", int_total
@@ -66,7 +141,6 @@ END {
     print "int Smallest: ", int_smallest
 
     print ""
-    
     print "middleware_external"
     print "ext Total: ", ext_total
     print "ext Count: ", ext_count
@@ -75,11 +149,18 @@ END {
     print "ext Smallest: ", ext_smallest
 
     print ""
-    
-    print "middleware_internal - middleware_external"
-    print " Total: ", int_total - ext_total
-    print " Count: ", int_count - ext_count
-    print " Average: ", int_total/int_count - ext_total/ext_count
-    print " Biggest: ", int_biggest - ext_biggest
-    print " Smallest: ", int_smallest - ext_smallest
+    print "inner_handle_heartbeat_from_app"
+    print " Total: ", f1_total
+    print " Count: ", f1_count
+    print " Average: ", f1_total/f1_count
+    print " Biggest: ", f1_biggest
+    print " Smallest: ", f1_smallest
+
+    print ""
+    print "inner_handle_request_by_api_id"
+    print " Total: ", f2_total
+    print " Count: ", f2_count
+    print " Average: ", f2_total/f2_count
+    print " Biggest: ", f2_biggest
+    print " Smallest: ", f2_smallest
 }
