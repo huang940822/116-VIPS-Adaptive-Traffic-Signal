@@ -118,7 +118,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
             log_file_write("\ndifference has been changed from %d to %d(cheng_long)", original_difference, difference);
         }
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
             if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
                 printf("residual:%d\r\n", residual);
@@ -156,7 +156,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
         difference = command_obj->effect_time - command_obj->adjusted_time;
         log_file_write("\ndifference is :%d\r\n", difference);
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, 15) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
             if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
                 printf("residual:%d\r\n", residual);
@@ -179,7 +179,7 @@ void command_buf_send(tsc_command_object_t *command_obj,
         log_file_write("\ndifference is :%d\r\n", difference);
 
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) != 0) {
+        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
             if (current_sec_residual + difference < 0) {
                 int16_t residual = difference + current_sec_residual;
                 printf("residual:%d\r\n", residual);
@@ -301,7 +301,7 @@ void command_buf_polling()
     // Thus,the command buffer object of the previous subphase is cleared.
     if (prior_SubPhaseID != current_SubPhaseID) {
         if (strncmp(command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name,
-                    COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
+                    COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
             if (command_buf[cycle_index][prior_SubPhaseID - 1].send_flag ==
                 true) {
                 snprintf(
@@ -327,8 +327,7 @@ void command_buf_polling()
     // compensation_command不能清除，除非他已經送出了。
     if (prior_SubPhaseID > current_SubPhaseID) {
         for (int i = 0; i < SUBPHASEID_NUM; i++) {
-            if (strncmp(command_buf[cycle_index][i].host_OBU_name,
-                        COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
+            if (strncmp(command_buf[cycle_index][i].host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
                 if (command_buf[cycle_index][i].send_flag == true) {
                     snprintf(log_content + strlen(log_content),
                              LOG_CONTENT_LEN - strlen(log_content),
@@ -365,7 +364,7 @@ void command_buf_polling()
         command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 &&
         current_StepID == 1 && current_StepSec > 1 &&
         prior_SubPhaseID == current_SubPhaseID) {
-        if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
+        if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
             int16_t residual_time = current_StepSec - command_buf[cycle_index][current_SubPhaseID - 1].compensation_time;
             printf("residual_time:%d\r\n", residual_time);
             if (residual_time <= TIME_DEFENSE) {
@@ -406,28 +405,10 @@ void command_buf_polling()
             log_file_write("RESUME instruction is executed\r\n");
             printf("RESUME instruction is executed.\r\n");
 
-            switch (config.traffic_compensation_method) {
-            case 1:
-                report_compensation_time();
-                traffic_compensation_method1(config.traffic_compensation_cycle_number);
-                break;
-            case 2:
-                report_compensation_time();
-                traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
-                break;
-            case 3:
-                report_compensation_time();
-                traffic_compensation_method3(config.traffic_compensation_cycle_number);
-                break;
-            default:
-                break;
-            }
-            // 補償結束清空 compensation buffer
-            compensation_buffer_clear();
+            start_compensation();  // 開始進行補償
             CompensationFlag = false;
         }
     }
-    return;
 }
 
 // 被command_buf_insert_adjustment和evsp呼叫
@@ -501,9 +482,8 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     }
 
     // 如果target_command是補償指令的話，則取聯集。
-    if (strncmp(target_command_obj->host_OBU_name, COMPENSATION_NAME,
-                COMPENSATION_LEN) == 0) {
-        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, COMPENSATION_LEN) == 0) {
+    if (strncmp(target_command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
+        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
             printf("union compensation command\r\n");
             target_command_obj->compensation_time += command->compensation_time;
             target_command_obj->app_id = command->app_id;
@@ -524,7 +504,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // replace resume command
     // 抓出來的目標cmd buff object其host obu id為resume id則優先取代？
     if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
-        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, COMPENSATION_MAX_LEN) == 0) {
+        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
             if (command->compensation_cycle == 1) {
                 tsc_command_object_t *target_compensation_command_obj =
                     &command_buf[(cycle_index + 1 + command->cycle) % CYCLE_NUM]
@@ -534,8 +514,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
                 target_compensation_command_obj->effect_time = command->effect_time;
                 target_compensation_command_obj->target_phase = command->target_phase;
                 target_compensation_command_obj->send_flag = false;
-                strncpy(target_compensation_command_obj->host_OBU_name, command->host_OBU_name,
-                        COMPENSATION_MAX_LEN);
+                strncpy(target_compensation_command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME));
                 command_buf_print();
                 pthread_mutex_unlock(&mutex_command_buf);
                 return INSERT_ACCEPT;
@@ -546,12 +525,10 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         target_command_obj->effect_time = command->effect_time;
         target_command_obj->target_phase = command->target_phase;
         target_command_obj->send_flag = false;
-        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, COMPENSATION_MAX_LEN) == 0) {
-            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                    COMPENSATION_MAX_LEN);
+        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
+            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, sizeof(COMPENSATION_NAME));
         } else {
-            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name,
-                    OBU_NAME_MAX_LEN);
+            strncpy(target_command_obj->host_OBU_name, command->host_OBU_name, OBU_NAME_MAX_LEN);
         }
         command_buf_print();
         pthread_mutex_unlock(&mutex_command_buf);

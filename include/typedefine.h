@@ -12,7 +12,6 @@
 #define FILE_PATH "./"
 #define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
-#define COMPENSATION_MAX_LEN 15
 #define ID_MAX_LEN 15
 #define APP_NAME_MAX_LEN 10
 #define TIMESTAMP_LEN 19

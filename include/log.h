@@ -14,6 +14,12 @@
 #define ERR_MSG_SZ 128
 #define LOG_CONTENT_LEN 2048
 
+#define log_snprintf(log_content, ...)                                                        \
+    do {                                                                                      \
+        size_t _len = strlen(log_content);                                                    \
+        snprintf(log_content + _len, LOG_CONTENT_LEN - _len, __VA_ARGS__); \
+    } while (0)
+
 void log_file_init();
 void log_file_name_update();
 void log_file_write(const char *format, ...);

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include "common_packet_tx.h"
 #include "config.h"
 #include "log.h"
 #include "traffic_compensation.h"
@@ -20,8 +21,9 @@
 #define PassLogAndStaus &signal_status, log_content
 
 pthread_mutex_t mutex_compensation = PTHREAD_MUTEX_INITIALIZER;
+int16_t compensation_buffer[SUBPHASEID_NUM];  // 儲存有被延長或是縮短過的秒數
 
-void get_compensation_buffer(int16_t buf[SUBPHASEID_NUM])
+static inline void get_compensation_buffer(int16_t buf[SUBPHASEID_NUM])
 {
     pthread_mutex_lock(&mutex_compensation);
     memcpy(buf, compensation_buffer, sizeof(compensation_buffer));
@@ -177,67 +179,57 @@ int16_t get_total_compensation_second()
 
 static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenum, int cycle_index, uint16_t *subphase_compensation_time)
 {
-    tsc_command_t command;
+    tsc_command_t command = {0};
     int ret = 0, subPhaseID = signal_status->SubPhaseID - 1;
+    int subphase_ptr = subPhaseID;
 
-    memset(&command, 0, sizeof(tsc_command_t));
     command.app_id = COMPENSATION_ID;
     command.app_priority = COMPENSATION_priority;
-    strncpy(command.host_OBU_name, COMPENSATION_NAME, COMPENSATION_MAX_LEN);
+    strncpy(command.host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME));
 
-    // 把 subphase_compensation_time 裡面的值下到 tc
-    // 從下一個時向開始
+    // 如果現在不是步階 1 或是步階 1 會調整到小於 MinGreen 或超過 MaxGreen 則到下一個 cycle
+    if (signal_status->StepID != 1 ||
+        signal_status->StepSec - subphase_compensation_time[subPhaseID] < signal_status->plan[subPhaseID].MinGreen ||
+        signal_status->StepSec - subphase_compensation_time[subPhaseID] > signal_status->plan[subPhaseID].MaxGreen) {
+        subphase_ptr = (subphase_ptr + 1) % signal_status->SubPhaseCount;
+    }
 
+    cycle_index %= CYCLE_NUM;
     command.compensation_cycle = Comp_cyclenum;
-    for (int j = signal_status->SubPhaseID % signal_status->SubPhaseCount;
-         j == subPhaseID; j += (j + 1) % signal_status->SubPhaseCount) {
-        if (subphase_compensation_time[j] == 0)
-            continue;
-        if (j < signal_status->SubPhaseID)
-            command.cycle = (cycle_index + 1) % CYCLE_NUM;
-        else
-            command.cycle = cycle_index % CYCLE_NUM;
-        command.target_phase = command.phase = j + 1;
-        command.compensation_time = subphase_compensation_time[j];
-        command.effect_time = signal_status->plan[j].PreTimeCompensated - subphase_compensation_time[j];
+    for (int i = 0; i < signal_status->SubPhaseCount; i++) {
+        if (subphase_compensation_time[subphase_ptr] == 0)
+            goto NotInsertCommand;
+
+        command.cycle = cycle_index;
+        command.target_phase = command.phase = subphase_ptr + 1;
+        command.compensation_time = subphase_compensation_time[subphase_ptr];
+        command.effect_time = signal_status->plan[subphase_ptr].PreTimeCompensated - subphase_compensation_time[subphase_ptr];
 
         printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
                command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
         ret = command_buf_insert_effect_time(&command);
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
-                 command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
-    }
-    if (signal_status->StepID != 1 &&
-        signal_status->StepSec - subphase_compensation_time[subPhaseID] < signal_status->plan[subPhaseID].MinGreen) {
-        cycle_index++;
-    }
-    if (subphase_compensation_time[subPhaseID] != 0) {
-        command.cycle = cycle_index % CYCLE_NUM;
-        command.target_phase = command.phase = signal_status->SubPhaseID;
-        command.compensation_time = subphase_compensation_time[subPhaseID];
-        command.effect_time = signal_status->plan[subPhaseID].PreTimeCompensated - subphase_compensation_time[subPhaseID];
-
-        printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
-               command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
-        ret = command_buf_insert_effect_time(&command);
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
-                 command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
+        log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
+                     command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
+NotInsertCommand:
+        subphase_ptr++;
+        if (subphase_ptr >= signal_status->SubPhaseCount) {
+            subphase_ptr %= signal_status->SubPhaseCount;
+            cycle_index = (cycle_index + 1) % CYCLE_NUM;
+        }
     }
 }
 
+// 按照比例把補償時間分配給這個 subphase 並回傳因最大綠或最小綠造成的剩餘時間
 static inline int allocate_compensation_by_weight(ArgTrafficStatus, float phase_weight[PHASE_COUNT_MAX_NUM], int compensation_time, int16_t subphase_compensation_time[SUBPHASEID_NUM])
 {
     int remaining_time = compensation_time;
-    uint16_t preremaining = 0;
-    double weights[SUBPHASEID_NUM] = {0};
+    float weights[SUBPHASEID_NUM] = {0};
 
     for (int i = 0; i < signal_status->SubPhaseCount; i++)
         weights[i] = phase_weight[i] * 0.01;
 
-    for (int i = 0; i < signal_status->SubPhaseCount && remaining_time == 0; i++) {
-        int comp_time = ceil(compensation_time * weights[i]);
+    for (int i = 0; i < signal_status->SubPhaseCount && remaining_time != 0; i++) {
+        int comp_time = ceil(compensation_time * weights[i]);                 // 取無條件進位
         comp_time = comp_time > remaining_time ? remaining_time : comp_time;  // 少於剩餘時間就等於剩餘時間
 
         int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i] - comp_time;
@@ -259,7 +251,7 @@ static inline void allocate_remaining_time(ArgTrafficStatus, int remaining_time,
     int pre_remaining_time = 0;
 
     // 會持續分配到剩餘時間為 0 或是無法再分配了
-    while (pre_remaining_time == remaining_time && remaining_time != 0) {
+    while (pre_remaining_time != remaining_time && remaining_time != 0) {
         float weight[PHASE_COUNT_MAX_NUM] = {0};
         uint8_t canAdjustNum = 0;
         // 如果剩餘時間大於 0 要檢查是否已經是 MinGreen 了 反之大於
@@ -287,7 +279,8 @@ static inline void allocate_remaining_time(ArgTrafficStatus, int remaining_time,
     }
 }
 
-static inline int init_cycle_compensation_time(ArgLogAndStatus, int16_t cycle_compensations[CYCLE_NUM], uint8_t Comp_cyclenum, uint8_t methodId)
+// 把總補償秒數平均分給各個週期
+static inline int get_cycle_compensation_time(ArgLogAndStatus, int16_t cycle_compensations[CYCLE_NUM], uint8_t Comp_cyclenum, uint8_t methodId)
 {
     int16_t total_compensation_time, tmp_comp;
 
@@ -301,35 +294,32 @@ static inline int init_cycle_compensation_time(ArgLogAndStatus, int16_t cycle_co
     }
     cycle_compensations[0] = tmp_comp;
 
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-             "start compensation %d \r\nTotal compensation second:%d\r\n compensation cycle is %d\r\n",
-             methodId, total_compensation_time, Comp_cyclenum);
+    log_snprintf(log_content, "start compensation %d \r\nTotal compensation second:%d\r\n compensation cycle is %d\r\n",
+                 methodId, total_compensation_time, Comp_cyclenum);
     for (int i = 0; i < Comp_cyclenum; i++) {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncompensation cycle %d is %d", i, cycle_compensations[i]);
+        log_snprintf(log_content, "\ncompensation cycle %d is %d", i, cycle_compensations[i]);
     }
     // 如果補償時間為 0 不做事
     return total_compensation_time;
 }
 
-#define ImplementCompensationByPhaseWeight()                                                                                       \
-    do {                                                                                                                           \
-        for (int i = 0; i < Comp_cyclenum; i++) {                                                                                  \
-            memset(subphase_compensation_time, 0, sizeof(subphase_compensation_time));                                             \
-            uint16_t remaining_time =                                                                                              \
-                allocate_compensation_by_weight(&signal_status, phase_weight, cycle_compensations[i], subphase_compensation_time); \
-            allocate_remaining_time(&signal_status, remaining_time, subphase_compensation_time);                                   \
-            insert_compensation_command(&signal_status, log_content, Comp_cyclenum, i, subphase_compensation_time);                \
-        }                                                                                                                          \
-    } while (0)
+static inline int implement_compensation_by_weight(ArgLogAndStatus, int16_t cycle_compensations[CYCLE_NUM], uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
+{
+    int16_t subphase_compensation_time[SUBPHASEID_NUM];
+
+    for (int i = 0; i < Comp_cyclenum; i++) {
+        memset(subphase_compensation_time, 0, sizeof(subphase_compensation_time));
+        uint16_t remaining_time =
+            allocate_compensation_by_weight(signal_status, phase_weight, cycle_compensations[i], subphase_compensation_time);
+        allocate_remaining_time(signal_status, remaining_time, subphase_compensation_time);
+        insert_compensation_command(signal_status, log_content, Comp_cyclenum, i, subphase_compensation_time);
+    }
+}
 
 // 原時向補償
-void traffic_compensation_method1(uint8_t Comp_cyclenum)
+static inline void traffic_compensation_method1(ArgLogContent, uint8_t Comp_cyclenum)
 {
-    char log_content[LOG_CONTENT_LEN + 1] = {0};
-    int16_t subphase_compensation_time[SUBPHASEID_NUM] = {0};
     int16_t cycle_compensations[CYCLE_NUM] = {0};  // 一個週期要補償幾秒
-    int16_t total_compensation_time = 0;
     traffic_signal_status_t signal_status;
 
     float phase_weight[PHASE_COUNT_MAX_NUM] = {0};
@@ -337,37 +327,31 @@ void traffic_compensation_method1(uint8_t Comp_cyclenum)
     int adjustNum = 0;
 
     get_traffic_signal_status(&signal_status);
-    total_compensation_time = init_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
+    get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
 
+    // 查詢有哪些時向是被調整過的 並分配比例
     get_compensation_buffer(comp_buf);
     for (int i = 0; i < SUBPHASEID_NUM; i++) {
         if (comp_buf[i] != 0)
             adjustNum++;
     }
-
     for (int i = 0; i < SUBPHASEID_NUM; i++) {
         if (comp_buf[i] != 0)
             phase_weight[i] = 100.0 / adjustNum;
     }
 
-    ImplementCompensationByPhaseWeight();
-    log_file_write(log_content);
+    implement_compensation_by_weight(&signal_status, log_content, cycle_compensations, Comp_cyclenum, phase_weight);
 }
 
 // 依照設定權重比例分配補長時間
-void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
+static inline void traffic_compensation_method2(ArgLogContent, uint8_t Comp_cyclenum, float phase_weight[PHASE_COUNT_MAX_NUM])
 {
-    char log_content[LOG_CONTENT_LEN + 1] = {0};
-    int16_t subphase_compensation_time[SUBPHASEID_NUM] = {0};
     int16_t cycle_compensations[CYCLE_NUM] = {0};  // 一個週期要補償幾秒
-    int16_t total_compensation_time = 0;
     traffic_signal_status_t signal_status;
 
     get_traffic_signal_status(&signal_status);
-    total_compensation_time = init_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
-
-    ImplementCompensationByPhaseWeight();
-    log_file_write(log_content);
+    get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
+    implement_compensation_by_weight(&signal_status, log_content, cycle_compensations, Comp_cyclenum, phase_weight);
 }
 
 /***************
@@ -375,48 +359,72 @@ void traffic_compensation_method2(uint8_t Comp_cyclenum, float phase_weight[PHAS
  1. 延長延幹道
  2. 縮短縮支道
 ***************/
-void traffic_compensation_method3(uint8_t Comp_cyclenum)
+static inline void traffic_compensation_method3(ArgLogContent, uint8_t Comp_cyclenum)
 {
-    char log_content[LOG_CONTENT_LEN + 1] = {0};
-    int16_t subphase_compensation_time[SUBPHASEID_NUM] = {0};
     int16_t cycle_compensations[CYCLE_NUM] = {0};  // 一個週期要補償幾秒
     int16_t total_compensation_time = 0;
     traffic_signal_status_t signal_status;
 
+    uint8_t arterial_phase = 0, branch_phase = 255;
     float phase_weight[PHASE_COUNT_MAX_NUM] = {0};
 
     get_traffic_signal_status(&signal_status);
-    total_compensation_time = init_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
+    total_compensation_time = get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
 
-    int temp_ack_seq;
-    uint8_t arterial_phase = 0, branch_phase = 1;
-
+    // 綠燈長度最長的為主幹道 第二長的為支道
     for (int i = 1; i < signal_status.SubPhaseCount; i++) {
-        if (signal_status.plan[i].PreGreen >= signal_status.plan[arterial_phase].PreGreen) {
+        if (signal_status.plan[i].PreGreen > signal_status.plan[arterial_phase].PreGreen) {
             branch_phase = arterial_phase;
             arterial_phase = i;
-        } else if (signal_status.plan[i].PreGreen != signal_status.plan[arterial_phase].PreGreen) {
-            if (branch_phase == arterial_phase || signal_status.plan[i].PreGreen > signal_status.plan[branch_phase].PreGreen) {
-                branch_phase = i;
-            }
+        } else if (branch_phase == 255 || signal_status.plan[i].PreGreen > signal_status.plan[branch_phase].PreGreen) {
+            branch_phase = i;
         }
     }
 
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-             "arterial_phase:%d \r\n branch_phase:%d\r\n", arterial_phase + 1, branch_phase + 1);
+    log_snprintf(log_content, "arterial_phase:%d \r\n branch_phase:%d\r\n", arterial_phase + 1, branch_phase + 1);
 
-    // 補償周期數為、T為總調整秒數
-    // 進行負補償
-    if (total_compensation_time > 0) {
+    if (total_compensation_time > 0) {  // 進行負補償
         printf("minus compensation\r\n");
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "minus compensation\r\n");
+        log_snprintf(log_content, "minus compensation\r\n");
         phase_weight[branch_phase] = 100;
     } else if (total_compensation_time < 0) {  // 進行正補償
         printf("positive compensation\r\n");
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "positive compensation\r\n");
+        log_snprintf(log_content, "positive compensation\r\n");
         phase_weight[arterial_phase] = 100;
     }
 
-    ImplementCompensationByPhaseWeight();
+    implement_compensation_by_weight(&signal_status, log_content, cycle_compensations, Comp_cyclenum, phase_weight);
+}
+
+void start_compensation()
+{
+    char log_content[LOG_CONTENT_LEN + 1] = {0};
+
+    pthread_mutex_lock(&mutex_compensation);
+    for (int i = 0; i < SUBPHASEID_NUM; i++)
+        log_snprintf(log_content, "compensation_buffer[%d]:%d\r\n", i, compensation_buffer[i]);
+    pthread_mutex_unlock(&mutex_compensation);
+
+    switch (config.traffic_compensation_method) {
+    case 0:
+        log_snprintf(log_content, "start compensation 0\r\n Do nothing. TC automatic compensation.\r\n");
+        goto NotReportEnd;
+        break;
+    case 1:
+        traffic_compensation_method1(log_content, config.traffic_compensation_cycle_number);
+        break;
+    case 2:
+        traffic_compensation_method2(log_content, config.traffic_compensation_cycle_number, config.phase_weight);
+        break;
+    case 3:
+        traffic_compensation_method3(log_content, config.traffic_compensation_cycle_number);
+        break;
+    default:
+        break;
+    }
+    report_compensation_time();
+NotReportEnd:
+    // 補償結束清空 compensation buffer
+    compensation_buffer_clear();
     log_file_write(log_content);
 }
