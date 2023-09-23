@@ -21,7 +21,7 @@
 #define PassLogAndStaus &signal_status, log_content
 
 pthread_mutex_t mutex_compensation = PTHREAD_MUTEX_INITIALIZER;
-int16_t compensation_buffer[SUBPHASEID_NUM];  // 儲存有被延長或是縮短過的秒數
+int16_t compensation_buffer[SUBPHASEID_NUM] = {0};  // 儲存有被延長或是縮短過的秒數
 
 static inline void get_compensation_buffer(int16_t buf[SUBPHASEID_NUM])
 {
