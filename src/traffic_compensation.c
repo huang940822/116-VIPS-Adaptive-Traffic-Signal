@@ -68,8 +68,7 @@ uint8_t is_in_compensation()
                     log_content + strlen(log_content),
                     LOG_CONTENT_LEN - strlen(log_content),
                     "signal_status.plan[%d].PreTimeCompensated:%d\r\n",
-                    current_phase - 1,
-                    signal_status.plan[current_phase - 1].PreTimeCompensated);
+                    current_phase - 1, signal_status.plan[current_phase - 1].PreTimeCompensated);
                 snprintf(log_content + strlen(log_content),
                          LOG_CONTENT_LEN - strlen(log_content),
                          "signal_status.plan[%d].PreGreen:%d\r\n",
@@ -210,7 +209,7 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
         ret = command_buf_insert_effect_time(&command);
         log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
                      command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
-NotInsertCommand:
+    NotInsertCommand:
         subphase_ptr++;
         if (subphase_ptr >= signal_status->SubPhaseCount) {
             subphase_ptr %= signal_status->SubPhaseCount;

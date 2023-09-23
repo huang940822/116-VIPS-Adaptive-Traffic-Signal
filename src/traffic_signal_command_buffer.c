@@ -120,7 +120,7 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
     int time = 0;
     int temp_ack_seq;
 
-    uint16_t current_sec_residual = get_current_second();
+    uint16_t current_sec_residual = signal_status.StepSec;
 
     switch (config.signal_controller_manufacturer) {
     case CHENG_LONG: {
@@ -135,16 +135,6 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
             difference = TIME_DEFENSE - current_sec_residual;  // 能夠忍受的砍的值
             printf("difference has been changed from %d to %d(cheng_long)\r\n", original_difference, difference);
             log_file_write("\ndifference has been changed from %d to %d(cheng_long)", original_difference, difference);
-        }
-
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
-            if (current_sec_residual + difference < 0) {
-                int16_t residual = difference + current_sec_residual;
-                printf("residual:%d\r\n", residual);
-                set_compensation_buffer(current_SubPhaseID, difference - residual);
-            } else {
-                set_compensation_buffer(current_SubPhaseID, difference);
-            }
         }
 
         // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
@@ -164,32 +154,13 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
             // time += pretime;
             time += (pretime - 4);  // 要想一下 -4是因為機器限制的關係
         }
-
-        temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP
-        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
-        WAIT_ACK_LOOP
         break;
     }
     case SHAN_ZHU: {
         difference = command_obj->effect_time - command_obj->adjusted_time;
         log_file_write("\ndifference is :%d\r\n", difference);
 
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
-            if (current_sec_residual + difference < 0) {
-                int16_t residual = difference + current_sec_residual;
-                printf("residual:%d\r\n", residual);
-                set_compensation_buffer(current_SubPhaseID, difference - residual);
-            } else {
-                set_compensation_buffer(current_SubPhaseID, difference);
-            }
-        }
-
         time = command_obj->effect_time;
-        temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP
-        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
-        WAIT_ACK_LOOP
         break;
     }
     case SHAN_ZHU_M: {
@@ -197,27 +168,27 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
         printf("difference:%d\r\n", difference);
         log_file_write("\ndifference is :%d\r\n", difference);
 
-
-        if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
-            if (current_sec_residual + difference < 0) {
-                int16_t residual = difference + current_sec_residual;
-                printf("residual:%d\r\n", residual);
-                set_compensation_buffer(current_SubPhaseID, difference - residual);
-            } else {
-                set_compensation_buffer(current_SubPhaseID, difference);
-            }
-        }
         time = command_obj->effect_time;
-        temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP
-        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
-        WAIT_ACK_LOOP
         break;
     }
     default:
         return;  // 不屬於任何一家號控器
         break;
     }
+    if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
+        if (current_sec_residual + difference < 0) {
+            int16_t residual = difference + current_sec_residual;
+            printf("residual:%d\r\n", residual);
+            set_compensation_buffer(current_SubPhaseID, difference - residual);
+        } else {
+            set_compensation_buffer(current_SubPhaseID, difference);
+        }
+    }
+    temp_ack_seq = tsc_dynamic();
+    WAIT_ACK_LOOP
+    temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
+    WAIT_ACK_LOOP
+
     // return值為5fcc
     temp_ack_seq = tsc_5F4C();  // query的輸出會在上面log evsp/tsp enable/disable的上方
     WAIT_ACK_LOOP
@@ -248,8 +219,7 @@ void command_buf_polling()
     get_traffic_signal_status(&signal_status);
     // for some error situation happens in CHENG_LONG
     if (signal_status.SubPhaseID == 0) {
-        command_buf_print();
-        return;
+        goto POLLING_END;
     }
 
     uint8_t current_SubPhaseID = signal_status.SubPhaseID;
@@ -268,9 +238,7 @@ void command_buf_polling()
         prior_SubPhaseID = current_SubPhaseID;
         prior_StepID = current_StepID;
         prior_StepSec = current_StepSec;
-        command_buf_print();
-        log_file_write(log_content);
-        return;
+        goto POLLING_END;
     }
 
     pthread_mutex_lock(&mutex_command_buf);
@@ -342,7 +310,6 @@ void command_buf_polling()
     prior_SubPhaseID = current_SubPhaseID;
     prior_StepID = current_StepID;
     prior_StepSec = current_StepSec;
-    command_buf_print();
     pthread_mutex_unlock(&mutex_command_buf);
 
     log_snprintf(log_content, "tsp and evsp status now:\r\n1.dont send to TSP:%d\n\r2.dont send to EVSP:%d\r\n",
@@ -350,13 +317,19 @@ void command_buf_polling()
 
     // only EVSP control instruction will goto `if`
     // ensure compensation buffer will be up-to-date after RESUME instruction execute.
+    // 把 host_OBU_name 改成 RESUME_ID_DONE 下一次就不會進來這裡
     if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, RESUME_ID, sizeof(RESUME_ID)) == 0) {
-        if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == true && CompensationFlag) {
+        if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == true) {
             log_snprintf(log_content, "RESUME instruction is executed\r\n");
             printf("RESUME instruction is executed.\r\n");
+            pthread_mutex_lock(&mutex_command_buf);
+            strncpy(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, RESUME_ID_DONE, sizeof(RESUME_ID_DONE));
+            pthread_mutex_unlock(&mutex_command_buf);
             start_compensation();  // 開始進行補償
         }
     }
+POLLING_END:
+    command_buf_print();
     log_file_write(log_content);
 }
 
@@ -425,32 +398,14 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         }
     }
 
-    // resume是為了強制回到pretime 怎麼作到？
-    // evsp裡面會使用obu resumeid
-    // replace resume command
-    // 抓出來的目標cmd buff object其host obu id為resume id則優先取代？
-    if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
-        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
-            if (command->compensation_cycle == 1) {
-                tsc_command_object_t *target_compensation_command_obj =
-                    &command_buf[(cycle_index + 1 + command->cycle) % CYCLE_NUM]
-                                [command->phase - 1];
-                target_compensation_command_obj->app_id = command->app_id;
-                target_compensation_command_obj->app_priority = command->app_priority;
-                target_compensation_command_obj->effect_time = command->effect_time;
-                target_compensation_command_obj->target_phase = command->target_phase;
-                target_compensation_command_obj->send_flag = false;
-                strncpy(target_compensation_command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME));
-                command_buf_print();
-                pthread_mutex_unlock(&mutex_command_buf);
-                return INSERT_ACCEPT;
-            }
-        }
+    // resume 是 app 要回復原本時治狀態下的指令 所以可以被取代
+    // 因為 host_OBU_name 有可能是 RESUME_ID_DONE 所以 sizeof(RESUME_ID) - 1
+    if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
         goto COMMAND_BUF_INSERT_ACCEPT_APP_ID;
     }
 
     // resume command
-    if (strncmp(command->host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN) == 0) {
+    if (strncmp(command->host_OBU_name, RESUME_ID, sizeof(RESUME_ID)) == 0) {
         if (target_command_obj->app_id == command->app_id) {
             // 還是會使用 special_OBU_list_update_status
             // 但是會在 OBU_object_search 的時候沒有找到
@@ -503,12 +458,12 @@ COMMAND_BUF_INSERT_ACCEPT_EFFECT_TIME:
     target_command_obj->target_phase = command->target_phase;
     target_command_obj->send_flag = false;
 COMMAND_BUF_INSERT_ACCEPT:
-    command_buf_print();
     pthread_mutex_unlock(&mutex_command_buf);
+    command_buf_print();
     return INSERT_ACCEPT;
 COMMAND_BUF_IMPROPER_PRIORITY:
-    command_buf_print();
     pthread_mutex_unlock(&mutex_command_buf);
+    command_buf_print();
     return IMPROPER_PRIORITY;
 }
 
@@ -579,6 +534,7 @@ void command_buf_print()
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
+    pthread_mutex_lock(&mutex_command_buf);
     snprintf(log_content + strlen(log_content),
              LOG_CONTENT_LEN - strlen(log_content),
              "command buffer: current cycle index (%d)", cycle_index);
@@ -596,6 +552,7 @@ void command_buf_print()
                 command_buf[i][j].send_flag);
         }
     }
+    pthread_mutex_unlock(&mutex_command_buf);
     log_file_write(log_content);
 }
 

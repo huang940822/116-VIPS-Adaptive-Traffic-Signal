@@ -2,7 +2,11 @@
 
 #define SUBPHASEID_NUM 8
 #define CYCLE_NUM 2
+
+// resume 是 app 要回復原本時治狀態下的指令
+// app 可以自己計算需要先償還多少再交給補償機制補償
 #define RESUME_ID "RESUME"
+#define RESUME_ID_DONE "RESUME_DONE"
 
 extern tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM];
 extern pthread_mutex_t mutex_command_buf;
@@ -30,5 +34,5 @@ typedef enum command_buf_err {
     INVALID_HOST_OBU_NAME = -8,
     IMPROPER_PRIORITY = -9,
     IMPROPER_EFFECT_TIME = -10,
-    INCOMP_TSPDONOTHING=-11,
+    INCOMP_TSPDONOTHING = -11,
 } command_buf_err_t;
