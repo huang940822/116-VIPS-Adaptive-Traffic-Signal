@@ -111,41 +111,24 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     gettimeofday(&tv, NULL);
     localtime_r(&tv.tv_sec, &timeinfo);
 
-    // 減掉時差 與 加上 與 tc 時間的誤差
+    // 減掉時差 跟 加上 與 tc 時間的誤差
     secInDay = ((timeinfo.tm_hour - alignHour) * 60 + (timeinfo.tm_min - alignMin)) * 60 +
                timeinfo.tm_sec - offset + signal_status->tcTimeOffest;
-    // 要對齊第一個時向的第一個步階的第一秒
-    // 先扣掉經過的時向
-    for (int i = 0; i < subPhaseID; i++) {
-        secInDay -= (signal_status->plan[i].PreTimeCompensated + signal_status->plan[i].PedGreenFlash +
+    // 要對齊下一個週期開始的時間
+    // 加上剩下時向的時間
+    for (int i = subPhaseID + 1; i < signal_status->SubPhaseCount; i++) {
+        secInDay += (signal_status->plan[i].PreTimeCompensated + signal_status->plan[i].PedGreenFlash +
                      signal_status->plan[i].PedRed + signal_status->plan[i].Yellow + signal_status->plan[i].AllRed);
     }
-    // 再扣除經過的步階
-    switch (signal_status->StepID) {
-    case 5:
-        secInDay -= signal_status->plan[subPhaseID].Yellow;
-    case 4:
-        secInDay -= signal_status->plan[subPhaseID].PedRed;
-    case 3:
-        secInDay -= signal_status->plan[subPhaseID].PedGreenFlash;
-    case 2:
-        secInDay -= signal_status->plan[subPhaseID].PreTimeCompensated;
-    default:
-        break;
+    // 加上剩下步階的時間
+    for (int i = signal_status->StepID - 1; i < 4; i++) {
+        secInDay += signal_status->plan[subPhaseID].StepArr[i];
     }
-    // 最後扣除清過的秒數
-    if (signal_status->StepID == 1)
-        secInDay -= signal_status->plan[subPhaseID].PreTimeCompensated;
-    else
-        signal_status->plan[subPhaseID].StepArr[signal_status->StepID - 1];
+    // 加上現在剩餘的秒數
     secInDay += signal_status->StepSec;
 
-    // 避免是凌晨 0 點扣到變成負的 (前一天)
-    secInDay = (secInDay + daySec) % daySec;  // 絕對值
-    compTime = secInDay % cycleTime;
-
-    // 小於 cycleTime 的 1/2 就用扣的 大於就用加的去對齊
-    return (cycleTime / 2) < compTime ? -compTime : cycleTime - compTime;
+    // 小於 cycleTime 的 1/2 就用負補償 大於就用正補償
+    return compTime < (cycleTime / 2) ? -compTime : cycleTime - compTime;
 }
 
 static inline int16_t get_total_compensation_second_with_status(ArgTrafficStatus)

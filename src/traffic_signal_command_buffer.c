@@ -58,6 +58,18 @@ void command_buf_clear()
     log_file_write("command buff is cleared\r\n");
 }
 
+void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
+{
+    pthread_mutex_lock(&mutex_command_buf);
+    for (int i = 0; i < CYCLE_NUM; i++) {
+        for (int j = 0; j < SUBPHASEID_NUM; j++) {
+            if (strncmp(command_buf[i][j].host_OBU_name, host_OBU_name, ID_MAX_LEN + 1) == 0)
+                clear_index_command_buf(i, j);
+        }
+    }
+    pthread_mutex_unlock(&mutex_command_buf);
+}
+
 // 在切換日時段前 60 秒與後 10 分鐘停止控制
 static inline void stop_at_segament_change(traffic_signal_status_t *signal_status, char log_content[LOG_CONTENT_LEN + 1])
 {
@@ -384,18 +396,10 @@ int command_buf_insert_effect_time(tsc_command_t *command)
         goto COMMAND_BUF_INSERT_ACCEPT_APP_ID;
     }
 
-    // 如果target_command是補償指令的話，則取聯集。
-    if (strncmp(target_command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
-        if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
-            printf("union compensation command\r\n");
-            target_command_obj->app_id = command->app_id;
-            target_command_obj->compensation_time += command->compensation_time;
-            target_command_obj->app_priority = command->app_priority;
-            target_command_obj->effect_time = target_command_obj->effect_time + (command->effect_time - pretime);
-            target_command_obj->target_phase = command->target_phase;
-            target_command_obj->send_flag = false;
-            goto COMMAND_BUF_INSERT_ACCEPT;
-        }
+    // 補償指令要可以被下一個補償指令覆蓋 因為下一個近來的補償會考慮之後的延長
+    if (strncmp(target_command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0 &&
+        strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
+        goto COMMAND_BUF_INSERT_ACCEPT_EFFECT_TIME;
     }
 
     // resume 是 app 要回復原本時治狀態下的指令 所以可以被取代
@@ -558,11 +562,15 @@ void command_buf_print()
 
 bool check_command_buf_empty()
 {
+    pthread_mutex_lock(&mutex_command_buf);
     for (int i = 0; i < CYCLE_NUM; i++) {
         for (int j = 0; j < SUBPHASEID_NUM; j++) {
-            if (command_buf[i][j].app_id != 0)
+            if (command_buf[i][j].app_id != 0) {
+                pthread_mutex_unlock(&mutex_command_buf);
                 return false;
+            }
         }
     }
+    pthread_mutex_unlock(&mutex_command_buf);
     return true;
 }

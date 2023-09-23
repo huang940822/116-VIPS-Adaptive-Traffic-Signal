@@ -14,6 +14,7 @@ extern uint8_t cycle_index;
 
 void command_buf_init();
 void command_buf_clear();
+void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1]);
 void command_buf_polling();
 int command_buf_insert_effect_time(tsc_command_t *command);
 int command_buf_insert_adjustment(tsc_command_t *command);
