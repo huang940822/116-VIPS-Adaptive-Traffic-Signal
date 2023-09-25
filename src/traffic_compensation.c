@@ -64,19 +64,14 @@ uint8_t is_in_compensation()
         if (signal_status.plan[current_phase - 1].PreTimeCompensated > 0) {
             if (signal_status.plan[current_phase - 1].PreGreen !=
                 signal_status.plan[current_phase - 1].PreTimeCompensated) {
-                snprintf(
-                    log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "signal_status.plan[%d].PreTimeCompensated:%d\r\n",
-                    current_phase - 1, signal_status.plan[current_phase - 1].PreTimeCompensated);
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "signal_status.plan[%d].PreGreen:%d\r\n",
-                         current_phase - 1,
-                         signal_status.plan[current_phase - 1].PreGreen);
-                log_file_write(log_content);
+                log_snprintf(log_content,
+                             "signal_status.plan[%d].PreTimeCompensated:%d\r\n"
+                             "signal_status.plan[%d].PreGreen:%d\r\n"
+                             "do compensation\r\n",
+                             current_phase - 1, signal_status.plan[current_phase - 1].PreTimeCompensated,
+                             current_phase - 1, signal_status.plan[current_phase - 1].PreGreen);
                 printf("do compensation\r\n");
-                log_file_write("do compensation\r\n");
+                log_file_write(log_content);
                 return true;  // 正在補償
             } else {
                 printf("No compensation\r\n");

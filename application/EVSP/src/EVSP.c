@@ -285,6 +285,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             command.phase = command.target_phase;
             command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
 
+            command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
@@ -303,11 +304,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 // 結束 EVSP_VMS_SERVICE
                 vms_request_end(EVSP.id);
             }
-
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         }
-
     } else { /* not in host OBU list */
         // search plan
         uint8_t plan_id = get_plan_id();
@@ -378,7 +377,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (current_step != 1)
                 current_phase++;
 
-            command.cycle = 0;                            // 0 代表線在這個 cycle
+            command.cycle = 0;  // 0 代表線在這個 cycle
 
             // 如果 current_phase >= target_phase，i 就會加到 target_phase
             // target_phase < current_phase，的話就會停在 SubPhaseCount 把現在的 cycle 都換成最小綠

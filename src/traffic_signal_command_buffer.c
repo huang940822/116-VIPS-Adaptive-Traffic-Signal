@@ -60,14 +60,20 @@ void command_buf_clear()
 
 void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
 {
+    int has_clean = false;
     pthread_mutex_lock(&mutex_command_buf);
     for (int i = 0; i < CYCLE_NUM; i++) {
         for (int j = 0; j < SUBPHASEID_NUM; j++) {
-            if (strncmp(command_buf[i][j].host_OBU_name, host_OBU_name, ID_MAX_LEN + 1) == 0)
+            if (strncmp(command_buf[i][j].host_OBU_name, host_OBU_name, ID_MAX_LEN + 1) == 0) {
                 clear_index_command_buf(i, j);
+                has_clean = true;
+            }
         }
     }
     pthread_mutex_unlock(&mutex_command_buf);
+    if (has_clean) {
+        log_file_write("%-15s has been cleaned in command buffer.");
+    }
 }
 
 // 在切換日時段前 60 秒與後 10 分鐘停止控制
@@ -539,21 +545,17 @@ void command_buf_print()
     memset(log_content, 0, sizeof(log_content));
 
     pthread_mutex_lock(&mutex_command_buf);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "command buffer: current cycle index (%d)", cycle_index);
+    log_snprintf(log_content, "command buffer: current cycle index (%d)", cycle_index);
     for (int i = 0; i < CYCLE_NUM; i++) {
         for (int j = 0; j < signal_status.SubPhaseCount; j++) {
-            snprintf(
-                log_content + strlen(log_content),
-                LOG_CONTENT_LEN - strlen(log_content),
-                "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-15s, TP:%1d, AppID:%2d, "
-                "AppPri:%2d, ET:%3d, SF:%1d",
-                i, j + 1, command_buf[i][j].adjusted_time,
-                signal_status.plan[j].PreGreen, command_buf[i][j].host_OBU_name,
-                command_buf[i][j].target_phase, command_buf[i][j].app_id,
-                command_buf[i][j].app_priority, command_buf[i][j].effect_time,
-                command_buf[i][j].send_flag);
+            log_snprintf(log_content,
+                         "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-15s, TP:%1d, AppID:%2d, "
+                         "AppPri:%2d, ET:%3d, SF:%1d",
+                         i, j + 1, command_buf[i][j].adjusted_time,
+                         signal_status.plan[j].PreGreen, command_buf[i][j].host_OBU_name,
+                         command_buf[i][j].target_phase, command_buf[i][j].app_id,
+                         command_buf[i][j].app_priority, command_buf[i][j].effect_time,
+                         command_buf[i][j].send_flag);
         }
     }
     pthread_mutex_unlock(&mutex_command_buf);
