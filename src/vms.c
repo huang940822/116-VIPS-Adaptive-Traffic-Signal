@@ -555,6 +555,7 @@ void *VMS_program_update(void *data)
         uint8_t upload_error_cnt[RTM_MAX];
         memset(upload_error_cnt, 0, sizeof(upload_error_cnt));
 
+        // 因為改成每面 VMS 可以各自撥放不同的紅燈節目和綠燈節目，所以當要上傳紅綠燈的節目時(編號 2~17 )就要改成獨立上傳
         if (program_id >= 2 && program_id <= 17) {
             int VMS_id = 0;
             if (program_id == 2 || program_id == 10) {
