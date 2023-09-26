@@ -222,37 +222,32 @@ static inline int allocate_compensation_by_weight(ArgTrafficStatus, float phase_
     return remaining_time;
 }
 
-// 平均分配剩餘的補償時間
+// 分配剩餘的補償時間從主時相開始補償 及綠燈秒數最長的
 static inline void allocate_remaining_time(ArgTrafficStatus, int remaining_time, int16_t subphase_compensation_time[SUBPHASEID_NUM])
 {
+    if (remaining_time == 0)
+        return;
     int pre_remaining_time = 0;
+    int index[PHASE_COUNT_MAX_NUM];
+    for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
+        index[i] = i;
+    }
 
-    // 會持續分配到剩餘時間為 0 或是無法再分配了
-    while (pre_remaining_time != remaining_time && remaining_time != 0) {
+    // 使用冒泡泡排序排序大小的 index
+    for (int i = 0; i < signal_status->SubPhaseCount - 1; i++) {
+        for (int j = 0; j < signal_status->SubPhaseCount - i - 1; j++) {
+            if (signal_status->plan[index[j]].PreGreen < signal_status->plan[index[j + 1]].PreGreen) {
+                int temp = index[j];
+                index[j] = index[j + 1];
+                index[j + 1] = temp;
+            }
+        }
+    }
+
+    for (int i = 0; i < signal_status->SubPhaseCount && remaining_time != 0; i++) {
         float weight[PHASE_COUNT_MAX_NUM] = {0};
-        uint8_t canAdjustNum = 0;
-        // 如果剩餘時間大於 0 要檢查是否已經是 MinGreen 了 反之大於
-        // 然後將還剩餘的時間分配給還可以調整的時向
-        for (int i = 0; i < signal_status->SubPhaseCount; i++) {
-            int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i];
-            if (remaining_time > 0 && effect_time > signal_status->plan[i].MinGreen) {
-                canAdjustNum++;
-            }
-            if (remaining_time < 0 && effect_time < signal_status->plan[i].MaxGreen) {
-                canAdjustNum++;
-            }
-        }
-        for (int i = 0; i < signal_status->SubPhaseCount; i++) {
-            int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i];
-            if (remaining_time > 0 && effect_time > signal_status->plan[i].MinGreen) {
-                weight[i] = 100 / canAdjustNum;
-            }
-            if (remaining_time < 0 && effect_time < signal_status->plan[i].MaxGreen) {
-                weight[i] = 100 / canAdjustNum;
-            }
-        }
+        weight[index[i]] = 100;
         remaining_time = allocate_compensation_by_weight(signal_status, weight, remaining_time, subphase_compensation_time);
-        pre_remaining_time = remaining_time;
     }
 }
 
