@@ -266,49 +266,26 @@ void command_buf_polling()
     // This means that traffic signal has crossed to the next subphase.
     // Thus,the command buffer object of the previous subphase is cleared.
     if (prior_SubPhaseID != current_SubPhaseID) {
-        if (strncmp(command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name,
-                    COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
-            if (command_buf[cycle_index][prior_SubPhaseID - 1].send_flag == true) {
-                log_snprintf(log_content,
-                             "\ncommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                             cycle_index, prior_SubPhaseID,
-                             command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
-                clear_index_command_buf(cycle_index, prior_SubPhaseID - 1);
-            }
-        } else {
-            clear_index_command_buf(cycle_index, prior_SubPhaseID - 1);
+        int prior_cycle_index = cycle_index;
+        /* cross to next cycle */
+        // 代表已經到下一個cycle.
+        if (prior_SubPhaseID > current_SubPhaseID) {
+            cycle_index = (cycle_index + 1) % CYCLE_NUM;  // 更新cycle
         }
-        // 設定為0代表不控制？
+        // 當發現前一個指令是 resume 就進行補償
+        if (strncmp(command_buf[prior_cycle_index][prior_SubPhaseID - 1].host_OBU_name,
+                    RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
+            pthread_mutex_unlock(&mutex_command_buf);
+            start_compensation();  // 開始進行補償
+            pthread_mutex_lock(&mutex_command_buf);
+        }
+        clear_index_command_buf(prior_cycle_index, prior_SubPhaseID - 1);
+        // 設定為 0 代表現在沒有 app 控制
         set_control_status(0);
-    }
-    /* cross to next cycle */
-    // 代表已經到下一個cycle.
-    // 所以要把previous cycle 中的command buffer object 清除
-    // compensation_command不能清除，除非他已經送出了。
-    if (prior_SubPhaseID > current_SubPhaseID) {
-        for (int i = 0; i < SUBPHASEID_NUM; i++) {
-            if (strncmp(command_buf[cycle_index][i].host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) == 0) {
-                if (command_buf[cycle_index][i].send_flag == true) {
-                    log_snprintf(log_content,
-                                 "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                                 cycle_index, prior_SubPhaseID, command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
-                    clear_index_command_buf(cycle_index, i);
-                } else
-                    continue;
-            } else {
-                log_snprintf(log_content,
-                             "\rcommand_buf[%d][%d]: HoID:%-15s is cleared\r\n",
-                             cycle_index, prior_SubPhaseID, command_buf[cycle_index][prior_SubPhaseID - 1].host_OBU_name);
-                clear_index_command_buf(cycle_index, i);
-            }
+        // 換相了 更新adjusted time讓他變成現在的倒數秒數
+        if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0) {
+            command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;
         }
-        cycle_index = (cycle_index + 1) % CYCLE_NUM;  // 更新cycle
-    }
-
-    // 換相了 更新adjusted time讓他變成現在的倒數秒數
-    if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0 &&
-        prior_SubPhaseID != current_SubPhaseID) {
-        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;
     }
 
     /* command ready to send in current phase */
@@ -332,20 +309,6 @@ void command_buf_polling()
 
     log_snprintf(log_content, "tsp and evsp status now:\r\n1.dont send to TSP:%d\n\r2.dont send to EVSP:%d\r\n",
                  TSP.dontSend2TC, EVSP.dontSend2TC);
-
-    // only EVSP control instruction will goto `if`
-    // ensure compensation buffer will be up-to-date after RESUME instruction execute.
-    // 把 host_OBU_name 改成 RESUME_ID_DONE 下一次就不會進來這裡
-    if (strncmp(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, RESUME_ID, sizeof(RESUME_ID)) == 0) {
-        if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == true) {
-            log_snprintf(log_content, "RESUME instruction is executed\r\n");
-            printf("RESUME instruction is executed.\r\n");
-            pthread_mutex_lock(&mutex_command_buf);
-            strncpy(command_buf[cycle_index][current_SubPhaseID - 1].host_OBU_name, RESUME_ID_DONE, sizeof(RESUME_ID_DONE));
-            pthread_mutex_unlock(&mutex_command_buf);
-            start_compensation();  // 開始進行補償
-        }
-    }
 POLLING_END:
     command_buf_print();
     log_file_write(log_content);
@@ -394,7 +357,6 @@ int command_buf_insert_effect_time(tsc_command_t *command)
 
     // command object first insert
     if (target_command_obj->app_id == 0) {
-        target_command_obj->compensation_time = command->compensation_time;
         // adjusted_time is the length of time that the "traffic signal controller" is adjusted to.
         if (target_command_obj->adjusted_time == 0) {  // 因為此步階預設倒數時間為 pretime
             target_command_obj->adjusted_time = pretime;
@@ -410,7 +372,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
 
     // resume 是 app 要回復原本時治狀態下的指令 所以可以被取代
     // 因為 host_OBU_name 有可能是 RESUME_ID_DONE 所以 sizeof(RESUME_ID) - 1
-    if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
+    if (strncmp(target_command_obj->host_OBU_name, RESUME_ID, sizeof(RESUME_ID)) == 0) {
         goto COMMAND_BUF_INSERT_ACCEPT_APP_ID;
     }
 
@@ -531,6 +493,25 @@ int command_buf_insert_adjustment(tsc_command_t *command)
                        command->host_OBU_name, command->adjustment, command->effect_time);
     }
     return command_buf_insert_effect_time(command);
+}
+
+// APP 結束會恢復狀態 會刪除剩餘的 host OBU command 並回復 current phase 原本的路燈時間
+// 並在下一個 phase 會開始補償
+// 如果 current phase 已經不是 step 1 也會插入 因為下一個 phase 的補償會幫助
+int command_buf_resume_control(int appid)
+{
+    tsc_command_t command = {0};
+    traffic_signal_status_t signal_status;
+
+    get_traffic_signal_status(&signal_status);
+
+    command.app_id = appid;
+    command.target_phase = signal_status.SubPhaseID;
+    strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
+    command.phase = command.target_phase;
+    command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
+
+    return command_buf_insert_effect_time(&command);
 }
 
 void command_buf_print()

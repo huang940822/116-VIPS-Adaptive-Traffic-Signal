@@ -369,7 +369,6 @@ typedef struct tsc_command_object {
                             // to be adjusted to.
     uint8_t adjusted_time;  // is the length of time that the traffic signal
                             // controller is adjusted to.
-    int8_t compensation_time;
     char host_OBU_name[ID_MAX_LEN + 1];
     bool send_flag;
 } tsc_command_object_t;

@@ -372,8 +372,8 @@ int TSP_on_cloud_packet_rx(void *arg)
         TSP_host_OBU_obj_print();
         log_file_write(log_content);
 
-        command_buf_delete_OBU(host_OBU_name); // 刪除在 command buf 還沒下下去的指令
-        start_compensation();  // 進行補償
+        command_buf_delete_OBU(host_OBU_name);  // 刪除在 command buf 還沒下下去的指令
+        command_buf_resume_control(TSP.id);     // 進行 resume 後補償
         break;
     case 6:  // disable tsp's command to tc machine
     {

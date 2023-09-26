@@ -6,7 +6,6 @@
 // resume 是 app 要回復原本時治狀態下的指令
 // app 可以自己計算需要先償還多少再交給補償機制補償
 #define RESUME_ID "RESUME"
-#define RESUME_ID_DONE "RESUME_DONE"
 
 extern tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM];
 extern pthread_mutex_t mutex_command_buf;
@@ -15,6 +14,7 @@ extern uint8_t cycle_index;
 void command_buf_init();
 void command_buf_clear();
 void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1]);
+int command_buf_resume_control(int appid);
 void command_buf_polling();
 int command_buf_insert_effect_time(tsc_command_t *command);
 int command_buf_insert_adjustment(tsc_command_t *command);

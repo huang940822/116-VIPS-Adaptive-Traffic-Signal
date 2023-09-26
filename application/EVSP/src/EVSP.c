@@ -276,34 +276,18 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
                      app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
-            tsc_command_t command;
-            memset(&command, 0, sizeof(tsc_command_t));
-            command.app_id = EVSP.id;
-            command.app_priority = EVSP.priority;
-            command.target_phase = host_OBU->target_phase;
-            strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
-            command.phase = command.target_phase;
-            command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
-
             command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
-            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
+            if (EVSP_host_OBU_obj_resume(host_OBU->target_phase) == true) {
                 // 進行補償
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
-
-                uint8_t current_phase = signal_status.SubPhaseID;
-                if (command.target_phase >= current_phase) {
-                    command.cycle = 0;
-                } else {  // target phase已過 到下一個cycle執行
-                    command.cycle = 1;
-                }
-                insert_command_and_log;
+                command_buf_resume_control(EVSP.id);
 
                 // 結束 EVSP_VMS_SERVICE
                 vms_request_end(EVSP.id);
             }
+            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         }
