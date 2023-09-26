@@ -555,7 +555,40 @@ void *VMS_program_update(void *data)
         uint8_t upload_error_cnt[RTM_MAX];
         memset(upload_error_cnt, 0, sizeof(upload_error_cnt));
 
-        for (int i = 0; i < 4; i++) {
+        if (program_id >= 2 && program_id <= 17) {
+            int VMS_id = 0;
+            if (program_id == 2 || program_id == 10) {
+                VMS_id = 0;
+            } else if (program_id == 3 || program_id == 11) {
+                VMS_id = 1;
+            } else if (program_id == 4 || program_id == 12) {
+                VMS_id = 2;
+            } else if (program_id == 5 || program_id == 13) {
+                VMS_id = 3;
+            }
+            while (upload_error_cnt[VMS_id] < VMS_RESEND_THRESHOLD) {
+                sleep(1);
+                res = VMS_wifi_connect(VMS_name[VMS_id]);
+                if (res == 0) {
+                    break;
+                }
+                upload_error_cnt[VMS_id]++;
+            }
+            // 表示成功連接 Wi-Fi，準備開始嘗試上傳 Program
+            if (res == 0) {
+                while (upload_error_cnt[VMS_id] < VMS_RESEND_THRESHOLD) {
+                    sleep(1);
+                    res = VMS_program_update_packet_tx(program_id, program_name);
+                    if (res == 0) {
+                        break;
+                    }
+                    upload_error_cnt[VMS_id]++;
+                }
+            }
+            sleep(1);
+            VMS_wifi_disconnect();
+        } else {
+            for (int i = 0; i < 4; i++) {
             while (upload_error_cnt[i] < VMS_RESEND_THRESHOLD) {
                 sleep(1);
                 res = VMS_wifi_connect(VMS_name[i]);
@@ -577,6 +610,7 @@ void *VMS_program_update(void *data)
             }
             sleep(1);
             VMS_wifi_disconnect();
+            }
         }
 
         // 檢查是否有 VMS 異常
