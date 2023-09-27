@@ -129,19 +129,16 @@ int TIB_on_registration(void *arg)
     }
     /* MAP msg init */
     map_msg_init(&map);
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    print_config_map(map, log_content, LOG_CONTENT_LEN);
-    printf("%s\n", log_content);
-    TIB.dontSend2TC = TIB_config.TIB_dontSend2TC;
-    /* create a timer to send map packet */
-    create_timer(&MAP_packet_tx_timer_id, NULL, MAP_packet_tx);
-    set_timer(MAP_packet_tx_timer_id, (int) (1 / TIB_config.MAP_packet_transfer_speed),
-              (int) ((1000000000 / TIB_config.MAP_packet_transfer_speed) % 1000000000),
-              (int) (1 / TIB_config.MAP_packet_transfer_speed),
-              (int) ((1000000000 / TIB_config.MAP_packet_transfer_speed) % 1000000000));
+    // char log_content[LOG_CONTENT_LEN + 1];
+    // memset(log_content, 0, sizeof(log_content));
+    // print_config_map(map, log_content, LOG_CONTENT_LEN);
+    // printf("%s\n", log_content);
 
     spat_msg_init(&p_spat);
+    pthread_t MAP_packet_tx_thread;
+    ret = pthread_create(&MAP_packet_tx_thread, NULL, MAP_packet_tx_loop, NULL);
+    pthread_detach(MAP_packet_tx_thread);
     pthread_t SPaT_packet_tx_thread;
     ret = pthread_create(&SPaT_packet_tx_thread, NULL, SPaT_packet_tx_loop, NULL);
+    pthread_detach(SPaT_packet_tx_thread);
 }

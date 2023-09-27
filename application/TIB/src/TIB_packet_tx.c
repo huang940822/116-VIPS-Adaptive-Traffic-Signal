@@ -17,48 +17,85 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-void MAP_packet_tx(__sigval_t value)
+static inline int set_timer_fd(int transfer_speed, char *error_msg)
 {
-    uint8_t SubPhaseCount = get_SubPhaseCount();
-    if (SubPhaseCount > 0) {
-        map_msg_update(map);
-        printf("=========================\n");
-        map_print(map);
-        OBU_j2735_tx(MapData_Id, map);
-    }
-}
-
-void *SPaT_packet_tx_loop()
-{
-    // sleep(1);
     int fd = timerfd_create(CLOCK_REALTIME, 0);
+    int t = 1000000000 / transfer_speed;
+    struct itimerspec timerValue = {0};
 
     if (fd == -1) {
-        log_file_write_fatal_error("SPaT_packet_tx_loop timefd create error.");
+        log_file_write_fatal_error("%s timefd create error.", error_msg);
+        return -1;
     }
 
-    struct itimerspec timerValue;
-    memset(&timerValue, 0, sizeof(struct itimerspec));
-
-    int t = 1000000000 / TIB_config.SPaT_packet_transfer_speed;
     timerValue.it_value.tv_sec = t / 1000000000;
     timerValue.it_value.tv_nsec = t % 1000000000;
     timerValue.it_interval.tv_sec = t / 1000000000;
     timerValue.it_interval.tv_nsec = t % 1000000000;
 
     if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-        log_file_write_fatal_error("SPaT_packet_tx_loop timerfd_settime");
-        exit(errno);
+        log_file_write_fatal_error("%s timerfd_settime, errno %d.", error_msg, errno);
+        close(fd);
+        return -1;
     }
+    return fd;
+}
+
+void *MAP_packet_tx_loop()
+{
     uint64_t exp;
     uint8_t *tx_buf = NULL;
     int tx_buf_len = 0;
+    int fd = set_timer_fd(TIB_config.MAP_packet_transfer_speed, "MAP_packet_tx_loop");
+    int pior_planID = -1;
+
+    if (fd == -1) {
+        return NULL;
+    }
+
+    while (1) {
+        int s = read(fd, &exp, sizeof(uint64_t));
+        if (s != sizeof(uint64_t))
+            log_file_write_fatal_error("MAP_packet_tx_loop timer read error");
+
+        int planID = get_plan_id();
+        // 切換 plan 的時候才會算一次
+        if (planID != pior_planID) {
+            if (get_SubPhaseCount() < 0)
+                continue;
+            if (map_msg_update(map) < 0)
+                continue;
+            // printf("=========================\n");
+            // map_print(map);
+            pior_planID = planID;
+        }
+        OBU_j2735_tx(MapData_Id, map);
+    }
+    close(fd);
+}
+
+void *SPaT_packet_tx_loop()
+{
+    uint64_t exp;
+    uint8_t *tx_buf = NULL;
+    int tx_buf_len = 0;
+    int pior_stepID = -1;
+    int fd = set_timer_fd(TIB_config.SPaT_packet_transfer_speed, "SPaT_packet_tx_loop");
+
+    if (fd == -1) {
+        return NULL;
+    }
+
     while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
-        if (spat_msg_update(p_spat) < 0) {
-            continue;
+        int stepID = get_current_step();
+        // 在 stepID 換的時候更新
+        if (stepID != pior_stepID) {
+            if (spat_msg_update(p_spat) < 0)
+                continue;
+            pior_stepID = stepID;
         }
         // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);

@@ -95,18 +95,19 @@ void map_msg_init(MapData **map_ptr)
     }
 }
 
-void map_connectTo_clean(MapData *map)
+static inline int map_connectTo_clean(MapData *map)
 {
     if (map->intersections.count <= 0)
-        return;
+        return -1;
     LaneList *laneList = &map->intersections.tab[0].laneSet;
     for (int i = 0; i < laneList->count; i++) {
         laneList->tab[i].connectsTo_option = FALSE;
         laneList->tab[i].connectsTo.count = 0;
     }
+    return 1;
 }
 
-void map_signal_group(MapData *map)
+int map_signal_group(MapData *map)
 {
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -145,9 +146,9 @@ void map_signal_group(MapData *map)
     uint8_t greenSignalMap[COMPASS_NUM];
     int map_table[COMPASS_NUM];
     if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
-        return;
+        return -1;
     if (get_map_table(&signal_status, map_table) < 0)
-        return;
+        return -1;
 
     int signalGroupID = 0;
 
@@ -185,16 +186,16 @@ void map_signal_group(MapData *map)
                 search_signal_compass(LeftGreenMask, set_compass_connectsTo(stright_laneId););
         }
     }
-
 #undef set_compass_connectsTo
 #undef search_signal_compass
+    return 1;
 }
 
-void map_msg_update(MapData *map)
+int map_msg_update(MapData *map)
 {
     map->intersections.tab->revision++;
     map->intersections.tab->revision &= 0b1111111;
-    map_signal_group(map);
+    return map_signal_group(map);
 }
 
 void map_dump_mem(void *data, int len)
