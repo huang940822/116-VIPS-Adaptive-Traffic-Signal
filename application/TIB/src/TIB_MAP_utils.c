@@ -73,7 +73,6 @@ void map_msg_init(MapData **map_ptr)
         lane->laneAttributes.laneType.u.vehicle.len = 16;
         Malloc(lane->laneAttributes.laneType.u.vehicle.buf, 2, "laneType");
         for (uint16_t mask = 1, i = 0; mask != 0; mask <<= 1, i++) {
-            printf("mask %d\n", mask);
             if (mask & config_lane->lane_attributes) {
                 asn1_bstr_set_bit(&lane->laneAttributes.laneType.u.vehicle, i);
             }
