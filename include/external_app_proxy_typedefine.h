@@ -1,7 +1,10 @@
 #ifndef EXTERNAL_APP_PROXY_TYPEDEFINE_H
 #define EXTERNAL_APP_PROXY_TYPEDEFINE_H
 
-/* this file should be the same as in server side (i.e., middleware) */
+/* DANGER: this file: external_app_proxy_typedefine.h
+ * will exist both is server-side and client-side
+ * the two should be "THE SAME" !! */
+
 /* EAL stands for External-Application-Library*/
 enum ea_err_definition_enum {
     /* no err */

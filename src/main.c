@@ -80,7 +80,7 @@ int register_handler_for_unexpected_signal()
 }
 
 int main()
-{
+{   
     int ret = 0;
 
     //signal(SIGINT, sigintHandler); //old version
@@ -166,11 +166,6 @@ int main()
         // &SPaT,
         // &MAP,
         // &SPM,
-        // &EVSP1,
-        //  &EVSP2,
-        //  &EVSP3,
-        //  &EVSP4,
-        //  &EVSP5,
     };
     
     /* 注意有些 app 的 on_registration() 會 create timer */

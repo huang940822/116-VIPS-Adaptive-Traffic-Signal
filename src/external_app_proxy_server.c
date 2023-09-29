@@ -88,6 +88,95 @@ void inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint64_t mask
     }
 }
 
+static inline __attribute__((always_inline)) 
+void print_and_log_external_app_register_msg( app_obj_t* app_p )
+{   
+    if(!app_p)
+        return;
+
+    char log_content[LOG_CONTENT_LEN + 1];
+    memset(log_content, 0, sizeof(log_content));
+
+    printf("\n[EAP msg] external app registered:\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "\n[EAP msg] external app registered:\n");
+
+    printf(" app name: %s\n app id: %d\n app priority: %d\n", 
+            app_p->name, app_p->id, app_p->priority);
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             " app name: %s\n app id: %d\n app priority: %d\n", 
+             app_p->name, app_p->id, app_p->priority);
+    
+    printf("callback registered initially:\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "callback registered initially:\n");
+    
+    if(app_p->on_OBU_packet_rx){
+        printf("- on_OBU_packet_rx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_OBU_packet_rx\n");
+    }
+    if(app_p->on_OBU_packet_tx){
+        printf("- on_OBU_packet_tx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_OBU_packet_tx\n");
+    }
+    if(app_p->on_RSU_packet_rx){
+        printf("- on_RSU_packet_rx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_RSU_packet_rx\n");
+    }
+    if(app_p->on_RSU_packet_tx){
+        printf("- on_RSU_packet_tx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_RSU_packet_tx\n");
+    }
+    if(app_p->on_cloud_packet_rx){
+        printf("- on_cloud_packet_rx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_cloud_packet_rx\n");
+    }
+    if(app_p->on_cloud_packet_tx){
+        printf("- on_cloud_packet_tx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_cloud_packet_tx\n");
+    }
+    if(app_p->on_camera_packet_rx){
+        printf("- on_camera_packet_rx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_camera_packet_rx\n");
+    }
+    if(app_p->on_traffic_signal_command_tx){
+        printf("- on_traffic_signal_command_tx\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_traffic_signal_command_tx\n");
+    }
+    if(app_p->on_middleware_restart){
+        printf("- on_middleware_restart\n");
+        snprintf(log_content + strlen(log_content),
+                 LOG_CONTENT_LEN - strlen(log_content),
+                 "- on_middleware_restart\n");
+    }
+
+    printf("\n");
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
+             "\n");
+
+    log_file_write(log_content);
+}
+
 static inline  __attribute__((always_inline))  
 int set_timer_fd_for_checking_app_hearbeat()
 {   
@@ -248,95 +337,6 @@ int inner_handle_app_register( app_obj_t* app_p, void *payload_p)
     return app_register(app_p);  /* using existed function in application_registration.c */
 }
 
-static inline __attribute__((always_inline)) 
-void print_and_log_external_app_register_msg( app_obj_t* app_p )
-{   
-    if(!app_p)
-        return;
-
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-
-    printf("\n[EAP msg] external app registered:\n");
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\n[EAP msg] external app registered:\n");
-
-    printf(" app name: %s\n app id: %d\n app priority: %d\n", 
-            app_p->name, app_p->id, app_p->priority);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             " app name: %s\n app id: %d\n app priority: %d\n", 
-             app_p->name, app_p->id, app_p->priority);
-    
-    printf("callback registered initially:\n");
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "callback registered initially:\n");
-    
-    if(app_p->on_OBU_packet_rx){
-        printf("- on_OBU_packet_rx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_OBU_packet_rx\n");
-    }
-    if(app_p->on_OBU_packet_tx){
-        printf("- on_OBU_packet_tx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_OBU_packet_tx\n");
-    }
-    if(app_p->on_RSU_packet_rx){
-        printf("- on_RSU_packet_rx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_RSU_packet_rx\n");
-    }
-    if(app_p->on_RSU_packet_tx){
-        printf("- on_RSU_packet_tx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_RSU_packet_tx\n");
-    }
-    if(app_p->on_cloud_packet_rx){
-        printf("- on_cloud_packet_rx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_cloud_packet_rx\n");
-    }
-    if(app_p->on_cloud_packet_tx){
-        printf("- on_cloud_packet_tx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_cloud_packet_tx\n");
-    }
-    if(app_p->on_camera_packet_rx){
-        printf("- on_camera_packet_rx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_camera_packet_rx\n");
-    }
-    if(app_p->on_traffic_signal_command_tx){
-        printf("- on_traffic_signal_command_tx\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_traffic_signal_command_tx\n");
-    }
-    if(app_p->on_middleware_restart){
-        printf("- on_middleware_restart\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "- on_middleware_restart\n");
-    }
-
-    printf("\n");
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\n");
-
-    log_file_write(log_content);
-}
-
 /* this function will use api_wrapper_fp_arr, which will send unix packet to external app */
 static inline __attribute__((always_inline)) 
 int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
@@ -376,27 +376,28 @@ int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
 static inline __attribute__((always_inline)) 
 int inner_handle_heartbeat_from_app(int client_fd, packet_to_proxy_header_t *header_p)
 {   
-    packet_from_proxy_header_t ack;
-    ack.packet_type = EA_PACKET_TYPE_ACK;
-    ack.seq_num = header_p->seq_num;
-
     int ret = update_external_app_heartbeat_by_appID(header_p->appID);
-    if(ret){
-        ack.ret_val = EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP;
-    }
-    else{
-        ack.ret_val = EAL_ERR_OK;
-    }
-    
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
-    if(ret != 0){
-        fprintf(stderr, "%s: send ack with seq_num:%u to client_fd:%d fail, ret = %d\n", 
-                __func__, ack.seq_num, client_fd, ret);
-        
-        log_file_write("%s: send ack with seq_num:%u to client_fd:%d fail, ret = %d\n", 
-                        __func__, ack.seq_num, client_fd, ret);
-    }
 
+    if( header_p->need_ack ){
+        packet_from_proxy_header_t ack;
+        ack.packet_type = EA_PACKET_TYPE_ACK;
+        ack.seq_num = header_p->seq_num;
+        if(ret){
+            ack.ret_val = EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP;
+        }
+        else{
+            ack.ret_val = EAL_ERR_OK;
+        }
+
+        ret = send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
+        if(ret != 0){
+            fprintf(stderr, "%s: send ack with seq_num:%u to client_fd:%d fail, ret = %d\n", 
+                    __func__, ack.seq_num, client_fd, ret);
+            
+            log_file_write("%s: send ack with seq_num:%u to client_fd:%d fail, ret = %d\n", 
+                            __func__, ack.seq_num, client_fd, ret);
+        }
+    }
     return ret;
 }
 
@@ -674,7 +675,6 @@ void *external_app_proxy_main_handler()
     int client_fd;       //temporary store client that we are communicating with.
     int num_ev_ready;    //number of events which are ready, returned by epoll_wait()
     log_file_write("%s: is ready to enter main loop\n", __func__);
-    fprintf(stdout, "%s: is ready to enter main loop\n", __func__);
 
     /* step7 start polling connection using epoll_wait */
     while(1){ 

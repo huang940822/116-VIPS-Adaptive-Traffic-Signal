@@ -17,6 +17,7 @@
 
 extern struct timespec hb_trc1;
 extern struct timespec hb_trc2;
+extern struct timespec WOW_trc;
 
 extern struct timespec trc_f1b;
 extern struct timespec trc_f2b;
@@ -39,6 +40,12 @@ extern struct timespec trc5;
 extern struct timespec trc6;
 extern struct timespec trc7;
 extern struct timespec trc8;
+
+extern struct timespec thread_trc0;
+extern struct timespec thread_trc1;
+extern struct timespec thread_trc2;
+extern struct timespec thread_trc3;
+extern struct timespec thread_trc4;
 
 void log_file_init();
 void log_file_name_update();

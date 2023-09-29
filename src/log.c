@@ -12,6 +12,7 @@
 
 struct timespec hb_trc1;
 struct timespec hb_trc2;
+struct timespec WOW_trc;
 
 struct timespec trc_f1b;
 struct timespec trc_f2b;
@@ -34,6 +35,12 @@ struct timespec trc5;
 struct timespec trc6;
 struct timespec trc7;
 struct timespec trc8;
+
+struct timespec thread_trc0;
+struct timespec thread_trc1;
+struct timespec thread_trc2;
+struct timespec thread_trc3;
+struct timespec thread_trc4;
 
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 

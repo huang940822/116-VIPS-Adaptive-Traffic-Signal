@@ -11,6 +11,11 @@
 #include "log.h"
 #include "external_app_proxy_typedefine.h"
 
+/* DANGER: this file: external_app_proxy_socket.h
+ * will exist both is server-side and client-side
+ * the two should be "THE SAME" !! */
+
+#define NON_ACK_INTERACTION_BEST_EFFORT 0
 #define EAP_CLIENT_PRINT_DEBUG 1
 #define EAP_SERVER_PRINT_DEBUG 1
 
@@ -37,13 +42,20 @@ typedef struct _packet_from_proxy_header_t {
     union{
         uint32_t api_id;    //might used for api-ack 
         uint32_t seq_num;   //used for heartbeat-ack
+        struct {
+            long sec;
+            long nsec;
+        };
     };
 } packet_from_proxy_header_t;
 
 typedef struct _packet_to_proxy_header_t {
     uint32_t packet_type;
-    pid_t pid;
     uint32_t appID;
+    union{
+        pid_t pid;
+        bool need_ack; //used when send heartbeat
+    };
     union{
         uint32_t api_id;    //used when send api-request
         uint32_t seq_num;   //used when send heartbeat
@@ -150,7 +162,7 @@ void unlock_callback_notify_channel();
 /* recommend middleware-api implementation use functions below  */
 bool is_proxy_connected();
 int32_t simple_send_request_header_to_proxy(int api_id);
-int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num);
+int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num, bool need_ack);
 int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size);
 int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, int api_id);
 int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size);

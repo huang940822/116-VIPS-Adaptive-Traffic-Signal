@@ -17,6 +17,10 @@
 #include "external_app_proxy_socket.h"
 #include "log.h"
 
+/* DANGER: this file: external_app_proxy_socket.c
+ * will exist both is server-side and client-side
+ * except for include-path, the two should be "THE SAME" !! */
+
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
 #define EAP_CONNECT_TIMEOUT_MS 10000   //10s == 10000ms
 
@@ -412,13 +416,14 @@ int32_t simple_send_request_header_to_proxy(int api_id)
     return EAL_ERR_OK;
 }
 
-int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num)
+int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num, bool need_ack)
 {
     int ret;
     packet_to_proxy_header_t hearbeat;
     hearbeat.packet_type = EA_PACKET_TYPE_HEARTBEAT;
     hearbeat.seq_num = seq_num;
     hearbeat.appID = register_appID;
+    hearbeat.need_ack = need_ack;
     
     errno = 0;
     ret = send(interact_fd, &hearbeat, sizeof(hearbeat), MSG_NOSIGNAL);

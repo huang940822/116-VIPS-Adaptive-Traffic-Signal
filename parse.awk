@@ -1,48 +1,33 @@
 BEGIN {
-    int_biggest = 0
-    int_smallest = 1011927840
-    int_total = 0
-    int_count = 0
+    label1_biggest = 0
+    label1_smallest = 1011927840
+    label1_total = 0
+    label1_count = 0
+    label1_total_sos_us = 0
 
-    ext_biggest = 0
-    ext_smallest = 1011927840
-    ext_total = 0
-    ext_count = 0
+    label2_biggest = 0
+    label2_smallest = 1011927840
+    label2_total = 0
+    label2_count = 0
+    label2_total_sos_us = 0
 
-    trc12_biggest = 0
-    trc12_smallest = 1011927840
-    trc12_total = 0
-    trc12_count = 0
+    label3_biggest = 0
+    label3_smallest = 1011927840
+    label3_total = 0
+    label3_count = 0
+    label3_total_sos_us = 0
 
-    f1_biggest = 0
-    f1_smallest = 1011927840
-    f1_total = 0
-    f1_count = 0
+    label4_biggest = 0
+    label4_smallest = 1011927840
+    label4_total = 0
+    label4_count = 0
+    label4_total_sos_us = 0
 
-    f2_biggest = 0
-    f2_smallest = 1011927840
-    f2_total = 0
-    f2_count = 0
-
-    f3_biggest = 0
-    f3_smallest = 1011927840
-    f3_total = 0
-    f3_count = 0
-
-    f4_biggest = 0
-    f4_smallest = 1011927840
-    f4_total = 0
-    f4_count = 0
-
-    f5_biggest = 0
-    f5_smallest = 1011927840
-    f5_total = 0
-    f5_count = 0
-
-    f6_biggest = 0
-    f6_smallest = 1011927840
-    f6_total = 0
-    f6_count = 0
+    label5_biggest = 0
+    label5_smallest = 1011927840
+    label5_total = 0
+    label5_count = 0
+    label5_total_sos_us = 0
 }
 
 {
@@ -51,14 +36,15 @@ BEGIN {
         value = $6
         if(value > 0)
         {
-            int_total += value
-            int_count += 1
+            label1_total += value
+            label1_count += 1
+            label1_total_sos_us += (value/1000) * (value/1000)
 
-            if ( value > int_biggest) {
-                int_biggest = value
+            if ( value > label1_biggest) {
+                label1_biggest = value
             }
-            if ( value < int_smallest) {
-                int_smallest = value
+            if ( value < label1_smallest) {
+                label1_smallest = value
             }
         }
     }
@@ -68,31 +54,15 @@ BEGIN {
         value = $6
         if(value > 0)
         {
-            ext_total += value
-            ext_count += 1
+            label2_total += value
+            label2_count += 1
+            label2_total_sos_us += (value/1000) * (value/1000)
 
-            if ( value > ext_biggest) {
-                ext_biggest = value
+            if ( value > label2_biggest) {
+                label2_biggest = value
             }
-            if ( value < ext_smallest) {
-                ext_smallest = value
-            }
-        }
-    }
-
-    if ($1 == "inner_handle_heartbeat_from_app" ) 
-    {
-        value = $6
-        if(value > 0)
-        {
-            f1_total += value
-            f1_count += 1
-
-            if ( value > f1_biggest) {
-                f1_biggest = value
-            }
-            if ( value < f1_smallest) {
-                f1_smallest = value
+            if ( value < label2_smallest) {
+                label2_smallest = value
             }
         }
     }
@@ -102,65 +72,107 @@ BEGIN {
         value = $6
         if(value > 0)
         {
-            f2_total += value
-            f2_count += 1
+            label3_total += value
+            label3_count += 1
+            label3_total_sos_us += (value/1000) * (value/1000)
 
-            if ( value > f2_biggest) {
-                f2_biggest = value
+            if ( value > label3_biggest) {
+                label3_biggest = value
             }
-            if ( value < f2_smallest) {
-                f2_smallest = value
+            if ( value < label3_smallest) {
+                label3_smallest = value
+            }
+        }
+    }
+
+    
+    if ($1 == "inner_handle_heartbeat_from_app" ) 
+    {
+        value = $6
+        if(value > 0)
+        {
+            label4_total += value
+            label4_count += 1
+            label4_total_sos_us += (value/1000) * (value/1000)
+
+            if ( value > label4_biggest) {
+                label4_biggest = value
+            }
+            if ( value < label4_smallest) {
+                label4_smallest = value
             }
         }
     }
 }
 
 END {
-
-    int_total /= 1000
-    int_biggest /= 1000
-    int_smallest /= 1000
-
-    ext_total /= 1000
-    ext_biggest /= 1000
-    ext_smallest /= 1000
-    
-    f1_total /= 1000
-    f1_biggest /= 1000
-    f1_smallest /= 1000
-
-    f2_total /= 1000
-    f2_biggest /= 1000
-    f2_smallest /= 1000
-
+    label1_total /= 1000
+    label1_avg_us = label1_total/label1_count
+    label1_var_us = (label1_total_sos_us / label1_count) - (label1_avg_us * label1_avg_us)
+    label1_sd_us = sqrt(label1_var_us)
+    label1_biggest /= 1000
+    label1_smallest /= 1000
+    print ""
     print "middleware_internal"
-    print "int Total: ", int_total
-    print "int Count: ", int_count
-    print "int Average: ", int_total/int_count
-    print "int Biggest: ", int_biggest
-    print "int Smallest: ", int_smallest
+    print "count: ", label1_count
+    print "avg_us: ", label1_avg_us
+    print "sd_us: ", label1_sd_us
+    print "Biggest: ", label1_biggest
+    print "Smallest: ", label1_smallest
 
+    label2_total /= 1000
+    label2_avg_us = label2_total/label2_count
+    label2_var_us = (label2_total_sos_us / label2_count) - (label2_avg_us * label2_avg_us)
+    label2_sd_us = sqrt(label2_var_us)
+    label2_biggest /= 1000
+    label2_smallest /= 1000
     print ""
     print "middleware_external"
-    print "ext Total: ", ext_total
-    print "ext Count: ", ext_count
-    print "ext Average: ", ext_total/ext_count
-    print "ext Biggest: ", ext_biggest
-    print "ext Smallest: ", ext_smallest
+    print "label2 Count: ", label2_count
+    print "label2 label2_avg_us: ", label2_avg_us
+    print "label2 label2_sd_us: ", label2_sd_us
+    print "label2 Biggest: ", label2_biggest
+    print "label2 Smallest: ", label2_smallest
 
-    print ""
-    print "inner_handle_heartbeat_from_app"
-    print " Total: ", f1_total
-    print " Count: ", f1_count
-    print " Average: ", f1_total/f1_count
-    print " Biggest: ", f1_biggest
-    print " Smallest: ", f1_smallest
-
+    label3_total /= 1000
+    label3_avg_us = label3_total/label3_count
+    label3_var_us = (label3_total_sos_us / label3_count) - (label3_avg_us * label3_avg_us)
+    label3_sd_us = sqrt(label3_var_us)
+    label3_biggest /= 1000
+    label3_smallest /= 1000
     print ""
     print "inner_handle_request_by_api_id"
-    print " Total: ", f2_total
-    print " Count: ", f2_count
-    print " Average: ", f2_total/f2_count
-    print " Biggest: ", f2_biggest
-    print " Smallest: ", f2_smallest
+    print "count: ", label3_count
+    print "avg_us: ", label3_avg_us
+    print "sd_us: ", label3_sd_us
+    print "Biggest: ", label3_biggest
+    print "Smallest: ", label3_smallest
+
+    label4_total /= 1000
+    label4_avg_us = label4_total/label4_count
+    label4_var_us = (label4_total_sos_us / label4_count) - (label4_avg_us * label4_avg_us)
+    label4_sd_us = sqrt(label4_var_us)
+    label4_biggest /= 1000
+    label4_smallest /= 1000
+    print ""
+    print "inner_handle_heartbeat_from_app"
+    print "count: ", label4_count
+    print "avg_us: ", label4_avg_us
+    print "sd_us: ", label4_sd_us
+    print "Biggest: ", label4_biggest
+    print "Smallest: ", label4_smallest
+
+    label5_total /= 1000
+    label5_avg_us = label5_total/label5_count
+    label5_var_us = (label5_total_sos_us / label5_count) - (label5_avg_us * label5_avg_us)
+    label5_sd_us = sqrt(label5_var_us)
+    label5_biggest /= 1000
+    label5_smallest /= 1000
+    print ""
+    print "nothing"
+    print "count: ", label5_count
+    print "avg_us: ", label5_avg_us
+    print "sd_us: ", label5_sd_us
+    print "Biggest: ", label5_biggest
+    print "Smallest: ", label5_smallest
 }

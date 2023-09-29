@@ -167,6 +167,10 @@ int init_server(comm_server_t *server)
 }
 int start_server(comm_server_t *server)
 {
+    // for test
+    // clock_gettime(CLOCK_MONOTONIC, &WOW_trc);
+    // printf("WOWOW-end s:%ld us:%ld\n", WOW_trc.tv_sec, WOW_trc.tv_nsec/1000);
+
     ae_main(server->el);
     ae_delete_event_loop(server->el);
 }
