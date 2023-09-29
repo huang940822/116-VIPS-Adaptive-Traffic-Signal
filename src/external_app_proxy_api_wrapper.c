@@ -77,14 +77,13 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
     return ret;
 }
 
-
 /* com_packet_processing.h */
 int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
 {
     /* WARNNING!!! 
        except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in cloud_packet_tx() in ea_library
+       "MATCH" the "read" and "send" pairs in cloud_packet_tx_needAck() in ea_library
     */
     struct {
         uint16_t len;
@@ -112,12 +111,15 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     /* cloud_packet_tx does not return err-code currently (return void) */
     cloud_packet_tx( payload.len, payload.service_id, specific_field);
 
-    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    #if NON_ACK_INTERACTION_BEST_EFFORT
+        //do not send ack
+    #else
+        ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    #endif
 
     /* no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
 {
     /* WARNNING!!! 
@@ -165,7 +167,6 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     /* no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 {
     /* WARNNING!!! 
@@ -212,7 +213,6 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     /* no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(remote_com_send)(int client_fd)
 {
     /* WARNNING!!! 
@@ -261,7 +261,6 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     return ret;
 }
 
-
 /* config.h */
 int API_WRAPPER_OF(get_config_RSU_id)(int client_fd)
 {
@@ -269,35 +268,30 @@ int API_WRAPPER_OF(get_config_RSU_id)(int client_fd)
        so this WRAPPER_FUNC should never be called */
     return 0;
 }
-
 int API_WRAPPER_OF(get_config_RSU_lat)(int client_fd)
 {   
     /* current version will update remote RSU config when registered, 
        so this WRAPPER_FUNC should never be called */
     return 0;
 }
-
 int API_WRAPPER_OF(get_config_RSU_lon)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
        so this WRAPPER_FUNC should never be called */
     return 0;
 }
-
 int API_WRAPPER_OF(get_config_RSU_name)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
        so this WRAPPER_FUNC should never be called */
     return 0;
 }
-
 int API_WRAPPER_OF(get_config_RSU_region)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
        so this WRAPPER_FUNC should never be called */
     return 0;
 }
-
 int API_WRAPPER_OF(get_config_RSU_elev)(int client_fd)
 {
     /* current version will update remote RSU config when registered, 
@@ -305,14 +299,13 @@ int API_WRAPPER_OF(get_config_RSU_elev)(int client_fd)
     return 0;
 }
 
-
 /* traffic_signal_command_buffer.h */
 int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
 {
     /* WARNNING!!! 
        except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time() in ea_library
+       "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time_needAck() in ea_library
     */
     struct {
         tsc_command_t tsc_cmd;
@@ -339,12 +332,15 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
         ack_ret_val = EAL_ERR_OK;
     }
 
-    ret = simple_send_ack_to_app(client_fd, ack_ret_val);
-    
+    #if NON_ACK_INTERACTION_BEST_EFFORT
+        //do not send ack
+    #else
+        ret = simple_send_ack_to_app(client_fd, ack_ret_val);
+    #endif
+
     /* no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
 {
     /* WARNNING!!! 
@@ -382,14 +378,13 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
     return ret;
 }
 
-
 /* vms.h */
 int API_WRAPPER_OF(vms_request_start)(int client_fd)
 {
     /* WARNNING!!! 
        except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
+       "MATCH" the "read" and "send" pairs in vms_request_start() in ea_library
     */
     struct {
         uint8_t id;
@@ -407,12 +402,9 @@ int API_WRAPPER_OF(vms_request_start)(int client_fd)
     /* call the actual function */
     vms_request_start(payload.id, payload.priority);
 
-    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
-    
-    /* no ack_payload for this api*/
+    /* no ack and no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(vms_request_end)(int client_fd)
 {
     /* WARNNING!!! 
@@ -434,18 +426,22 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
 
     /* call the actual function */
     vms_request_end(payload.id);
-    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
-    
+
+    #if NON_ACK_INTERACTION_BEST_EFFORT
+        //do not send ack
+    #else
+        ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    #endif
+
     /* no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
 {
     /* WARNNING!!! 
        except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
+       "MATCH" the "read" and "send" pairs in vms_sync_evsp_prog() in ea_library
     */
     struct{
         uint8_t evsp_prog[RTM_MAX];
@@ -469,13 +465,12 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
     /* no ack_payload for this api*/
     return ret;
 }
-
 int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
 {
     /* WARNNING!!! 
        except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
+       "MATCH" the "read" and "send" pairs in vms_sync_then_start_needAck() in ea_library
     */
     struct{
         uint8_t id;
@@ -497,12 +492,16 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
     }
     /* then call the actual function */
     vms_request_start(payload.id, payload.priority);
-    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
-    
+
+    #if NON_ACK_INTERACTION_BEST_EFFORT
+        //do not send ack
+    #else
+        ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    #endif
+
     /* no ack_payload for this api*/
     return ret;
 }
-
 
 /* traffic_signal_status_updating.h */
 int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
@@ -531,7 +530,6 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
 {
     /* WARNNING!!! 
@@ -558,7 +556,6 @@ int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_current_phase)(int client_fd)
 {
     /* WARNNING!!! 
@@ -585,7 +582,6 @@ int API_WRAPPER_OF(get_current_phase)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_current_step)(int client_fd)
 {
     /* WARNNING!!! 
@@ -612,7 +608,6 @@ int API_WRAPPER_OF(get_current_step)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_current_second)(int client_fd)
 {
     /* WARNNING!!! 
@@ -639,7 +634,6 @@ int API_WRAPPER_OF(get_current_second)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
 {
     /* WARNNING!!! 
@@ -666,7 +660,6 @@ int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_SignalCount)(int client_fd)
 {
     /* WARNNING!!! 
@@ -693,7 +686,6 @@ int API_WRAPPER_OF(get_SignalCount)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_plan_id)(int client_fd)
 {
     /* WARNNING!!! 
@@ -720,7 +712,6 @@ int API_WRAPPER_OF(get_plan_id)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_control_status)(int client_fd)
 {
     /* WARNNING!!! 
@@ -747,7 +738,6 @@ int API_WRAPPER_OF(get_control_status)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
 {
     /* WARNNING!!! 
@@ -774,7 +764,6 @@ int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_remaining_time)(int client_fd)
 {
     /* WARNNING!!! 
@@ -815,7 +804,6 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
 {
     /* WARNNING!!! 
@@ -855,7 +843,6 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
 {
     /* WARNNING!!! 
@@ -882,7 +869,6 @@ int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
 {
     /* WARNNING!!! 
@@ -909,7 +895,6 @@ int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(set_control_status)(int client_fd)
 {
     /* WARNNING!!! 
@@ -938,7 +923,6 @@ int API_WRAPPER_OF(set_control_status)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
 {
     /* WARNNING!!! 
@@ -965,7 +949,6 @@ int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
 {
     /* WARNNING!!! 
@@ -992,7 +975,6 @@ int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
     }
     return ret;
 }
-
 int API_WRAPPER_OF(get_prev_SubPhaseID)(int client_fd)
 {
     /* WARNNING!!! 
@@ -1020,7 +1002,6 @@ int API_WRAPPER_OF(get_prev_SubPhaseID)(int client_fd)
     return ret;
 }
 
-
 eap_api_wrapper_fp api_wrapper_fp_arr[] = {
     /* application_registration.h */
     [API_ID_OF(event_callback_msg_id_insert)] = API_WRAPPER_OF(event_callback_msg_id_insert),
@@ -1041,7 +1022,7 @@ eap_api_wrapper_fp api_wrapper_fp_arr[] = {
 
     /* traffic_signal_command_buffer.h */
     [API_ID_OF(command_buf_insert_effect_time)] = API_WRAPPER_OF(command_buf_insert_effect_time),
-    [API_ID_OF(command_buf_insert_effect_time)] = API_WRAPPER_OF(command_buf_insert_effect_time),
+    [API_ID_OF(command_buf_insert_adjustment)] = API_WRAPPER_OF(command_buf_insert_adjustment),
 
     /* vms.h */    
     [API_ID_OF(vms_request_start)] = API_WRAPPER_OF(vms_request_start),

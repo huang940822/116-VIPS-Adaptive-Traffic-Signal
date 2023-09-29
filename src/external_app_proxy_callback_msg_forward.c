@@ -22,6 +22,8 @@
 #include "external_app_proxy_callback_msg_forward.h"
 
 app_obj_t* proxy_handling_app_p;
+//for test
+
 
 static inline __attribute__((always_inline)) 
 int pre_handling_cloud_packet_before_forwarding(C2R_app_section_t* app_section, app_obj_t* app_obj_p)
@@ -75,44 +77,6 @@ int pre_handling_cloud_packet_before_forwarding(C2R_app_section_t* app_section, 
 }
 
 static inline __attribute__((always_inline)) 
-void fill_self_defined_section(V2R_self_defined_section_t *self_section_p,
-                               OBU_object_t *OBU_object_p,
-                               V2R_app_section_t *app_section_p)
-{
-    strncpy(self_section_p->obu_name, 
-            OBU_object_p->OBU_name, OBU_NAME_MAX_LEN);
-    self_section_p->vehical_type = OBU_object_p->vehicle_type;
-
-    uint8_t last_record_pointer = OBU_object_p->record_ring.last_record_pointer;
-    OBU_record_t *last_record_p = &(OBU_object_p->record_ring.record[last_record_pointer]);
-    self_section_p->time_second = last_record_p->time_second;
-    self_section_p->lon = last_record_p->position_lon;
-    self_section_p->lat = last_record_p->position_lat;
-    self_section_p->speed = last_record_p->speed;
-    self_section_p->direction = last_record_p->direction;
-
-    self_section_p->msgID = app_section_p->msgID;
-    if( self_section_p->msgID == BasicSafetyMessage_Id){
-        self_section_p->data_len = app_section_p->payload_len;
-        //self_section_p->data = app_section_p->payload;
-    }
-    else{
-        self_section_p->data_len = 0;
-        //self_section_p->data = app_section_p->data;
-    }
-
-    if(self_section_p->vehical_type == VEHICLE_AMBULANCE){
-        ;//currently evsp_on_duty_flag... is directly read from payload_len
-    }
-    else if( self_section_p->vehical_type == VEHICLE_BUS){
-        ;//currently tsp_passenger_num... is not in use
-    }
-    else{
-        ;//currently no other vehical_type
-    }
-}
-
-static inline __attribute__((always_inline)) 
 int forward_function_parameter_check(void *app_section, event_type_t event, char* func_name)
 {
     if(!app_section){
@@ -152,12 +116,18 @@ int forward_function_parameter_check(void *app_section, event_type_t event, char
 static inline __attribute__((always_inline)) 
 int simple_send_notify_header(int fd, event_type_t event)
 {
+    static struct timespec notify_trc;
     packet_from_proxy_header_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
-    header.callback_event = event;  
+    header.callback_event = event; 
+    
+    //for test
+    record_current_timespec(&notify_trc);
+    header.sec = notify_trc.tv_sec;
+    header.nsec = notify_trc.tv_nsec;
+
     return send_packet_to_unix_sk_fd(fd, &header, sizeof(header));
 }
-
 
 /* NOTICE, if you add new callback, you NEED to add a new EAP_CBMSG_FORWARD_FUNC_OF */
 /* and update the cbmsg_forward_fp_arr[]  */
@@ -182,37 +152,36 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
         return ret;
     }
 
-    /* currently the app_section passed into FORWARD_FUNC_OF(on_OBU_packet_rx) 
-       is wrapper_arg_for_obu_packet_t* */
-    wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
+    V2R_self_defined_section_t* self_defined_section_p 
+                                    = (V2R_self_defined_section_t*)app_section ;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
-    if( arg_p->msg_p==0 || arg_p->object_p==0 || arg_p->app_section_p==0 ){
+    if( self_defined_section_p->data==0 || self_defined_section_p->data_len==0 ){
         printf("wow wow why\n");
         return -2;
     }
-
-    V2R_self_defined_section_t self_defined_section;
-    fill_self_defined_section(&self_defined_section, arg_p->object_p, arg_p->app_section_p);
-    
+     
     ret = simple_send_notify_header(notify_fd, EVENT_OBU_PACKET_RX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
         return ret;
     }
     
-    ret = send_packet_to_unix_sk_fd(notify_fd, &(self_defined_section), sizeof(self_defined_section));
+    ret = send_packet_to_unix_sk_fd(notify_fd, self_defined_section_p, 
+                                               sizeof(V2R_self_defined_section_t));
     if(ret){
         simple_fatal_act_logger("send self_defined_section", ret);
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, &(self_defined_section_p->data_len), 
+                                               sizeof(size_t));
     if(ret){
         simple_fatal_act_logger("send msg_len", ret);
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
+    ret = send_packet_to_unix_sk_fd(notify_fd, self_defined_section_p->data ,
+                                               self_defined_section_p->data_len);
     if(ret){
         simple_fatal_act_logger("send msg", ret);
         return ret;
@@ -237,36 +206,36 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
         return ret;
     }
 
-    /* currently the app_section passed into FORWARD_FUNC_OF(on_OBU_packet_tx) 
-       is wrapper_arg_for_obu_packet_t* */
-    wrapper_arg_for_obu_packet_t* arg_p = (wrapper_arg_for_obu_packet_t*)app_section;
+    V2R_self_defined_section_t* self_defined_section_p 
+                                    = (V2R_self_defined_section_t*)app_section ;
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
-    if( arg_p->msg_p==0 || arg_p->object_p==0 || arg_p->app_section_p==0 ){
+    if( self_defined_section_p->data==0 || self_defined_section_p->data_len==0 ){
+        printf("wow wow why\n");
         return -2;
     }
-
-    V2R_self_defined_section_t self_defined_section;
-    fill_self_defined_section(&self_defined_section, arg_p->object_p, arg_p->app_section_p);
-
-    ret = simple_send_notify_header(notify_fd, EVENT_OBU_PACKET_RX);
+     
+    ret = simple_send_notify_header(notify_fd, EVENT_OBU_PACKET_TX);
     if(ret){
         simple_fatal_act_logger("send header", ret);
         return ret;
     }
-
-    ret = send_packet_to_unix_sk_fd(notify_fd, &(self_defined_section), sizeof(self_defined_section));
+    
+    ret = send_packet_to_unix_sk_fd(notify_fd, self_defined_section_p, 
+                                               sizeof(V2R_self_defined_section_t));
     if(ret){
         simple_fatal_act_logger("send self_defined_section", ret);
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd(notify_fd, &(arg_p->msg_p->msg_len), sizeof(size_t));
+    ret = send_packet_to_unix_sk_fd(notify_fd, &(self_defined_section_p->data_len), 
+                                               sizeof(size_t));
     if(ret){
         simple_fatal_act_logger("send msg_len", ret);
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd(notify_fd, arg_p->msg_p->msg , arg_p->msg_p->msg_len);
+    ret = send_packet_to_unix_sk_fd(notify_fd, self_defined_section_p->data ,
+                                               self_defined_section_p->data_len);
     if(ret){
         simple_fatal_act_logger("send msg", ret);
         return ret;
