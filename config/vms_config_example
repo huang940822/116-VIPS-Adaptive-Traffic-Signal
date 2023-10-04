@@ -13,9 +13,9 @@ ACTIVE_DIRECTIONS 1 0 1 0 1 0 1 0
 # integer number array
 # length of the array is 8
 
-PROGRAM_IDs_GREEN 4 255 4 255 4 255 4 255
+PROGRAM_IDs_GREEN 2 255 3 255 4 255 5 255
 
 # Program IDs(Not Green)
 # integer number array
 # length of the array is 8
-PROGRAM_IDs_NOT_GREEN 3 255 3 255 3 255 3 255
+PROGRAM_IDs_NOT_GREEN 10 255 11 255 12 255 13 255
