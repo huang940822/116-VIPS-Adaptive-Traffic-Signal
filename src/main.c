@@ -120,9 +120,12 @@ int main()
         set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
     }
 
-    /* Start server */
-    // 需要再 com_layer init 完才能 com_send()
-    com_layer_init(NULL);
+    J2735Config cfg;
+    ret = j2735_init(&cfg);
+    if (!IS_SUCCESS(ret)) {
+        printf("Fail to init J2735\n");
+        return -1;
+    }
 
     /* application service registration */
     app_obj_t *app_arr[] = {
@@ -161,12 +164,9 @@ int main()
         perror("main: pthread_create");
         exit(errno);
     }
-    J2735Config cfg;
-    ret = j2735_init(&cfg);
-    if (!IS_SUCCESS(ret)) {
-        printf("Fail to init J2735\n");
-        return -1;
-    }
+
+    /* Start server */
+    com_layer_init(NULL);
 
     while (1) {
         sleep(1);
