@@ -38,9 +38,17 @@ int spat_msg_init(SPAT **pp_spat)
         perror("J2735 library initial");
         exit(errno);
     }
+    // 不用 j2735_msg_prealloc 是因為 MovementState 幫忙宣告的最多到 16 個而已
+    Malloc((*pp_spat), sizeof(SPAT), "SPaT msg");
+    // 因為只有一個路口所以只宣告一個路口的
+    Malloc((*pp_spat)->intersections.tab, sizeof(IntersectionState), "SPaT IntersectionState");
+    Malloc((*pp_spat)->intersections.tab[0].states.tab, sizeof(MovementState) * MovementList_MAX_SIZE, "SPaT MovementState");
+    for (int i = 0; i < MovementList_MAX_SIZE; i++) {
+        Malloc((*pp_spat)->intersections.tab[0].states.tab[i].state_time_speed.tab, sizeof(MovementEvent) * MovementList_MAX_SIZE, "SPaT MovementState");
+    }
+    Malloc((*pp_spat)->intersections.tab[0].status.buf, 16, "SPaT BitString status");
+    (*pp_spat)->intersections.tab[0].status.len = 16;
 
-    (*pp_spat) = (SPAT *) j2735_msg_prealloc(SPAT_Id);
-    /* only 1 intersection */
     (*pp_spat)->intersections.count = 1;
     IntersectionState *int_state = (*pp_spat)->intersections.tab;
     /* set randomly  */
