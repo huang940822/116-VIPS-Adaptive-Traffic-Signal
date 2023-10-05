@@ -19,7 +19,6 @@
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
-uint8_t flag_pretime = 0;
 uint8_t flag_countdown_on = 0;
 uint8_t flag_countdown_off = 0;
 uint8_t flag_query_firm_ver = 0;

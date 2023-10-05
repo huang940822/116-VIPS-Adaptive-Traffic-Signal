@@ -74,11 +74,6 @@ void timer_event_handler(__sigval_t value)
             WAIT_ACK_LOOP
             flag_PhaseOrder = false;
         }
-        if (flag_pretime == true) {
-            temp_ack_seq = tsc_pretime();
-            WAIT_ACK_LOOP
-            flag_pretime = false;
-        }
 
         if (flag_countdown_on == true) {
             temp_ack_seq =

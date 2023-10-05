@@ -276,10 +276,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
                      app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
+            int target_phase = host_OBU->target_phase;
             command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
+            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(host_OBU->target_phase) == true) {
+            if (EVSP_host_OBU_obj_resume(target_phase) == true) {
                 // 進行補償
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
                 command_buf_resume_control(EVSP.id);
@@ -287,7 +289,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 // 結束 EVSP_VMS_SERVICE
                 vms_request_end(EVSP.id);
             }
-            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         }

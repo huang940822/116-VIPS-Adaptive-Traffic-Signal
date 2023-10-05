@@ -22,8 +22,6 @@ traffic_signal_status_t current_signal_status;
 pthread_mutex_t mutex_current_signal_status = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_signal_status;
-static uint16_t pretime_sent_count = 0;
-extern uint8_t flag_pretime;
 extern uint8_t flag_switch2nextStep;
 extern uint8_t flag_PhaseOrder;
 uint8_t phase_change_flag = false;
@@ -91,25 +89,6 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     if (signal_status.StepSec <= 255 && signal_status.StepID == 1) {
         clear_655xx_error();
     }
-
-    // execute pretime instruction to force tc go back to pretime
-    // to prevent the tc not go back to pretime after 全動態
-    // pretime_sent_count is for let pretime sent one time only in step 4
-    // now, have to check command buffer whether or not is empty
-    // if it is empty and return pretime control status.
-    if (signal_status.StepID == 4) {  // 4 閃黃燈
-        // printf("command_buf_empty:%d\r\n",check_command_buf_empty());
-        if (pretime_sent_count == 0 && check_command_buf_empty()) {
-            log_file_write("5FCC: execute go back to pretime at step 4\r\n");
-            // printf("5FCC updating: set pretime!\r\n");
-            // tsc_pretime();
-            flag_pretime = true;
-        }
-        pretime_sent_count++;
-    } else {
-        pretime_sent_count = 0;
-    }
-
 
     if (config.log_signal_packet_info) {
         log_file_write("signal packet info: 5FCC\nControlStrategy: %d\nSubPhaseID: %d\nStepID: %d\nStepSec: %d",
@@ -389,7 +368,7 @@ void packet_0FC2(traffic_signal_packet_t *packet)
                                  signal_status.Sec - timeinfo.tm_sec;
 
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-             "signal packet info: 0FC2\n %hhd-%hhd-%hhd_%hhd:%hhd:%hhd week %hhd\n offset %d",
+             "signal packet info: 0FC2\n %hhd-%hhd-%hhd_%hhd:%hhd:%hhd week %hhd offset %d",
              signal_status.Year, signal_status.Month, signal_status.Day,
              signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week, signal_status.tcTimeOffest);
     pthread_mutex_unlock(&mutex_signal_status);

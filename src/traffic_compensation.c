@@ -121,6 +121,7 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     }
     // 加上現在剩餘的秒數
     secInDay += signal_status->StepSec;
+    compTime = secInDay % cycleTime;
 
     // 小於 cycleTime 的 1/2 就用負補償 大於就用正補償
     return compTime < (cycleTime / 2) ? -compTime : cycleTime - compTime;

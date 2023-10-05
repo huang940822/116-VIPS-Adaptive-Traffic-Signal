@@ -272,7 +272,7 @@ typedef struct traffic_signal_status {
     uint8_t Sec;    // (00~59)
     // TC 與 IPC 相差的秒數 只有比較當天的相差 超過一天不會計算
     // 正數表示 TC 時間較快 負數表示 IPC 時間較快
-    uint16_t tcTimeOffest;
+    int tcTimeOffest;
     // 0F 04
     uint16_t original_tc_health_status;
 

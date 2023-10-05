@@ -72,7 +72,7 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
     }
     pthread_mutex_unlock(&mutex_command_buf);
     if (has_clean) {
-        log_file_write("%-15s has been cleaned in command buffer.");
+        log_file_write("%-15s has been cleaned in command buffer.", host_OBU_name);
     }
 }
 
@@ -229,6 +229,20 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
 }
 // In order to enable the commands in the commmand buffer to be sent to the
 // traffic signal controller at an appropriate time.
+
+static inline bool check_command_buf_empty()
+{
+    for (int i = 0; i < CYCLE_NUM; i++) {
+        for (int j = 0; j < SUBPHASEID_NUM; j++) {
+            if (command_buf[i][j].app_id != 0) {
+                pthread_mutex_unlock(&mutex_command_buf);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void command_buf_polling()
 {
     char log_content[LOG_CONTENT_LEN + 1] = {0};
@@ -287,10 +301,33 @@ void command_buf_polling()
             command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;
         }
     }
+    // execute pretime instruction to force tc go back to pretime
+    // to prevent the tc not go back to pretime after 全動態
+    // pretime_sent_count is for let pretime sent one time only in step 4
+    // now, have to check command buffer whether or not is empty
+    // if it is empty and return pretime control status.
+    static uint8_t pretimeflag = true;
+    if (signal_status.StepID == 4) {
+        if (check_command_buf_empty() && pretimeflag) {
+            // if (get_total_compensation_second() > 2) {
+            //     pthread_mutex_unlock(&mutex_command_buf);
+            //     start_compensation();  // 開始進行補償
+            //     pthread_mutex_lock(&mutex_command_buf);
+            // } else {
+
+            // }
+            pretimeflag = false;
+            uint8_t temp_ack_seq = tsc_pretime();
+            WAIT_ACK_LOOP
+        }
+    } else {
+        pretimeflag = true;
+    }
 
     /* command ready to send in current phase */
-    if (command_buf[cycle_index][current_SubPhaseID - 1].send_flag == false &&
-        command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 &&
+    // app_id != 0 代表有指令
+    if (command_buf[cycle_index][current_SubPhaseID - 1].app_id != 0 &&
+        command_buf[cycle_index][current_SubPhaseID - 1].send_flag == false &&
         current_StepID == 1 && current_StepSec > 1 && prior_SubPhaseID == current_SubPhaseID) {
         // 將目前phase的 command buffer object 送到TC箱
         command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
@@ -498,19 +535,21 @@ int command_buf_insert_adjustment(tsc_command_t *command)
 // APP 結束會恢復狀態 會刪除剩餘的 host OBU command 並回復 current phase 原本的路燈時間
 // 並在下一個 phase 會開始補償
 // 如果 current phase 已經不是 step 1 也會插入 因為下一個 phase 的補償會幫助
-int command_buf_resume_control(int appid)
+int command_buf_resume_control(uint8_t appid)
 {
     tsc_command_t command = {0};
     traffic_signal_status_t signal_status;
 
     get_traffic_signal_status(&signal_status);
 
-    command.app_id = appid;
+    command.app_id = 99;
+    command.app_priority = 99;
     command.target_phase = signal_status.SubPhaseID;
     strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
     command.phase = command.target_phase;
     command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
-
+    
+    log_file_write("app id %d insert resume.", appid);
     return command_buf_insert_effect_time(&command);
 }
 
@@ -541,19 +580,4 @@ void command_buf_print()
     }
     pthread_mutex_unlock(&mutex_command_buf);
     log_file_write(log_content);
-}
-
-bool check_command_buf_empty()
-{
-    pthread_mutex_lock(&mutex_command_buf);
-    for (int i = 0; i < CYCLE_NUM; i++) {
-        for (int j = 0; j < SUBPHASEID_NUM; j++) {
-            if (command_buf[i][j].app_id != 0) {
-                pthread_mutex_unlock(&mutex_command_buf);
-                return false;
-            }
-        }
-    }
-    pthread_mutex_unlock(&mutex_command_buf);
-    return true;
 }
