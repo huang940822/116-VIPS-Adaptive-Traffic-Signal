@@ -112,7 +112,7 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     // 要對齊下一個週期開始的時間
     // 加上剩下時向的時間
     for (int i = subPhaseID + 1; i < signal_status->SubPhaseCount; i++) {
-        secInDay += (signal_status->plan[i].PreTimeCompensated + signal_status->plan[i].PedGreenFlash +
+        secInDay += (signal_status->plan[i].PreGreen + signal_status->plan[i].PedGreenFlash +
                      signal_status->plan[i].PedRed + signal_status->plan[i].Yellow + signal_status->plan[i].AllRed);
     }
     // 加上剩下步階的時間
@@ -122,7 +122,6 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     // 加上現在剩餘的秒數
     secInDay += signal_status->StepSec;
     compTime = secInDay % cycleTime;
-
     // 小於 cycleTime 的 1/2 就用負補償 大於就用正補償
     return compTime < (cycleTime / 2) ? -compTime : cycleTime - compTime;
 }
@@ -155,7 +154,7 @@ int16_t get_total_compensation_second()
     return get_total_compensation_second_with_status(&signal_status);
 }
 
-static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenum, int cycle_index, uint16_t *subphase_compensation_time)
+static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenum, int cycle_index, int16_t subphase_compensation_time[SUBPHASEID_NUM])
 {
     tsc_command_t command = {0};
     int ret = 0, subPhaseID = signal_status->SubPhaseID - 1;
@@ -173,22 +172,20 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
     }
 
     cycle_index %= CYCLE_NUM;
-    command.compensation_cycle = Comp_cyclenum;
     for (int i = 0; i < signal_status->SubPhaseCount; i++) {
         if (subphase_compensation_time[subphase_ptr] == 0)
             goto NotInsertCommand;
 
         command.cycle = cycle_index;
         command.target_phase = command.phase = subphase_ptr + 1;
-        command.compensation_time = subphase_compensation_time[subphase_ptr];
-        command.effect_time = signal_status->plan[subphase_ptr].PreTimeCompensated - subphase_compensation_time[subphase_ptr];
+        command.effect_time = (int16_t) signal_status->plan[subphase_ptr].PreGreen + subphase_compensation_time[subphase_ptr];
 
-        printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
-               command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
         ret = command_buf_insert_effect_time(&command);
-        log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
-                     command.cycle, command.phase, command.effect_time, command.compensation_time, ret);
     NotInsertCommand:
+        printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
+               command.cycle, subphase_ptr + 1, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
+        log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
+                     command.cycle, command.phase, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
         subphase_ptr++;
         if (subphase_ptr >= signal_status->SubPhaseCount) {
             subphase_ptr %= signal_status->SubPhaseCount;
@@ -270,7 +267,7 @@ static inline int get_cycle_compensation_time(ArgLogAndStatus, int16_t cycle_com
     log_snprintf(log_content, "start compensation %d \r\nTotal compensation second:%d\r\n compensation cycle is %d\r\n",
                  methodId, total_compensation_time, Comp_cyclenum);
     for (int i = 0; i < Comp_cyclenum; i++) {
-        log_snprintf(log_content, "\ncompensation cycle %d is %d", i, cycle_compensations[i]);
+        log_snprintf(log_content, "compensation cycle %d is %d\n", i, cycle_compensations[i]);
     }
     // 如果補償時間為 0 不做事
     return total_compensation_time;

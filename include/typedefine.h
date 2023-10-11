@@ -354,9 +354,6 @@ typedef struct tsc_command {
                           // to be adjusted to.
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
-    int8_t compensation_time;
-    uint8_t compensation_cycle;
-
     char host_OBU_name[ID_MAX_LEN + 1];
 } tsc_command_t;
 
