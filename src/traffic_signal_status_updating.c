@@ -27,15 +27,11 @@ extern uint8_t flag_switch2nextStep;
 extern uint8_t flag_PhaseOrder;
 uint8_t phase_change_flag = false;
 uint8_t real_pretime = 0;
-static uint8_t FirstSwitchFlag = 0;
 static uint8_t PhaseOrder_initial = true;
 
 /* 5F CC 回報時相步階 */
 void packet_5FCC(traffic_signal_packet_t *packet)
 {
-    static uint8_t previous_phase = 0;
-    // static uint8_t init_get_phase_flag=false;
-
     pthread_mutex_lock(&mutex_signal_status);
 
     signal_status.ControlStrategy = packet->INFO[2];
@@ -61,27 +57,6 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     }
     signal_status.StepID = packet->INFO[4];
     signal_status.StepSec = (packet->INFO[5] << 8) | packet->INFO[6];
-
-    // phase change happen!!
-
-    // printf("previous phase is %d and current phase is %d\r\n",
-    // previous_phase, signal_status.SubPhaseID);
-
-    if (previous_phase != signal_status.SubPhaseID) {
-        if (FirstSwitchFlag == 1) {  // 第一次換相不取值
-            FirstSwitchFlag = 2;
-        } else if (FirstSwitchFlag == 2) {
-            // 只有在換時向的第一秒取值
-            // 取這個時向步階一的總秒數
-            signal_status.plan[signal_status.SubPhaseID - 1]
-                .PreTimeCompensated = signal_status.StepSec;
-            printf("phase changed and pretime for phase %d is %d\r\n",
-                   signal_status.SubPhaseID, signal_status.StepSec);
-            log_file_write("signal_status.plan[%d].PreTimeCompensated:%d\r\n", signal_status.SubPhaseID - 1, signal_status.plan[signal_status.SubPhaseID - 1].PreTimeCompensated);
-        }
-    }
-
-    previous_phase = signal_status.SubPhaseID;
 
     if (signal_status.StepSec > 255 && signal_status.StepID == 1) {
         flag_switch2nextStep = true;

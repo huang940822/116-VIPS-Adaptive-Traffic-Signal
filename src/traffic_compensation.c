@@ -122,6 +122,8 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     // 加上現在剩餘的秒數
     secInDay += signal_status->StepSec;
     compTime = secInDay % cycleTime;
+    log_file_write("Get alignment compensation time secInDay: %d align: %d %d compTime: %d cycletime: %d\n",
+                   secInDay, alignHour, alignMin, compTime, cycleTime);
     // 小於 cycleTime 的 1/2 就用負補償 大於就用正補償
     return compTime < (cycleTime / 2) ? -compTime : cycleTime - compTime;
 }
@@ -185,7 +187,7 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
         printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
                command.cycle, subphase_ptr + 1, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
         log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
-                     command.cycle, command.phase, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
+                     command.cycle, subphase_ptr + 1, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
         subphase_ptr++;
         if (subphase_ptr >= signal_status->SubPhaseCount) {
             subphase_ptr %= signal_status->SubPhaseCount;
@@ -194,26 +196,30 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
     }
 }
 
-// 按照比例把補償時間分配給這個 subphase 並回傳因最大綠或最小綠造成的剩餘時間
 static inline int allocate_compensation_by_weight(ArgTrafficStatus, float phase_weight[PHASE_COUNT_MAX_NUM], int compensation_time, int16_t subphase_compensation_time[SUBPHASEID_NUM])
 {
-    int remaining_time = compensation_time;
+    int remaining_time = compensation_time, comp_time = 0;
     float weights[SUBPHASEID_NUM] = {0};
 
     for (int i = 0; i < signal_status->SubPhaseCount; i++)
         weights[i] = phase_weight[i] * 0.01;
 
     for (int i = 0; i < signal_status->SubPhaseCount && remaining_time != 0; i++) {
-        int comp_time = ceil(compensation_time * weights[i]);                 // 取無條件進位
-        comp_time = comp_time > remaining_time ? remaining_time : comp_time;  // 少於剩餘時間就等於剩餘時間
+        if (compensation_time > 0) {
+            comp_time = ceil(compensation_time * weights[i]);                     // 取無條件進位
+            comp_time = comp_time > remaining_time ? remaining_time : comp_time;  // 少於剩餘時間就等於剩餘時間
+        } else {
+            comp_time = -ceil(-compensation_time * weights[i]);
+            comp_time = comp_time < remaining_time ? remaining_time : comp_time;
+        }
 
-        int effect_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i] - comp_time;
+        int effect_time = signal_status->plan[i].PreGreen + subphase_compensation_time[i] + comp_time;
         if (effect_time < signal_status->plan[i].MinGreen)
             effect_time = signal_status->plan[i].MinGreen;
         else if (effect_time > signal_status->plan[i].MaxGreen)
             effect_time = signal_status->plan[i].MaxGreen;
 
-        comp_time = signal_status->plan[i].PreTimeCompensated - subphase_compensation_time[i] - effect_time;
+        comp_time = effect_time - signal_status->plan[i].PreGreen - subphase_compensation_time[i];
         subphase_compensation_time[i] += comp_time;
         remaining_time -= comp_time;
     }
@@ -279,7 +285,7 @@ static inline int implement_compensation_by_weight(ArgLogAndStatus, int16_t cycl
 
     for (int i = 0; i < Comp_cyclenum; i++) {
         memset(subphase_compensation_time, 0, sizeof(subphase_compensation_time));
-        uint16_t remaining_time =
+        int16_t remaining_time =
             allocate_compensation_by_weight(signal_status, phase_weight, cycle_compensations[i], subphase_compensation_time);
         allocate_remaining_time(signal_status, remaining_time, subphase_compensation_time);
         insert_compensation_command(signal_status, log_content, Comp_cyclenum, i, subphase_compensation_time);

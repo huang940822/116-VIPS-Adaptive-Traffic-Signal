@@ -225,9 +225,9 @@ typedef struct static_plan {
 
     // Green - PedGreenFlash
     uint16_t PreGreen;  // 原始步階1
-    // 時向步階一的正在執行的總秒數
+    // 正在執行的綠燈秒數
     // 會因為執行延長、縮短或補償動態改變
-    // 如果沒有被延長或縮短等於 PreGreen
+    // 如果沒有被延長或縮短等於 Green
     uint16_t PreTimeCompensated;
 
     // 5F C5

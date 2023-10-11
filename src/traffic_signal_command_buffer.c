@@ -99,11 +99,23 @@ static inline void stop_at_segament_change(traffic_signal_status_t *signal_statu
 }
 
 // 要送command到tc箱 被polling呼叫
-static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhaseID)
+void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhaseID)
 {
+    traffic_signal_status_t signal_status;
+    get_traffic_signal_status(&signal_status);
+    sem_timedwait_millsecs(
+        &sem_signal_status,
+        SEM_SIGNAL_STATUS_TIMEOUT);  // 有timeout的號誌等待 但是 對應的post在那？
+
+    uint16_t pretime = signal_status.plan[current_SubPhaseID - 1].PreGreen;
+    int difference = 0;
+    int time = 0;
+    int temp_ack_seq;
+
     uint8_t conpensation_flag = false;
     conpensation_flag = is_in_compensation();
-    // 公車來臨若TC正在補償則不做控制
+    uint16_t current_sec_residual = signal_status.StepSec;
+
     if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
         if (TSP.dontSend2TC == 1) {
             printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
@@ -128,20 +140,8 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
         log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }
 
-    sem_timedwait_millsecs(&sem_signal_status, SEM_SIGNAL_STATUS_TIMEOUT);  // 有timeout的號誌等待 但是 對應的post在那？
-
-    traffic_signal_status_t signal_status;
-    get_traffic_signal_status(&signal_status);
-
-    uint16_t pretime = signal_status.plan[current_SubPhaseID - 1].PreTimeCompensated;
-    int difference = 0;
-    int time = 0;
-    int temp_ack_seq;
-
-    uint16_t current_sec_residual = signal_status.StepSec;
-
     switch (config.signal_controller_manufacturer) {
-    case CHENG_LONG: {
+    case CHENG_LONG:
         // command_obj->adjusted_time代表這個step現在的時間
         difference = command_obj->effect_time - command_obj->adjusted_time;
         // printf("cmd obj's effect time is %d and adjusted time is %d\r\n", command_obj->effect_time, command_obj->adjusted_time);
@@ -163,50 +163,46 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
             time = 255;
         }
 
+        temp_ack_seq = tsc_dynamic();
+        WAIT_ACK_LOOP
+
         while (time < 0) {
-            temp_ack_seq = tsc_dynamic();
-            WAIT_ACK_LOOP
             // 不能下0 否則step會立刻結束
             temp_ack_seq = tsc_extend(current_SubPhaseID, 1, 1);  // 每次就是pretime-4去扣
             WAIT_ACK_LOOP
             // time += pretime;
             time += (pretime - 4);  // 要想一下 -4是因為機器限制的關係
         }
+        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
+        WAIT_ACK_LOOP
         break;
-    }
-    case SHAN_ZHU: {
+
+    case SHAN_ZHU:
         difference = command_obj->effect_time - command_obj->adjusted_time;
         log_file_write("\ndifference is :%d\r\n", difference);
 
         time = command_obj->effect_time;
+        temp_ack_seq = tsc_dynamic();
+        WAIT_ACK_LOOP
+        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
+        WAIT_ACK_LOOP
         break;
-    }
-    case SHAN_ZHU_M: {
+
+    case SHAN_ZHU_M:
         difference = command_obj->effect_time - command_obj->adjusted_time;
         printf("difference:%d\r\n", difference);
         log_file_write("\ndifference is :%d\r\n", difference);
 
         time = command_obj->effect_time;
+        temp_ack_seq = tsc_dynamic();
+        WAIT_ACK_LOOP
+        temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
+        WAIT_ACK_LOOP
         break;
-    }
     default:
         return;  // 不屬於任何一家號控器
         break;
     }
-    if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
-        if (current_sec_residual + difference < 0) {
-            int16_t residual = difference + current_sec_residual;
-            printf("residual:%d\r\n", residual);
-            set_compensation_buffer(current_SubPhaseID, difference - residual);
-        } else {
-            set_compensation_buffer(current_SubPhaseID, difference);
-        }
-    }
-    temp_ack_seq = tsc_dynamic();
-    WAIT_ACK_LOOP
-    temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
-    WAIT_ACK_LOOP
-
     // return值為5fcc
     temp_ack_seq = tsc_5F4C();  // query的輸出會在上面log evsp/tsp enable/disable的上方
     WAIT_ACK_LOOP
@@ -227,6 +223,7 @@ static inline void command_buf_send(tsc_command_object_t *command_obj, uint8_t c
         current = current->next;
     }
 }
+
 // In order to enable the commands in the commmand buffer to be sent to the
 // traffic signal controller at an appropriate time.
 
@@ -297,9 +294,7 @@ void command_buf_polling()
         // 設定為 0 代表現在沒有 app 控制
         set_control_status(0);
         // 換相了 更新adjusted time讓他變成現在的倒數秒數
-        if (command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time == 0) {
-            command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;
-        }
+        command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time = current_StepSec;
     }
     // execute pretime instruction to force tc go back to pretime
     // to prevent the tc not go back to pretime after 全動態
@@ -548,7 +543,7 @@ int command_buf_resume_control(uint8_t appid)
     strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
     command.phase = command.target_phase;
     command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
-    
+
     log_file_write("app id %d insert resume.", appid);
     return command_buf_insert_effect_time(&command);
 }
@@ -559,18 +554,18 @@ void command_buf_print()
         return;
     }
     traffic_signal_status_t signal_status;
-    get_traffic_signal_status(&signal_status);
-
     char log_content[LOG_CONTENT_LEN + 1];
+
+    get_traffic_signal_status(&signal_status);
     memset(log_content, 0, sizeof(log_content));
 
     pthread_mutex_lock(&mutex_command_buf);
-    log_snprintf(log_content, "command buffer: current cycle index (%d)", cycle_index);
+    log_snprintf(log_content, "command buffer: current cycle index (%d) current SubPhaseID (%d)",
+                 cycle_index, signal_status.SubPhaseID);
     for (int i = 0; i < CYCLE_NUM; i++) {
         for (int j = 0; j < signal_status.SubPhaseCount; j++) {
             log_snprintf(log_content,
-                         "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-15s, TP:%1d, AppID:%2d, "
-                         "AppPri:%2d, ET:%3d, SF:%1d",
+                         "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-15s, TP:%1d, AppID:%2d, AppPri:%2d, ET:%3d, SF:%1d",
                          i, j + 1, command_buf[i][j].adjusted_time,
                          signal_status.plan[j].PreGreen, command_buf[i][j].host_OBU_name,
                          command_buf[i][j].target_phase, command_buf[i][j].app_id,
