@@ -11,6 +11,7 @@
 #include "config.h"
 #include "error_status.h"
 #include "log.h"
+#include "timer_event.h"
 #include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_packet_tx.h"
@@ -340,7 +341,8 @@ void packet_5FC6(traffic_signal_packet_t *packet)
 
     log_file_write(log_content);
     pthread_mutex_unlock(&mutex_signal_status);
-
+    if (guarenteed_cmd_set._5F46_count == 0)
+        guarenteed_cmd_set._5F46_count++;
     return;
 }
 
@@ -372,6 +374,9 @@ void packet_0FC2(traffic_signal_packet_t *packet)
              signal_status.Year, signal_status.Month, signal_status.Day,
              signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week, signal_status.tcTimeOffest);
     pthread_mutex_unlock(&mutex_signal_status);
+
+    if (guarenteed_cmd_set._0F42_count == 0)  // 保證有收到回覆
+        guarenteed_cmd_set._0F42_count++;
     log_file_write(log_content);
     return;
 }

@@ -298,7 +298,7 @@ uint8_t tsc_5F43()
     return ret;
 }
 
-// query date and time
+// query date and time, response 0FC2
 uint8_t tsc_0F42()
 {
     traffic_signal_packet_t *packet;
@@ -319,7 +319,7 @@ uint8_t tsc_0F42()
     return ret;
 }
 
-// query plan of all day
+// query plan of all day, response 5FC6
 uint8_t tsc_5F46(uint8_t WeekDay) 
 {
     traffic_signal_packet_t *packet;
@@ -408,7 +408,7 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
     return ret;
 }
 
-// query version of tsc
+// query version of tsc 0F43
 uint8_t tsc_query_firmware_version(void)
 {
     traffic_signal_packet_t *packet;
