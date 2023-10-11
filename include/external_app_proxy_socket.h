@@ -15,7 +15,9 @@
  * will exist both is server-side and client-side
  * the two should be "THE SAME" !! */
 
-#define NON_ACK_INTERACTION_BEST_EFFORT 0
+#define USING_BEST_EFFORT_NON_ACK_SET 1
+#define USING_BEST_EFFORT_LOCAL_GET 1
+
 #define EAP_CLIENT_PRINT_DEBUG 1
 #define EAP_SERVER_PRINT_DEBUG 1
 
@@ -25,10 +27,12 @@ enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_NTF_UPDATE,      /*notify channel update*/
     EA_PACKET_TYPE_REQ,             /*requeset*/
     EA_PACKET_TYPE_ACK,             /*ack*/
-    EA_PACKET_TYPE_NM_NTF,          /*normal notify*/
-    EA_PACKET_TYPE_SP_NTF,          /*special notify*/
+    EA_PACKET_TYPE_NM_NTF,          /*normal notify, i.e., EVENT callback notify*/
+    EA_PACKET_TYPE_SP_NTF,          /*special notify, depend on usage, currently for failed API notify*/
     EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
+    EA_PACKET_TYPE_INTENAL_UPDATE,  /*can be used for update local copy of RSU-data on client side*/
     EA_PACKET_TYPE_PROXY,           /*current version not used yet, used by proxy library for special usage*/
+    
     /* this tag should always be at the last*/
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
 };
@@ -45,6 +49,10 @@ typedef struct _packet_from_proxy_header_t {
         struct {
             long sec;
             long nsec;
+        };
+        struct {
+            long glb_sec;
+            long glb_nsec;
         };
     };
 } packet_from_proxy_header_t;

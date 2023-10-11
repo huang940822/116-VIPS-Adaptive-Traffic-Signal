@@ -14,6 +14,7 @@
 #include "traffic_signal_status_updating.h"
 #include "com_io.h"
 #include "ObstacleList.h"
+#include "byte_processing.h"
 //#include "j2735inc/j2735_codec.h"
 
 #include "external_app_proxy_socket.h"
@@ -123,8 +124,12 @@ int simple_send_notify_header(int fd, event_type_t event)
     
     //for test
     record_current_timespec(&notify_trc);
+    
+    //for test
     header.sec = notify_trc.tv_sec;
     header.nsec = notify_trc.tv_nsec;
+    header.glb_sec = trc5.tv_sec;
+    header.glb_nsec = trc5.tv_nsec;
 
     return send_packet_to_unix_sk_fd(fd, &header, sizeof(header));
 }

@@ -17,7 +17,7 @@ uint8_t get_current_eap_heartbeat_rc();
 void *external_app_proxy_main_handler();
 
 #define ENABLE_EXTERNAL_APP_HEARTBEAT_PERIODIC_CHECK 1
-#define HEARTBEAT_CHECK_START_OFFSET_S   10    //send first heartbeat after enter mainloop 10-s
+#define HEARTBEAT_CHECK_START_OFFSET_S   10    //start checking heartbeat after enter mainloop 10-s
 #define HEARTBEAT_CHECK_PERIOD_S     10        //after that, send heartbeat per 10-s
 //app should send heartbeat to middleware at least inside "3" heartbeat check period
 #define HEARTBEAT_CHECK_ALLOWED_THERSHHOLD  3  

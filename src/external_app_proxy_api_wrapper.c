@@ -111,8 +111,8 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     /* cloud_packet_tx does not return err-code currently (return void) */
     cloud_packet_tx( payload.len, payload.service_id, specific_field);
 
-    #if NON_ACK_INTERACTION_BEST_EFFORT
-        //do not send ack
+    #if USING_BEST_EFFORT_NON_ACK_SET
+        ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     #endif
@@ -332,8 +332,8 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
         ack_ret_val = EAL_ERR_OK;
     }
 
-    #if NON_ACK_INTERACTION_BEST_EFFORT
-        //do not send ack
+    #if USING_BEST_EFFORT_NON_ACK_SET
+        ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, ack_ret_val);
     #endif
@@ -427,8 +427,8 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
     /* call the actual function */
     vms_request_end(payload.id);
 
-    #if NON_ACK_INTERACTION_BEST_EFFORT
-        //do not send ack
+    #if USING_BEST_EFFORT_NON_ACK_SET
+        ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     #endif
@@ -460,8 +460,12 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
         evsp_prog[i] = payload.evsp_prog[i];
     }
 
-    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
-    
+    #if USING_BEST_EFFORT_NON_ACK_SET
+        ;//do not send ack
+    #else
+        ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    #endif
+
     /* no ack_payload for this api*/
     return ret;
 }
@@ -493,8 +497,8 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
     /* then call the actual function */
     vms_request_start(payload.id, payload.priority);
 
-    #if NON_ACK_INTERACTION_BEST_EFFORT
-        //do not send ack
+    #if USING_BEST_EFFORT_NON_ACK_SET
+        ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
     #endif

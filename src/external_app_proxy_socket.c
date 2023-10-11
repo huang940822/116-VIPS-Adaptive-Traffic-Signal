@@ -490,6 +490,7 @@ int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size)
     errno = 0;
     ret = recv(interact_fd, packet_p, packet_size, 0);
     current_errno = errno;
+
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
         return EAL_ERR_SOCKET_DISCONNECT;
