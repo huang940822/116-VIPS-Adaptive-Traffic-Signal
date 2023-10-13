@@ -215,7 +215,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     temp_ack_seq = tsc_5F4C();  // query的輸出會在上面log evsp/tsp enable/disable的上方
     WAIT_ACK_LOOP
     if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
-        set_compensation_buffer(current_SubPhaseID, difference);
+        set_compensation_buffer(current_SubPhaseID);
     }
 
     /* traffic signal command tx event */

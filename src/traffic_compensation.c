@@ -21,19 +21,19 @@
 #define PassLogAndStaus &signal_status, log_content
 
 pthread_mutex_t mutex_compensation = PTHREAD_MUTEX_INITIALIZER;
-int16_t compensation_buffer[SUBPHASEID_NUM] = {0};  // 儲存有被延長或是縮短過的秒數
+uint8_t compensation_buffer[SUBPHASEID_NUM] = {0};  // 儲存是否有被調整過的 phase
 
-static inline void get_compensation_buffer(int16_t buf[SUBPHASEID_NUM])
+static inline void get_compensation_buffer(uint8_t buf[SUBPHASEID_NUM])
 {
     pthread_mutex_lock(&mutex_compensation);
     memcpy(buf, compensation_buffer, sizeof(compensation_buffer));
     pthread_mutex_unlock(&mutex_compensation);
 }
 
-void set_compensation_buffer(int subphaseId, int adjust_time)
+void set_compensation_buffer(int subphaseId)
 {
     pthread_mutex_lock(&mutex_compensation);
-    compensation_buffer[subphaseId - 1] += adjust_time;
+    compensation_buffer[subphaseId - 1] = 1;
     pthread_mutex_unlock(&mutex_compensation);
 }
 
@@ -280,7 +280,7 @@ static inline int get_cycle_compensation_time(ArgLogAndStatus, int16_t cycle_com
     }
     cycle_compensations[0] = tmp_comp;
 
-    log_snprintf(log_content, "start compensation %d \r\nTotal compensation second:%d\r\n compensation cycle is %d\r\n",
+    log_snprintf(log_content, "start compensation method %d \r\nTotal compensation second:%d\r\n compensation cycle is %d\r\n",
                  methodId, total_compensation_time, Comp_cyclenum);
     for (int i = 0; i < Comp_cyclenum; i++) {
         log_snprintf(log_content, "compensation cycle %d is %d\n", i, cycle_compensations[i]);
@@ -309,7 +309,7 @@ static inline void traffic_compensation_method1(ArgLogContent, uint8_t Comp_cycl
     traffic_signal_status_t signal_status;
 
     float phase_weight[PHASE_COUNT_MAX_NUM] = {0};
-    int16_t comp_buf[SUBPHASEID_NUM] = {0};
+    uint8_t comp_buf[SUBPHASEID_NUM] = {0};
     int adjustNum = 0;
 
     get_traffic_signal_status(&signal_status);

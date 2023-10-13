@@ -272,9 +272,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-                     "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
-                     app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
+            log_snprintf(log_content, "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
+                         app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             int target_phase = host_OBU->target_phase;
             command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令

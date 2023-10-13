@@ -7,7 +7,7 @@
 #define SUBPHASEID_NUM 8
 #define COMPENSATION_CYCLE 2
 
-void set_compensation_buffer(int subphaseId, int adjust_time);
+void set_compensation_buffer(int subphaseId);
 void compensation_buffer_clear();
 int16_t get_total_compensation_second();
 
