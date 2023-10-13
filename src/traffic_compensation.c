@@ -173,12 +173,20 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
         subphase_ptr = (subphase_ptr + 1) % signal_status->SubPhaseCount;
     }
 
-    cycle_index %= CYCLE_NUM;
+    int cycle_ptr = cycle_index % CYCLE_NUM;
     for (int i = 0; i < signal_status->SubPhaseCount; i++) {
-        if (subphase_compensation_time[subphase_ptr] == 0)
+        if (cycle_index >= Comp_cyclenum - 1 && subphase_compensation_time[subphase_ptr] == 0) {
+            // 因為成龍會自己補償所以如果只後還有補償的話就算是 0 也會補
+            int tmp_ptr = subphase_ptr;
+            for (int j = i + 1; j < signal_status->SubPhaseCount; j++) {
+                tmp_ptr = (tmp_ptr + 1) % signal_status->SubPhaseCount;
+                if (subphase_compensation_time[tmp_ptr] != 0)
+                    goto InsertCommand;
+            }
             goto NotInsertCommand;
-
-        command.cycle = cycle_index;
+        }
+    InsertCommand:
+        command.cycle = cycle_ptr;
         command.target_phase = command.phase = subphase_ptr + 1;
         command.effect_time = (int16_t) signal_status->plan[subphase_ptr].PreGreen + subphase_compensation_time[subphase_ptr];
 
@@ -191,7 +199,7 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
         subphase_ptr++;
         if (subphase_ptr >= signal_status->SubPhaseCount) {
             subphase_ptr %= signal_status->SubPhaseCount;
-            cycle_index = (cycle_index + 1) % CYCLE_NUM;
+            cycle_ptr = (cycle_ptr + 1) % CYCLE_NUM;
         }
     }
 }
@@ -314,6 +322,7 @@ static inline void traffic_compensation_method1(ArgLogContent, uint8_t Comp_cycl
     for (int i = 0; i < SUBPHASEID_NUM; i++) {
         if (comp_buf[i] != 0)
             phase_weight[i] = 100.0 / adjustNum;
+        printf("phase_weight %d %f\n", i, phase_weight[i]);
     }
 
     implement_compensation_by_weight(&signal_status, log_content, cycle_compensations, Comp_cyclenum, phase_weight);
@@ -359,11 +368,11 @@ static inline void traffic_compensation_method3(ArgLogContent, uint8_t Comp_cycl
 
     log_snprintf(log_content, "arterial_phase:%d \r\n branch_phase:%d\r\n", arterial_phase + 1, branch_phase + 1);
 
-    if (total_compensation_time > 0) {  // 進行負補償
+    if (total_compensation_time < 0) {  // 進行負補償
         printf("minus compensation\r\n");
         log_snprintf(log_content, "minus compensation\r\n");
         phase_weight[branch_phase] = 100;
-    } else if (total_compensation_time < 0) {  // 進行正補償
+    } else if (total_compensation_time > 0) {  // 進行正補償
         printf("positive compensation\r\n");
         log_snprintf(log_content, "positive compensation\r\n");
         phase_weight[arterial_phase] = 100;

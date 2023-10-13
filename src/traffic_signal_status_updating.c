@@ -53,6 +53,9 @@ void packet_5FCC(traffic_signal_packet_t *packet)
 
     // for some error situation happens in CHENG_LONG
     if (packet->INFO[3] != 0 && packet->INFO[4] != 5) {
+        if (packet->INFO[3] < signal_status.SubPhaseID) {
+            update_cycle_index();
+        }
         signal_status.SubPhaseID = packet->INFO[3];
     }
     signal_status.StepID = packet->INFO[4];
@@ -345,7 +348,7 @@ void packet_0FC2(traffic_signal_packet_t *packet)
                                  signal_status.Sec - timeinfo.tm_sec;
 
     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-             "signal packet info: 0FC2\n %hhd-%hhd-%hhd_%hhd:%hhd:%hhd week %hhd offset %d",
+             "signal packet info: 0FC2\n %hhd-%02hhd-%02hhd_%02hhd:%02hhd:%02hhd week %hhd offset %d",
              signal_status.Year, signal_status.Month, signal_status.Day,
              signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week, signal_status.tcTimeOffest);
     pthread_mutex_unlock(&mutex_signal_status);

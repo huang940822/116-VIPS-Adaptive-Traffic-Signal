@@ -25,6 +25,7 @@ tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM] = {0};
 pthread_mutex_t mutex_command_buf = PTHREAD_MUTEX_INITIALIZER;
 
 uint8_t cycle_index = 0;
+uint8_t prior_cycle_index = 0;
 uint8_t prior_SubPhaseID = 0;
 uint8_t prior_StepID = 0;
 uint16_t prior_StepSec = 0;
@@ -35,6 +36,13 @@ uint8_t traffic_signal_command_buf_polling_num =
 
 #define clear_index_command_buf(cyc_index, subphase_num) \
     memset(&command_buf[cyc_index][subphase_num], 0, sizeof(tsc_command_object_t))
+
+// 由收到 5FCC 時更新避免 subphaseID 與 cycle index 不同步
+// 沒有用 lock 因為在 5FCC 會修改
+void update_cycle_index()
+{
+    cycle_index = (cycle_index + 1) % CYCLE_NUM;
+}
 
 void command_buf_init()
 {
@@ -206,6 +214,9 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     // return值為5fcc
     temp_ack_seq = tsc_5F4C();  // query的輸出會在上面log evsp/tsp enable/disable的上方
     WAIT_ACK_LOOP
+    if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
+        set_compensation_buffer(current_SubPhaseID, difference);
+    }
 
     /* traffic signal command tx event */
     traffic_signal_command_arg_t command;  // this variable is for callback of signal packet tx
@@ -277,12 +288,6 @@ void command_buf_polling()
     // This means that traffic signal has crossed to the next subphase.
     // Thus,the command buffer object of the previous subphase is cleared.
     if (prior_SubPhaseID != current_SubPhaseID) {
-        int prior_cycle_index = cycle_index;
-        /* cross to next cycle */
-        // 代表已經到下一個cycle.
-        if (prior_SubPhaseID > current_SubPhaseID) {
-            cycle_index = (cycle_index + 1) % CYCLE_NUM;  // 更新cycle
-        }
         // 當發現前一個指令是 resume 就進行補償
         if (strncmp(command_buf[prior_cycle_index][prior_SubPhaseID - 1].host_OBU_name,
                     RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
@@ -333,7 +338,7 @@ void command_buf_polling()
         command_buf[cycle_index][current_SubPhaseID - 1].adjusted_time =
             command_buf[cycle_index][current_SubPhaseID - 1].effect_time;
     }
-
+    prior_cycle_index = cycle_index;
     prior_SubPhaseID = current_SubPhaseID;
     prior_StepID = current_StepID;
     prior_StepSec = current_StepSec;

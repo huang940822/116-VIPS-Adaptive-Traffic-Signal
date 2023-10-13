@@ -20,6 +20,7 @@ int command_buf_insert_effect_time(tsc_command_t *command);
 int command_buf_insert_adjustment(tsc_command_t *command);
 void command_buf_print();
 uint8_t is_in_conpensation();
+void update_cycle_index();
 
 /* Return codes of command buf insert */
 typedef enum command_buf_err {
