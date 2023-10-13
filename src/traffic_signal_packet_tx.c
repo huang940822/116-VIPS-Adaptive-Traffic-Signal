@@ -23,7 +23,6 @@ uint8_t flag_countdown_on = 0;
 uint8_t flag_countdown_off = 0;
 uint8_t flag_query_firm_ver = 0;
 uint8_t flag_switch2nextStep = 0;
-uint8_t flag_PhaseOrder = 0;
 
 #define signal_packet_init       \
     packet->DLE_1 = DLE_VAL;     \
@@ -276,7 +275,7 @@ uint8_t tsc_5F45()
     return ret;
 }
 
-// 查詢號誌控制器之時向排列
+// 查詢號誌控制器之時向排列, response 5FC3
 uint8_t tsc_5F43()
 {
     traffic_signal_packet_t *packet;

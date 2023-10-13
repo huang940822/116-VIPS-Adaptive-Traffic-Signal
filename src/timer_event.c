@@ -27,7 +27,6 @@ extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
 extern uint8_t flag_switch2nextStep;
-extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
 
@@ -61,12 +60,6 @@ void timer_event_handler(__sigval_t value)
         temp_ack_seq = tsc_5F44();
         // WAIT_ACK_LOOP
         command_buf_polling();
-
-        if (flag_PhaseOrder == true) {
-            temp_ack_seq = tsc_5F43();
-            WAIT_ACK_LOOP
-            flag_PhaseOrder = false;
-        }
 
         if (flag_countdown_on == true) {
             temp_ack_seq =
@@ -116,6 +109,11 @@ void timer_event_handler(__sigval_t value)
             time(&currentTime);
             localtime_r(&currentTime, &localTime);
             temp_ack_seq = tsc_5F46(localTime.tm_wday);
+            WAIT_ACK_LOOP
+        }
+
+        if (guarenteed_cmd_set._5F43_count == 0) {
+            temp_ack_seq = tsc_5F43();
             WAIT_ACK_LOOP
         }
 

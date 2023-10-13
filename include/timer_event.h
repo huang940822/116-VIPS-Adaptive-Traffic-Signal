@@ -5,8 +5,9 @@
 
 // 保證會收到回覆的 command
 typedef struct Guaranteed_command_set {
-    uint16_t _5F46_count;
-    uint16_t _0F42_count;
+    uint16_t _0F42_count;  // 查詢 TC 時間
+    uint16_t _5F43_count;  // 更新時向燈號
+    uint16_t _5F46_count;  // 查詢日時段
 } Guaranteed_command_set_t;
 
 

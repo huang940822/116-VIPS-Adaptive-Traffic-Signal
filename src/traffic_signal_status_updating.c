@@ -24,7 +24,6 @@ pthread_mutex_t mutex_current_signal_status = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_signal_status = PTHREAD_MUTEX_INITIALIZER;
 sem_t sem_signal_status;
 extern uint8_t flag_switch2nextStep;
-extern uint8_t flag_PhaseOrder;
 uint8_t phase_change_flag = false;
 uint8_t real_pretime = 0;
 static uint8_t PhaseOrder_initial = true;
@@ -155,12 +154,11 @@ void packet_5FC5(traffic_signal_packet_t *packet)
     // signal_status.PlanID = packet->INFO[2];
     //
     if (PhaseOrder_initial == true) {
-        flag_PhaseOrder = true;
         PhaseOrder_initial = false;
     }
     if (signal_status.PhaseOrder != packet->INFO[4]) {
         command_buf_clear();
-        flag_PhaseOrder = true;
+        guarenteed_cmd_set._5F43_count = 0;
     }
     signal_status.PhaseOrder = packet->INFO[4];
     signal_status.SubPhaseCount = packet->INFO[5];
@@ -261,32 +259,27 @@ void packet_5FC3(traffic_signal_packet_t *packet)
     signal_status.SignalMap = packet->INFO[3];
     signal_status.SignalCount = packet->INFO[4];
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\nSignalMap:%x SignalCount:%x\r\n",
-             signal_status.SignalMap, signal_status.SignalCount);
-
+    log_snprintf(log_content, "\nSignalMap:%x SignalCount:%x\r\n",
+                 signal_status.SignalMap, signal_status.SignalCount);
     printf("SignalMap:%x SignalCount:%x\r\n", signal_status.SignalMap, signal_status.SignalCount);
-
 
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount; j++) {
             signal_status.phaseorder_plan[i][j].SignalStatus = packet->INFO[6 + i * signal_status.SignalCount + j];
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "SignalStatus:%x ",
-                     signal_status.phaseorder_plan[i][j].SignalStatus);
+            log_snprintf(log_content, "SignalStatus:%x ",
+                         signal_status.phaseorder_plan[i][j].SignalStatus);
             printf("SignalStatus:%x ", signal_status.phaseorder_plan[i][j].SignalStatus);
         }
         printf("\r\n");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\r\n");
+        log_snprintf(log_content, "\r\n");
+    }
+    // 確保查的是現在的 PhaseOrder
+    if (packet->INFO[2] == signal_status.PhaseOrder) {
+        guarenteed_cmd_set._5F43_count = 1;
     }
 
-    log_file_write(log_content);
-
     pthread_mutex_unlock(&mutex_signal_status);
+    log_file_write(log_content);
     return;
 }
 

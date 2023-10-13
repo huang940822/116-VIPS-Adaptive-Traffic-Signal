@@ -193,9 +193,11 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
         ret = command_buf_insert_effect_time(&command);
     NotInsertCommand:
         printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
-               command.cycle, subphase_ptr + 1, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
+               command.cycle, subphase_ptr + 1, signal_status->plan[subphase_ptr].PreGreen + subphase_compensation_time[subphase_ptr],
+               subphase_compensation_time[subphase_ptr], ret);
         log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
-                     command.cycle, subphase_ptr + 1, command.effect_time, subphase_compensation_time[subphase_ptr], ret);
+                     command.cycle, subphase_ptr + 1, signal_status->plan[subphase_ptr].PreGreen + subphase_compensation_time[subphase_ptr],
+                     subphase_compensation_time[subphase_ptr], ret);
         subphase_ptr++;
         if (subphase_ptr >= signal_status->SubPhaseCount) {
             subphase_ptr %= signal_status->SubPhaseCount;
@@ -311,7 +313,7 @@ static inline void traffic_compensation_method1(ArgLogContent, uint8_t Comp_cycl
     int adjustNum = 0;
 
     get_traffic_signal_status(&signal_status);
-    get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
+    get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 1);
 
     // 查詢有哪些時向是被調整過的 並分配比例
     get_compensation_buffer(comp_buf);
@@ -354,7 +356,7 @@ static inline void traffic_compensation_method3(ArgLogContent, uint8_t Comp_cycl
     float phase_weight[PHASE_COUNT_MAX_NUM] = {0};
 
     get_traffic_signal_status(&signal_status);
-    total_compensation_time = get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 2);
+    total_compensation_time = get_cycle_compensation_time(PassLogAndStaus, cycle_compensations, Comp_cyclenum, 3);
 
     // 綠燈長度最長的為主幹道 第二長的為支道
     for (int i = 1; i < signal_status.SubPhaseCount; i++) {
