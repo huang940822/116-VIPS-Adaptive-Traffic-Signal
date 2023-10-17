@@ -62,7 +62,7 @@ int main()
     /* log init */
     log_file_init();  // 一個timer被created
 
-    log_file_write("version : v2.4.6");
+    log_file_write("version : v2.4.7");
 
     /* read config file*/
     ret = config_init();
@@ -134,7 +134,7 @@ int main()
         &TSP,
         // &CPS,
         // &SPaT,
-        &TIB,
+        // &TIB,
         // &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);

@@ -390,14 +390,15 @@ void spat_printf(SPAT *pp_spat)
 
         for (int j = 0; j < state->state_time_speed.count; j++) {
             if (state->state_time_speed.tab[j].timing_option == TRUE) {
-                if (state->state_time_speed.tab[j].eventState == MovementPhaseState_permissive_Movement_Allowed)
+                if (state->state_time_speed.tab[j].eventState == MovementPhaseState_permissive_Movement_Allowed) {
                     printf("round green\n");
-                else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_protected_Movement_Allowed)
+                } else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_protected_Movement_Allowed) {
                     printf("arrow green\n");
-                else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_protected_clearance)
+                } else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_protected_clearance) {
                     printf("yallow\n");
-                else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_stop_And_Remain)
+                } else if (state->state_time_speed.tab[j].eventState == MovementPhaseState_stop_And_Remain) {
                     printf("red\n");
+                }
                 printf(" startTime : %d ", state->state_time_speed.tab[j].timing.startTime);
                 printf(" minEndTime : %d\n", state->state_time_speed.tab[j].timing.minEndTime);
             }
