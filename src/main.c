@@ -6,13 +6,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "MMP.h"
-#include "EVSP.h"
-#include "TSP.h"
 #include "CPS.h"
-#include "SPaT.h"
-#include "MAP.h"
+#include "EVSP.h"
+#include "MMP.h"
 #include "SPM.h"
+#include "TIB.h"
+#include "TSP.h"
 
 #include "OBU_record_processing.h"
 #include "application_registration.h"
@@ -31,8 +30,8 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
-#include "vms.h"
 #include "typedefine.h"
+#include "vms.h"
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
@@ -61,7 +60,7 @@ int main()
     int ret = 0;
 
     /* log init */
-    log_file_init();  //一個timer被created
+    log_file_init();  // 一個timer被created
 
     log_file_write("version : v2.4.6");
 
@@ -97,9 +96,9 @@ int main()
         exit(errno);
     }
 
-    pthread_t vms_thread;   // vms thread
+    pthread_t vms_thread;  // vms thread
     ret = pthread_create(&vms_thread, NULL, vms_handler, NULL);
-    if(ret != 0) {
+    if (ret != 0) {
         log_file_write_fatal_error(
             "error creating vms_thread: %d", ret);
         perror("main: pthread_create");
@@ -107,9 +106,9 @@ int main()
     }
 
     /* command buffer init & command buffer polling timer event*/
-    command_buf_init();  //這裡面又一個timer被created
+    command_buf_init();  // 這裡面又一個timer被created
 
-    /* traffic signal status report timer event */  //這裡是幹麻看不懂 r2v???
+    /* traffic signal status report timer event */  // 這裡是幹麻看不懂 r2v???
     if (config.signal_status_report_active) {
         timer_t traffic_signal_status_report_timer_id;
         uint8_t traffic_signal_status_report_timer_num =
@@ -121,6 +120,13 @@ int main()
         set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
     }
 
+    J2735Config cfg;
+    ret = j2735_init(&cfg);
+    if (!IS_SUCCESS(ret)) {
+        printf("Fail to init J2735\n");
+        return -1;
+    }
+
     /* application service registration */
     app_obj_t *app_arr[] = {
         // &MMP,
@@ -128,7 +134,7 @@ int main()
         &TSP,
         // &CPS,
         // &SPaT,
-        // &MAP,
+        &TIB,
         // &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
@@ -136,13 +142,13 @@ int main()
         ret = app_register(app_arr[i]);
         if (ret != 0) {
             log_file_write_fatal_error("error registering application: %d (%s)",
-                                    ret, app_arr[i]->name);
+                                       ret, app_arr[i]->name);
         } else {
             log_file_write("%s register successfully", app_arr[i]->name);
         }
     }
 
-    /* OBU list garbage collection timer event */  //清掉太久的obu object
+    /* OBU list garbage collection timer event */  // 清掉太久的obu object
     OBU_object_garbage_collection_init();
 
     // log application register event
@@ -158,13 +164,7 @@ int main()
         perror("main: pthread_create");
         exit(errno);
     }
-    J2735Config cfg;
-    ret = j2735_init(&cfg);
-    if (!IS_SUCCESS(ret)) {
-        printf("Fail to init J2735\n");
-        return -1;
-    }
-    
+
     /* Start server */
     com_layer_init(NULL);
 

@@ -272,42 +272,25 @@ int EVSP_on_OBU_packet_rx(void *arg)
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
-            snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-                     "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
-                     app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
+            log_snprintf(log_content, "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
+                         app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
-            tsc_command_t command;
-            memset(&command, 0, sizeof(tsc_command_t));
-            command.app_id = EVSP.id;
-            command.app_priority = EVSP.priority;
-            command.target_phase = host_OBU->target_phase;
-            strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
-            command.phase = command.target_phase;
-            command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
-
+            int target_phase = host_OBU->target_phase;
+            command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(command.target_phase) == true) {
+            if (EVSP_host_OBU_obj_resume(target_phase) == true) {
                 // 進行補償
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
-
-                uint8_t current_phase = signal_status.SubPhaseID;
-                if (command.target_phase >= current_phase) {
-                    command.cycle = 0;
-                } else {  // target phase已過 到下一個cycle執行
-                    command.cycle = 1;
-                }
-                insert_command_and_log;
+                command_buf_resume_control(EVSP.id);
 
                 // 結束 EVSP_VMS_SERVICE
                 vms_request_end(EVSP.id);
             }
-
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         }
-
     } else { /* not in host OBU list */
         // search plan
         uint8_t plan_id = get_plan_id();
@@ -378,7 +361,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             if (current_step != 1)
                 current_phase++;
 
-            command.cycle = 0;                            // 0 代表線在這個 cycle
+            command.cycle = 0;  // 0 代表線在這個 cycle
 
             // 如果 current_phase >= target_phase，i 就會加到 target_phase
             // target_phase < current_phase，的話就會停在 SubPhaseCount 把現在的 cycle 都換成最小綠

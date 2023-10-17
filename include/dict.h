@@ -241,7 +241,7 @@ static dict_entry *dict_find(dict *ht, const void *key)
     dict_entry *he;
     unsigned int h;
 
-    if (ht->size == 0)
+    if (ht == 0 || ht->size == 0)
         return NULL;
     h = dict_hash_key(ht, key) & ht->sizemask;
     he = ht->table[h];

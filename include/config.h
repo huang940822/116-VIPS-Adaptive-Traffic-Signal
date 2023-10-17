@@ -101,4 +101,6 @@ char *read_line(char *read_buf, int read_buf_len, FILE *fp);
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
 // val 的長度使用 MAX_CONFIG_VARIABLE_LEN
 bool read_string_from_config_line(char *config_line, char *val);
+bool read_string_arr_from_config_line(char *config_line, void *val, const char delim[]);
+
 #endif

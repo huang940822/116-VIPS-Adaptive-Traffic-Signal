@@ -6,6 +6,7 @@
 #include "config.h"
 #include "log.h"
 #include "typedefine.h"
+#include "vector.h"
 
 config_object_t config = {
     .RSU_name = "S428901   ",
@@ -161,6 +162,18 @@ static bool read_name_from_config_line(char *config_line, char *val)
     }
 }
 
+bool read_string_arr_from_config_line(char *config_line, void *val, const char delim[])
+{
+    vector_t(char *) *str_arr = val;
+    char *save_ptr = NULL;
+    char *substr = trim_comments(strtok_r(config_line, delim, &save_ptr));
+    while (substr != NULL) {
+        vector_push_back(*str_arr, substr);
+        substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
+    }
+    return str_arr->size != 0 ? true : false;
+}
+
 void trim_space(char *str)
 {
     if (str == NULL)
@@ -170,7 +183,7 @@ void trim_space(char *str)
     while (isspace(*start))
         start++;
 
-    while (isspace(*end) && end > start)
+    while (end > start && isspace(*end))
         end--;
 
     *(end + 1) = '\0';

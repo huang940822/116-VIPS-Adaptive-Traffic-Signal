@@ -383,6 +383,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         record->direction &= 0b111;
     } break;
     default:
+        printf("other msg\n");
         return -1;
         break;
     }
