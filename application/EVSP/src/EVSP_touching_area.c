@@ -492,7 +492,7 @@ int EVSP_table_config()
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
             uint8_t k;
-            for (k = 0; i < EVSP_plan_list.terminate_area_count; k++) {
+            for (k = 0; k < EVSP_plan_list.terminate_area_count; k++) {
                 if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] == EVSP_plan_list.terminate_area[k].terminate_area_id) {
                     EVSP_plan_list.touching_area[i].terminate_area_Id[j] = k;
                     break;
