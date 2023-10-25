@@ -1,4 +1,10 @@
 # RSU_Controller_master
+
+## Directory in RSU
+```
+/home/oslab/RSU_Controller
+```
+
 ## Compiling Environment
 
 1. Installing Make and GCC9
