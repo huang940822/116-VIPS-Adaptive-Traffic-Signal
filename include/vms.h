@@ -26,7 +26,7 @@
 #define VMS_PACKET_END "\n"
 
 #define CAROUSEL_NUM 255 
-#define VMS_ERROR_THRESHOLD 10
+#define VMS_ERROR_THRESHOLD 50
 
 #define VMS_1 "NCKU_1"
 #define VMS_2 "NCKU_2"
