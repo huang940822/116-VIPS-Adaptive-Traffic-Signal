@@ -47,10 +47,6 @@ typedef struct _packet_from_proxy_header_t {
         uint32_t api_id;    //might used for api-ack 
         uint32_t seq_num;   //used for heartbeat-ack
         struct {
-            long sec;
-            long nsec;
-        };
-        struct {
             long glb_sec;
             long glb_nsec;
         };

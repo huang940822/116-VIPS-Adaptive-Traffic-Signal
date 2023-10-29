@@ -123,11 +123,6 @@ int simple_send_notify_header(int fd, event_type_t event)
     header.callback_event = event; 
     
     //for test
-    record_current_timespec(&notify_trc);
-    
-    //for test
-    header.sec = notify_trc.tv_sec;
-    header.nsec = notify_trc.tv_nsec;
     header.glb_sec = trc5.tv_sec;
     header.glb_nsec = trc5.tv_nsec;
 

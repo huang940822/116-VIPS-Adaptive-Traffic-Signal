@@ -15,10 +15,6 @@
 #define ERR_MSG_SZ 128
 #define LOG_CONTENT_LEN 2048
 
-extern struct timespec hb_trc1;
-extern struct timespec hb_trc2;
-extern struct timespec WOW_trc;
-
 extern struct timespec trc_f1b;
 extern struct timespec trc_f2b;
 extern struct timespec trc_f3b;
@@ -63,5 +59,5 @@ struct timespec get_timespec_diff(struct timespec bgn, struct timespec end);
 uint32_t get_us_diff(struct timespec bgn, struct timespec end);
 void record_current_timespec(struct timespec* now_p);
 void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg);
-
+void print_single_timespec_to_stdout(struct timespec trc, char* msg);
 #endif  /* LOG_H */

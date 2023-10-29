@@ -236,6 +236,7 @@ int unlink_an_external_app(app_obj_t *app_obj_p)
             "[EAP msg] err: %s call: remove_both_channels_from_proxy_epoll() " 
             "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
     }
+
     ret = close_both_channels_of_an_external_app(app_obj_p);
     if(ret){
         log_file_write(
@@ -561,26 +562,24 @@ int handle_remote_client_request(int client_fd)
             printf("[EAP msg] get heartbeat packet from appID:%u, seq_num:%u\n", 
                     header.appID, header.seq_num);
         #endif
+        
         log_file_write("[EAP msg] get heartbeat packet from appID:%u, seq_num:%u\n", 
                         header.appID, header.seq_num);
 
-        record_current_timespec(&trc1);
         ret = inner_handle_heartbeat_from_app(client_fd, &header);
-        record_current_timespec(&trc2);
-        print_timespec_to_stderr(trc1, trc2, "inner_handle_heartbeat_from_app");
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
         #ifdef MT_SPECIAL_ZERO //EAP_SERVER_PRINT_DEBUG
             printf("[EAP msg] get request packet from appID:%u, api_id:%d ->%s() \n", 
                     header.appID, header.api_id, api_id_str_arr[header.api_id] );
         #endif
+
+        #ifdef ENABLE_EXTERNAL_APP_INTERACTION_LOGGING
         log_file_write("[EAP msg] get request packet from appID:%u, api_id:%d ->%s() \n", 
                         header.appID, header.api_id, api_id_str_arr[header.api_id] );
+        #endif
 
-        record_current_timespec(&trc1);
         ret = inner_handle_request_by_api_id(client_fd, header.api_id);
-        record_current_timespec(&trc2);
-        print_timespec_to_stderr(trc1, trc2, "inner_handle_request_by_api_id");
     }
 
 err_handling:

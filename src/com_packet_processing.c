@@ -491,20 +491,18 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     pthread_mutex_lock(&mutex_callback_list);
     
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
+    record_current_timespec(&trc5);
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id 
             && msgf->messageId == current->next->event_callback_id.u.msg_id) 
         {   
             proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
-                record_current_timespec(&trc5);
                 current->next->callback( &V2R_self_defined_section );
-                record_current_timespec(&trc6);
-                print_timespec_to_stderr(trc5, trc6, "middleware_external");
             }
             else{
-                record_current_timespec(&trc3);
                 /* original internal APPs */
+                record_current_timespec(&trc3);
                 current->next->callback((void *) &app_section);
                 record_current_timespec(&trc4);
                 print_timespec_to_stderr(trc3, trc4, "middleware_internal");
@@ -512,6 +510,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
     }
+    record_current_timespec(&trc6);
+    //print_timespec_to_stderr(trc5, trc6, "middleware_external");
     
     pthread_mutex_unlock(&mutex_callback_list);
     

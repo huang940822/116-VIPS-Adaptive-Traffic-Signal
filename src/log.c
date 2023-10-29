@@ -10,10 +10,6 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
-struct timespec hb_trc1;
-struct timespec hb_trc2;
-struct timespec WOW_trc;
-
 struct timespec trc_f1b;
 struct timespec trc_f2b;
 struct timespec trc_f3b;
@@ -301,4 +297,12 @@ void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* ms
     }
 
     fprintf(stderr, "s: %ld , ns: %ld\n", temp.tv_sec, temp.tv_nsec);
+}
+
+void print_single_timespec_to_stdout(struct timespec trc, char* msg)
+{   
+    if(msg)
+        fprintf(stdout, "%s ", msg);
+    
+    fprintf(stdout, "s: %ld , ns: %ld\n", trc.tv_sec, trc.tv_nsec);
 }

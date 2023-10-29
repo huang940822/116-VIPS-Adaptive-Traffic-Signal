@@ -33,8 +33,12 @@ int simple_send_ack_to_app(int fd, int ack_ret_val)
         printf("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
                 ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
     #endif
+
+    #ifdef ENABLE_EXTERNAL_APP_INTERACTION_LOGGING
     log_file_write("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
                     ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
+    #endif
+    
     return ret;
 }
 
@@ -519,6 +523,8 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
         traffic_signal_status_t ts_status;
     } ack_payload;
 
+    printf("size of traffic_signal_status_t: %u\n", sizeof(traffic_signal_status_t));
+
     /* call the actual function */
     get_traffic_signal_status( &(ack_payload.ts_status) );
 
@@ -532,6 +538,7 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
     if (ret != 0) {
         ;//maybe log err
     }
+
     return ret;
 }
 int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)

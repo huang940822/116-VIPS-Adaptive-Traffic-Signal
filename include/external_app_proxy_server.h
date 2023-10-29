@@ -22,6 +22,8 @@ void *external_app_proxy_main_handler();
 //app should send heartbeat to middleware at least inside "3" heartbeat check period
 #define HEARTBEAT_CHECK_ALLOWED_THERSHHOLD  3  
 
+#define ENABLE_EXTERNAL_APP_INTERACTION_LOGGING 1
+
 /* below is used by external_app_proxy_api_wrapper.c */
 int32_t recv_packet_from_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
 int32_t send_packet_to_unix_sk_fd(int socket_fd, void* packet_p, size_t packet_size);
