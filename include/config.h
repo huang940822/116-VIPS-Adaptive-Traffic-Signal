@@ -27,6 +27,7 @@ typedef struct config_object {
     float signal_adjust_upper_bound_percentage;
     float signal_adjust_lower_bound_percentage;
     uint8_t traffic_compensation_method;
+    uint8_t traffic_compensation_baseline;
     uint8_t traffic_compensation_cycle_number;
     float phase_weight[PHASE_COUNT_MAX_NUM];
 
@@ -93,6 +94,18 @@ typedef enum vms_config_err {
     VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN = -4,
     VMS_CONFIG_INVALID_OPEN_FILE = -99,
 } vms_config_err_t;
+
+typedef enum traffic_signal_controller_manufacturer {
+    CHENG_LONG = 0,
+    SHAN_ZHU = 1,
+    SHAN_ZHU_M = 2,
+} traffic_signal_controller_manufacturer_t;
+
+typedef enum compensation_baseline {
+    NOT_SET_BASELINE = 0,
+    ZERO_HOUR_ZERO_MIN_BASELINE = 1,
+    DAILY_SEGMENT_BASELINE = 2,
+} compensation_baseline_t;
 
 void trim_space(char *str);
 char *trim_comments(char *buf);

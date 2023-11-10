@@ -90,7 +90,7 @@ uint8_t is_in_compensation()
     }
 }
 
-// 取得進行零時零分基準點補償與現在補償的差距
+// 取得基準點補償與現在補償的差距
 static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alignHour, int alignMin)
 {
     const uint32_t daySec = 86400;
@@ -128,22 +128,39 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     return compTime < (cycleTime / 2) ? -compTime : cycleTime - compTime;
 }
 
+static inline void get_nearly_segment(ArgTrafficStatus, AllDay_plan_t *segment)
+{
+    struct timeval tv;
+    struct tm timeinfo;
+
+    gettimeofday(&tv, NULL);
+    localtime_r(&tv.tv_sec, &timeinfo);
+
+    int MinInDay = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+    for (int i = 1; i < signal_status->SegmentCount; i++) {
+        if (MinInDay < (signal_status->allday_plan[i].Hour * 60 + signal_status->allday_plan[i].Min)) {
+            segment->Hour = signal_status->allday_plan[i - 1].Hour;
+            segment->Min = signal_status->allday_plan[i - 1].Min;
+            return;
+        }
+    }
+    segment->Hour = signal_status->allday_plan[signal_status->SegmentCount - 1].Hour;
+    segment->Min = signal_status->allday_plan[signal_status->SegmentCount - 1].Min;
+}
+
 static inline int16_t get_total_compensation_second_with_status(ArgTrafficStatus)
 {
+    AllDay_plan_t segment;
+    if (config.traffic_compensation_baseline == ZERO_HOUR_ZERO_MIN_BASELINE) {
+        return get_alignment_compensation_time(signal_status, 0, 0);
+    } else if (config.traffic_compensation_baseline == DAILY_SEGMENT_BASELINE) {
+        get_nearly_segment(signal_status, &segment);
+        return get_alignment_compensation_time(signal_status, segment.Hour, segment.Min);
+    }
+
     if (config.signal_controller_manufacturer == CHENG_LONG) {
-        struct timeval tv;
-        struct tm timeinfo;
-
-        gettimeofday(&tv, NULL);
-        localtime_r(&tv.tv_sec, &timeinfo);
-
-        int MinInDay = timeinfo.tm_hour * 60 + timeinfo.tm_min;
-        for (int i = 1; i < signal_status->SegmentCount; i++) {
-            if (MinInDay < (signal_status->allday_plan[i].Hour * 60 + signal_status->allday_plan[i].Min)) {
-                return get_alignment_compensation_time(signal_status, signal_status->allday_plan[i - 1].Hour, signal_status->allday_plan[i - 1].Min);
-            }
-        }
-        return get_alignment_compensation_time(signal_status, signal_status->allday_plan[signal_status->SegmentCount - 1].Hour, signal_status->allday_plan[signal_status->SegmentCount - 1].Min);
+        get_nearly_segment(signal_status, &segment);
+        return get_alignment_compensation_time(signal_status, segment.Hour, segment.Min);
     } else {
         return get_alignment_compensation_time(signal_status, 0, 0);
     }

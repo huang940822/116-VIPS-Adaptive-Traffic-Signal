@@ -21,6 +21,7 @@ config_object_t config = {
     .signal_adjust_upper_bound_percentage = 60,
     .signal_adjust_lower_bound_percentage = 60,
     .traffic_compensation_method = 0,
+    .traffic_compensation_baseline = 0,
     .traffic_compensation_cycle_number = 1,
     .phase_weight = 0,
     0,
@@ -439,6 +440,24 @@ int config_init()
                 }
             } else {
                 return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
+            }
+        }
+        // traffic compensation baseline
+        if (strstr(buf, "TRAFFIC_COMPENSATION_BASELINE ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "ZERO_HOUR_ZERO_MIN_BASELINE") == 0) {
+                    config.traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE;
+                    log_file_write("config: traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE");
+                    continue;
+                } else if (strcmp(string_val, "DAILY_SEGMENT_BASELINE") == 0) {
+                    config.traffic_compensation_baseline = DAILY_SEGMENT_BASELINE;
+                    log_file_write("config: traffic_compensation_baseline = DAILY_SEGMENT_BASELINE");
+                    continue;
+                } else {
+                    return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;
+                }
+            } else {
+                return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;
             }
         }
         // traffic compensation cycle number
