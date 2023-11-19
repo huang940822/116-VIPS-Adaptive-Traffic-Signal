@@ -124,6 +124,11 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
+static inline void evsp_before_return(int ret)
+{
+    ;
+}
+
 int EVSP_on_OBU_packet_rx(void *arg)
 {   
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;

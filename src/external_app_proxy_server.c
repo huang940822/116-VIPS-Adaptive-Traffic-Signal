@@ -354,8 +354,8 @@ int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
         fprintf(stderr, "err: inner_handle_request_by_api_id: api_id >= %d\n", NUM_OF_API_ID_DEFININITION);
         return -1;
     }
-    if ( api_id == API_ID_OF(remote_app_registration) ){
-        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(remote_app_registration));
+    if ( api_id == API_ID_OF(app_remote_register) ){
+        fprintf(stderr, "err: inner_handle_request_by_api_id: api_id == %d\n", API_ID_OF(app_remote_register));
         return -1;
     }
     if ( api_id == API_ID_OF(app_main_loop_start) ){
@@ -412,7 +412,7 @@ int handle_new_client_accepted(int client_fd)
     /* WARNNING!!
      * make sure the packet you send-to/recv-from proxy client 
      * "MATCH" the send-to/recv-from action 
-     *  in remote_app_registration() in external_app_proxy_client.c
+     *  in app_remote_register() in external_app_proxy_client.c
      */
 
     int ret;
@@ -434,7 +434,7 @@ int handle_new_client_accepted(int client_fd)
         send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));
         return 0;
     }
-    else if( header.api_id != API_ID_OF(remote_app_registration)){
+    else if( header.api_id != API_ID_OF(app_remote_register)){
         fprintf( stderr, "register packet BAD_API_ID\n");
         ack.ret_val = EAL_ERR_BAD_API_ID_BEFORE_REGISTER;
         send_packet_to_unix_sk_fd( client_fd, &ack, sizeof(ack));

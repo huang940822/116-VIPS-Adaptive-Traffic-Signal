@@ -16,7 +16,6 @@
  * the two should be "THE SAME" !! */
 
 #define USING_BEST_EFFORT_NON_ACK_SET 1
-#define USING_BEST_EFFORT_LOCAL_GET 1
 
 #define EAP_CLIENT_PRINT_DEBUG 1
 #define EAP_SERVER_PRINT_DEBUG 1
@@ -28,10 +27,8 @@ enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_REQ,             /*requeset*/
     EA_PACKET_TYPE_ACK,             /*ack*/
     EA_PACKET_TYPE_NM_NTF,          /*normal notify, i.e., EVENT callback notify*/
-    EA_PACKET_TYPE_SP_NTF,          /*special notify, depend on usage, currently for failed API notify*/
+    EA_PACKET_TYPE_SP_NTF,          /*special notify, depend on usage, currently not in use*/
     EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
-    EA_PACKET_TYPE_INTENAL_UPDATE,  /*can be used for update local copy of RSU-data on client side*/
-    EA_PACKET_TYPE_PROXY,           /*current version not used yet, used by proxy library for special usage*/
     
     /* this tag should always be at the last*/
     NUM_OF_EA_PACKET_TYPE_DEFININITION,  
@@ -96,7 +93,7 @@ enum ea_callback_api_id_definition_enum{
     API_ID_OF(reserved_id_for_heartbeat_comm),
     
     /* external_app_proxy.h */
-    API_ID_OF(remote_app_registration),
+    API_ID_OF(app_remote_register),
     API_ID_OF(app_main_loop_start),
 
     /* application_registration.h */

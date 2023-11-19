@@ -507,7 +507,7 @@ char* api_id_str_arr[] = {
     [API_ID_OF(reserved_id_for_heartbeat_comm)] = "reserved_id_for_heartbeat_comm",
 
     /* ea_external_app_proxy.h */
-    [API_ID_OF(remote_app_registration)] = "remote_app_registration",
+    [API_ID_OF(app_remote_register)] = "app_remote_register",
     [API_ID_OF(app_main_loop_start)] = "app_main_loop_start",
 
     /* ea_application_registration.h */

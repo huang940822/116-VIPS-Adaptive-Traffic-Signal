@@ -523,8 +523,6 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
         traffic_signal_status_t ts_status;
     } ack_payload;
 
-    printf("size of traffic_signal_status_t: %u\n", sizeof(traffic_signal_status_t));
-
     /* call the actual function */
     get_traffic_signal_status( &(ack_payload.ts_status) );
 
