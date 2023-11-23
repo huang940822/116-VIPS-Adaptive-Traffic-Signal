@@ -84,6 +84,13 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
     }
 }
 
+void command_buf_search(int cycle, int subphaseID, tsc_command_object_t *command_obj)
+{
+    pthread_mutex_lock(&mutex_command_buf);
+    memcpy(command_obj, &command_buf[(cycle_index + cycle) % CYCLE_NUM][subphaseID - 1], sizeof(tsc_command_object_t));
+    pthread_mutex_unlock(&mutex_command_buf);
+}
+
 // 在切換日時段前 60 秒與後 10 分鐘停止控制
 static inline void stop_at_segament_change(traffic_signal_status_t *signal_status, char log_content[LOG_CONTENT_LEN + 1])
 {
@@ -309,13 +316,6 @@ void command_buf_polling()
     static uint8_t pretimeflag = true;
     if (signal_status.StepID == 4) {
         if (check_command_buf_empty() && pretimeflag) {
-            // if (get_total_compensation_second() > 2) {
-            //     pthread_mutex_unlock(&mutex_command_buf);
-            //     start_compensation();  // 開始進行補償
-            //     pthread_mutex_lock(&mutex_command_buf);
-            // } else {
-
-            // }
             pretimeflag = false;
             uint8_t temp_ack_seq = tsc_pretime();
             WAIT_ACK_LOOP
