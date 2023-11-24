@@ -276,7 +276,7 @@ void command_buf_polling()
     if (config.log_command_buffer) {
         log_snprintf(log_content,
                      "prior signal status: SubPhaseID(%d) StepID(%d) StepSec(%d)"
-                     "\ncurrent signal status: SubPhaseID(%d) StepID(%d) StepSec(%d)",
+                     "\ncurrent signal status: SubPhaseID(%d) StepID(%d) StepSec(%d)\n",
                      prior_SubPhaseID, prior_StepID, prior_StepSec,  // here all are global variables
                      current_SubPhaseID, current_StepID, current_StepSec);
     }

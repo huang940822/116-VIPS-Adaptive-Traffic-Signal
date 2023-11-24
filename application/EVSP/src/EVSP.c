@@ -49,11 +49,6 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     // printf("\nTSP_on_cloud_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    // typedef struct C2R_app_section {
-    //     uint32_t payload_len;
-    //     char *payload;
-    //     uint8_t com_id;
-    // } C2R_app_section_t;
     C2R_app_section_t *app_section = (C2R_app_section_t *) arg;
 
     msg_buf_t read_buf;
@@ -367,8 +362,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
             if (target_phase == host_OBU->target_phase) {
                 command_buf_search(0, signal_status.SubPhaseID, &command_obj);
-                if (command_obj.app_id != 0 && command_obj.app_priority != 0)
+                // 表示現在沒有指令
+                if (command_obj.app_id == 0 && command_obj.app_priority == 0) {
+                    printf("EVSP --- reactivate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
+                    log_snprintf(log_content, "\nEVSP reactivate");
                     ret = EVSP_rolling_to_target_phase(target_phase, host_OBU->OBU_name, log_content, &signal_status);
+                }
             }
         }
     } else { /* not in host OBU list */
@@ -396,6 +395,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
             log_snprintf(log_content, "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
                          app_section->OBU_object->OBU_name, target_phase, area_ptr->touching_area_id);
+
+            printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
 
             EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
                                      target_phase, area_ptr);

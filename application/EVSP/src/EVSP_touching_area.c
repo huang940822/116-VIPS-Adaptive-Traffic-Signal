@@ -784,14 +784,11 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
                 if (flag && touching_area->node_count == 2 &&
                     (touching_area->node[1].lat <= lat && lat <= touching_area->node[0].lat) &&
                     (touching_area->node[0].lon <= lon && lon <= touching_area->node[1].lon)) {
-                    printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID, plan->plan_subPhase[i].touching_area_Id[j]);
                     *area_ptr = touching_area;
                     return plan->plan_subPhase[i].SubPhaseID;
                 }
             } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
                 if (flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
-                    printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID,
-                           EVSP_plan_list.touching_area[plan->plan_subPhase[i].touching_area_Id[j]].touching_area_id);
                     *area_ptr = touching_area;
                     return plan->plan_subPhase[i].SubPhaseID;
                 }
