@@ -5,6 +5,7 @@ extern app_obj_t app_list;
 extern event_callback_t callback_list[EVENT_TYPE_NUMBER];
 
 int app_register(app_obj_t *);
+app_obj_t *app_obj_search_by_id(int appid);
 void app_list_print();
 void event_callback_print();
 void event_callback_msg_id_insert(event_type_t event_type,

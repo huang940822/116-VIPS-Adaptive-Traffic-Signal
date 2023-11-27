@@ -51,8 +51,10 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
 ** Return:      event_callback: address of new event callback node
 ******************************************************************************/
 void event_callback_msg_id_insert(event_type_t event_type,
-                           char *name, int priority, DSRCmsgID msg_id,
-                           int (*callback)(void *))
+                                  char *name,
+                                  int priority,
+                                  DSRCmsgID msg_id,
+                                  int (*callback)(void *))
 {
     event_callback_t *previous = &callback_list[event_type];
     event_callback_t *current = previous->next;
@@ -93,7 +95,7 @@ void event_callback_insert(event_callback_t *head,
     while (current != NULL) {
         /* callback with same app id already exist */
         if (current->event_callback_id.choice == event_callback_id_app_id &&
-             current->event_callback_id.u.app_id == app->id) {
+            current->event_callback_id.u.app_id == app->id) {
             // printf("callback with same app_id exist\n");
             return;
         }
@@ -153,6 +155,25 @@ int app_obj_insert(app_obj_t *app)
     num++;
     current->next = app;
     return num;
+}
+
+app_obj_t *app_obj_search_by_id(int appid)
+{
+    app_obj_t *current = app_list.next;
+
+    /* empty list */
+    if (current == NULL) {
+        return NULL;
+    }
+
+    /* traverse to last node */
+    while (current->next != NULL) {
+        if (current->id == appid) {
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
 }
 
 /*****************************************************************************

@@ -539,7 +539,9 @@ int command_buf_resume_control(uint8_t appid)
 {
     tsc_command_t command = {0};
     traffic_signal_status_t signal_status;
-
+    app_obj_t *app_obj = app_obj_search_by_id(appid);
+    if (app_obj == NULL || app_obj->dontSend2TC == 1)
+        return -1;
     get_traffic_signal_status(&signal_status);
 
     command.app_id = 99;
