@@ -240,7 +240,7 @@ int log_file_write_with_errno(const char *format, ...)
             fflush(stderr);
         }
         else{
-            ;//TODO: log to a file
+            ;//log to a file
         }
     }
 

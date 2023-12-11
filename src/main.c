@@ -20,6 +20,7 @@
 #include "config.h"
 #include "dispatcher.h"
 #include "external_app_proxy_server.h"
+#include "external_app_proxy_callback_msg_forward.h"
 #include "error_code_user.h"
 #include "error_status.h"
 #include "j2735_codec.h"
@@ -42,7 +43,7 @@ extern uint8_t flag_query_firm_ver;
 
 pthread_mutex_t mutex_uart_comple_protect = PTHREAD_MUTEX_INITIALIZER;
 
-//declaration
+//declaration here
 int register_handler_for_unexpected_signal();
 
 void signalUnExpectedHandler(int sig_num)
@@ -53,12 +54,16 @@ void signalUnExpectedHandler(int sig_num)
     printf("get in mutex in signal handler for unexpected signal\r\n");
     printf("the signal number is %d\r\n", sig_num);
     printf("\nuart write actions has all be completed before exit from process\n");
+    if(sig_num == SIGKILL){
+        event_middleware_restart_handler();
+    }
     fflush(stdout);
     fflush(stderr);
     exit(0);
     pthread_mutex_unlock(&mutex_uart_comple_protect);
 }
 
+//definition here
 int register_handler_for_unexpected_signal()
 {   
     __sighandler_t ret_p = 0;    

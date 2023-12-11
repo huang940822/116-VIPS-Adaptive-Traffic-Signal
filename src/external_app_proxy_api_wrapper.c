@@ -25,19 +25,17 @@ static inline __attribute__((always_inline))
 int simple_send_ack_to_app(int fd, int ack_ret_val)
 {   
     int ret;
-    packet_from_proxy_header_t ack;
+    packet_header_from_proxy_t ack;
     ack.packet_type = EA_PACKET_TYPE_ACK;
     ack.ret_val = ack_ret_val;
-    ret = send_packet_to_unix_sk_fd( fd, &ack, sizeof(ack));
-    #ifdef MT_SPECIAL_ZERO //EAP_SERVER_PRINT_DEBUG 
-        printf("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
+    ret = eap_send_packet_to_unix_sk( fd, &ack, sizeof(ack));
+    #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+        fprintf(stderr, "[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
                 ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
     #endif
 
-    #ifdef ENABLE_EXTERNAL_APP_INTERACTION_LOGGING
     log_file_write("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
                     ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
-    #endif
     
     return ret;
 }
@@ -48,7 +46,7 @@ int simple_send_ack_to_app(int fd, int ack_ret_val)
 int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
     */
@@ -59,7 +57,7 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
         DSRCmsgID msg_id;
     } payload;
     
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -85,7 +83,7 @@ int API_WRAPPER_OF(event_callback_msg_id_insert)(int client_fd)
 int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in cloud_packet_tx_needAck() in ea_library
     */
@@ -94,7 +92,7 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
         uint8_t service_id;
     }payload;
 
-    int ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    int ret = eap_recv_packet_from_unix_sk(client_fd, &payload, sizeof(payload));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -103,7 +101,7 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     }
 
     unsigned char specific_field[ payload.len ];
-    ret = recv_packet_from_unix_sk_fd(client_fd, specific_field, sizeof(payload.len));
+    ret = eap_recv_packet_from_unix_sk(client_fd, specific_field, sizeof(payload.len));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get specific_field from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -115,7 +113,7 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
     /* cloud_packet_tx does not return err-code currently (return void) */
     cloud_packet_tx( payload.len, payload.service_id, specific_field);
 
-    #if USING_BEST_EFFORT_NON_ACK_SET
+    #if USING_NON_ACK_CONFIG
         ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
@@ -127,7 +125,7 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
 int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in OBU_j2735_tx() in ea_library
     */
@@ -136,7 +134,7 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
         size_t buf_len;
     }payload;
   
-    ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    ret = eap_recv_packet_from_unix_sk(client_fd, &payload, sizeof(payload));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -145,7 +143,7 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     }
 
     uint8_t buf[ payload.buf_len ];
-    ret = recv_packet_from_unix_sk_fd(client_fd, buf, sizeof(payload.buf_len));
+    ret = eap_recv_packet_from_unix_sk(client_fd, buf, sizeof(payload.buf_len));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -174,7 +172,7 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
 int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is recv in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is recv in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "recv" and "send" pairs in OBU_packet_tx() in ea_library
     */
@@ -182,7 +180,7 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
         size_t write_buf_len;
     }payload;
 
-    int ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    int ret = eap_recv_packet_from_unix_sk(client_fd, &payload, sizeof(payload));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -191,7 +189,7 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     }
 
     uint8_t write_buf[ payload.write_buf_len ];
-    ret = recv_packet_from_unix_sk_fd(client_fd, write_buf, sizeof(payload.write_buf_len));
+    ret = eap_recv_packet_from_unix_sk(client_fd, write_buf, sizeof(payload.write_buf_len));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get write_buf_content from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -220,7 +218,7 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 int API_WRAPPER_OF(remote_com_send)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in remote_com_send() in ea_library
     */
@@ -229,7 +227,7 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     } payload;
     
     int ret; 
-    ret = recv_packet_from_unix_sk_fd(client_fd, &payload, sizeof(payload));
+    ret = eap_recv_packet_from_unix_sk(client_fd, &payload, sizeof(payload));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -238,7 +236,7 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     }
 
     uint8_t buf[ payload.buf_len ];
-    ret = recv_packet_from_unix_sk_fd(client_fd, buf, sizeof(payload.buf_len));
+    ret = eap_recv_packet_from_unix_sk(client_fd, buf, sizeof(payload.buf_len));
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s get buf from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -307,7 +305,7 @@ int API_WRAPPER_OF(get_config_RSU_elev)(int client_fd)
 int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time_needAck() in ea_library
     */
@@ -315,7 +313,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
         tsc_command_t tsc_cmd;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -336,7 +334,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
         ack_ret_val = EAL_ERR_OK;
     }
 
-    #if USING_BEST_EFFORT_NON_ACK_SET
+    #if USING_NON_ACK_CONFIG
         ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, ack_ret_val);
@@ -348,7 +346,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
 int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time() in ea_library
     */
@@ -356,7 +354,7 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
         tsc_command_t tsc_cmd;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -386,7 +384,7 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
 int API_WRAPPER_OF(vms_request_start)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in vms_request_start() in ea_library
     */
@@ -395,7 +393,7 @@ int API_WRAPPER_OF(vms_request_start)(int client_fd)
         uint8_t priority;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -406,13 +404,19 @@ int API_WRAPPER_OF(vms_request_start)(int client_fd)
     /* call the actual function */
     vms_request_start(payload.id, payload.priority);
 
+    #if USING_NON_ACK_CONFIG
+        ;//do not send ack
+    #else
+        ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    #endif
+
     /* no ack and no ack_payload for this api*/
     return ret;
 }
 int API_WRAPPER_OF(vms_request_end)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in event_callback_msg_id_insert() in ea_library
     */
@@ -420,7 +424,7 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
         uint8_t id;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -431,7 +435,7 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
     /* call the actual function */
     vms_request_end(payload.id);
 
-    #if USING_BEST_EFFORT_NON_ACK_SET
+    #if USING_NON_ACK_CONFIG
         ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
@@ -443,7 +447,7 @@ int API_WRAPPER_OF(vms_request_end)(int client_fd)
 int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in vms_sync_evsp_prog() in ea_library
     */
@@ -451,7 +455,7 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
         uint8_t evsp_prog[RTM_MAX];
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -464,7 +468,7 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
         evsp_prog[i] = payload.evsp_prog[i];
     }
 
-    #if USING_BEST_EFFORT_NON_ACK_SET
+    #if USING_NON_ACK_CONFIG
         ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
@@ -476,7 +480,7 @@ int API_WRAPPER_OF(vms_sync_evsp_prog)(int client_fd)
 int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in vms_sync_then_start_needAck() in ea_library
     */
@@ -486,7 +490,7 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
         uint8_t evsp_prog[RTM_MAX];
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -501,7 +505,7 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
     /* then call the actual function */
     vms_request_start(payload.id, payload.priority);
 
-    #if USING_BEST_EFFORT_NON_ACK_SET
+    #if USING_NON_ACK_CONFIG
         ;//do not send ack
     #else
         ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
@@ -515,7 +519,7 @@ int API_WRAPPER_OF(vms_sync_then_start)(int client_fd)
 int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_traffic_signal_status() in ea_library
     */
@@ -532,7 +536,7 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -542,7 +546,7 @@ int API_WRAPPER_OF(get_traffic_signal_status)(int client_fd)
 int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_current_traffic_signal_status() in ea_library
     */
@@ -559,7 +563,7 @@ int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -568,7 +572,7 @@ int API_WRAPPER_OF(get_current_traffic_signal_status)(int client_fd)
 int API_WRAPPER_OF(get_current_phase)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_current_phase() in ea_library
     */
@@ -585,7 +589,7 @@ int API_WRAPPER_OF(get_current_phase)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -594,7 +598,7 @@ int API_WRAPPER_OF(get_current_phase)(int client_fd)
 int API_WRAPPER_OF(get_current_step)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_current_step() in ea_library
     */
@@ -611,7 +615,7 @@ int API_WRAPPER_OF(get_current_step)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -620,7 +624,7 @@ int API_WRAPPER_OF(get_current_step)(int client_fd)
 int API_WRAPPER_OF(get_current_second)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_current_second() in ea_library
     */
@@ -637,7 +641,7 @@ int API_WRAPPER_OF(get_current_second)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -646,7 +650,7 @@ int API_WRAPPER_OF(get_current_second)(int client_fd)
 int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_current_second() in ea_library
     */
@@ -663,7 +667,7 @@ int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -672,7 +676,7 @@ int API_WRAPPER_OF(get_SubPhaseCount)(int client_fd)
 int API_WRAPPER_OF(get_SignalCount)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_SignalCount() in ea_library
     */
@@ -689,7 +693,7 @@ int API_WRAPPER_OF(get_SignalCount)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -698,7 +702,7 @@ int API_WRAPPER_OF(get_SignalCount)(int client_fd)
 int API_WRAPPER_OF(get_plan_id)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_plan_id in ea_library
     */
@@ -715,7 +719,7 @@ int API_WRAPPER_OF(get_plan_id)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -724,7 +728,7 @@ int API_WRAPPER_OF(get_plan_id)(int client_fd)
 int API_WRAPPER_OF(get_control_status)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_control_status in ea_library
     */
@@ -741,7 +745,7 @@ int API_WRAPPER_OF(get_control_status)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -750,7 +754,7 @@ int API_WRAPPER_OF(get_control_status)(int client_fd)
 int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_PhaseOrder in ea_library
     */
@@ -767,7 +771,7 @@ int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -776,7 +780,7 @@ int API_WRAPPER_OF(get_PhaseOrder)(int client_fd)
 int API_WRAPPER_OF(get_remaining_time)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_remaining_time in ea_library
     */
@@ -786,7 +790,7 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
         uint16_t second;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -807,7 +811,7 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -816,7 +820,7 @@ int API_WRAPPER_OF(get_remaining_time)(int client_fd)
 int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_SignalStatus in ea_library
     */
@@ -825,7 +829,7 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
         uint8_t SignalCount_index;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -846,7 +850,7 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -855,7 +859,7 @@ int API_WRAPPER_OF(get_SignalStatus)(int client_fd)
 int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_total_compensation_second in ea_library
     */
@@ -872,7 +876,7 @@ int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -881,7 +885,7 @@ int API_WRAPPER_OF(get_total_compensation_second)(int client_fd)
 int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_compensation_buffer in ea_library
     */
@@ -898,7 +902,7 @@ int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -907,7 +911,7 @@ int API_WRAPPER_OF(get_compensation_buffer)(int client_fd)
 int API_WRAPPER_OF(set_control_status)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in set_control_status in ea_library
     */
@@ -915,7 +919,7 @@ int API_WRAPPER_OF(set_control_status)(int client_fd)
         uint8_t control_status;
     } payload;
 
-    int ret = recv_packet_from_unix_sk_fd( client_fd, &payload, sizeof(payload) );
+    int ret = eap_recv_packet_from_unix_sk( client_fd, &payload, sizeof(payload) );
     if(PRINT_API_MSG_FOR_DEBUG)
         fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n", 
                 __func__, client_fd, ret);
@@ -935,7 +939,7 @@ int API_WRAPPER_OF(set_control_status)(int client_fd)
 int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_original_tc_health_status in ea_library
     */
@@ -952,7 +956,7 @@ int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -961,7 +965,7 @@ int API_WRAPPER_OF(get_original_tc_health_status)(int client_fd)
 int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_next_SubPhaseID in ea_library
     */
@@ -978,7 +982,7 @@ int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }
@@ -987,7 +991,7 @@ int API_WRAPPER_OF(get_next_SubPhaseID)(int client_fd)
 int API_WRAPPER_OF(get_prev_SubPhaseID)(int client_fd)
 {
     /* WARNNING!!! 
-       except for packet_to_proxy_header_t, which is read in handle_remote_client_request(),
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
        "MATCH" the "read" and "send" pairs in get_next_SubPhaseID in ea_library
     */
@@ -1004,7 +1008,7 @@ int API_WRAPPER_OF(get_prev_SubPhaseID)(int client_fd)
         return ret;
     }
 
-    ret = send_packet_to_unix_sk_fd( client_fd, &ack_payload, sizeof(ack_payload));
+    ret = eap_send_packet_to_unix_sk( client_fd, &ack_payload, sizeof(ack_payload));
     if (ret != 0) {
         ;//maybe log err
     }

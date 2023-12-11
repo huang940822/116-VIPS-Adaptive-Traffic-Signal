@@ -15,76 +15,80 @@
  * will exist both is server-side and client-side
  * the two should be "THE SAME" !! */
 
-#define USING_BEST_EFFORT_NON_ACK_SET 1
+#define USING_NON_ACK_CONFIG 1
 
-#define EAP_CLIENT_PRINT_DEBUG 1
 #define EAP_SERVER_PRINT_DEBUG 1
+#define EAP_SERVER_INNER_DETAIL_PRINT_DEBUG 0
+
+#define FORWARD_SAME_FORMAT_OBU_MSG_TO_EA 0
 
 enum ea_packet_type_definition_enum{
-    EA_PACKET_TYPE_RESERVED = 0,    /*reserved*/
-    EA_PACKET_TYPE_REGISTER,        /*register, will update intetact channel */
-    EA_PACKET_TYPE_NTF_UPDATE,      /*notify channel update*/
-    EA_PACKET_TYPE_REQ,             /*requeset*/
-    EA_PACKET_TYPE_ACK,             /*ack*/
-    EA_PACKET_TYPE_NM_NTF,          /*normal notify, i.e., EVENT callback notify*/
-    EA_PACKET_TYPE_SP_NTF,          /*special notify, depend on usage, currently not in use*/
-    EA_PACKET_TYPE_HEARTBEAT,       /*heartbeat*/
+    EA_PACKET_TYPE_RESERVED = 0,    /*reserved, for future expansion, such as emergency handling*/
+    EA_PACKET_TYPE_REGISTER_TOP,    /*register top-half, will establish intetaction channel */
+    EA_PACKET_TYPE_REGISTER_BOT,    /*register top-half, will establish notification channel */
+    EA_PACKET_TYPE_REQ,             /*request*/
+    EA_PACKET_TYPE_ACK,             /*ack of request */
+    EA_PACKET_TYPE_NM_NTF,          /*normal notify, i.e., EVENT message send to EA */
+    EA_PACKET_TYPE_SP_NTF,          /*special notify, for future expansion, currently not in use*/
+    EA_PACKET_TYPE_REPORT,          /*for sending heartbeat*/
     
-    /* this tag should always be at the last*/
-    NUM_OF_EA_PACKET_TYPE_DEFININITION,  
+    /* tag below should always be at the last*/
+    TOTAL_NUM_OF_EA_PACKET_TYPE,  
 };
 
-typedef struct _packet_from_proxy_header_t {
+// typedef struct _proxy_packet_header_t {
+//     uint32_t packet_type;
+//     union{
+//         /* register type API header */
+//         struct {
+//             uint32_t api_id;     //used when registering
+//         }reg_h;
+
+//         /* event type API header*/
+//         struct {
+//             event_type_t callback_event; //event id
+//             struct{     //for test
+//                 long glb_sec;
+//                 long glb_nsec;
+//             };
+//         }evt_h; 
+
+//         /* request (get/set) type API header */
+//         struct {
+//             uint32_t appID;
+//             union{
+//                 uint32_t api_id;    //used when send api-request
+//                 int ret_val;        //return value of api-request
+//             };
+//         }req_h; 
+
+//         /* report type API header */
+//         struct {
+//             uint32_t appID;     //used for heartbeat packet
+//         }rpt_h; 
+//     };
+// }proxy_packet_header_t;
+
+// typedef proxy_packet_header_t packet_header_from_proxy_t;
+// typedef proxy_packet_header_t packet_header_to_proxy_t;
+
+typedef struct _packet_header_from_proxy_t {
     uint32_t packet_type;
     union{
-        event_type_t callback_event; //used for notify
-        int ret_val; //used for ack return value of api-request
+        event_type_t callback_event; //event id
+        int ret_val;        //return value of api-request
     };
-    union{
-        uint32_t api_id;    //might used for api-ack 
-        uint32_t seq_num;   //used for heartbeat-ack
-        struct {
-            long glb_sec;
-            long glb_nsec;
-        };
+    struct{
+        long glb_sec;
+        long glb_nsec;
     };
-} packet_from_proxy_header_t;
+} packet_header_from_proxy_t;
 
-typedef struct _packet_to_proxy_header_t {
+typedef struct _packet_header_to_proxy_t {
     uint32_t packet_type;
-    uint32_t appID;
-    union{
-        pid_t pid;
-        bool need_ack; //used when send heartbeat
-    };
-    union{
-        uint32_t api_id;    //used when send api-request
-        uint32_t seq_num;   //used when send heartbeat
-    };
-} packet_to_proxy_header_t;
-
-typedef struct _app_registration_payload_t {
-    char name[APP_NAME_MAX_LEN];
-    uint8_t id;
-    uint8_t priority;
-    uint8_t dontSend2TC;
-    uint64_t callback_register_mask;
-    pid_t pid;
-} app_registration_payload_t;
-
-typedef struct _notify_update_payload_t {
-    uint8_t id;
-    pid_t pid;
-} notify_update_payload_t;
-
-typedef struct _notify_update_ack_payload_t {
-    uint32_t RSU_id;
-    double RSU_lat;
-    double RSU_lon;
-    char RSU_name[RSU_NAME_MAX_LEN];
-    double RSU_elev;
-    uint32_t RSU_region;
-} notify_update_ack_payload_t;
+    uint32_t api_id;    //used when registering or send api-request
+    uint32_t appID;     //used when sending heartbeat
+} packet_header_to_proxy_t;
 
 #define API_ID_OF(api_name)  api_name ## _API_ID
 enum ea_callback_api_id_definition_enum{
@@ -94,7 +98,6 @@ enum ea_callback_api_id_definition_enum{
     
     /* external_app_proxy.h */
     API_ID_OF(app_remote_register),
-    API_ID_OF(app_main_loop_start),
 
     /* application_registration.h */
     API_ID_OF(event_callback_msg_id_insert),
@@ -153,19 +156,19 @@ extern char* ack_ret_val_str_arr[];
 /* since application might implement multi-thread program, ,
  * we add a mutex_lock to serialize their usage of the same channel 
  * the implementation is based on mutex lock */ 
-void lock_api_request_channel();
-void unlock_api_request_channel();
-void lock_callback_notify_channel();
-void unlock_callback_notify_channel();
+void lock_interact_channel();
+void unlock_interact_channel();
+void lock_notify_channel();
+void unlock_notify_channel();
 
 /* functions below are only used in library used by external application */
 /* middleware itself will not use */
 /* recommend middleware-api implementation use functions below  */
 bool is_proxy_connected();
 int32_t simple_send_request_header_to_proxy(int api_id);
-int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num, bool need_ack);
+int32_t simple_send_heartbeat_to_proxy();
 int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size);
-int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, int api_id);
+int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int api_id);
 int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size);
 /* functions above ... */
 

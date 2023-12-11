@@ -10,8 +10,8 @@
 app_obj_t* get_app_obj_by_appID(uint8_t appID);
 app_obj_t* get_app_obj_by_unix_socket_fd(int unix_sk_fd);
 
-int reset_external_app_both_fd(app_obj_t *app, int socket_fd);
-int update_external_app_notify_fd(app_obj_t *app, int socket_fd);
+int set_ea_app_obj_new_sk_fd(app_obj_t *app, int socket_fd);
+int update_ea_app_obj_notify_fd(app_obj_t *app, int socket_fd);
 
 /* used when proxy detect an external app lose heartbeat for a long time */
 /* or when send/recv to that APP's unix socket result in EAL_ERR_SOCKET_DISCONNECT */

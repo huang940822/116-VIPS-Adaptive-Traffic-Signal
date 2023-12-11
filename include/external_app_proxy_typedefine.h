@@ -35,7 +35,7 @@ enum ea_err_definition_enum {
     EAL_ERR_BAD_API_ID_BEFORE_REGISTER,
     EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT,
     EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE,
-    EAL_ERR_BAD_PACKET_TYPE_IN_MSG_QUEUE,
+    EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE,
 
     /* error detected when calling the actual api in middleware */
     EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO,

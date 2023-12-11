@@ -80,7 +80,8 @@ app_obj_t* get_app_obj_by_unix_socket_fd(int unix_sk_fd)
 }
 
 /* used when an external app connects and registers for first channel*/
-int reset_external_app_both_fd(app_obj_t *app, int socket_fd)
+/* this will set I-channel to client_fd and N-channel to 0*/
+int set_ea_app_obj_new_sk_fd(app_obj_t *app, int socket_fd)
 {   
     if(!app)
         return -1;
@@ -104,8 +105,8 @@ int reset_external_app_both_fd(app_obj_t *app, int socket_fd)
 }
 
 /* each external app has 2 channel, 
- * this one used for connecting and registering second channel*/
-int update_external_app_notify_fd(app_obj_t *app, int socket_fd)
+ * this one used for updating second channel in the app_obj_t */
+int update_ea_app_obj_notify_fd(app_obj_t *app, int socket_fd)
 {   
     if(!app)
         return -1;

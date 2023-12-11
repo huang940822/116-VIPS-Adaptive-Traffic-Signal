@@ -19,7 +19,9 @@
 
 /* DANGER: this file: external_app_proxy_socket.c
  * will exist both is server-side and client-side
- * except for include-path, the two should be "THE SAME" !! */
+ * Except for the #include above, the two files should be "THE SAME" !! 
+ * */
+/* Most of the functions or variables in this file are used for client */
 
 #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
 #define EAP_CONNECT_TIMEOUT_MS 10000   //10s == 10000ms
@@ -36,12 +38,12 @@ pthread_mutex_t mutex_notify_fd = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_interact_fd = PTHREAD_MUTEX_INITIALIZER;
 
 /* notify_fd and interact_fd are both file-scope, do not expose them to header file */
-/* middleware use notify_fd to send msg to app 
-   app use interact_fd to send request/heartbeat to middleware and get ack */
+/* APP use notify_fd to get msg which is sent from middleware
+   APP use interact_fd to send request/heartbeat to middleware and get ack */
 static int notify_fd;
 static int interact_fd; 
 static int current_errno;
-static uint32_t register_appID;
+static uint32_t registered_appID;
 
 static inline __attribute__((always_inline)) 
 int32_t modify_socket_fd_block_setting(int socket_fd, bool set_to_block)
@@ -68,17 +70,14 @@ int32_t modify_socket_fd_block_setting(int socket_fd, bool set_to_block)
     return 0;
 }
 
-/* below are only used in library functions used by external application,
-   middleware itself will not use */
-
 void set_register_appID(uint32_t appID)
 {
-    register_appID = appID;
+    registered_appID = appID;
 }
 
 uint32_t get_register_appID()
 {
-    return register_appID;
+    return registered_appID;
 }
 
 int32_t add_notify_fd_to_epoll(int* ep_fd)
@@ -96,22 +95,22 @@ int32_t add_notify_fd_to_epoll(int* ep_fd)
     return EAL_ERR_OK;
 }
 
-void lock_api_request_channel()
+void lock_interact_channel()
 {
     pthread_mutex_lock(&mutex_interact_fd);
 }
 
-void unlock_api_request_channel()
+void unlock_interact_channel()
 {
     pthread_mutex_unlock(&mutex_interact_fd);
 }
 
-void lock_callback_notify_channel()
+void lock_notify_channel()
 {
     pthread_mutex_lock(&mutex_notify_fd);
 }
 
-void unlock_callback_notify_channel()
+void unlock_notify_channel()
 {
     pthread_mutex_unlock(&mutex_notify_fd);
 }
@@ -391,14 +390,37 @@ int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size)
     return EAL_ERR_OK;
 }
 
-/* recommend middleware-api implementation use functions below  */
+/* WARN:recommend middleware-api implementation use functions below  */
+/* WARN:function below did NOT take the lock inside, 
+   please take the lock by yourself using lock_interact_channel() and lock_notify_channel */
+
+int32_t simple_send_heartbeat_to_proxy()
+{
+    int ret;
+    packet_header_to_proxy_t hearbeat;
+    hearbeat.packet_type = EA_PACKET_TYPE_REPORT;
+    hearbeat.appID = registered_appID;
+    
+    errno = 0;
+    ret = send(interact_fd, &hearbeat, sizeof(hearbeat), MSG_NOSIGNAL);
+    current_errno = errno;
+    log_file_write("%s: send() ret = %d\n", __func__, ret);
+    if( ret == -1 ){
+        log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
+        if( errno == -EPIPE){
+            return EAL_ERR_SOCKET_DISCONNECT;
+        } 
+        return EAL_ERR_SOCKET_SYSCALL;
+    }
+    return EAL_ERR_OK;
+}
 
 int32_t simple_send_request_header_to_proxy(int api_id) 
 {   
     int ret;
-    packet_to_proxy_header_t header;
+    packet_header_to_proxy_t header;
     header.packet_type = EA_PACKET_TYPE_REQ;
-    header.appID = register_appID;
+    header.appID = registered_appID;
     header.api_id = api_id;
 
     errno = 0;
@@ -416,54 +438,14 @@ int32_t simple_send_request_header_to_proxy(int api_id)
     return EAL_ERR_OK;
 }
 
-int32_t simple_send_heartbeat_to_proxy(uint32_t seq_num, bool need_ack)
+int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int api_id)
 {
     int ret;
-    packet_to_proxy_header_t hearbeat;
-    hearbeat.packet_type = EA_PACKET_TYPE_HEARTBEAT;
-    hearbeat.seq_num = seq_num;
-    hearbeat.appID = register_appID;
-    hearbeat.need_ack = need_ack;
-    
+    memset(ack_p, 0, sizeof(packet_header_from_proxy_t));
     errno = 0;
-    ret = send(interact_fd, &hearbeat, sizeof(hearbeat), MSG_NOSIGNAL);
+    ret = recv(interact_fd, ack_p, sizeof(packet_header_from_proxy_t), 0);
     current_errno = errno;
-    log_file_write("%s: send() ret = %d\n", __func__, ret);
-    if( ret == -1 ){
-        log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
-        if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
-        } 
-        return EAL_ERR_SOCKET_SYSCALL;
-    }
-    return EAL_ERR_OK;
-}
 
-int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size) 
-{   
-    /* this function should behaves like interact_fd_send_to_proxy() */
-    int ret = 0;
-    errno = 0;
-    ret = send(interact_fd, packet_p, packet_size, MSG_NOSIGNAL);
-    current_errno = errno;
-    log_file_write("%s: send() ret = %d\n", __func__, ret);
-    if( ret == -1 ){
-        log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
-        if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
-        } 
-        return EAL_ERR_SOCKET_SYSCALL;
-    }
-    return EAL_ERR_OK;
-}
-
-int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, int api_id)
-{
-    int ret;
-    memset(ack_p, 0, sizeof(packet_from_proxy_header_t));
-    errno = 0;
-    ret = recv(interact_fd, ack_p, sizeof(packet_from_proxy_header_t), 0);
-    current_errno = errno;
     log_file_write("%s: api->%s, recv() ret = %d\n", __func__, api_id_str_arr[api_id], ret);
     if( ret == 0 ){   /* meaning that remote client might close the fd */
         log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret 0 (probably disconnected)\n");
@@ -483,9 +465,28 @@ int32_t simple_get_ack_from_proxy(packet_from_proxy_header_t *ack_p, int api_id)
     return ret;
 }
 
+/* this function should behaves like interact_fd_send_to_proxy() */
+int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size) 
+{   
+    int ret = 0;
+    errno = 0;
+    ret = send(interact_fd, packet_p, packet_size, MSG_NOSIGNAL);
+    current_errno = errno;
+
+    log_file_write("%s: send() ret = %d\n", __func__, ret);
+    if( ret == -1 ){
+        log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
+        if( errno == -EPIPE){
+            return EAL_ERR_SOCKET_DISCONNECT;
+        } 
+        return EAL_ERR_SOCKET_SYSCALL;
+    }
+    return EAL_ERR_OK;
+}
+
+/* this function should behaves like interact_fd_recv_from_proxy() */
 int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size)
 {
-    /* this function should behaves like interact_fd_recv_from_proxy() */
     int ret;
     errno = 0;
     ret = recv(interact_fd, packet_p, packet_size, 0);
@@ -508,7 +509,6 @@ char* api_id_str_arr[] = {
 
     /* ea_external_app_proxy.h */
     [API_ID_OF(app_remote_register)] = "app_remote_register",
-    [API_ID_OF(app_main_loop_start)] = "app_main_loop_start",
 
     /* ea_application_registration.h */
     [API_ID_OF(event_callback_msg_id_insert)] = "event_callback_msg_id_insert",
@@ -587,7 +587,7 @@ char* ack_ret_val_str_arr[] = {
     [EAL_ERR_BAD_API_ID_BEFORE_REGISTER] = "EAL_ERR_BAD_API_ID_BEFORE_REGISTER",
     [EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT] = "EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT",
     [EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE] = "EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE",
-    [EAL_ERR_BAD_PACKET_TYPE_IN_MSG_QUEUE] = "EAL_ERR_BAD_PACKET_TYPE_IN_MSG_QUEUE",
+    [EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE] = "EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE",
 
     /* error detected when calling the actual api in middleware */
     [EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO] = "EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO",

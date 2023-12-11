@@ -232,7 +232,7 @@ int app_obj_insert(app_obj_t *app)
     
 unlock_ret:
     pthread_mutex_unlock(&mutex_app_list); 
-    return num;
+    return ret;
 }
 
 /*****************************************************************************
@@ -382,6 +382,7 @@ void event_callback_print()
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "(%d)",
                      current->next->priority);
+            
             current = current->next;
             if (current->next != NULL) {
                 snprintf(log_content + strlen(log_content),
@@ -390,9 +391,7 @@ void event_callback_print()
         }
     }
 
-unlock_ret:
     pthread_mutex_unlock(&mutex_callback_list);
-
     log_file_write(log_content);
 }
 

@@ -479,18 +479,24 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
      * In addition, to handle j2735 decoding issue, 
      * we will send msg->msg and msg->msg_len to external-library,
      * the library will decode the msg and complete the V2R_self_defined_section_t
-     * at the external side.
+     * at the external client side.
      * */
     V2R_self_defined_section_t V2R_self_defined_section;
     fill_V2R_self_defined_section(&V2R_self_defined_section, object, &app_section);
     V2R_self_defined_section.data = msg->msg;
     V2R_self_defined_section.data_len = msg->msg_len;
 
+    /* 另外也保留能傳送 V2R_app_section_t 給外部 APP 的 code */
+    #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
+        wrapper_arg_for_obu_packet_t wrapper_arg_for_obu;
+        wrapper_arg_for_obu.msg_p = msg;
+        wrapper_arg_for_obu.app_section_p = &app_section;
+    #endif
+
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list);
-    
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
+    pthread_mutex_lock(&mutex_callback_list);
     record_current_timespec(&trc5);
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_msg_id 
@@ -498,26 +504,22 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         {   
             proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
-                current->next->callback( &V2R_self_defined_section );
+                #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
+                    EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(&wrapper_arg_for_obu);
+                #else
+                    current->next->callback( &V2R_self_defined_section );
+                #endif
             }
             else{
-                /* original internal APPs */
-                record_current_timespec(&trc3);
-                current->next->callback((void *) &app_section);
-                record_current_timespec(&trc4);
-                print_timespec_to_stderr(trc3, trc4, "middleware_internal");
+                current->next->callback( (void *)&app_section ); /* original internal APPs */
             }
         }
         current = current->next;
     }
     record_current_timespec(&trc6);
-    //print_timespec_to_stderr(trc5, trc6, "middleware_external");
-    
     pthread_mutex_unlock(&mutex_callback_list);
     
-    fflush(stderr);
-
-    // free resource just
+    // free resource 
     if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
     if (msgf != NULL)
