@@ -54,9 +54,9 @@ void signalUnExpectedHandler(int sig_num)
     printf("get in mutex in signal handler for unexpected signal\r\n");
     printf("the signal number is %d\r\n", sig_num);
     printf("\nuart write actions has all be completed before exit from process\n");
-    if(sig_num == SIGKILL){
-        event_middleware_restart_handler();
-    }
+
+    event_middleware_restart_handler();
+    
     fflush(stdout);
     fflush(stderr);
     exit(0);
