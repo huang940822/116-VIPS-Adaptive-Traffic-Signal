@@ -387,7 +387,7 @@ void spat_printf(SPAT *pp_spat)
     printf("id : %d\n", int_state->id.id);
     for (int i = 0; i < int_state->states.count; i++) {
         MovementState *state = &int_state->states.tab[i];
-        printf("\nsigmalGroup : %d %d\n", state->signalGroup, state->state_time_speed.count);
+        printf("\nsignalGroup : %d %d\n", state->signalGroup, state->state_time_speed.count);
 
         for (int j = 0; j < state->state_time_speed.count; j++) {
             if (state->state_time_speed.tab[j].timing_option == TRUE) {
