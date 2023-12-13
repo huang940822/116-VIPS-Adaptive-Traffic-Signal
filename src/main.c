@@ -131,10 +131,9 @@ int main()
     app_obj_t *app_arr[] = {
         // &MMP,
         &EVSP,
-        &TSP,
+        // &TSP,
         // &CPS,
-        // &SPaT,
-        // &TIB,
+        &TIB,
         // &SPM,
     };
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);

@@ -69,6 +69,7 @@ void *MAP_packet_tx_loop()
             // map_print(map);
             pior_planID = planID;
         }
+        map_print(map);
         OBU_j2735_tx(MapData_Id, map);
     }
     close(fd);

@@ -51,22 +51,23 @@ void map_msg_init(MapData **map_ptr)
 
         // bit 5-8 為 Approach
         lane->laneID = ((config_lane->approach << 5) & 0b11100000);
-        // ingress 設 bit 4 為 0, egress 為 0
-        if (config_lane->direction == LaneDirection_ingressPath) {
+        // ingress 設 bit 4 為 1, egress 為 0
+        if (config_lane->direction & (1 << LaneDirection_ingressPath)) {
             lane->laneID |= 0b00010000;
         }
         lane->laneID |= (0b00001111 & config_lane->lane_index);
 
         lane->laneAttributes.directionalUse.len = 2;
         Malloc(lane->laneAttributes.directionalUse.buf, 1, "directionalUse");
-        if (config_lane->direction == LaneDirection_ingressPath) {
+        if (config_lane->direction & (1 << LaneDirection_egressPath)) {
             lane->egressApproach_option = TRUE;
             lane->egressApproach = config_lane->approach;
-            asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath);
-        } else {
+            asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_egressPath);
+        } 
+        if (config_lane->direction & (1 << LaneDirection_ingressPath)) {
             lane->ingressApproach_option = TRUE;
             lane->ingressApproach = config_lane->approach;
-            asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_egressPath);
+            asn1_bstr_set_bit(&lane->laneAttributes.directionalUse, LaneDirection_ingressPath);
         }
 
         lane->laneAttributes.laneType.choice = config_lane->lane_type;
@@ -129,8 +130,7 @@ int map_signal_group(MapData *map)
 
 #define search_signal_compass(signalMask, setFunc)                                   \
     do {                                                                             \
-        if (greenSignalMap[i] & signalMask &&                                        \
-            signalGroupID <= 255) {                                                  \
+        if (signalGroupID != -1) {                                                   \
             for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {              \
                 MAP_config_connectsTo_t *config_connectTo =                          \
                     &vector_at(TIB_config.connectsTo_list, i);                       \
@@ -142,47 +142,34 @@ int map_signal_group(MapData *map)
         }                                                                            \
     } while (0)
 
-    uint8_t greenSignalMap[COMPASS_NUM];
-    int map_table[COMPASS_NUM];
-    if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
-        return -1;
-    if (get_map_table(&signal_status, map_table) < 0)
-        return -1;
+    int signalGroupID = -1;
 
-    int signalGroupID = 0;
-
-    for (int i = 0; i < signal_status.SignalCount && i < COMPASS_NUM; i++) {
-        if (greenSignalMap[i] == 0)
-            continue;
-        struct list_head *head = &TIB_config.MAP_lane_compass[map_table[i]];
+    for (int i = 0; i < COMPASS_NUM; i++) {
+        struct list_head *head = &TIB_config.MAP_lane_compass[i];
         MAP_config_lane_t *config_lane, *safe;
         // 一般車道
         list_for_each_entry_safe(config_lane, safe, head, compass_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RroundHeadGreenIndex];
-            if (signalGroupID)  // signalGroupID == 0 代表沒有在 config 裡面被定義
-                search_signal_compass(RroundHeadGreenMask, set_compass_connectsTo(left_laneId);
-                                      set_compass_connectsTo(stright_laneId);
-                                      set_compass_connectsTo(right_laneId););
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][LeftGreenIndex];
-            if (signalGroupID)
-                search_signal_compass(LeftGreenMask, set_compass_connectsTo(left_laneId););
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][StrightGreenIndex];
-            if (signalGroupID)
-                search_signal_compass(StrightGreenMask, set_compass_connectsTo(stright_laneId););
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][RightGreenIndex];
-            if (signalGroupID)
-                search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[config_lane->approach][RroundHeadGreenIndex];
+            search_signal_compass(RroundHeadGreenMask, set_compass_connectsTo(left_laneId);
+                                  set_compass_connectsTo(straight_laneId);
+                                  set_compass_connectsTo(right_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[config_lane->approach][LeftGreenIndex];
+            search_signal_compass(LeftGreenMask, set_compass_connectsTo(left_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[config_lane->approach][StraightGreenIndex];
+            search_signal_compass(StraightGreenMask, set_compass_connectsTo(straight_laneId););
+            signalGroupID = TIB_config.signalGroupId_table[config_lane->approach][RightGreenIndex];
+            search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
         }
-        head = &TIB_config.MAP_sidewalk_compass[map_table[i]];
+        head = &TIB_config.MAP_sidewalk_compass[i];
         // 行人道
         list_for_each_entry_safe(config_lane, safe, head, compass_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
-            signalGroupID = TIB_config.signalGroupId_table[map_table[i]][PedestrianGreenIndex];
+            signalGroupID = TIB_config.signalGroupId_table[i][PedestrianGreenIndex];
             if (signalGroupID)
-                search_signal_compass(LeftGreenMask, set_compass_connectsTo(stright_laneId););
+                search_signal_compass(LeftGreenMask, set_compass_connectsTo(straight_laneId););
         }
     }
 #undef set_compass_connectsTo
@@ -238,8 +225,10 @@ void map_print(MapData *map)
                 if (NodeListXY_nodes == map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.choice) {
                     /* The function only show nodes type */
                     printf("  node list count: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count);
-                    printf("  node list ingressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].ingressApproach);
-                    printf("  node list egressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].egressApproach);
+                    if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].ingressApproach_option)
+                        printf("  node list ingressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].ingressApproach);
+                    if (map->intersections.tab[intersection_index].laneSet.tab[lane_index].egressApproach_option)
+                        printf("  node list egressApproach: %d\n", map->intersections.tab[intersection_index].laneSet.tab[lane_index].egressApproach);
                     for (node_index = 0; node_index < map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.count; node_index++) {
                         switch (map->intersections.tab[intersection_index].laneSet.tab[lane_index].nodeList.u.nodes.tab[node_index].delta.choice) {
                         case NodeOffsetPointXY_node_XY1:

@@ -37,7 +37,7 @@ typedef struct MAP_config_lane {
 typedef struct MAP_config_connectsTo {
     uint8_t config_laneID;
     vector_t(uint8_t) left_laneId;
-    vector_t(uint8_t) stright_laneId;
+    vector_t(uint8_t) straight_laneId;
     vector_t(uint8_t) right_laneId;
 } MAP_config_connectsTo_t;
 
@@ -64,9 +64,8 @@ typedef struct TIB_config_object {
     // 人行道的方向
     struct list_head MAP_sidewalk_compass[COMPASS_NUM];
 
-    // 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北
-    // 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
-    uint8_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
+    // 對應號控器上哪一路有哪些綠燈 signalGroupId 是多少
+    int16_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
 } TIB_config_object_t;
 
 void print_config_map(MapData *map, char *buf, int buf_len);

@@ -148,10 +148,7 @@ int spat_msg_update(SPAT *pp_spat)
         }                                                                                            \
     } while (0)
 
-    int map_table[COMPASS_NUM];
     if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
-        return -1;
-    if (get_map_table(&signal_status, map_table) < 0)
         return -1;
 
     SPaT_debug("----------\n");
@@ -171,7 +168,11 @@ int spat_msg_update(SPAT *pp_spat)
                 int index = 0, cur_subphase = signal_status.SubPhaseID - 1, offset = 0;
 
                 state->state_time_speed.count = 0;
-                state->signalGroup = TIB_config.signalGroupId_table[map_table[i]][j];
+                state->signalGroup = TIB_config.signalGroupId_table[i][j];
+                if (state->signalGroup == -1) {
+                    statesList->count--;
+                    continue;
+                }
                 if (signal_mask_arr[j] != PedestrianGreenMask) {
                     // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
                     greenType = signal_mask_arr[j] == RroundHeadGreenMask ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;

@@ -13,7 +13,7 @@
 #define GreenSignalTable  \
     X(RroundHeadGreen, 0) \
     X(LeftGreen, 1)       \
-    X(StrightGreen, 2)    \
+    X(StraightGreen, 2)    \
     X(RightGreen, 3)      \
     X(PedestrianGreen, 4)
 
