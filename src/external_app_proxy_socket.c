@@ -122,7 +122,7 @@ bool is_proxy_connected()
 
 int32_t is_interact_fd_set()
 {
-    return interact_fd == 0;
+    return interact_fd != 0;
 }
 
 int32_t interact_fd_disconnect_from_proxy()
@@ -257,7 +257,7 @@ int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size)
 
 int32_t is_notify_fd_set()
 {
-    return notify_fd == 0; 
+    return notify_fd != 0; 
 }
 
 int32_t notify_fd_disconnect_from_proxy()
@@ -575,7 +575,7 @@ char* ack_ret_val_str_arr[] = {
     /* our middleware library detected err */
     [EAL_ERR_PACKET_TYPE_NOT_MATCH -EAL_ERR_RESERVE] = "EAL_ERR_PACKET_TYPE_NOT_MATCH",
     [EAL_ERR_PACKET_BAD_CONTENT -EAL_ERR_RESERVE] = "EAL_ERR_PACKET_BAD_CONTENT",
-    [EAL_ERR_HEARTBEAT_SETTING -EAL_ERR_RESERVE] = "EAL_ERR_HEARTBEAT_SETTING",
+    [EAL_ERR_HEARTBEAT_TIMER_FD_SETTING -EAL_ERR_RESERVE] = "EAL_ERR_HEARTBEAT_TIMER_FD_SETTING",
     [EAL_ERR_APP_NOT_REGISTER_YET -EAL_ERR_RESERVE] = "EAL_ERR_APP_NOT_REGISTER_YET",
     [EAL_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM -EAL_ERR_RESERVE] = "EAL_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM",
     [EAL_ERR_CALLBACK_NOT_REGISTER_TO_MW -EAL_ERR_RESERVE] = "EAL_ERR_CALLBACK_NOT_REGISTER_TO_MW",

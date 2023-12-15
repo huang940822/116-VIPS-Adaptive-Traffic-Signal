@@ -508,11 +508,13 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     pthread_mutex_lock(&mutex_callback_list);
     record_current_timespec(&trc5);
+    
     while (current->next != NULL) {
+        proxy_handling_app_p = current->next->app_obj_p;
+
         if (current->next->event_callback_id.choice == event_callback_id_msg_id 
             && msgf->messageId == current->next->event_callback_id.u.msg_id) 
         {   
-            proxy_handling_app_p = current->next->app_obj_p;
             if(proxy_handling_app_p->ea_info_p){
                 #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
                     EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(&wrapper_arg_for_obu);
@@ -536,7 +538,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
 
-        if(proxy_handling_app_p->ea_info_p){
+        if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
             #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
                 printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
                     "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
