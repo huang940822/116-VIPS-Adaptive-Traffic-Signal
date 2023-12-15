@@ -151,7 +151,7 @@ enum ea_callback_api_id_definition_enum{
 };
 
 extern char* api_id_str_arr[];
-extern char* ack_ret_val_str_arr[];
+char* get_str_by_err_code(int err_code);
 
 /* since application might implement multi-thread program, ,
  * we add a mutex_lock to serialize their usage of the same channel 

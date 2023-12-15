@@ -31,11 +31,11 @@ int simple_send_ack_to_app(int fd, int ack_ret_val)
     ret = eap_send_packet_to_unix_sk( fd, &ack, sizeof(ack));
     #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
         fprintf(stderr, "[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
-                ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
+                ack_ret_val, get_str_by_err_code(ack_ret_val) );
     #endif
 
     log_file_write("[EAP msg] for the request, ack.ret_val is:%d ->%s\n", 
-                    ack_ret_val, ack_ret_val_str_arr[ack_ret_val] );
+                    ack_ret_val, get_str_by_err_code(ack_ret_val) );
     
     return ret;
 }
@@ -158,7 +158,7 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("err: %s: com_send() ret:%d\n", __func__, ret);
-        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
+        ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
         ack_ret_val = EAL_ERR_OK;
@@ -204,7 +204,7 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     ret = com_send(GENERAL_COM_ID, write_buf, payload.write_buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("err: %s com_send() ret:%d\n", __func__, ret);
-        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
+        ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
         ack_ret_val = EAL_ERR_OK;
@@ -251,7 +251,7 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     ret = com_send(GENERAL_COM_ID, buf, payload.buf_len);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("err: %s com_send() ret:%d\n", __func__, ret);
-        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
+        ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
     }
     else{
         ack_ret_val = EAL_ERR_OK;
@@ -328,7 +328,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
     log_file_write("%s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
     if (ret != 0) {
         log_file_write("err: %s: command_buf_insert_effect_time ret: %d\n", __func__, ret);
-        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
+        ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
     }
     else{
         ack_ret_val = EAL_ERR_OK;
@@ -368,7 +368,7 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
     log_file_write("%s command_buf_insert_adjustment ret %d\n", __func__, ret);
     if (ret != 0) {
         log_file_write("%s command_buf_insert_adjustment ret %d\n", __func__, ret);
-        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
+        ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
     }
     else{
         ack_ret_val = EAL_ERR_OK;

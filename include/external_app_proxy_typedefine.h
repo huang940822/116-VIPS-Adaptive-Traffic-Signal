@@ -7,11 +7,13 @@
 
 /* EAL stands for External-Application-Library*/
 enum ea_err_definition_enum {
-    /* no err */
-    EAL_ERR_OK = 0,
+    EAL_ERR_OK = 0,  /* no err */
+    EAL_ERR_RESERVE = 1024, //error code start from 1024+1
     
     /* OS-syscall or OS-lib-call err*/
     EAL_ERR_SOCKET_SYSCALL,
+    EAL_ERR_SOCKET_CONNECT_TIMEOUT,
+    EAL_ERR_SOCKET_CONNECT_FAIL,
     EAL_ERR_SOCKET_DISCONNECT,
     EAL_ERR_EPOLL_SYSCALL,
     EAL_ERR_MEMORY_LIB,
@@ -19,8 +21,6 @@ enum ea_err_definition_enum {
     EAL_ERR_J2735_MSG_DECODE,
 
     /* our library detected err */
-    EAL_ERR_CONNECT_TO_PROXY_TIMEOUT,
-    EAL_ERR_CONNECT_TO_PROXY_FAIL,
     EAL_ERR_PACKET_TYPE_NOT_MATCH,
     EAL_ERR_PACKET_BAD_CONTENT,
     EAL_ERR_HEARTBEAT_SETTING,
@@ -43,7 +43,7 @@ enum ea_err_definition_enum {
     EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP,
     
     /* this tag should always be at the last */
-    NUM_OF_EA_ERR_DEF,
+    BOT_OF_EA_ERR_DEF,
 };
 
 #endif  /* EXTERNAL_APP_PROXY_TYPEDEFINE_H */

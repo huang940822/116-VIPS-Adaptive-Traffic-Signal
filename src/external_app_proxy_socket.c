@@ -90,7 +90,7 @@ int32_t add_notify_fd_to_epoll(int* ep_fd)
 
     if(epoll_ctl( *ep_fd, EPOLL_CTL_ADD, notify_fd, &ev)){
         log_file_write_with_errno("add_notify_fd_to_epoll: epoll_ctl");
-        return EAL_ERR_EPOLL_SYSCALL;
+        return -EAL_ERR_EPOLL_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -133,7 +133,7 @@ int32_t interact_fd_disconnect_from_proxy()
     current_errno = errno;
     if(ret == -1){
         log_file_write_with_errno("%s: close() ret -1\n", __func__);
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     interact_fd = 0;
     return EAL_ERR_OK;
@@ -144,11 +144,11 @@ int32_t interact_fd_connect_to_proxy()
     int ret; 
     if( (interact_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         log_file_write_with_errno("interact_fd_connect_to_proxy: socket() ret -1\n");
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     
     if( (ret = modify_socket_fd_block_setting(interact_fd, false)) == -1 ){
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
 
     /* sun_path in a char array with size = 108, be care of your "sk_addr" */
@@ -161,7 +161,7 @@ int32_t interact_fd_connect_to_proxy()
     if( connect(interact_fd, (const struct sockaddr *)(&sk_addr), sizeof(struct sockaddr_un)) == -1){
         if (errno != EINPROGRESS) {
             log_file_write_with_errno("interact_fd_connect_to_proxy: connect() ret -1\n");
-            ret = EAL_ERR_SOCKET_SYSCALL;
+            ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
         log_file_write("interact_fd_connect_to_proxy: connect() 1st-try ret EINPROGRESS\n"
@@ -172,7 +172,7 @@ int32_t interact_fd_connect_to_proxy()
         epfd = epoll_create(1);
         if (epfd < 0) {
             log_file_write_with_errno("interact_fd_connect_to_proxy: epoll_create(1) ret -1\n");
-            ret = EAL_ERR_EPOLL_SYSCALL;
+            ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
         memset(&ev, 0, sizeof(ev));
@@ -180,7 +180,7 @@ int32_t interact_fd_connect_to_proxy()
         ev.data.fd = interact_fd;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, interact_fd, &ev) != 0) {
             log_file_write_with_errno("interact_fd_connect_to_proxy: epoll_ctl(EPOLL_CTL_ADD) ret -1\n");
-            ret = EAL_ERR_EPOLL_SYSCALL;
+            ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
         nfd = epoll_wait(epfd, ev_ret, 10, EAP_CONNECT_TIMEOUT_MS);
@@ -189,7 +189,7 @@ int32_t interact_fd_connect_to_proxy()
         
         if (nfd < 0 || !(ev.events & EPOLLOUT)) {
             log_file_write("interact_fd_connect_to_proxy: connect timeout after %u ms\n", EAP_CONNECT_TIMEOUT_MS );
-            ret = EAL_ERR_CONNECT_TO_PROXY_TIMEOUT;
+            ret = -EAL_ERR_SOCKET_CONNECT_TIMEOUT;
             goto err_handle;
         }
 
@@ -197,19 +197,19 @@ int32_t interact_fd_connect_to_proxy()
         socklen_t result_len = sizeof(result);
         if (getsockopt(interact_fd, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0) {
             log_file_write_with_errno("interact_fd_connect_to_proxy: getsockopt ret < 0\n");
-            ret = EAL_ERR_SOCKET_SYSCALL;
+            ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
         if (result != 0) {
             log_file_write("interact_fd_connect_to_proxy connect to server fail\n");
-            ret = EAL_ERR_CONNECT_TO_PROXY_FAIL;
+            ret = -EAL_ERR_SOCKET_CONNECT_FAIL;
             goto err_handle;
         }    
     }
 
     /* back to blocking mode */
     if( (ret = modify_socket_fd_block_setting(interact_fd, true)) == -1 ){
-        ret = EAL_ERR_SOCKET_SYSCALL;
+        ret = -EAL_ERR_SOCKET_SYSCALL;
         goto err_handle;
     }
 
@@ -229,11 +229,11 @@ int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size)
     current_errno = errno;
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if(ret == 0){   /* meaning that remote proxy might close the fd */
-        return EAL_ERR_SOCKET_DISCONNECT;
+        return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret  < 0 ){
         log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -248,9 +248,9 @@ int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size)
     if( ret == -1 ){
         log_file_write_with_errno("%s: send() ret %d\n", __func__, ret);
         if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
+            return -EAL_ERR_SOCKET_DISCONNECT;
         }
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -268,7 +268,7 @@ int32_t notify_fd_disconnect_from_proxy()
     current_errno = errno;
     if(ret == -1){
         log_file_write_with_errno("%s: close() ret -1\n", __func__);
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     notify_fd = 0;
     return EAL_ERR_OK;
@@ -279,11 +279,11 @@ int32_t notify_fd_connect_to_proxy()
     int ret; 
     if( (notify_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         log_file_write_with_errno("notify_fd_connect_to_proxy: socket() ret -1\n");
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     
     if( (ret = modify_socket_fd_block_setting(notify_fd, false)) == -1 ){
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
 
     /* sun_path in a char array with size = 108, be care of your "sk_addr" */
@@ -296,7 +296,7 @@ int32_t notify_fd_connect_to_proxy()
     if( connect(notify_fd, (const struct sockaddr *)(&sk_addr), sizeof(struct sockaddr_un)) == -1){
         if (errno != EINPROGRESS) {
             log_file_write_with_errno("notify_fd_connect_to_proxy: connect() ret -1\n");
-            ret = EAL_ERR_SOCKET_SYSCALL;
+            ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
         log_file_write("notify_fd_connect_to_proxy: connect() 1st-try ret EINPROGRESS\n"
@@ -307,7 +307,7 @@ int32_t notify_fd_connect_to_proxy()
         epfd = epoll_create(1);
         if (epfd < 0) {
             log_file_write_with_errno("notify_fd_connect_to_proxy: epoll_create(1) ret -1\n");
-            ret = EAL_ERR_EPOLL_SYSCALL;
+            ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
         memset(&ev, 0, sizeof(ev));
@@ -315,7 +315,7 @@ int32_t notify_fd_connect_to_proxy()
         ev.data.fd = notify_fd;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, notify_fd, &ev) != 0) {
             log_file_write_with_errno("notify_fd_connect_to_proxy: epoll_ctl(EPOLL_CTL_ADD) ret -1\n");
-            ret = EAL_ERR_EPOLL_SYSCALL;
+            ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
         nfd = epoll_wait(epfd, ev_ret, 10, EAP_CONNECT_TIMEOUT_MS);
@@ -324,7 +324,7 @@ int32_t notify_fd_connect_to_proxy()
         
         if (nfd < 0 || !(ev.events & EPOLLOUT)) {
             log_file_write("notify_fd_connect_to_proxy: connect timeout after %u ms\n", EAP_CONNECT_TIMEOUT_MS );
-            ret = EAL_ERR_CONNECT_TO_PROXY_TIMEOUT;
+            ret = -EAL_ERR_SOCKET_CONNECT_TIMEOUT;
             goto err_handle;
         }
 
@@ -332,19 +332,19 @@ int32_t notify_fd_connect_to_proxy()
         socklen_t result_len = sizeof(result);
         if (getsockopt(notify_fd, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0) {
             log_file_write_with_errno("notify_fd_connect_to_proxy: getsockopt ret < 0\n");
-            ret = EAL_ERR_SOCKET_SYSCALL;
+            ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
         if (result != 0) {
             log_file_write("notify_fd_connect_to_proxy connect to server fail\n");
-            ret = EAL_ERR_CONNECT_TO_PROXY_FAIL;
+            ret = -EAL_ERR_SOCKET_CONNECT_FAIL;
             goto err_handle;
         }    
     }
 
     /* back to blocking mode */
     if( (ret = modify_socket_fd_block_setting(notify_fd, true)) == -1 ){
-        ret = EAL_ERR_SOCKET_SYSCALL;
+        ret = -EAL_ERR_SOCKET_SYSCALL;
         goto err_handle;
     }
 
@@ -364,11 +364,11 @@ int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size)
     current_errno = errno;
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
-        return EAL_ERR_SOCKET_DISCONNECT;
+        return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret  < 0 ){
         log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -383,9 +383,9 @@ int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size)
     if( ret == -1 ){
         log_file_write_with_errno("%s: send() ret %d\n", __func__, ret);
         if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
+            return -EAL_ERR_SOCKET_DISCONNECT;
         }
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -408,9 +408,9 @@ int32_t simple_send_heartbeat_to_proxy()
     if( ret == -1 ){
         log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
         if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
+            return -EAL_ERR_SOCKET_DISCONNECT;
         } 
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -431,9 +431,9 @@ int32_t simple_send_request_header_to_proxy(int api_id)
         log_file_write_with_errno("%s: api->%s, send() ret = %d\n", 
                                         __func__, api_id_str_arr[api_id], ret);
         if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
+            return -EAL_ERR_SOCKET_DISCONNECT;
         } 
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -449,15 +449,15 @@ int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int
     log_file_write("%s: api->%s, recv() ret = %d\n", __func__, api_id_str_arr[api_id], ret);
     if( ret == 0 ){   /* meaning that remote client might close the fd */
         log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret 0 (probably disconnected)\n");
-        return EAL_ERR_SOCKET_DISCONNECT;
+        return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret < 0 ){
         log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret <0\n");
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     else if( ack_p->packet_type != EA_PACKET_TYPE_ACK ){
         log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK\n");
-        ret = EAL_ERR_PACKET_TYPE_NOT_MATCH;
+        ret = -EAL_ERR_PACKET_TYPE_NOT_MATCH;
     }
     else{
         ret = EAL_ERR_OK;
@@ -477,9 +477,9 @@ int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size)
     if( ret == -1 ){
         log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
         if( errno == -EPIPE){
-            return EAL_ERR_SOCKET_DISCONNECT;
+            return -EAL_ERR_SOCKET_DISCONNECT;
         } 
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -494,11 +494,11 @@ int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size)
 
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
-        return EAL_ERR_SOCKET_DISCONNECT;
+        return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret < 0 ){
         log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
-        return EAL_ERR_SOCKET_SYSCALL;
+        return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
@@ -563,35 +563,46 @@ char* ack_ret_val_str_arr[] = {
     [EAL_ERR_OK] = "EAL_ERR_OK",
 
     /* OS-syscall or OS-lib-call err*/
-    [EAL_ERR_SOCKET_SYSCALL] = "EAL_ERR_SOCKET_SYSCALL",
-    [EAL_ERR_SOCKET_DISCONNECT] = "EAL_ERR_SOCKET_DISCONNECT",
-    [EAL_ERR_EPOLL_SYSCALL] = "EAL_ERR_EPOLL_SYSCALL",
-    [EAL_ERR_MEMORY_LIB] = "EAL_ERR_MEMORY_LIB",
-    [EAL_ERR_J2735_MSG_ENCODE] = "EAL_ERR_J2735_MSG_ENCODE",
-    [EAL_ERR_J2735_MSG_DECODE] = "EAL_ERR_J2735_MSG_DECODE",
+    [EAL_ERR_SOCKET_SYSCALL -EAL_ERR_RESERVE] = "EAL_ERR_SOCKET_SYSCALL",
+    [EAL_ERR_SOCKET_CONNECT_TIMEOUT -EAL_ERR_RESERVE] = "EAL_ERR_SOCKET_CONNECT_TIMEOUT",
+    [EAL_ERR_SOCKET_CONNECT_FAIL -EAL_ERR_RESERVE] = "EAL_ERR_SOCKET_CONNECT_FAIL",
+    [EAL_ERR_SOCKET_DISCONNECT -EAL_ERR_RESERVE] = "EAL_ERR_SOCKET_DISCONNECT",
+    [EAL_ERR_EPOLL_SYSCALL -EAL_ERR_RESERVE] = "EAL_ERR_EPOLL_SYSCALL",
+    [EAL_ERR_MEMORY_LIB -EAL_ERR_RESERVE] = "EAL_ERR_MEMORY_LIB",
+    [EAL_ERR_J2735_MSG_ENCODE -EAL_ERR_RESERVE] = "EAL_ERR_J2735_MSG_ENCODE",
+    [EAL_ERR_J2735_MSG_DECODE -EAL_ERR_RESERVE] = "EAL_ERR_J2735_MSG_DECODE",
 
     /* our middleware library detected err */
-    [EAL_ERR_CONNECT_TO_PROXY_TIMEOUT] = "EAL_ERR_CONNECT_TO_PROXY_TIMEOUT",
-    [EAL_ERR_CONNECT_TO_PROXY_FAIL] = "EAL_ERR_CONNECT_TO_PROXY_FAIL",
-    [EAL_ERR_PACKET_TYPE_NOT_MATCH] = "EAL_ERR_PACKET_TYPE_NOT_MATCH",
-    [EAL_ERR_PACKET_BAD_CONTENT] = "EAL_ERR_PACKET_BAD_CONTENT",
-    [EAL_ERR_HEARTBEAT_SETTING] = "EAL_ERR_HEARTBEAT_SETTING",
-    [EAL_ERR_APP_NOT_REGISTER_YET] = "EAL_ERR_APP_NOT_REGISTER_YET",
-    [EAL_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM] = "EAL_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM",
-    [EAL_ERR_CALLBACK_NOT_REGISTER_TO_MW] = "EAL_ERR_CALLBACK_NOT_REGISTER_TO_MW",
-    [EAL_ERR_CALLBACK_NOT_SUPPORT_IN_CURRENT_VERSION] = "EAL_ERR_CALLBACK_NOT_SUPPORT_IN_CURRENT_VERSION",
-    [EAL_ERR_CALLBACK_NOT_DEFINED_BY_CUR_APP] = "EAL_ERR_CALLBACK_NOT_DEFINED_BY_CUR_APP",
-    [EAL_ERR_BAD_PARAMETER] = "EAL_ERR_BAD_PARAMETER",
-    [EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER] = "EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER",
-    [EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE] = "EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE",
-    [EAL_ERR_BAD_API_ID_BEFORE_REGISTER] = "EAL_ERR_BAD_API_ID_BEFORE_REGISTER",
-    [EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT] = "EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT",
-    [EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE] = "EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE",
-    [EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE] = "EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE",
+    [EAL_ERR_PACKET_TYPE_NOT_MATCH -EAL_ERR_RESERVE] = "EAL_ERR_PACKET_TYPE_NOT_MATCH",
+    [EAL_ERR_PACKET_BAD_CONTENT -EAL_ERR_RESERVE] = "EAL_ERR_PACKET_BAD_CONTENT",
+    [EAL_ERR_HEARTBEAT_SETTING -EAL_ERR_RESERVE] = "EAL_ERR_HEARTBEAT_SETTING",
+    [EAL_ERR_APP_NOT_REGISTER_YET -EAL_ERR_RESERVE] = "EAL_ERR_APP_NOT_REGISTER_YET",
+    [EAL_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM -EAL_ERR_RESERVE] = "EAL_ERR_CALLBACK_NOT_DEFINED_IN_SYSTEM",
+    [EAL_ERR_CALLBACK_NOT_REGISTER_TO_MW -EAL_ERR_RESERVE] = "EAL_ERR_CALLBACK_NOT_REGISTER_TO_MW",
+    [EAL_ERR_CALLBACK_NOT_SUPPORT_IN_CURRENT_VERSION -EAL_ERR_RESERVE] = "EAL_ERR_CALLBACK_NOT_SUPPORT_IN_CURRENT_VERSION",
+    [EAL_ERR_CALLBACK_NOT_DEFINED_BY_CUR_APP -EAL_ERR_RESERVE] = "EAL_ERR_CALLBACK_NOT_DEFINED_BY_CUR_APP",
+    [EAL_ERR_BAD_PARAMETER -EAL_ERR_RESERVE] = "EAL_ERR_BAD_PARAMETER",
+    [EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER -EAL_ERR_RESERVE] = "EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER",
+    [EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE -EAL_ERR_RESERVE] = "EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE",
+    [EAL_ERR_BAD_API_ID_BEFORE_REGISTER -EAL_ERR_RESERVE] = "EAL_ERR_BAD_API_ID_BEFORE_REGISTER",
+    [EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT",
+    [EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE -EAL_ERR_RESERVE] = "EAL_ERR_LIB_SEND_WRONG_PACKET_TYPE",
+    [EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE -EAL_ERR_RESERVE] = "EAL_ERR_BAD_PACKET_TYPE_RECEIVE_FROM_MIDDLEWARE",
 
     /* error detected when calling the actual api in middleware */
-    [EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO] = "EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO",
-    [EAL_ERR_IN_MIDDLEWARE_API_INTERNAL] = "EAL_ERR_IN_MIDDLEWARE_API_INTERNAL",
-    [EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP] = "EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP",
-
+    [EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO",
+    [EAL_ERR_IN_MIDDLEWARE_API_INTERNAL -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_API_INTERNAL",
+    [EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP",
 };
+
+char* get_str_by_err_code(int err_code)
+{
+    if( err_code == EAL_ERR_OK)  
+        return "EAL_ERR_OK";
+
+    int reverse_code = -1*err_code;
+    if ( reverse_code <= EAL_ERR_RESERVE || reverse_code >= BOT_OF_EA_ERR_DEF)  
+        return "Not EAL defined error";
+    else
+        return ack_ret_val_str_arr[ reverse_code -EAL_ERR_RESERVE ];
+}
