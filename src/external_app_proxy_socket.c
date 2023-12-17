@@ -23,7 +23,10 @@
  * */
 /* Most of the functions or variables in this file are used for client */
 
-#define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
+/* WARN: make sure the path MY_UNIX_SOCKET_PATH correctly locate the file for connect() 
+ * i.e. the file should be the same file that is used by server (middlware EAP) */
+//#define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
+#define MY_UNIX_SOCKET_PATH "../RSU_Controller_master/config/my_unix_socket_file_for_eap"
 #define EAP_CONNECT_TIMEOUT_MS 10000   //10s == 10000ms
 
 /* References:

@@ -28,7 +28,12 @@
 #include "external_app_proxy_callback_msg_forward.h"
 #include "external_app_proxy_server.h"
 
-#define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
+/* WARN: make sure the path MY_UNIX_SOCKET_PATH correctly locate the file for bind() 
+ * client application (i.e., external app) will use EAL (external application library) 
+ * to try to register to the middleware (EAP).
+ * And the EAL internal codes will and should use the exact same file as the middleware */
+//#define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
+#define MY_UNIX_SOCKET_PATH "../RSU_Controller_master/config/my_unix_socket_file_for_eap"
 #define EPOLL_MAX_EVENTS 64
 
 /* The backlog argument defines the maximum length to which the
