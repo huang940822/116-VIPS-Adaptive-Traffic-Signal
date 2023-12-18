@@ -18,6 +18,7 @@
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
 #include "external_app_proxy_callback_msg_forward.h"
+#include "external_app_proxy_server.h"
 
 // todo: both above should be removed!
 #define TIME_DEFENSE 5
@@ -305,12 +306,14 @@ void command_buf_send(tsc_command_object_t *command_obj,
         
         /* log the event message forwarding action */
         if(proxy_handling_app_p->ea_info_p){
-            #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+            #if ENABLE_PRINTING_EAP_MSG_FORWARDING
                 printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
                     "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
             #endif
+            #if ENABLE_LOGGING_EAP_MSG_FORWARDING
                 log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
                     "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
+            #endif
         }
     }
 

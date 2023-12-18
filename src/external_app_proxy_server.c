@@ -209,6 +209,10 @@ int set_timer_fd_for_checking_app_hearbeat()
     
     int ret = timerfd_settime(check_heartbeat_timer_fd, 0, &check_heartbeat_its, NULL);
     if ( ret < 0) {
+        fprintf(stderr, 
+            "set_timer_fd_for_checking_app_hearbeat()"
+            "timerfd_settime with check_heartbeat_its ret %d\n", ret);
+
         log_file_write_fatal_error(
             "set_timer_fd_for_checking_app_hearbeat()"
             "timerfd_settime with check_heartbeat_its ret %d\n", ret);
@@ -220,6 +224,10 @@ int set_timer_fd_for_checking_app_hearbeat()
     ev.data.fd = check_heartbeat_timer_fd;
     ret = epoll_ctl(ep_fd, EPOLL_CTL_ADD, check_heartbeat_timer_fd, &ev);
     if( ret != 0 ){
+        fprintf(stderr, 
+            "set_timer_fd_for_checking_app_hearbeat()"
+            "epoll_ctl(EPOLL_CTL_ADD) ret %d\n", ret);
+
         log_file_write_fatal_error(
             "set_timer_fd_for_checking_app_hearbeat()"
             "epoll_ctl(EPOLL_CTL_ADD) ret %d\n", ret);
@@ -246,16 +254,30 @@ int unlink_an_external_app(app_obj_t *app_obj_p)
     int ret;
     ret = remove_both_channels_from_proxy_epoll(app_obj_p);
     if(ret){
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf(stderr,
+            "[EAP msg] err: %s call: remove_both_channels_from_proxy_epoll() " 
+            "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write(
             "[EAP msg] err: %s call: remove_both_channels_from_proxy_epoll() " 
             "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+        #endif
     }
 
     ret = close_both_channels_of_an_external_app(app_obj_p);
     if(ret){
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf(stderr,
+            "[EAP msg] err: %s call: close_both_channels_of_an_external_app() " 
+            "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write(
             "[EAP msg] err: %s call: close_both_channels_of_an_external_app() " 
             "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
+        #endif
 
         /* even the close failed, we still reset the fds, to prevent proxy interact with it */
         app_obj_p->ea_info_p->interact_fd = 0;  
@@ -296,12 +318,16 @@ int check_all_external_app_heartbeats()
             if ( record_diff > HEARTBEAT_MONITOR_ALLOWED_THERSHHOLD ) {
                 unlink_an_external_app(current);
 
+                #if ENABLE_PRINTING_EAP_DETECTED_ERR
                 fprintf(stderr,
                     "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
                     __func__, current->id, ret);
+                #endif
+                #if ENABLE_LOGGING_EAP_DETECTED_ERR
                 log_file_write(
                     "[EAP msg] %s call: unlink_an_external_app() for appID:%d, ret = %d\n",
                     __func__, current->id, ret);
+                #endif
             }
         }
         current = current->next;
@@ -319,11 +345,15 @@ static inline __attribute__((always_inline))
 int inner_handle_request_by_api_id(int client_fd, uint32_t api_id)
 {   
     if ( client_fd == 0 ){
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr, "err: inner_handle_request_by_api_id: client_fd == 0\n");
+        #endif
         return -1;
     }
     if ( api_id <= API_ID_OF(app_remote_register) || api_id >= NUM_OF_API_ID_DEFININITION ){
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr, "err: inner_handle_request_by_api_id: bad api_id == %d\n", api_id);
+        #endif
         return -2;
     }
 
@@ -366,7 +396,14 @@ int handle_new_client_registration(int client_fd)
     packet_header_to_proxy_t header;
     ret = eap_recv_packet_from_unix_sk( client_fd, &header, sizeof(header));
     if( ret != 0 ){
-        fprintf( stderr, "%d: eap_recv_packet_from_unix_sk ret: %d\n",__LINE__ , ret);
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf( stderr, "line %d, %s: recv header ret: %d\n",
+                 __LINE__, __func__ , ret);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
+        log_file_write("line %d, %s: recv header ret: %d\n",
+                 __LINE__, __func__ , ret);
+        #endif
         return ret;
     }
 
@@ -375,16 +412,30 @@ int handle_new_client_registration(int client_fd)
         && header.packet_type != EA_PACKET_TYPE_REGISTER_BOT)
     {   
         ack.ret_val = -EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER;
+
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf( stderr, "[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
+                       ack.ret_val, "EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER");
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
-                       ack.ret_val, get_str_by_err_code(ack.ret_val));
+                       ack.ret_val, "EAL_ERR_BAD_PACKET_TYPE_BEFORE_REGISTER");
+        #endif
 
         return eap_simple_send_ack(client_fd, &ack, sizeof(ack), 1); //fail at check 1
     }
     else if( header.api_id != API_ID_OF(app_remote_register) )
     {
         ack.ret_val = -EAL_ERR_BAD_API_ID_BEFORE_REGISTER;
+
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf( stderr, "[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
+                       ack.ret_val, "EAL_ERR_BAD_API_ID_BEFORE_REGISTER");
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
-                       ack.ret_val, get_str_by_err_code(ack.ret_val));
+                       ack.ret_val, "EAL_ERR_BAD_API_ID_BEFORE_REGISTER");
+        #endif
 
         return eap_simple_send_ack(client_fd, &ack, sizeof(ack), 2); //fail at check 2
     }
@@ -403,7 +454,14 @@ int handle_new_client_registration(int client_fd)
         } payload_top;
 
         if( (ret = eap_recv_packet_from_unix_sk( client_fd, &payload_top, sizeof(payload_top)) ) != 0){
-            fprintf( stderr, "%d: eap_recv_packet_from_unix_sk ret: %d\n",__LINE__ , ret);
+            #if ENABLE_PRINTING_EAP_DETECTED_ERR
+            fprintf( stderr, "line %d, %s: recv payload_top ret: %d\n",
+                    __LINE__, __func__ , ret);
+            #endif
+            #if ENABLE_LOGGING_EAP_DETECTED_ERR
+            log_file_write("line %d, %s: recv payload_top ret: %d\n",
+                    __LINE__, __func__ , ret);
+            #endif
             return ret;
         }
 
@@ -422,10 +480,17 @@ int handle_new_client_registration(int client_fd)
             
             ret = app_register(in_MW_app_p);  /* using existed function in application_registration.c */
             if(ret != 0){
-                fprintf( stderr, "app_register ret %d\n", ret);
                 ack.ret_val = -EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT;
+
+                #if ENABLE_PRINTING_EAP_DETECTED_ERR
+                fprintf( stderr, "[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
+                               ack.ret_val, "EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT" );
+                #endif
+                #if ENABLE_LOGGING_EAP_DETECTED_ERR
                 log_file_write("[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
-                               ack.ret_val, get_str_by_err_code(ack.ret_val) );
+                               ack.ret_val, "EAL_ERR_IN_MIDDLEWARE_REGISTER_REJECT" );
+                #endif
+
                 return eap_simple_send_ack(client_fd, &ack, sizeof(ack), 3); //fail at check 3
             }
         }
@@ -436,8 +501,9 @@ int handle_new_client_registration(int client_fd)
         in_MW_app_p->ea_info_p->pid = payload_top.pid;
         
         ack.ret_val = EAL_ERR_OK;
+        /*we always log successful registration*/
         log_file_write("[EAP msg] for the registration top, ack.ret_val is:%d ->%s\n", 
-                               ack.ret_val, get_str_by_err_code(ack.ret_val) );
+                               ack.ret_val, "EAL_ERR_OK" );
         return eap_simple_send_ack(client_fd, &ack, sizeof(ack), 0);
     }
     else{  /* I.e., header.packet_type == EA_PACKET_TYPE_REGISTER_BOT */
@@ -452,7 +518,16 @@ int handle_new_client_registration(int client_fd)
         } payload_bot;
 
         if( (ret = eap_recv_packet_from_unix_sk( client_fd, &payload_bot, sizeof(payload_bot)) ) != 0){
-            fprintf( stderr, "%d: eap_recv_packet_from_unix_sk ret: %d\n",__LINE__ , ret);
+            
+            #if ENABLE_PRINTING_EAP_DETECTED_ERR
+            fprintf( stderr, "line %d, %s: recv payload_bot ret: %d\n",
+                    __LINE__, __func__ , ret);
+            #endif
+            #if ENABLE_LOGGING_EAP_DETECTED_ERR
+            log_file_write("line %d, %s: recv payload_bot ret: %d\n",
+                    __LINE__, __func__ , ret);
+            #endif
+            
             return ret;
         }
 
@@ -496,8 +571,17 @@ int handle_new_client_registration(int client_fd)
             success_ack_payload.RSU_region = config.RSU_region;
             strncpy(success_ack_payload.RSU_name, config.RSU_name, RSU_NAME_MAX_LEN);
             
-            if( (ret = eap_send_packet_to_unix_sk( client_fd, &success_ack_payload, sizeof(success_ack_payload)) ) != 0){
-                fprintf( stderr, "%d: eap_send_packet_to_unix_sk ret: %d\n", __LINE__ , ret);
+            ret = eap_send_packet_to_unix_sk(client_fd, &success_ack_payload, sizeof(success_ack_payload));
+            if( ret ){
+                #if ENABLE_PRINTING_EAP_DETECTED_ERR
+                fprintf( stderr, "line %d, %s: send success_ack_payload ret: %d\n",
+                        __LINE__, __func__ , ret);
+                #endif
+                #if ENABLE_LOGGING_EAP_DETECTED_ERR
+                log_file_write("line %d, %s: send success_ack_payload ret: %d\n",
+                        __LINE__, __func__ , ret);
+                #endif
+                
                 return ret;
             }
         }
@@ -518,8 +602,15 @@ int handle_registered_client_packet(int client_fd)
     packet_header_to_proxy_t header;
     ret = eap_recv_packet_from_unix_sk( client_fd, &header, sizeof(header));
     if (ret != 0) {
-        fprintf(stderr, "%s: eap_recv_packet_from_unix_sk header from client_fd:%d, ret = %d\n", 
-                __func__, client_fd, ret);
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf( stderr, "line %d, %s: recv header ret: %d\n",
+                __LINE__, __func__ , ret);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
+        log_file_write("line %d, %s: recv header ret: %d\n",
+                __LINE__, __func__ , ret);
+        #endif
+
         goto err_handling;
     }
 
@@ -528,53 +619,72 @@ int handle_registered_client_packet(int client_fd)
          && header.packet_type != EA_PACKET_TYPE_REPORT) 
     {   
         ack.ret_val = -EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE;
+
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf( stderr, "[EAP msg] for the ea request, ack.ret_val is:%d ->%s\n", 
+                       ack.ret_val, "EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE" );
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("[EAP msg] for the ea request, ack.ret_val is:%d ->%s\n", 
-                       ack.ret_val, get_str_by_err_code(ack.ret_val) );
+                       ack.ret_val, "EAL_ERR_BAD_PACKET_TYPE_TO_MIDDLEWARE" );
+        #endif
 
         ret = eap_simple_send_ack(client_fd, &ack, sizeof(ack), 1);
         if(ret !=0 ){
-            fprintf(stderr, "%s: send ack to client_fd:%d, ret = %d\n", 
-                    __func__, client_fd, ret);
-            ;//maybe log err
+            #if ENABLE_PRINTING_EAP_DETECTED_ERR
+            fprintf( stderr, "line %d, %s: send ack ret: %d\n",
+                    __LINE__, __func__ , ret);
+            #endif
+            #if ENABLE_LOGGING_EAP_DETECTED_ERR
+            log_file_write("line %d, %s: send ack ret: %d\n",
+                    __LINE__, __func__ , ret);
+            #endif
         }
         goto err_handling;
     }
     
     if ( header.packet_type == EA_PACKET_TYPE_REPORT ) {
-        #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+        #if ENABLE_PRINTING_EAP_HEARTBEAT_RECEIVING
             printf("[EAP msg] get heartbeat packet from appID:%u\n", 
                     header.appID);
         #endif
-        
+        #if ENABLE_LOGGING_EAP_HEARTBEAT_RECEIVING
         log_file_write("[EAP msg] get heartbeat packet from appID:%u\n", 
                         header.appID);
+        #endif
 
         ret = inner_handle_heartbeat_from_app(client_fd, &header);
 
         if( ret == -EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP ){
-            #if EAP_SERVER_PRINT_DEBUG
+            #if ENABLE_PRINTING_EAP_DETECTED_ERR
                 printf("[EAP msg] heartbeat record update failed for appID:%u\n", 
                         header.appID);
             #endif
+            #if ENABLE_LOGGING_EAP_DETECTED_ERR
             log_file_write("[EAP msg] heartbeat record update failed for appID:%u\n", 
                             header.appID);
+            #endif
         }
     }
     else{   /* i.e., header.packet_type == EA_PACKET_TYPE_REQ */
-        #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+        #if ENABLE_PRINTING_EAP_REQUEST_HANDLING
             printf("[EAP msg] get request packet from appID:%u, api_id:%d ->%s() \n", 
                     header.appID, header.api_id, api_id_str_arr[header.api_id] );
         #endif
-
+        #if ENABLE_LOGGING_EAP_REQUEST_HANDLING
         log_file_write("[EAP msg] get request packet from appID:%u, api_id:%d ->%s() \n", 
                         header.appID, header.api_id, api_id_str_arr[header.api_id] );
+        #endif
 
         ret = inner_handle_request_by_api_id(client_fd, header.api_id);
+
         if( ret ){
-            #if EAP_SERVER_PRINT_DEBUG
-                printf("[EAP msg] handle request failed for with ret: %d\n", ret); 
+            #if ENABLE_PRINTING_EAP_DETECTED_ERR
+                printf("[EAP msg] handle request failed with ret: %d\n", ret); 
             #endif
-            log_file_write("[EAP msg] handle request failed for with ret: %d\n", ret); 
+            #if ENABLE_LOGGING_EAP_DETECTED_ERR
+            log_file_write("[EAP msg] handle request failed with ret: %d\n", ret);
+            #endif
         }
     }
 
@@ -590,8 +700,13 @@ err_handling:
         }
         else{
             /* this case should never happend */
+            fprintf(stderr, 
+                "[EAP msg] err: get_app_obj_by_unix_socket_fd() "
+                "cannot find matching app with client_fd: %d\n", 
+                client_fd );
             log_file_write(
-                "[EAP msg] get_app_obj_by_unix_socket_fd() cannot find matching app with client_fd: %d\n", 
+                "[EAP msg] err: get_app_obj_by_unix_socket_fd() "
+                "cannot find matching app with client_fd: %d\n", 
                 client_fd );
         }
     }
@@ -686,17 +801,18 @@ void *external_app_proxy_main_handler()
                 (void)read(check_heartbeat_timer_fd, &junk_var, sizeof(junk_var));
                 int ret = check_all_external_app_heartbeats();
 
-                #if EAP_SERVER_PRINT_DEBUG
-                    fprintf(stderr, "[EAP msg] check_all_external_app_heartbeats() ret %d\n",  ret);
+                #if ENABLE_PRINTING_EAP_DETECTED_ERR
+                    if(ret) 
+                        fprintf(stderr, "[EAP msg] check_all_external_app_heartbeats() ret %d\n",  ret);
                 #endif
-
                 log_file_write("[EAP msg] check_all_external_app_heartbeats() ret %d\n", ret);
             }
             else if (ev_arr[i].data.fd == unix_listen_fd){    /* CASE 2: new client want to link */
 
                 if( (client_fd = accept(unix_listen_fd, NULL, NULL)) == -1){
-                    log_file_write_fatal_error("err: %s: accept()", __func__);
-                    fprintf(stderr, "err: %s: accept\n", __func__);
+                    fprintf(stderr, "[EAP msg] err: %s: accept, WHY??\n", __func__);
+                    log_file_write("[EAP msg] err: %s: accept, WHY??\n", __func__);
+                    continue;
                 }
 
                 /* enter registration process, notice that each new client will link 2 times to establish 2 channel */
@@ -719,8 +835,8 @@ void *external_app_proxy_main_handler()
     
     } //while (1)
 
-    log_file_write_fatal_error("[EAP msg] err: %s: thread unexpected exit", __func__);
     fprintf(stderr, "[EAP msg] err: %s: thread unexpected exit\n", __func__);
+    log_file_write_fatal_error("[EAP msg] err: %s: thread unexpected exit", __func__);
 }
 
 int32_t eap_recv_packet_from_unix_sk(int socket_fd, void* packet_p, size_t packet_size)
@@ -735,8 +851,13 @@ int32_t eap_recv_packet_from_unix_sk(int socket_fd, void* packet_p, size_t packe
         if( !errno_str ){
             errno_str = "undefined/zero errno";
         }
+        #if ENABLE_PRINTING_EAP_INNER_SOCKET_ERR
         fprintf(stderr, "[EAP MSG] %s: recv() ret -1, strerror() shows: %s\n", __func__, errno_str);
+        #endif
+        #if ENABLE_LOGGING_EAP_INNER_SOCKET_ERR
         log_file_write("[EAP MSG] %s: recv() ret -1, strerror() shows: %s\n", __func__, errno_str);
+        #endif
+
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
@@ -752,8 +873,13 @@ int32_t eap_send_packet_to_unix_sk(int socket_fd, void* packet_p, size_t packet_
         if( !errno_str ){
             errno_str = "undefined/zero errno";
         }
+        #if ENABLE_PRINTING_EAP_INNER_SOCKET_ERR
         fprintf(stderr, "[EAP MSG] %s: send() ret -1, strerror() shows: %s\n", __func__, errno_str);
+        #endif
+        #if ENABLE_LOGGING_EAP_INNER_SOCKET_ERR
         log_file_write("[EAP MSG] %s: send() ret -1, strerror() shows: %s\n", __func__, errno_str);
+        #endif
+
         if( errno == -EPIPE){
             /* meaning that remote client close the fd (maybe due to crash) */
             return -EAL_ERR_SOCKET_DISCONNECT;
@@ -766,7 +892,7 @@ int32_t eap_send_packet_to_unix_sk(int socket_fd, void* packet_p, size_t packet_
 int32_t eap_simple_send_ack(int client_fd, void* ack_p, size_t ack_size, int ret_if_suc){
     int ret = eap_send_packet_to_unix_sk( client_fd, ack_p, ack_size);
     if( ret != 0){
-        #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
             fprintf(stderr, "[EAP msg] %d: eap_send_packet_to_unix_sk to fd: %d ret: %d\n",
                               __LINE__, client_fd, ret);
         #endif

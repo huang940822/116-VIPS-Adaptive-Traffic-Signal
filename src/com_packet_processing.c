@@ -20,6 +20,7 @@
 #include "timer_event.h"
 #include "traffic_signal_packet_rx.h"
 #include "typedefine.h"
+#include "external_app_proxy_server.h"
 #include "external_app_proxy_callback_msg_forward.h"
 
 #include "error_code_user.h"
@@ -323,13 +324,15 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
             current->next->callback((void *) &app_section);  // what com_id for?
 
             /* log the event message forwarding action */
-            if(proxy_handling_app_p->ea_info_p){
-                #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+            if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
+                #if ENABLE_PRINTING_EAP_MSG_FORWARDING
                     printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
                         "EVENT_CLOUD_PACKET_RX", proxy_handling_app_p->id);
                 #endif
+                #if ENABLE_LOGGING_EAP_MSG_FORWARDING
                     log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
                         "EVENT_CLOUD_PACKET_RX", proxy_handling_app_p->id);
+                #endif
             }
         }
         current = current->next;
@@ -527,25 +530,18 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
             }
 
             /* log the event message forwarding action */
-            if(proxy_handling_app_p->ea_info_p){
-                #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+            if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
+                #if ENABLE_PRINTING_EAP_MSG_FORWARDING
                     printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
                         "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
                 #endif
+                #if ENABLE_LOGGING_EAP_MSG_FORWARDING
                     log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
                         "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
+                #endif
             }
         }
         current = current->next;
-
-        if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
-            #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
-                printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                    "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
-            #endif
-                log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                    "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
-        }
     }
     record_current_timespec(&trc6);
     pthread_mutex_unlock(&mutex_callback_list);
@@ -627,13 +623,15 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
             current->next->callback((void *) obstaclelist);
 
             /* log the event message forwarding action */
-            if(proxy_handling_app_p->ea_info_p){
-                #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+            if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
+                #if ENABLE_PRINTING_EAP_MSG_FORWARDING
                     printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
                         "EVENT_CAMERA_PACKET_RX", proxy_handling_app_p->id);
                 #endif
+                #if ENABLE_LOGGING_EAP_MSG_FORWARDING
                     log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
                         "EVENT_CAMERA_PACKET_RX", proxy_handling_app_p->id);
+                #endif
             }
         }
         current = current->next;

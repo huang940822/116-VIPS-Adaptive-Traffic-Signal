@@ -25,6 +25,7 @@
 app_obj_t* proxy_handling_app_p;
 //for test
 
+ /* this function is modified from "int EVSP_on_CLOUD_packet_rx(void *arg)" */
 static inline __attribute__((always_inline)) 
 int pre_handling_cloud_packet_before_forwarding(C2R_app_section_t* app_section, app_obj_t* app_obj_p)
 {
@@ -85,29 +86,37 @@ int forward_function_parameter_check(void *app_section, event_type_t event, char
         /* EVENT_MIDDLEWARE_RESTART and EVENT_REGISTRATION currently has no parameter */
         if( event != EVENT_MIDDLEWARE_RESTART && event != EVENT_REGISTRATION )
         {
+            #if ENABLE_PRINTING_EAP_DETECTED_ERR
             fprintf(stderr,"%s: app_section assigned is NULL ptr!, "
                            "skip callback parameter forwarding\n", func_name);
+            #endif
+            #if ENABLE_LOGGING_EAP_DETECTED_ERR
             log_file_write("%s: app_section assigned is NULL ptr!, "
                            "skip callback parameter forwarding\n", func_name);
+            #endif
         }
         return -1;
     }
     if(!proxy_handling_app_p){
-        fprintf(stderr,"%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
         /* this error is fatal. it should NEVER happend. if detected, check the implementation */
+        fprintf(stderr,"%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
         log_file_write_fatal_error("%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
         return -1;
     }
     if( proxy_handling_app_p->ea_info_p == 0){
-        fprintf(stderr,"%s: be called when the app is not external\n", func_name);
         /* this error is fatal. it should NEVER happend. if detected, check the implementation */
+        fprintf(stderr,"%s: be called when the app is not external\n", func_name);
         log_file_write_fatal_error("%s: be called when the app is not external\n", func_name);
         return -1;
     }
     if( proxy_handling_app_p->ea_info_p->notify_fd == 0){
-        // fprintf(stderr,"%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
         /* this error is not fatal */
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+        fprintf(stderr,"%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
+        #endif
         return -1;
     }
     return 0;
@@ -139,13 +148,15 @@ void event_middleware_restart_handler(){
         current = current->next;
 
         /* log the event message forwarding action */
-        if(proxy_handling_app_p->ea_info_p){
-            #if EAP_SERVER_INNER_DETAIL_PRINT_DEBUG
+        if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
+            #if ENABLE_PRINTING_EAP_MSG_FORWARDING
                 printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
                     "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
             #endif
+            #if ENABLE_LOGGING_EAP_MSG_FORWARDING
                 log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
                     "EVENT_MIDDLEWARE_RESTART", proxy_handling_app_p->id);
+            #endif
         }
     }
     pthread_mutex_unlock(&mutex_callback_list);
@@ -270,8 +281,12 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_rx)(void *app_section)
     /* current version of middleware have not defined 
        the structure of R2R packet, so this callback 
        will not be registered , nor be called */
+    #if ENABLE_PRINTING_EAP_MSG_FORWARDING
     fprintf(stderr,"FORWARD_FUNC_OF(on_RSU_packet_rx): should not be called at current verstion\n");
-    log_file_write_fatal_error("FORWARD_FUNC_OF(on_RSU_packet_rx): should not be called at current verstion\n");
+    #endif
+    #if ENABLE_LOGGING_EAP_MSG_FORWARDING
+    log_file_write("FORWARD_FUNC_OF(on_RSU_packet_rx): should not be called at current verstion\n");
+    #endif
     return -1;
 }
 
@@ -279,8 +294,12 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_tx)(void *app_section){
     /* current version of middleware have not defined 
        the structure of R2R packet, so this callback 
        will not be registered , nor be called */
+    #if ENABLE_PRINTING_EAP_MSG_FORWARDING
     fprintf(stderr,"FORWARD_FUNC_OF(on_RSU_packet_tx): should not be called at current verstion\n");
-    log_file_write_fatal_error("FORWARD_FUNC_OF(on_RSU_packet_tx): should not be called at current verstion\n");
+    #endif
+    #if ENABLE_LOGGING_EAP_MSG_FORWARDING
+    log_file_write("FORWARD_FUNC_OF(on_RSU_packet_tx): should not be called at current verstion\n");
+    #endif
     return -1;
 }
 
@@ -447,9 +466,12 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_registration)(void *app_section)
        external_app_proxy server/ external_app_proxy client-library,
        and the on_registration callback will directly be invoked on client side,
        so this callback should not be called */
-
+    #if ENABLE_PRINTING_EAP_MSG_FORWARDING
     fprintf(stderr,"FORWARD_FUNC_OF(on_registration): should not be called at current verstion\n");
-    log_file_write_fatal_error("FORWARD_FUNC_OF(on_registration): should not be called at current verstion\n");
+    #endif
+    #if ENABLE_LOGGING_EAP_MSG_FORWARDING
+    log_file_write("FORWARD_FUNC_OF(on_registration): should not be called at current verstion\n");
+    #endif
     return -1;
 }
 
@@ -463,11 +485,13 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
     int ret;
     
     if(!proxy_handling_app_p){
+        /* this error is fatal. it should NEVER happend. if detected, check the implementation */
         fprintf(stderr,"FORWARD_FUNC_OF(on_middle_restart): proxy_handling_app_p be assigned NULL ptr!\n");
         log_file_write_fatal_error("FORWARD_FUNC_OF(on_middle_restart): proxy_handling_app_p be assigned NULL ptr!");
         return -1;
     }
     if( proxy_handling_app_p->ea_info_p == 0){
+        /* this error is fatal. it should NEVER happend. if detected, check the implementation */
         fprintf(stderr,"FORWARD_FUNC_OF(on_middle_restart): be called when the app is not external\n");
         log_file_write_fatal_error("FORWARD_FUNC_OF(on_middle_restart): be called when the app is not external\n");
         return -1;
@@ -481,10 +505,15 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
 
     ret = eap_send_packet_to_unix_sk(notify_fd, &header, sizeof(header));
     if(ret){
+        
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr,"FORWARD_FUNC_OF(on_middleware_restart): "
                        "send header ret:%d\n", ret);
-        log_file_write_fatal_error(
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
+        log_file_write(
             "FORWARD_FUNC_OF(on_middleware_restart):send header ret:%d\n", ret);
+        #endif
         return ret;
     }
     return ret;

@@ -17,11 +17,6 @@
 
 #define USING_NON_ACK_CONFIG 1
 
-#define EAP_SERVER_PRINT_DEBUG 1
-#define EAP_SERVER_INNER_DETAIL_PRINT_DEBUG 0
-
-#define FORWARD_SAME_FORMAT_OBU_MSG_TO_EA 0
-
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved, for future expansion, such as emergency handling*/
     EA_PACKET_TYPE_REGISTER_TOP,    /*register top-half, will establish intetaction channel */
