@@ -39,8 +39,6 @@ void *external_app_proxy_main_handler();
 #define ENABLE_LOGGING_EAP_INNER_SOCKET_ERR 1
 #define ENABLE_PRINTING_EAP_INNER_SOCKET_ERR 0
 
-#define ENABLE_PRINTING_EAP_API_WRAPPER_ERR 0
-
 /* below is used by external_app_proxy_api_wrapper.c */
 int32_t eap_recv_packet_from_unix_sk(int socket_fd, void* packet_p, size_t packet_size);
 int32_t eap_send_packet_to_unix_sk(int socket_fd, void* packet_p, size_t packet_size);

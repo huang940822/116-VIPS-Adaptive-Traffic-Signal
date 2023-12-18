@@ -17,6 +17,13 @@
 
 #define USING_NON_ACK_CONFIG 1
 
+// logging options
+#define ENABLE_LOGGING_EALIB_DETECTED_ERR 1
+#define ENABLE_PRINTING_EALIB_DETECTED_ERR 0
+
+#define ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR 1
+#define ENABLE_PRINTING_EALIB_INNER_SOCKET_ERR 0
+
 enum ea_packet_type_definition_enum{
     EA_PACKET_TYPE_RESERVED = 0,    /*reserved, for future expansion, such as emergency handling*/
     EA_PACKET_TYPE_REGISTER_TOP,    /*register top-half, will establish intetaction channel */

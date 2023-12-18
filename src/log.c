@@ -212,8 +212,8 @@ void log_file_write_fatal_error(const char *format, ...)
 
 int log_file_write_with_errno(const char *format, ...)
 {  
-    if( ENABLE_FATAL_LOG ){
-        if( SWITCH_FATAL_LOG_TO_PRINT ){
+    if( ENABLE_FATAL_WITH_ERR_CODE_LOG ){
+        if( SWITCH_FATAL_WITH_ERR_CODE_LOG_TO_PRINT ){
             char* errno_str = strerror(errno);
             if( !errno_str ) errno_str = "undefined/zero errno";
             

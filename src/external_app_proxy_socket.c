@@ -232,10 +232,15 @@ int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size)
     current_errno = errno;
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if(ret == 0){   /* meaning that remote proxy might close the fd */
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
+        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret  < 0 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
@@ -249,7 +254,9 @@ int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size)
     current_errno = errno;
     log_file_write("%s: send() ret = %d\n", __func__, ret);
     if( ret == -1 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: send() ret %d\n", __func__, ret);
+        #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
         }
@@ -367,10 +374,15 @@ int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size)
     current_errno = errno;
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
+        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret  < 0 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
@@ -384,7 +396,9 @@ int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size)
     current_errno = errno;
     log_file_write("%s: send() ret = %d\n", __func__, ret);
     if( ret == -1 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: send() ret %d\n", __func__, ret);
+        #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
         }
@@ -409,7 +423,9 @@ int32_t simple_send_heartbeat_to_proxy()
     current_errno = errno;
     log_file_write("%s: send() ret = %d\n", __func__, ret);
     if( ret == -1 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
+        #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
         } 
@@ -431,8 +447,10 @@ int32_t simple_send_request_header_to_proxy(int api_id)
     current_errno = errno;
     log_file_write("%s: api->%s, send() ret = %d\n", __func__, api_id_str_arr[api_id], ret);
     if( ret == -1 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: api->%s, send() ret = %d\n", 
                                         __func__, api_id_str_arr[api_id], ret);
+        #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
         } 
@@ -451,15 +469,21 @@ int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int
 
     log_file_write("%s: api->%s, recv() ret = %d\n", __func__, api_id_str_arr[api_id], ret);
     if( ret == 0 ){   /* meaning that remote client might close the fd */
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret 0 (probably disconnected)\n");
+        #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret < 0 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret <0\n");
+        #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     else if( ack_p->packet_type != EA_PACKET_TYPE_ACK ){
+        #if ENABLE_LOGGING_EALIB_DETECTED_ERR
         log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK\n");
+        #endif
         ret = -EAL_ERR_PACKET_TYPE_NOT_MATCH;
     }
     else{
@@ -478,7 +502,9 @@ int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size)
 
     log_file_write("%s: send() ret = %d\n", __func__, ret);
     if( ret == -1 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
+        #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
         } 
@@ -497,12 +523,18 @@ int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size)
 
     log_file_write("%s: recv() ret = %d\n", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
+        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret < 0 ){
+        #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
+
     return EAL_ERR_OK;
 }
 
