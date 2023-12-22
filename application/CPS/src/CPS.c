@@ -287,12 +287,12 @@ int CPS_on_registration(void *arg)
     cnt = 0;
     # if CPS_RX_MODE
         time_t rawtime;
-        struct tm *info;
+        struct tm localTime;
         char buffer[20];
         char name[50];
         memset(buffer, 0, sizeof(buffer));
         time(&rawtime);
-        info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
+        localtime_r(&rawtime, &localTime); // 轉換成本地時間表示的分解時間
         strftime(buffer, 20, "%Y-%m-%d_%H:%M:%S", info);
         sprintf(name, "./cps_log/Perf_%s.txt", buffer);
         fp2 = fopen(name, "w");
@@ -301,12 +301,12 @@ int CPS_on_registration(void *arg)
     # endif
     # if CPS_DEBUG_APPLI > 0 && !CPS_RX_MODE
         time_t rawtime;
-        struct tm *info;
+        struct tm localTime;
         char buffer[20];
         char name[50];
         memset(buffer, 0, sizeof(buffer));
         time(&rawtime);
-        info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
+        localtime_r(&rawtime, &localTime); // 轉換成本地時間表示的分解時間
         strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
         sprintf(name, "./cps_log/Appl_recv_%s.txt", buffer);
         fp2 = fopen(name, "w");
@@ -315,7 +315,7 @@ int CPS_on_registration(void *arg)
     # endif
     # if CPS_LOG
         time(&rawtime);
-        info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
+        localtime_r(&rawtime, &localTime); // 轉換成本地時間表示的分解時間
         strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
         sprintf(name, "./cps_log/Obstacle_dump_%s.txt", buffer);
         fp4 = fopen(name, "w");

@@ -100,11 +100,11 @@ void OBU_packet_tx(uint16_t len,
 
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     char buffer[20];
     time(&rawtime);
-    info = localtime(&rawtime);
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+    localtime_r(&rawtime, &localTime);
+    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", &localTime);
     write_char(buffer, &write_buf, TIMESTAMP_LEN, TIMESTAMP_LEN);
 
     // position
@@ -172,11 +172,11 @@ void cloud_packet_tx(uint16_t len,
 
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     char buffer[20];
     time(&rawtime);
-    info = localtime(&rawtime);
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+    localtime_r(&rawtime, &localTime);
+    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", &localTime);
     write_char(buffer, &write_buf, TIMESTAMP_LEN, TIMESTAMP_LEN);
 
     // position

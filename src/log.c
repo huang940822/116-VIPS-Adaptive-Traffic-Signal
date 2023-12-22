@@ -22,10 +22,10 @@ void log_file_init()
 {
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     time(&rawtime);
-    info = localtime(&rawtime);
-    strftime(log_file_name, LOG_FILE_NAME_LEN, LOG_FILE_NAME_FORMAT, info);
+    localtime_r(&rawtime, &localTime);
+    strftime(log_file_name, LOG_FILE_NAME_LEN, LOG_FILE_NAME_FORMAT, &localTime);
 
     /* Get file path */
     char file_path[255];
@@ -52,11 +52,11 @@ void log_file_name_update()
 {
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     char buffer[LOG_FILE_NAME_LEN];
     time(&rawtime);
-    info = localtime(&rawtime);
-    strftime(buffer, LOG_FILE_NAME_LEN, LOG_FILE_NAME_FORMAT, info);
+    localtime_r(&rawtime, &localTime);
+    strftime(buffer, LOG_FILE_NAME_LEN, LOG_FILE_NAME_FORMAT, &localTime);
 
     if (strncmp(buffer, log_file_name, LOG_FILE_NAME_LEN) != 0) {
         /* Get new file path */
@@ -103,12 +103,12 @@ void log_file_write(const char *format, ...)
 {
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     char buffer[20];
     memset(buffer, 0, sizeof(buffer));
     time(&rawtime);
-    info = localtime(&rawtime);  // 轉換成本地時間表示的分解時間
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+    localtime_r(&rawtime, &localTime); // 轉換成本地時間表示的分解時間
+    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", &localTime);
 
     // content
     char log_content[LOG_CONTENT_LEN + 1];
@@ -144,12 +144,12 @@ void log_file_write_fatal_error(const char *format, ...)
 {
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     char buffer[20];
     memset(buffer, 0, sizeof(buffer));
     time(&rawtime);
-    info = localtime(&rawtime);
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+    localtime_r(&rawtime, &localTime);
+    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", &localTime);
 
     // content
     char log_content[LOG_CONTENT_LEN + 1];

@@ -323,13 +323,15 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         }
 
         struct timeval tv;
+        struct tm localTime;
         gettimeofday(&tv, NULL);
         int second = tv.tv_sec % 60;
         int secMark = bsm->coreData.secMark / 1000;
         if (second > secMark && (second - secMark) > 30)
             tv.tv_sec -= 60;
         tv.tv_sec = tv.tv_sec - second + secMark;
-        record->time_second = mktime(localtime(&tv.tv_sec));
+        localtime_r(&tv.tv_sec, &localTime);
+        record->time_second = mktime(&localTime);
 
         record->position_lat = bsm->coreData.lat / 10000000.0;
         record->position_lon = bsm->coreData.Long / 10000000.0;
@@ -361,20 +363,20 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 
         struct timeval tv;
         gettimeofday(&tv, NULL);
-        struct tm *timeinfo;
-        timeinfo = localtime(&tv.tv_sec);
+        struct tm timeinfo;
+        localtime_r(&tv.tv_sec, &timeinfo);
 
         int yday = (srm->timeStamp / 1440) + 1, dmin = srm->timeStamp % 1440;
 
-        if (yday2month_day(timeinfo, yday) == -1) {
+        if (yday2month_day(&timeinfo, yday) == -1) {
             return -1;
         }
 
-        timeinfo->tm_hour = dmin / 60;
-        timeinfo->tm_min = dmin % 60;
-        timeinfo->tm_sec = srm->second / 1000;
-        timeinfo->tm_isdst = -1;
-        record->time_second = mktime(timeinfo);
+        timeinfo.tm_hour = dmin / 60;
+        timeinfo.tm_min = dmin % 60;
+        timeinfo.tm_sec = srm->second / 1000;
+        timeinfo.tm_isdst = -1;
+        record->time_second = mktime(&timeinfo);
 
         record->position_lat = requestor->position.position.lat / 10000000.0;
         record->position_lon = requestor->position.position.Long / 10000000.0;

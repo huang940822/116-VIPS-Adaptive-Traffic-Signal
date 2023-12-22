@@ -80,9 +80,10 @@ void *SPM_repeater()
         gettimeofday(&tv, NULL);
         time_t now = (time_t) tv.tv_sec;
 
-        struct tm *timeinfo = localtime(&tv.tv_sec);
-        ssm->timeStamp = (((timeinfo->tm_yday * 24) + timeinfo->tm_hour) * 60) + timeinfo->tm_min;
-        ssm->second = (timeinfo->tm_sec * 1000) + (tv.tv_usec / 1000);
+        struct tm timeinfo;
+        localtime_r(&tv.tv_sec, &timeinfo);
+        ssm->timeStamp = (((timeinfo.tm_yday * 24) + timeinfo.tm_hour) * 60) + timeinfo.tm_min;
+        ssm->second = (timeinfo.tm_sec * 1000) + (tv.tv_usec / 1000);
 
         ssm->status.tab[0].sequenceNumber = sequenceNumber++;
         sequenceNumber &= 0b1111111;
