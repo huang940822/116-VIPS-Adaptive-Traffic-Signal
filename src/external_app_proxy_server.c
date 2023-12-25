@@ -242,8 +242,9 @@ int remove_both_channels_from_proxy_epoll(app_obj_t *app_obj_p)
 {   
     /* After a socket fd being closed, 
      * that socket fd will automatically de-register itself from epoll,
+     * (as long as the middleware is single-process, and that the fd is only referenced by EAP),
      * so currently we do nothing in this function.
-     * If in later linux version, the behavior of epoll changed,
+     * If in later linux version, the behavior of epoll changes,
      * this function might need to be implemented */
     return 0;
 }
