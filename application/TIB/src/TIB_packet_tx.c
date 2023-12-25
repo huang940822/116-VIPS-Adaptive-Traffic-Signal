@@ -98,7 +98,7 @@ void *SPaT_packet_tx_loop()
                 continue;
             pior_stepID = stepID;
         }
-        spat_printf(p_spat);
+        // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);
     }
     close(fd);

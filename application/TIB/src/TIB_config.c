@@ -15,7 +15,7 @@ TIB_config_object_t TIB_config = {
     .TIB_dontSend2TC = 1,
     .lane_list = {0},
     .connectsTo_list = {0},
-    .MAP_lane_compass = {0},
+    .MAP_lane_approach = {0},
 };
 
 int TIB_config_init()
@@ -100,8 +100,8 @@ int TIB_config_init()
 
             vector_init(TIB_config.lane_list);
             for (int i = 0; i < COMPASS_NUM; i++) {
-                INIT_LIST_HEAD(&TIB_config.MAP_lane_compass[i]);
-                INIT_LIST_HEAD(&TIB_config.MAP_sidewalk_compass[i]);
+                INIT_LIST_HEAD(&TIB_config.MAP_lane_approach[i]);
+                INIT_LIST_HEAD(&TIB_config.MAP_sidewalk_approach[i]);
             }
 
             while (!feof(fp)) {
@@ -130,16 +130,6 @@ int TIB_config_init()
                 if (int_val != TIB_config.lane_list.size)
                     FreeAndReturnInvalid(str_arr, LaneSet_table, "LaneSet_table laneId err");
                 config_lane.config_laneID = int_val;
-
-                // compasss
-                substr = vector_at(str_arr, index++);
-                const char *compass_order[] = COMPASS_ORDER;
-                for (config_lane.compass = 0; config_lane.compass < COMPASS_NUM; config_lane.compass++) {
-                    if (strcmp(compass_order[config_lane.compass], substr) == 0)
-                        break;
-                }
-                if (config_lane.compass >= COMPASS_NUM)
-                    FreeAndReturnInvalid(str_arr, LaneSet_table, "LaneSet_table compass err");
 
                 // lane_direction
                 substr = vector_at(str_arr, index++);
@@ -252,11 +242,11 @@ int TIB_config_init()
             }
             for (int i = 0; i < TIB_config.lane_list.size; i++) {
                 MAP_config_lane_t *lane = &vector_at(TIB_config.lane_list, i);
-                INIT_LIST_HEAD(&(lane->compass_node));
-                if (lane->compass < COMPASS_NUM && lane->lane_type == LaneTypeAttributes_vehicle && lane->direction & (1 << LaneDirection_ingressPath)) {
-                    list_add_tail(&lane->compass_node, &TIB_config.MAP_lane_compass[lane->compass]);
-                } else if (lane->compass < COMPASS_NUM && lane->lane_type == LaneTypeAttributes_sidewalk) {
-                    list_add_tail(&lane->compass_node, &TIB_config.MAP_sidewalk_compass[lane->compass]);
+                INIT_LIST_HEAD(&(lane->approach_node));
+                if (lane->approach < COMPASS_NUM && lane->lane_type == LaneTypeAttributes_vehicle && lane->direction & (1 << LaneDirection_ingressPath)) {
+                    list_add_tail(&lane->approach_node, &TIB_config.MAP_lane_approach[lane->approach]);
+                } else if (lane->approach < COMPASS_NUM && lane->lane_type == LaneTypeAttributes_sidewalk) {
+                    list_add_tail(&lane->approach_node, &TIB_config.MAP_sidewalk_approach[lane->approach]);
                 }
             }
         }
@@ -426,16 +416,33 @@ void print_config_map(MapData *map, char *buf, int buf_len)
         }
         snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
     }
-    const char *conpass_order[] = COMPASS_ORDER;
     for (int i = 0; i < COMPASS_NUM; i++) {
         MAP_config_lane_t *lane, *safe;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%s: ", conpass_order[i]);
-        list_for_each_entry_safe(lane, safe, &TIB_config.MAP_lane_compass[i], compass_node)
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "Road %d: ", i);
+        list_for_each_entry_safe(lane, safe, &TIB_config.MAP_lane_approach[i], approach_node)
         {
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
         }
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
     }
-    snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+    snprintf(buf + strlen(buf), buf_len - strlen(buf), "connectsTo_list \n");
+    for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {
+        MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);        
+        log_snprintf(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
+        for (int j = 0; j < connectsTo->left_laneId.size; j++) {
+            log_snprintf(buf, "%d ", vector_at(connectsTo->left_laneId, j));
+        }
+        log_snprintf(buf, "\n straight_laneId: ");
+        for (int j = 0; j < connectsTo->straight_laneId.size; j++) {
+            log_snprintf(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
+        }
+        log_snprintf(buf, "\n right_laneId: ");
+        for (int j = 0; j < connectsTo->right_laneId.size; j++) {
+            log_snprintf(buf, "%d ", vector_at(connectsTo->right_laneId, j));
+        }
+        log_snprintf(buf, "\n");
+    }
+    snprintf(buf + strlen(buf), buf_len - strlen(buf), "signalGroupId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
             snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", TIB_config.signalGroupId_table[i][j]);

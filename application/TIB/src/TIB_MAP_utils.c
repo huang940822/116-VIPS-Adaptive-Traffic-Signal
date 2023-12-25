@@ -145,10 +145,10 @@ int map_signal_group(MapData *map)
     int signalGroupID = -1;
 
     for (int i = 0; i < COMPASS_NUM; i++) {
-        struct list_head *head = &TIB_config.MAP_lane_compass[i];
+        struct list_head *head = &TIB_config.MAP_lane_approach[i];
         MAP_config_lane_t *config_lane, *safe;
         // 一般車道
-        list_for_each_entry_safe(config_lane, safe, head, compass_node)
+        list_for_each_entry_safe(config_lane, safe, head, approach_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
             signalGroupID = TIB_config.signalGroupId_table[config_lane->approach][RroundHeadGreenIndex];
@@ -162,9 +162,9 @@ int map_signal_group(MapData *map)
             signalGroupID = TIB_config.signalGroupId_table[config_lane->approach][RightGreenIndex];
             search_signal_compass(RightGreenMask, set_compass_connectsTo(right_laneId););
         }
-        head = &TIB_config.MAP_sidewalk_compass[i];
+        head = &TIB_config.MAP_sidewalk_approach[i];
         // 行人道
-        list_for_each_entry_safe(config_lane, safe, head, compass_node)
+        list_for_each_entry_safe(config_lane, safe, head, approach_node)
         {
             GenericLane *lane = &laneSet->tab[config_lane->config_laneID];
             signalGroupID = TIB_config.signalGroupId_table[i][PedestrianGreenIndex];

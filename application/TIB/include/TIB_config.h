@@ -22,13 +22,12 @@ typedef struct MAP_Node {
 } MAP_Node_t;
 
 typedef struct MAP_config_lane {
-    struct list_head compass_node;
+    struct list_head approach_node;
     vector_t(MAP_Node_t) node_list;
     int32_t config_laneID;
     uint8_t direction;  // bit string 0 ingress 1 egress
     uint8_t approach;
     uint8_t lane_index;
-    uint8_t compass;
     LaneTypeAttributes_choice lane_type;
     uint16_t lane_attributes;
     uint8_t shared_with;
@@ -58,11 +57,11 @@ typedef struct TIB_config_object {
     uint8_t SPaT_packet_transfer_speed;
     vector_t(MAP_config_lane_t) lane_list;
     vector_t(MAP_config_connectsTo_t) connectsTo_list;
-    // N NE E SE S S W NW
+    // 用號控器上的第機車道區分 approachID
     // 只有是車道 並且是 ingress
-    struct list_head MAP_lane_compass[COMPASS_NUM];
+    struct list_head MAP_lane_approach[COMPASS_NUM];
     // 人行道的方向
-    struct list_head MAP_sidewalk_compass[COMPASS_NUM];
+    struct list_head MAP_sidewalk_approach[COMPASS_NUM];
 
     // 對應號控器上哪一路有哪些綠燈 signalGroupId 是多少
     int16_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
