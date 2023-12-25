@@ -80,12 +80,12 @@ app_obj_t* get_app_obj_by_unix_socket_fd(int unix_sk_fd)
 }
 
 /* used when an external app connects and registers for first channel*/
-/* this will set I-channel to client_fd and N-channel to 0*/
-int set_ea_app_obj_new_sk_fd(app_obj_t *app, int socket_fd)
+/* this will set I-channel to new_interact_fd and set N-channel to 0 */
+int reset_external_app_two_new_sk_fds(app_obj_t *app, int new_interact_fd)
 {   
     if(!app)
         return -1;
-    if(!socket_fd)
+    if(!new_interact_fd)
         return -1;
 
     int ret;
@@ -94,7 +94,7 @@ int set_ea_app_obj_new_sk_fd(app_obj_t *app, int socket_fd)
     pthread_mutex_lock(&mutex_app_list); 
     if( app->ea_info_p ){
         app->ea_info_p->notify_fd = 0;
-        app->ea_info_p->interact_fd = socket_fd;
+        app->ea_info_p->interact_fd = new_interact_fd;
         ret = 0;
     }
     else{
@@ -106,7 +106,7 @@ int set_ea_app_obj_new_sk_fd(app_obj_t *app, int socket_fd)
 
 /* each external app has 2 channel, 
  * this one used for updating second channel in the app_obj_t */
-int update_ea_app_obj_notify_fd(app_obj_t *app, int socket_fd)
+int update_external_app_notify_fd(app_obj_t *app, int socket_fd)
 {   
     if(!app)
         return -1;

@@ -497,7 +497,7 @@ int handle_new_client_registration(int client_fd)
         }
 
         /*this will set I-channel to client_fd and N-channel to 0*/
-        ret = set_ea_app_obj_new_sk_fd(in_MW_app_p, client_fd);  
+        ret = reset_external_app_two_new_sk_fds(in_MW_app_p, client_fd);  
         in_MW_app_p->ea_info_p->heartbeat_rc = proxy_cur_heartbeat;
         in_MW_app_p->ea_info_p->pid = payload_top.pid;
         
@@ -543,7 +543,7 @@ int handle_new_client_registration(int client_fd)
         }
         else{
             ntf_ack.ret_val = EAL_ERR_OK;
-            update_ea_app_obj_notify_fd(in_MW_app_p, client_fd);
+            update_external_app_notify_fd(in_MW_app_p, client_fd);
             in_MW_app_p->ea_info_p->heartbeat_rc = proxy_cur_heartbeat;
         }
 
