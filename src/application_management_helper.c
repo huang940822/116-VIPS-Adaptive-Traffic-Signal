@@ -131,12 +131,13 @@ int update_external_app_notify_fd(app_obj_t *app, int socket_fd)
 /* used when proxy detect an external app lose heartbeat for a long time */
 /* or when send/recv to that APP's unix socket result in EAL_ERR_SOCKET_DISCONNECT */
 /* WARNNING!! this function ASSUME the "CALLER" will TAKE "mutex_app_list" before call it */
-int close_both_channels_of_an_external_app(app_obj_t *app)
+int inner_close_both_channels_of_an_external_app(app_obj_t *app)
 {   
-    if(!app)
-        return -1;
-
     int ret = 0;
+    if(!app){
+        ret = -1;
+        goto end;
+    }
 
     if( app->ea_info_p ){
 
@@ -177,10 +178,26 @@ int close_both_channels_of_an_external_app(app_obj_t *app)
     else{
         log_file_write("err %s: invoked for internal app\n", __func__);
         /* this function should not be invoked for internal app */
-        ret = -1;
+        ret = -2;
     }
 
 end:
+    return ret;
+}
+
+/* used when send/recv to that APP's unix socket result in EAL_ERR_SOCKET_DISCONNECT */
+/* this function will take mutex_lock */
+int directly_close_both_channels_of_an_external_app(app_obj_t *app)
+{   
+    int ret = 0;
+    pthread_mutex_lock(&mutex_app_list); 
+
+    ret = inner_close_both_channels_of_an_external_app(app);
+
+    pthread_mutex_unlock(&mutex_app_list); 
+    if(!ret){
+        log_file_write( "%s: close app: %s's sockets\n", __func__, app->name);
+    }
     return ret;
 }
 

@@ -23,9 +23,8 @@ pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
 /* this function assume the caller have grabbed the mutex_callback_list  */
-/* this function assume the caller have grabbed the mutex_callback_list  */
 static inline __attribute__((always_inline)) 
-app_obj_t* get_app_obj_by_name(char* name_p)
+app_obj_t* get_app_obj_by_app_name(char* name_p)
 {
     // check app name
     if ( !name_p ){
@@ -73,10 +72,10 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
         exit(errno);
     }
 
-    app_obj_p = get_app_obj_by_name(name);
+    app_obj_p = get_app_obj_by_app_name(name);
     if(!app_obj_p){
-        log_file_write_fatal_error("event_callback_new: get_app_obj_by_name() find no matching app");
-        perror("event_callback_new: get_app_obj_by_name() find no matching app");
+        log_file_write_fatal_error("event_callback_new: get_app_obj_by_app_name() find no matching app");
+        perror("event_callback_new: get_app_obj_by_app_name() find no matching app");
         exit(errno);
     }
 

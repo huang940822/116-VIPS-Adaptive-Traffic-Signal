@@ -7,6 +7,7 @@
 #include "log.h"
 #include "typedefine.h"
 #include "application_registration.h"
+#include "application_management_helper.h"
 #include "com_packet_processing.h"
 #include "config.h"
 #include "traffic_signal_command_buffer.h"
@@ -117,7 +118,7 @@ int forward_function_parameter_check(void *app_section, event_type_t event, char
         #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
         #endif
-        return -1;
+        return 0;
     }
     return 0;
 }
@@ -191,7 +192,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
      
     ret = simple_send_notify_packet_header(notify_fd, EVENT_OBU_PACKET_RX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
     
@@ -199,7 +202,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
                                     self_defined_section_p, 
                                     sizeof(V2R_self_defined_section_t));
     if(ret){
-        simple_fatal_act_logger("send self_defined_section", ret);
+        simple_fatal_action_logger("send self_defined_section", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -207,7 +212,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
                                     &(self_defined_section_p->data_len), 
                                     sizeof(size_t));
     if(ret){
-        simple_fatal_act_logger("send msg_len", ret);
+        simple_fatal_action_logger("send msg_len", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -215,7 +222,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx)(void *app_section)
                                     self_defined_section_p->data ,
                                     self_defined_section_p->data_len);
     if(ret){
-        simple_fatal_act_logger("send msg", ret);
+        simple_fatal_action_logger("send msg", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -245,7 +254,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
      
     ret = simple_send_notify_packet_header(notify_fd, EVENT_OBU_PACKET_TX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
     
@@ -253,7 +264,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
                                     self_defined_section_p, 
                                     sizeof(V2R_self_defined_section_t));
     if(ret){
-        simple_fatal_act_logger("send self_defined_section", ret);
+        simple_fatal_action_logger("send self_defined_section", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -261,7 +274,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
                                     &(self_defined_section_p->data_len), 
                                     sizeof(size_t));
     if(ret){
-        simple_fatal_act_logger("send msg_len", ret);
+        simple_fatal_action_logger("send msg_len", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -269,7 +284,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx)(void *app_section)
                                     self_defined_section_p->data ,
                                     self_defined_section_p->data_len);
     if(ret){
-        simple_fatal_act_logger("send msg", ret);
+        simple_fatal_action_logger("send msg", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -328,21 +345,27 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_rx)(void *app_section)
 
     ret = simple_send_notify_packet_header(notify_fd, EVENT_CLOUD_PACKET_RX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
     /* send toppest level structure */
     ret = eap_send_packet_to_unix_sk(notify_fd, app_section_p, sizeof(C2R_app_section_t));
     if(ret){
-        simple_fatal_act_logger("send app_section", ret);
+        simple_fatal_action_logger("send app_section", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
     /* since there are inner structure inside, we send them here */
     ret = eap_send_packet_to_unix_sk(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
-        simple_fatal_act_logger("send app_section->payload", ret);
+        simple_fatal_action_logger("send app_section->payload", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
     
@@ -367,21 +390,27 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_tx)(void *app_section)
 
     ret = simple_send_notify_packet_header(notify_fd, EVENT_CLOUD_PACKET_RX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
     /* send toppest level structure */
     ret = eap_send_packet_to_unix_sk(notify_fd, app_section_p, sizeof(C2R_app_section_t));
     if(ret){
-        simple_fatal_act_logger("send app_section", ret);
+        simple_fatal_action_logger("send app_section", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
     /* since there are inner structure inside, we send them here */
     ret = eap_send_packet_to_unix_sk(notify_fd, app_section_p->payload , app_section_p->payload_len);
     if(ret){
-        simple_fatal_act_logger("send app_section->payload", ret);
+        simple_fatal_action_logger("send app_section->payload", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
     
@@ -406,14 +435,18 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
 
     ret = simple_send_notify_packet_header(notify_fd, EVENT_CAMERA_PACKET_RX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
     /* send toppest level structure */
     ret = eap_send_packet_to_unix_sk(notify_fd, obstaclelist_p, sizeof(ObstacleList));
     if(ret){
-        simple_fatal_act_logger("send obstaclelist", ret);
+        simple_fatal_action_logger("send obstaclelist", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -421,7 +454,9 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_camera_packet_rx)(void *app_section)
     ret = eap_send_packet_to_unix_sk(notify_fd, obstaclelist_p->tab,
                                  (obstaclelist_p->count)*sizeof(Obstacle));
     if(ret){
-        simple_fatal_act_logger("send obstaclelist->tab", ret);
+        simple_fatal_action_logger("send obstaclelist->tab", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
     
@@ -446,13 +481,17 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_traffic_signal_command_tx)(void *app_section)
 
     ret = simple_send_notify_packet_header(notify_fd, EVENT_TRAFFIC_SIGNAL_COMMAND_TX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
     ret = eap_send_packet_to_unix_sk(notify_fd, app_section_p, sizeof(traffic_signal_command_arg_t));
     if(ret){
-        simple_fatal_act_logger("send app_section", ret);
+        simple_fatal_action_logger("send app_section", ret);
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
         return ret;
     }
 
@@ -514,7 +553,8 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
         log_file_write(
             "FORWARD_FUNC_OF(on_middleware_restart):send header ret:%d\n", ret);
         #endif
-        return ret;
+        if(ret == -EAL_ERR_SOCKET_DISCONNECT)
+            directly_close_both_channels_of_an_external_app(proxy_handling_app_p);
     }
     return ret;
 }
@@ -567,7 +607,7 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(void *app_section)
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
     ret = simple_send_notify_packet_header(notify_fd, EVENT_OBU_PACKET_RX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
         return ret;
     }
 
@@ -575,7 +615,7 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(void *app_section)
                                      &(arg_p->msg_p->msg_len), 
                                      sizeof(size_t));
     if(ret){
-        simple_fatal_act_logger("send msg_len", ret);
+        simple_fatal_action_logger("send msg_len", ret);
         return ret;
     }
 
@@ -583,7 +623,7 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(void *app_section)
                                      arg_p->msg_p->msg, 
                                      arg_p->msg_p->msg_len);
     if(ret){
-        simple_fatal_act_logger("send msg", ret);
+        simple_fatal_action_logger("send msg", ret);
         return ret;
     }
 
@@ -591,14 +631,14 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(void *app_section)
                                      arg_p->app_section_p->OBU_object, 
                                      sizeof(OBU_object_t));
     if(ret){
-        simple_fatal_act_logger("send OBU_object", ret);
+        simple_fatal_action_logger("send OBU_object", ret);
         return ret;
     }
     ret = eap_send_packet_to_unix_sk(notify_fd, 
                                      arg_p->app_section_p->OBU_object->private_space,
                                      sizeof(app_private_space_t));
     if(ret){
-        simple_fatal_act_logger("send private_space", ret);
+        simple_fatal_action_logger("send private_space", ret);
         return ret;
     }
     return ret;
@@ -621,7 +661,7 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx_SAME_FORMAT)(void *app_section)
     int notify_fd = proxy_handling_app_p->ea_info_p->notify_fd;
     ret = simple_send_notify_packet_header(notify_fd, EVENT_OBU_PACKET_TX);
     if(ret){
-        simple_fatal_act_logger("send header", ret);
+        simple_fatal_action_logger("send header", ret);
         return ret;
     }
 
@@ -629,7 +669,7 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx_SAME_FORMAT)(void *app_section)
                                      &(arg_p->msg_p->msg_len), 
                                      sizeof(size_t));
     if(ret){
-        simple_fatal_act_logger("send msg_len", ret);
+        simple_fatal_action_logger("send msg_len", ret);
         return ret;
     }
 
@@ -637,7 +677,7 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx_SAME_FORMAT)(void *app_section)
                                      arg_p->msg_p->msg, 
                                      arg_p->msg_p->msg_len);
     if(ret){
-        simple_fatal_act_logger("send msg", ret);
+        simple_fatal_action_logger("send msg", ret);
         return ret;
     }
 
@@ -645,14 +685,14 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx_SAME_FORMAT)(void *app_section)
                                      arg_p->app_section_p->OBU_object, 
                                      sizeof(OBU_object_t));
     if(ret){
-        simple_fatal_act_logger("send OBU_object", ret);
+        simple_fatal_action_logger("send OBU_object", ret);
         return ret;
     }
     ret = eap_send_packet_to_unix_sk(notify_fd, 
                                      arg_p->app_section_p->OBU_object->private_space,
                                      sizeof(app_private_space_t));
     if(ret){
-        simple_fatal_act_logger("send private_space", ret);
+        simple_fatal_action_logger("send private_space", ret);
         return ret;
     }
     return ret;

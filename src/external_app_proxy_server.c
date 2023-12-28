@@ -267,16 +267,16 @@ int unlink_an_external_app(app_obj_t *app_obj_p)
         #endif
     }
 
-    ret = close_both_channels_of_an_external_app(app_obj_p);
+    ret = inner_close_both_channels_of_an_external_app(app_obj_p);
     if(ret){
         #if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr,
-            "[EAP msg] err: %s call: close_both_channels_of_an_external_app() " 
+            "[EAP msg] err: %s call: inner_close_both_channels_of_an_external_app() " 
             "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
         #endif
         #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write(
-            "[EAP msg] err: %s call: close_both_channels_of_an_external_app() " 
+            "[EAP msg] err: %s call: inner_close_both_channels_of_an_external_app() " 
             "for appID:%d, ret = %d\n", __func__, app_obj_p->id, ret);
         #endif
 

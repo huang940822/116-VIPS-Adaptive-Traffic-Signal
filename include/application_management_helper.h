@@ -16,7 +16,11 @@ int update_external_app_notify_fd(app_obj_t *app, int socket_fd);
 /* used when proxy detect an external app lose heartbeat for a long time */
 /* or when send/recv to that APP's unix socket result in EAL_ERR_SOCKET_DISCONNECT */
 /* WARNNING!! this function ASSUME the "CALLER" will TAKE "mutex_app_list" before call it */
-int close_both_channels_of_an_external_app(app_obj_t *app);
+int inner_close_both_channels_of_an_external_app(app_obj_t *app);
+
+/* used when send/recv to that APP's unix socket result in EAL_ERR_SOCKET_DISCONNECT */
+/* this function will TAKE "mutex_app_list" inside */
+int directly_close_both_channels_of_an_external_app(app_obj_t *app);
 
 int update_external_app_heartbeat_by_appID(uint8_t appID);
 int update_external_app_pid(app_obj_t *app, int pid);
