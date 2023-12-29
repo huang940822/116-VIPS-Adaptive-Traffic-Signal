@@ -102,13 +102,13 @@ int forward_function_parameter_check(void *app_section, event_type_t event, char
         /* this error is fatal. it should NEVER happend. if detected, check the implementation */
         fprintf(stderr,"%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
         log_file_write_fatal_error("%s: proxy_handling_app_p assigned is NULL ptr!\n", func_name);
-        return -1;
+        return -2;
     }
     if( proxy_handling_app_p->ea_info_p == 0){
         /* this error is fatal. it should NEVER happend. if detected, check the implementation */
         fprintf(stderr,"%s: be called when the app is not external\n", func_name);
         log_file_write_fatal_error("%s: be called when the app is not external\n", func_name);
-        return -1;
+        return -3;
     }
     if( proxy_handling_app_p->ea_info_p->notify_fd == 0){
         /* this error is not fatal */
@@ -118,7 +118,7 @@ int forward_function_parameter_check(void *app_section, event_type_t event, char
         #if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("%s: external APP's notify_fd is 0, probably disconnected\n", func_name);
         #endif
-        return 0;
+        return -4;
     }
     return 0;
 }
