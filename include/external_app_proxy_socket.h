@@ -16,6 +16,7 @@
  * the two should be "THE SAME" !! */
 
 #define USING_NON_ACK_CONFIG 1
+#define FORWARD_SAME_FORMAT_OBU_MSG_TO_EA 1
 
 // logging options
 #define ENABLE_LOGGING_EALIB_DETECTED_ERR 1

@@ -510,8 +510,6 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     * all might read/write callback_list, we add a mutex_lock */
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     pthread_mutex_lock(&mutex_callback_list);
-    record_current_timespec(&trc5);
-    
     while (current->next != NULL) {
         proxy_handling_app_p = current->next->app_obj_p;
 
@@ -543,7 +541,6 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
     }
-    record_current_timespec(&trc6);
     pthread_mutex_unlock(&mutex_callback_list);
     
     // free resource 

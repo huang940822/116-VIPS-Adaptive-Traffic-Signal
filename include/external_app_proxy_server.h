@@ -21,7 +21,6 @@ void *external_app_proxy_main_handler();
 #define HEARTBEAT_MONITOR_PERIOD_S     100        //after that, heartbeat-monotoring per 100-s
 //app should send heartbeat to middleware at least inside 3 "period"
 #define HEARTBEAT_MONITOR_ALLOWED_THERSHHOLD  3  
-#define FORWARD_SAME_FORMAT_OBU_MSG_TO_EA 0
 
 // logging options
 #define ENABLE_LOGGING_EAP_DETECTED_ERR 1
