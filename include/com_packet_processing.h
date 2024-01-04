@@ -25,6 +25,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg);
 int DSRC_send_timer_handler(buffer_ring_t *buffer);
 void OBU_j2735_tx(DSRCmsgID magId, void *data);
 int Is_Heartbeat(msg_obj_t *msg);
+
 /* Return codes of packet processing */
 typedef enum packet_processing_err {
     PACKET_NOT_J2735 = 1,
@@ -36,4 +37,4 @@ typedef enum packet_processing_err {
     PACKET_INVALID_VEHICLE_TYPE = -5
 } packet_processing_err_t;
 
-#endif
+#endif /* COM_PACKET_PROCESSING_H */

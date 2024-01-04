@@ -2,8 +2,10 @@
 #define EVSP_CONFIG_H
 
 #include "typedefine.h"
-
+#include <stdint.h>
 #define EVSP_CONFIG_FILE FILE_PATH "application/EVSP/config/config.txt"
+
+
 
 int EVSP_config_init();
 

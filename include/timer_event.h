@@ -2,6 +2,8 @@
 #define TIMER_EVENT_H
 
 #include "typedefine.h"
+#include <time.h>
+#include <sys/types.h>
 
 // 保證會收到回覆的 command
 typedef struct Guaranteed_command_set {
@@ -24,4 +26,4 @@ int delete_timer(timer_t timer_id);
 
 extern Guaranteed_command_set_t guarenteed_cmd_set;
 
-#endif
+#endif  /* TIMER_EVENT_H */

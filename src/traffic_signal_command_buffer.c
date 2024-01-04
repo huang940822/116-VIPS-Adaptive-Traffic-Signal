@@ -8,6 +8,7 @@
 #include "EVSP.h"
 #include "TSP.h"
 #include "application_registration.h"
+#include "application_management_helper.h"
 #include "common_packet_tx.h"
 #include "config.h"
 #include "log.h"
@@ -17,6 +18,9 @@
 #include "traffic_signal_packet_rx.h"
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
+#include "external_app_proxy_callback_msg_forward.h"
+#include "external_app_proxy_server.h"
+
 // todo: both above should be removed!
 #define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
@@ -131,26 +135,32 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     conpensation_flag = is_in_compensation();
     uint16_t current_sec_residual = signal_status.StepSec;
 
-    if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
-        if (TSP.dontSend2TC == 1) {
-            printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-            log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-            return;
-        }
-        if (conpensation_flag) {
-            printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
-            log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
-            return;
-        }
-    } else if (command_obj->app_id == EVSP.id) {
-        if (EVSP.dontSend2TC == 1) {
-            log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-            return;
-        }
-    } else {
-        log_file_write("not TSP either EVSP is sent to TC machine\r\n");
-    }
+    switch (config.signal_controller_manufacturer) {
+    case CHENG_LONG:
+        /* old: (TSP.id, EVSP.id) 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!! */
+        /* new: currently using the value defined in "enum application_id" */
+        if (command_obj->app_id == TSP_ID) {  
+            if (TSP.dontSend2TC == 1) {
+                printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+            if (conpensation_flag) {
+                printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                break;
+            }
 
+        } else if (command_obj->app_id == EVSP_ID) {
+            if (EVSP.dontSend2TC == 1) {
+                log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+        } else {
+            log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+        }
+    }
+    
     if (config.log_command_buffer) {
         log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }
@@ -193,6 +203,29 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         break;
 
     case SHAN_ZHU:
+        /* old: (TSP.id, EVSP.id) 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!! */
+        /* new: currently using the value defined in "enum application_id" */
+        if (command_obj->app_id == TSP_ID) {  
+            if (TSP.dontSend2TC == 1) {
+                printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+            if (conpensation_flag) {
+                printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                break;
+            }
+
+        } else if (command_obj->app_id == EVSP_ID) {
+            if (EVSP.dontSend2TC == 1) {
+                log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+        } else {
+            log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+        }
+
         difference = command_obj->effect_time - command_obj->adjusted_time;
         log_file_write("\ndifference is :%d\r\n", difference);
 
@@ -204,6 +237,28 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         break;
 
     case SHAN_ZHU_M:
+        /* old: (TSP.id, EVSP.id) 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!! */
+        /* new: currently using the value defined in "enum application_id" */
+        if (command_obj->app_id == TSP_ID) { 
+            if (TSP.dontSend2TC == 1) {
+                printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+            if (conpensation_flag) {
+                printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+                break;
+            }
+        } else if (command_obj->app_id == EVSP_ID) {
+            if (EVSP.dontSend2TC == 1) {
+                log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+                break;
+            }
+        } else {
+            log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+        }
+
         difference = command_obj->effect_time - command_obj->adjusted_time;
         printf("difference:%d\r\n", difference);
         log_file_write("\ndifference is :%d\r\n", difference);
@@ -233,13 +288,32 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     command.effect_time = command_obj->effect_time;
     memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
 
-    // 執行callback 完全不管app_id了 event signal packet tx
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
+
+    // 執行callback 完全不管 app_id 了 event signal packet tx
     // goto TSP_report_command()
     event_callback_t *current = &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX];
     while (current->next != NULL) {
+        proxy_handling_app_p = current->next->app_obj_p;
         current->next->callback((void *) &command);
         current = current->next;
+        
+        /* log the event message forwarding action */
+        if(proxy_handling_app_p->ea_info_p){
+            #if ENABLE_PRINTING_EAP_MSG_FORWARDING
+                printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
+                    "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
+            #endif
+            #if ENABLE_LOGGING_EAP_MSG_FORWARDING
+                log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
+                    "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
+            #endif
+        }
     }
+
+    pthread_mutex_unlock(&mutex_callback_list); 
 }
 
 // In order to enable the commands in the commmand buffer to be sent to the
@@ -539,7 +613,7 @@ int command_buf_resume_control(uint8_t appid)
 {
     tsc_command_t command = {0};
     traffic_signal_status_t signal_status;
-    app_obj_t *app_obj = app_obj_search_by_id(appid);
+    app_obj_t *app_obj = get_app_obj_by_appID(appid);
     if (app_obj == NULL || app_obj->dontSend2TC == 1)
         return -1;
     get_traffic_signal_status(&signal_status);

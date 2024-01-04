@@ -3,12 +3,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
-                     // ‘strptime’
+#include <unistd.h>
+#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function ‘strptime’
 #include <time.h>
 #include "j2735_map.h"
 #include "j2735_msg.h"
 #include "util.h"
+
 #define FILE_PATH "./"
 #define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
@@ -71,6 +72,7 @@ typedef enum event_type {
     EVENT_TRAFFIC_SIGNAL_COMMAND_TX = 6,
     EVENT_CAMERA_PACKET_RX = 7,
     EVENT_REGISTRATION = 8,
+    EVENT_MIDDLEWARE_RESTART,   /* enum will auto increase */ 
     EVENT_TYPE_NUMBER
 } event_type_t;
 
@@ -105,6 +107,13 @@ typedef enum signalstatus {
     PEDESTRIAN_RED = 128,
 } SignalStatus_t;
 
+typedef struct external_app_info_type {
+    pid_t pid;              //process id of the external application    
+    int notify_fd;          //middleware use this socket_fd to notify the app
+    int interact_fd;        //app will use this socket_fd to call middleware-api
+    uint8_t heartbeat_rc;   //heartbeat record, updated each time app send req to MW
+} ea_info_t;
+
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
     uint8_t dontSend2TC;
@@ -120,6 +129,8 @@ typedef struct application_object {
     int (*on_camera_packet_rx)(void *);
     int (*on_traffic_signal_command_tx)(void *);
     int (*on_registration)(void *);
+    int (*on_middleware_restart)(void *);
+    ea_info_t *ea_info_p;   //if this is not NULL, indicate this is an external app
     struct application_object *next;
 } app_obj_t;
 
@@ -143,6 +154,7 @@ typedef struct event_callback {
     uint8_t priority;
     int (*callback)(void *);
     struct event_callback *next;
+    app_obj_t *app_obj_p;
 } event_callback_t;
 
 typedef struct OBU_record_common_field {
@@ -172,7 +184,7 @@ typedef struct OBU_record_ring {
 
 typedef struct application_private_space {
     uint8_t static_space[STATIC_APP_PRIVATE_SPACE_CAPACITY];
-    uint8_t *dynamic_space;
+    //uint8_t *dynamic_space;   //not in use currently
 } app_private_space_t;
 
 typedef enum {
@@ -184,12 +196,12 @@ typedef enum {
 
 typedef struct OBU_object {
     char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
-    vehicle_type_t vehicle_type;
-    OBU_object_status status;
+    vehicle_type_t vehicle_type;    //enum type
+    OBU_object_status status;       //enum type
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
-    struct OBU_object *prev;
-    struct OBU_object *next;
+    struct OBU_object *prev;    //should not pass to external app
+    struct OBU_object *next;    //should not pass to external app
 } OBU_object_t;
 
 typedef struct traffic_signal_packet {
@@ -324,17 +336,45 @@ typedef struct V2R_common_field {
 typedef struct C2R_app_section {
     uint32_t payload_len;
     char *payload;
-    uint8_t com_id;
+    //uint8_t com_id;
 } C2R_app_section_t;
 
 typedef struct V2R_app_section {
     uint32_t payload_len;
     char *payload;
-    uint8_t com_id;
+    //uint8_t com_id;
     OBU_object_t *OBU_object;
     DSRCmsgID msgID;
-    void *data;
+    void *data;     //use j2735 lib to encode and decodes
 } V2R_app_section_t;
+
+typedef struct V2R_self_defined_section {
+    char obu_name[OBU_NAME_MAX_LEN];
+    uint8_t vehical_type; 
+    //char time_stamp[TIMESTAMP_LEN];
+    time_t time_second;
+    float lon;
+    float lat;
+    uint8_t speed;
+    uint8_t direction;
+    DSRCmsgID msgID;    /* id of bsm or srm */
+    size_t data_len;     /* len of srm_msg or bsm_msg */
+    void* data;          /* srm_msg or bsm_msg */
+    union{
+        struct{  //EVSP
+            uint8_t evsp_on_duty_flag;
+            uint8_t evsp_weight;
+            uint8_t evsp_error_code;
+        };
+
+        struct{  //TSP
+            uint8_t tsp_on_duty_flag;
+            uint8_t tsp_passenger_num;
+        };
+
+        //struct{ }; //for future new app
+    };
+} V2R_self_defined_section_t;
 
 typedef struct tsc_command {
     uint8_t app_id;

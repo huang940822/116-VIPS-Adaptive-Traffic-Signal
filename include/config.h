@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 #include "typedefine.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
 #define VMS_CONFIG_FILE FILE_PATH "config/vms_config.txt"
@@ -116,4 +119,4 @@ bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
 bool read_string_from_config_line(char *config_line, char *val);
 bool read_string_arr_from_config_line(char *config_line, void *val, const char delim[]);
 
-#endif
+#endif /* CONFIG_H */

@@ -10,6 +10,34 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
+struct timespec trc_f1b;
+struct timespec trc_f2b;
+struct timespec trc_f3b;
+struct timespec trc_f4b;
+struct timespec trc_f5b;
+struct timespec trc_f6b;
+struct timespec trc_f1e;
+struct timespec trc_f2e;
+struct timespec trc_f3e;
+struct timespec trc_f4e;
+struct timespec trc_f5e;
+struct timespec trc_f6e;
+
+struct timespec trc1;
+struct timespec trc2;
+struct timespec trc3;
+struct timespec trc4;
+struct timespec trc5;
+struct timespec trc6;
+struct timespec trc7;
+struct timespec trc8;
+
+struct timespec thread_trc0;
+struct timespec thread_trc1;
+struct timespec thread_trc2;
+struct timespec thread_trc3;
+struct timespec thread_trc4;
+
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 
 char log_file_name[LOG_FILE_NAME_LEN];
@@ -179,4 +207,102 @@ void log_file_write_fatal_error(const char *format, ...)
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
+}
+
+
+int log_file_write_with_errno(const char *format, ...)
+{  
+    if( ENABLE_FATAL_WITH_ERR_CODE_LOG ){
+        if( SWITCH_FATAL_WITH_ERR_CODE_LOG_TO_PRINT ){
+            char* errno_str = strerror(errno);
+            if( !errno_str ) errno_str = "undefined/zero errno";
+            
+            // timestamp
+            time_t rawtime;
+            struct tm *info;
+            char buffer[20];
+            memset(buffer, 0, sizeof(buffer));
+            time(&rawtime);
+            info = localtime(&rawtime);
+            strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", info);
+
+            // content
+            char log_content[LOG_CONTENT_LEN + 1];
+            memset(log_content, 0, sizeof(log_content));
+            va_list list;
+            va_start(list, format);
+            vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
+            va_end(list);
+            
+            fprintf(stderr, "%s\n", buffer);
+            fprintf(stderr, "strerror() shows: %s\n", errno_str);
+            fprintf(stderr, "fatal error: \n%s\n", log_content);
+            fflush(stderr);
+        }
+        else{
+            ;//log to a file
+        }
+    }
+
+    return 0;
+}
+
+
+struct timespec get_timespec_diff(struct timespec bgn, struct timespec end)
+{
+    struct timespec temp;
+    if ((end.tv_nsec - bgn.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec - bgn.tv_nsec;
+    } 
+    else {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec;
+        temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
+    }
+    return temp;
+}
+
+uint32_t get_us_diff(struct timespec bgn, struct timespec end)
+{
+    struct timespec temp;
+    if ((end.tv_nsec - bgn.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec - bgn.tv_nsec;
+    } 
+    else {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec;
+        temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
+    }
+    return (uint32_t)((temp.tv_sec)*1000000 + (temp.tv_nsec)/1000);
+}
+
+void record_current_timespec(struct timespec* now_p)
+{
+    clock_gettime(CLOCK_MONOTONIC, now_p);
+}
+
+void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg)
+{   
+    if(msg)
+        fprintf(stderr, "%s ", msg);
+    
+    struct timespec temp;
+    if ((end.tv_nsec - bgn.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec - bgn.tv_nsec;
+    } 
+    else {
+        temp.tv_sec = end.tv_sec - bgn.tv_sec;
+        temp.tv_nsec = end.tv_nsec - bgn.tv_nsec;
+    }
+
+    fprintf(stderr, "s: %ld , ns: %ld\n", temp.tv_sec, temp.tv_nsec);
+}
+
+void print_single_timespec_to_stdout(struct timespec trc, char* msg)
+{   
+    if(msg)
+        fprintf(stdout, "%s ", msg);
+    
+    fprintf(stdout, "s: %ld , ns: %ld\n", trc.tv_sec, trc.tv_nsec);
 }
