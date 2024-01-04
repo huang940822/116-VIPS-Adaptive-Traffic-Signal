@@ -16,6 +16,16 @@
  * the two should be "THE SAME" !! */
 
 #define USING_NON_ACK_CONFIG 1
+
+/* 
+* 依據老師的建議，
+* struct: V2R_app_section_t 最好不要直接傳出去給外部 app
+* 因此多了這個 macro 的設定。
+* if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA == 1,
+* middleware will send struct: V2R_app_section_t   to external app
+* instead if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA == 0,
+* middleware will send struct: V2R_self_defined_section_t   to external app
+* */
 #define FORWARD_SAME_FORMAT_OBU_MSG_TO_EA 1
 
 // logging options

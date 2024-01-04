@@ -66,7 +66,11 @@ int inner_set_external_app_callback_by_mask(app_obj_t* app_obj_p, uint64_t mask)
     }
 
     if( mask & ( 0x1 << EVENT_OBU_PACKET_RX ) ){
-        app_obj_p->on_OBU_packet_rx = cbmsg_forward_fp_arr[EVENT_OBU_PACKET_RX];
+        #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
+            app_obj_p->on_OBU_packet_rx = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT);
+        #else
+            app_obj_p->on_OBU_packet_rx = cbmsg_forward_fp_arr[EVENT_OBU_PACKET_RX];
+        #endif
     }
     if( mask & ( 0x1 << EVENT_OBU_PACKET_TX ) ){
         app_obj_p->on_OBU_packet_tx = cbmsg_forward_fp_arr[EVENT_OBU_PACKET_TX];

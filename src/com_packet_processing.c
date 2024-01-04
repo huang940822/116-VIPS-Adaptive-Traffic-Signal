@@ -486,24 +486,28 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     get_payload(&app_section, msgf);
     
-    /* 依據老師的要求, for external applcation, 
-     * we do not send V2R_app_section_t
-     * instead, we send V2R_self_defined_section_t.
-     * In addition, to handle j2735 decoding issue, 
-     * we will send msg->msg and msg->msg_len to external-library,
-     * the library will decode the msg and complete the V2R_self_defined_section_t
-     * at the external client side.
-     * */
-    V2R_self_defined_section_t V2R_self_defined_section;
-    fill_V2R_self_defined_section(&V2R_self_defined_section, object, &app_section);
-    V2R_self_defined_section.data = msg->msg;
-    V2R_self_defined_section.data_len = msg->msg_len;
-
-    /* 另外也保留能傳送 V2R_app_section_t 給外部 APP 的 code */
+    void* callback_parameter_pointer = 0;    
     #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
+        /* 有保留能傳送 struct: V2R_app_section_t 給外部 APP 的 code */
         wrapper_arg_for_obu_packet_t wrapper_arg_for_obu;
         wrapper_arg_for_obu.msg_p = msg;
         wrapper_arg_for_obu.app_section_p = &app_section;
+        callback_parameter_pointer = &wrapper_arg_for_obu;
+    #else
+        /* 依據老師的建議, 對於 external applcation, 如果有隱私上的疑慮, 可以 
+        * 改傳 struct: V2R_self_defined_section_t
+        * we do not send V2R_app_section_t
+        * instead, we send V2R_self_defined_section_t.
+        * In addition, to handle j2735 decoding issue, 
+        * we will send msg->msg and msg->msg_len to external-library,
+        * the library will decode the msg and complete the V2R_self_defined_section_t
+        * at the external client side.
+        * */
+        V2R_self_defined_section_t V2R_self_defined_section;
+        fill_V2R_self_defined_section(&V2R_self_defined_section, object, &app_section);
+        V2R_self_defined_section.data = msg->msg;
+        V2R_self_defined_section.data_len = msg->msg_len;
+        callback_parameter_pointer = &V2R_self_defined_section;
     #endif
 
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
@@ -517,11 +521,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
             && msgf->messageId == current->next->event_callback_id.u.msg_id) 
         {   
             if(proxy_handling_app_p->ea_info_p){
-                #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
-                    EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT)(&wrapper_arg_for_obu);
-                #else
-                    current->next->callback( &V2R_self_defined_section );
-                #endif
+                current->next->callback( callback_parameter_pointer );
             }
             else{
                 current->next->callback( (void *)&app_section ); /* original internal APPs */
