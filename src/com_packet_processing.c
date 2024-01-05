@@ -322,18 +322,6 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         {
             proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) &app_section);  // what com_id for?
-
-            /* log the event message forwarding action */
-            if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
-                #if ENABLE_PRINTING_EAP_MSG_FORWARDING
-                    printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                        "EVENT_CLOUD_PACKET_RX", proxy_handling_app_p->id);
-                #endif
-                #if ENABLE_LOGGING_EAP_MSG_FORWARDING
-                    log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                        "EVENT_CLOUD_PACKET_RX", proxy_handling_app_p->id);
-                #endif
-            }
         }
         current = current->next;
     }
@@ -494,10 +482,10 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         wrapper_arg_for_obu.app_section_p = &app_section;
         callback_parameter_pointer = &wrapper_arg_for_obu;
     #else
-        /* 依據老師的建議, 對於 external applcation, 如果有隱私上的疑慮, 可以 
-        * 改傳 struct: V2R_self_defined_section_t
-        * we do not send V2R_app_section_t
-        * instead, we send V2R_self_defined_section_t.
+        /* * 依據老師的 idea，在未來，struct: V2R_app_section_t 
+        * 可能不會直接傳出去給外部 app
+        * 因此多了定義了這個 struct: V2R_self_defined_section_t
+        * 用來傳給外部 APP
         * In addition, to handle j2735 decoding issue, 
         * we will send msg->msg and msg->msg_len to external-library,
         * the library will decode the msg and complete the V2R_self_defined_section_t
@@ -525,18 +513,6 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
             }
             else{
                 current->next->callback( (void *)&app_section ); /* original internal APPs */
-            }
-
-            /* log the event message forwarding action */
-            if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
-                #if ENABLE_PRINTING_EAP_MSG_FORWARDING
-                    printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                        "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
-                #endif
-                #if ENABLE_LOGGING_EAP_MSG_FORWARDING
-                    log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                        "EVENT_OBU_PACKET_RX", proxy_handling_app_p->id);
-                #endif
             }
         }
         current = current->next;
@@ -618,18 +594,6 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
             // }
             proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) obstaclelist);
-
-            /* log the event message forwarding action */
-            if(proxy_handling_app_p && proxy_handling_app_p->ea_info_p){
-                #if ENABLE_PRINTING_EAP_MSG_FORWARDING
-                    printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                        "EVENT_CAMERA_PACKET_RX", proxy_handling_app_p->id);
-                #endif
-                #if ENABLE_LOGGING_EAP_MSG_FORWARDING
-                    log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                        "EVENT_CAMERA_PACKET_RX", proxy_handling_app_p->id);
-                #endif
-            }
         }
         current = current->next;
     }

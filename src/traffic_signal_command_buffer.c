@@ -299,18 +299,6 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         proxy_handling_app_p = current->next->app_obj_p;
         current->next->callback((void *) &command);
         current = current->next;
-        
-        /* log the event message forwarding action */
-        if(proxy_handling_app_p->ea_info_p){
-            #if ENABLE_PRINTING_EAP_MSG_FORWARDING
-                printf("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                    "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
-            #endif
-            #if ENABLE_LOGGING_EAP_MSG_FORWARDING
-                log_file_write("[EAP msg] event message %s is forwarded to appID:%d\n", 
-                    "EVENT_TRAFFIC_SIGNAL_COMMAND_TX", proxy_handling_app_p->id);
-            #endif
-        }
     }
 
     pthread_mutex_unlock(&mutex_callback_list); 
