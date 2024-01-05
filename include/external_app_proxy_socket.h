@@ -18,13 +18,13 @@
 #define USING_NON_ACK_CONFIG 1
 
 /* 
-* 依據老師的建議，
-* struct: V2R_app_section_t 最好不要直接傳出去給外部 app
+* 依據老師的 idea，在未來，struct: V2R_app_section_t 
+* 可能不會直接傳出去給外部 app
 * 因此多了這個 macro 的設定。
 * if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA == 1,
-* middleware will send struct: V2R_app_section_t   to external app
+* middleware will send struct: V2R_app_section_t  to external app
 * instead if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA == 0,
-* middleware will send struct: V2R_self_defined_section_t   to external app
+* middleware will send struct: V2R_self_defined_section_t  to external app
 * */
 #define FORWARD_SAME_FORMAT_OBU_MSG_TO_EA 1
 
@@ -91,10 +91,6 @@ typedef struct _packet_header_from_proxy_t {
         event_type_t callback_event; //event id
         int ret_val;        //return value of api-request
     };
-    struct{
-        long glb_sec;
-        long glb_nsec;
-    };
 } packet_header_from_proxy_t;
 
 typedef struct _packet_header_to_proxy_t {
@@ -132,6 +128,9 @@ enum ea_callback_api_id_definition_enum{
     /* traffic_signal_command_buffer.h */
     API_ID_OF(command_buf_insert_effect_time),
     API_ID_OF(command_buf_insert_adjustment),
+    API_ID_OF(command_buf_delete_OBU),
+    API_ID_OF(command_buf_resume_control),
+    API_ID_OF(command_buf_search),
     
     /* vms.h */
     API_ID_OF(vms_request_start),
@@ -162,7 +161,7 @@ enum ea_callback_api_id_definition_enum{
     NUM_OF_API_ID_DEFININITION,  
 };
 
-extern char* api_id_str_arr[];
+char* get_str_api_id(int api_id);
 char* get_str_by_err_code(int err_code);
 
 /* since application might implement multi-thread program, ,

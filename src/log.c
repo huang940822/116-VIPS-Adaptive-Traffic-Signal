@@ -10,34 +10,6 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
-struct timespec trc_f1b;
-struct timespec trc_f2b;
-struct timespec trc_f3b;
-struct timespec trc_f4b;
-struct timespec trc_f5b;
-struct timespec trc_f6b;
-struct timespec trc_f1e;
-struct timespec trc_f2e;
-struct timespec trc_f3e;
-struct timespec trc_f4e;
-struct timespec trc_f5e;
-struct timespec trc_f6e;
-
-struct timespec trc1;
-struct timespec trc2;
-struct timespec trc3;
-struct timespec trc4;
-struct timespec trc5;
-struct timespec trc6;
-struct timespec trc7;
-struct timespec trc8;
-
-struct timespec thread_trc0;
-struct timespec thread_trc1;
-struct timespec thread_trc2;
-struct timespec thread_trc3;
-struct timespec thread_trc4;
-
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 
 char log_file_name[LOG_FILE_NAME_LEN];

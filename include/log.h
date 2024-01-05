@@ -15,39 +15,11 @@
 #define ERR_MSG_SZ 128
 #define LOG_CONTENT_LEN 2048
 
-#define log_snprintf(log_content, ...)                                                        \
-    do {                                                                                      \
-        size_t _len = strlen(log_content);                                                    \
+#define log_snprintf(log_content, ...)                                     \
+    do {                                                                   \
+        size_t _len = strlen(log_content);                                 \
         snprintf(log_content + _len, LOG_CONTENT_LEN - _len, __VA_ARGS__); \
     } while (0)
-
-extern struct timespec trc_f1b;
-extern struct timespec trc_f2b;
-extern struct timespec trc_f3b;
-extern struct timespec trc_f4b;
-extern struct timespec trc_f5b;
-extern struct timespec trc_f6b;
-extern struct timespec trc_f1e;
-extern struct timespec trc_f2e;
-extern struct timespec trc_f3e;
-extern struct timespec trc_f4e;
-extern struct timespec trc_f5e;
-extern struct timespec trc_f6e;
-
-extern struct timespec trc1;
-extern struct timespec trc2;
-extern struct timespec trc3;
-extern struct timespec trc4;
-extern struct timespec trc5;
-extern struct timespec trc6;
-extern struct timespec trc7;
-extern struct timespec trc8;
-
-extern struct timespec thread_trc0;
-extern struct timespec thread_trc1;
-extern struct timespec thread_trc2;
-extern struct timespec thread_trc3;
-extern struct timespec thread_trc4;
 
 void log_file_init();
 void log_file_name_update();

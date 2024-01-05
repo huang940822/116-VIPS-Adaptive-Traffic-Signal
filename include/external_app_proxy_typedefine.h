@@ -41,6 +41,7 @@ enum ea_err_definition_enum {
     EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO,
     EAL_ERR_IN_MIDDLEWARE_API_INTERNAL,
     EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP,
+    EAL_ERR_IN_MIDDLEWARE_COMMAND_BUF_RESUME_CTL,
     
     /* this tag should always be at the last */
     BOT_OF_EA_ERR_DEF,

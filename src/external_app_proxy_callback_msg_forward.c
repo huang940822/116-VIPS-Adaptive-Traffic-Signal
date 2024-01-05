@@ -129,10 +129,6 @@ int simple_send_notify_packet_header(int fd, event_type_t event)
     packet_header_from_proxy_t header;
     header.packet_type = EA_PACKET_TYPE_NM_NTF;
     header.callback_event = event; 
-    
-    //for test
-    header.glb_sec = trc5.tv_sec;
-    header.glb_nsec = trc5.tv_nsec;
 
     return eap_send_packet_to_unix_sk(fd, &header, sizeof(header));
 }
@@ -559,23 +555,6 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart)(void *app_section)
     return ret;
 }
 
-/* NOTICE, if you add new event callback, you NEED to add a entry for the cbmsg_forward function */
-/* "eap" stands for "external application proxy" */
-/* "cbmsg" stands for "callback message" */
-eap_cbmsg_forward_fp cbmsg_forward_fp_arr[EVENT_TYPE_NUMBER] = {
-    [EVENT_OBU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx),
-    [EVENT_OBU_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx),
-    [EVENT_RSU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_rx),
-    [EVENT_RSU_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_tx),
-    [EVENT_CLOUD_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_rx),
-    [EVENT_CLOUD_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_tx),
-    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_traffic_signal_command_tx),
-    [EVENT_CAMERA_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_camera_packet_rx),
-    [EVENT_REGISTRATION] = EAP_CBMSG_FORWARD_FUNC_OF(on_registration),
-    [EVENT_MIDDLEWARE_RESTART] = EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart),
-};
-
-
 #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
 
 /* Below are old version of OBU_packet msg forward function 
@@ -699,3 +678,25 @@ int EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx_SAME_FORMAT)(void *app_section)
 }
 
 #endif
+
+
+/* NOTICE, if you add new event callback, you NEED to add a entry for the cbmsg_forward function */
+/* "eap" stands for "external application proxy" */
+/* "cbmsg" stands for "callback message" */
+eap_cbmsg_forward_fp cbmsg_forward_fp_arr[EVENT_TYPE_NUMBER] = {
+    #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
+        [EVENT_OBU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx_SAME_FORMAT),
+    #else
+        [EVENT_OBU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_rx),
+    #endif
+
+    [EVENT_OBU_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_OBU_packet_tx),
+    [EVENT_RSU_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_rx),
+    [EVENT_RSU_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_RSU_packet_tx),
+    [EVENT_CLOUD_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_rx),
+    [EVENT_CLOUD_PACKET_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_cloud_packet_tx),
+    [EVENT_TRAFFIC_SIGNAL_COMMAND_TX] = EAP_CBMSG_FORWARD_FUNC_OF(on_traffic_signal_command_tx),
+    [EVENT_CAMERA_PACKET_RX] = EAP_CBMSG_FORWARD_FUNC_OF(on_camera_packet_rx),
+    [EVENT_REGISTRATION] = EAP_CBMSG_FORWARD_FUNC_OF(on_registration),
+    [EVENT_MIDDLEWARE_RESTART] = EAP_CBMSG_FORWARD_FUNC_OF(on_middleware_restart),
+};

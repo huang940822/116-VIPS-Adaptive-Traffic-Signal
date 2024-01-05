@@ -445,11 +445,11 @@ int32_t simple_send_request_header_to_proxy(int api_id)
     errno = 0;
     ret = send(interact_fd, &header, sizeof(header), MSG_NOSIGNAL);
     current_errno = errno;
-    log_file_write("%s: api->%s, send() ret = %d\n", __func__, api_id_str_arr[api_id], ret);
+    log_file_write("%s: api->%s, send() ret = %d\n", __func__, get_str_api_id(api_id), ret);
     if( ret == -1 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("%s: api->%s, send() ret = %d\n", 
-                                        __func__, api_id_str_arr[api_id], ret);
+                                        __func__, get_str_api_id(api_id), ret);
         #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
@@ -467,7 +467,7 @@ int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int
     ret = recv(interact_fd, ack_p, sizeof(packet_header_from_proxy_t), 0);
     current_errno = errno;
 
-    log_file_write("%s: api->%s, recv() ret = %d\n", __func__, api_id_str_arr[api_id], ret);
+    log_file_write("%s: api->%s, recv() ret = %d\n", __func__, get_str_api_id(api_id), ret);
     if( ret == 0 ){   /* meaning that remote client might close the fd */
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
         log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret 0 (probably disconnected)\n");
@@ -482,7 +482,7 @@ int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int
     }
     else if( ack_p->packet_type != EA_PACKET_TYPE_ACK ){
         #if ENABLE_LOGGING_EALIB_DETECTED_ERR
-        log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK\n");
+        log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK, it's %d\n", __func__, ack_p->packet_type);
         #endif
         ret = -EAL_ERR_PACKET_TYPE_NOT_MATCH;
     }
@@ -565,6 +565,9 @@ char* api_id_str_arr[] = {
     /* traffic_signal_command_buffer.h */
     [API_ID_OF(command_buf_insert_effect_time)] = "command_buf_insert_effect_time",
     [API_ID_OF(command_buf_insert_adjustment)] = "command_buf_insert_adjustment",
+    [API_ID_OF(command_buf_delete_OBU)] = "command_buf_delete_OBU",
+    [API_ID_OF(command_buf_resume_control)] = "command_buf_resume_control",
+    [API_ID_OF(command_buf_search)] = "command_buf_search",
 
     /* vms.h */    
     [API_ID_OF(vms_request_start)] = "vms_request_start",
@@ -591,6 +594,16 @@ char* api_id_str_arr[] = {
     [API_ID_OF(get_next_SubPhaseID)] = "get_next_SubPhaseID",
     [API_ID_OF(get_prev_SubPhaseID)] = "get_prev_SubPhaseID",
 };
+
+char* get_str_api_id(int api_id)
+{
+    if(api_id >= NUM_OF_API_ID_DEFININITION || api_id < 0){
+        return "BAD api_id";
+    }
+    else{
+        return api_id_str_arr[api_id];
+    }
+}
 
 char* ack_ret_val_str_arr[] = {
     /* no err */
@@ -627,6 +640,7 @@ char* ack_ret_val_str_arr[] = {
     [EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO",
     [EAL_ERR_IN_MIDDLEWARE_API_INTERNAL -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_API_INTERNAL",
     [EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_HEARTBEAT_UPDATE_FOR_APP",
+    [EAL_ERR_IN_MIDDLEWARE_COMMAND_BUF_RESUME_CTL -EAL_ERR_RESERVE] = "EAL_ERR_IN_MIDDLEWARE_COMMAND_BUF_RESUME_CTL",
 };
 
 char* get_str_by_err_code(int err_code)

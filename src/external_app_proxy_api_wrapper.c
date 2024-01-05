@@ -133,11 +133,11 @@ int API_WRAPPER_OF(cloud_packet_tx)(int client_fd)
 
     // ret = eap_recv_packet_from_unix_sk(client_fd, specific_field, sizeof(payload.len));
     // if( ret ){
-    //     #ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+    //     #if ENABLE_PRINTING_EAP_DETECTED_ERR
     //     fprintf(stderr, "[EAP MSG] %s: get specific_field from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
-    //     #ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+    //     #if ENABLE_LOGGING_EAP_DETECTED_ERR
     //     log_file_write("[EAP MSG] %s: get specific_field from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
@@ -179,11 +179,11 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
 
     // ret = eap_recv_packet_from_unix_sk(client_fd, buf, sizeof(payload.buf_len));
     // if( ret ){
-    //     #ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+    //     #if ENABLE_PRINTING_EAP_DETECTED_ERR
     //     fprintf(stderr, "[EAP MSG] %s: get buf from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
-    //     #ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+    //     #if ENABLE_LOGGING_EAP_DETECTED_ERR
     //     log_file_write("[EAP MSG] %s: get buf from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
@@ -198,10 +198,10 @@ int API_WRAPPER_OF(OBU_j2735_tx)(int client_fd)
     if (ret == COM_IO_ERR) {
         ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
 
-#ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+#if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr, "[EAP MSG] err: %s: com_send() ret:%d\n", __func__, ret);
 #endif
-#ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+#if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("[EAP MSG] err: %s: com_send() ret:%d\n", __func__, ret);
 #endif
     } else {
@@ -236,11 +236,11 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
 
     // ret = eap_recv_packet_from_unix_sk(client_fd, write_buf, sizeof(payload.write_buf_len));
     // if( ret ){
-    //     #ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+    //     #if ENABLE_PRINTING_EAP_DETECTED_ERR
     //     fprintf(stderr, "[EAP MSG] %s: get write_buf from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
-    //     #ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+    //     #if ENABLE_LOGGING_EAP_DETECTED_ERR
     //     log_file_write("[EAP MSG] %s: get write_buf from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
@@ -255,10 +255,10 @@ int API_WRAPPER_OF(OBU_packet_tx)(int client_fd)
     if (ret == COM_IO_ERR) {
         ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
 
-#ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+#if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr, "[EAP MSG] err: %s: com_send() ret:%d\n", __func__, ret);
 #endif
-#ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+#if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("[EAP MSG] err: %s: com_send() ret:%d\n", __func__, ret);
 #endif
     } else {
@@ -292,11 +292,11 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
 
     // ret = eap_recv_packet_from_unix_sk(client_fd, buf, sizeof(payload.buf_len));
     // if( ret ){
-    //     #ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+    //     #if ENABLE_PRINTING_EAP_DETECTED_ERR
     //     fprintf(stderr, "[EAP MSG] %s: get buf from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
-    //     #ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+    //     #if ENABLE_LOGGING_EAP_DETECTED_ERR
     //     log_file_write("[EAP MSG] %s: get buf from client_fd:%d, ret = %d\n",
     //             __func__, client_fd, ret);
     //     #endif
@@ -311,10 +311,10 @@ int API_WRAPPER_OF(remote_com_send)(int client_fd)
     if (ret == COM_IO_ERR) {
         ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_ERR_COM_IO;
 
-#ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
+#if ENABLE_PRINTING_EAP_DETECTED_ERR
         fprintf(stderr, "[EAP MSG] err: %s: com_send() ret:%d\n", __func__, ret);
 #endif
-#ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
+#if ENABLE_LOGGING_EAP_DETECTED_ERR
         log_file_write("[EAP MSG] err: %s: com_send() ret:%d\n", __func__, ret);
 #endif
     } else {
@@ -371,7 +371,7 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
     /* WARNNING!!!
        except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time_needAck() in ea_library
+       "MATCH" the "read" and "send" pairs in ea_library
     */
     struct {
         tsc_command_t tsc_cmd;
@@ -387,12 +387,12 @@ int API_WRAPPER_OF(command_buf_insert_effect_time)(int client_fd)
     if (ret) {
         ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
 
-#ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
-        fprintf(stderr, "[EAP MSG] %s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
-#endif
-#ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
-        log_file_write("[EAP MSG] %s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
-#endif
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+            fprintf(stderr, "[EAP MSG] %s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
+            log_file_write("[EAP MSG] %s: command_buf_insert_effect_time ret :%d\n", __func__, ret);
+        #endif
     } else {
         ack_ret_val = EAL_ERR_OK;
     }
@@ -411,7 +411,7 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
     /* WARNNING!!!
        except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
        make sure the "payload" you "recv" and "ack_payload" you "send",
-       "MATCH" the "read" and "send" pairs in command_buf_insert_effect_time() in ea_library
+       "MATCH" the "read" and "send" pairs in ea_library
     */
     struct {
         tsc_command_t tsc_cmd;
@@ -427,12 +427,12 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
     if (ret) {
         ack_ret_val = -EAL_ERR_IN_MIDDLEWARE_API_INTERNAL;
 
-#ifdef ENABLE_PRINTING_EAP_DETECTED_ERR
-        fprintf(stderr, "[EAP MSG] %s: command_buf_insert_adjustment ret :%d\n", __func__, ret);
-#endif
-#ifdef ENABLE_LOGGING_EAP_DETECTED_ERR
-        log_file_write("[EAP MSG] %s: command_buf_insert_adjustment ret :%d\n", __func__, ret);
-#endif
+        #if ENABLE_PRINTING_EAP_DETECTED_ERR
+            fprintf(stderr, "[EAP MSG] %s: command_buf_insert_adjustment ret :%d\n", __func__, ret);
+        #endif
+        #if ENABLE_LOGGING_EAP_DETECTED_ERR
+            log_file_write("[EAP MSG] %s: command_buf_insert_adjustment ret :%d\n", __func__, ret);
+        #endif
     } else {
         ack_ret_val = EAL_ERR_OK;
     }
@@ -440,6 +440,105 @@ int API_WRAPPER_OF(command_buf_insert_adjustment)(int client_fd)
     ret = simple_send_ack_to_app(client_fd, ack_ret_val);
 
     /* no ack_payload for this api*/
+    return ret;
+}
+int API_WRAPPER_OF(command_buf_delete_OBU)(int client_fd)
+{
+    /* WARNNING!!!
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in ea_library
+    */
+    struct {
+        char OBU_name[ID_MAX_LEN + 1];
+    } payload;
+
+    int ret = simple_recv_packet_from_app(client_fd, &payload, sizeof(payload), "payload");
+    if (ret)
+        return ret;
+
+    char host_OBU_name[ID_MAX_LEN + 1];
+    strncpy(host_OBU_name, payload.OBU_name, ID_MAX_LEN + 1);
+    
+    /* call the actual function */
+    command_buf_delete_OBU(host_OBU_name);
+
+#if USING_NON_ACK_CONFIG
+    ;  // do not send ack
+#else
+    int ack_ret_val = EAL_ERR_OK;
+    ret = simple_send_ack_to_app(client_fd, ack_ret_val);
+#endif
+
+    /* no ack_payload for this api*/
+    return ret;
+}
+int API_WRAPPER_OF(command_buf_resume_control)(int client_fd)
+{
+    /* WARNNING!!!
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in ea_library
+    */
+    struct {
+        uint8_t appid;
+    } payload;
+
+    int ret = simple_recv_packet_from_app(client_fd, &payload, sizeof(payload), "payload");
+    if (ret)
+        return ret;
+
+    /* call the actual function */
+    int ack_ret_val;
+    ret = command_buf_resume_control(payload.appid);
+    if(ret){
+        ack_ret_val = EAL_ERR_IN_MIDDLEWARE_COMMAND_BUF_RESUME_CTL;
+    }
+    else{
+        ack_ret_val = EAL_ERR_OK;
+    }
+
+#if USING_NON_ACK_CONFIG
+    ;  // do not send ack
+#else
+    ret = simple_send_ack_to_app(client_fd, ack_ret_val);
+#endif
+
+    /* no ack_payload for this api*/
+    return ret;
+}
+int API_WRAPPER_OF(command_buf_search)(int client_fd)
+{
+    /* WARNNING!!!
+       except for packet_header_to_proxy_t, which is read in handle_registered_client_packet(),
+       make sure the "payload" you "recv" and "ack_payload" you "send",
+       "MATCH" the "read" and "send" pairs in command_buf_search in ea_library
+    */
+    struct {
+        int cycle;
+        int subphaseID;
+    } payload;
+
+    int ret = eap_recv_packet_from_unix_sk(client_fd, &payload, sizeof(payload));
+    if (PRINT_API_MSG_FOR_DEBUG)
+        fprintf(stdout, "%s: get payload from client_fd:%d, ret = %d\n",
+                __func__, client_fd, ret);
+    if (ret) {
+        return ret;
+    }
+
+    struct {
+        tsc_command_object_t command_obj;
+    } ack_payload;
+
+    /* call the actual function */
+    command_buf_search(payload.cycle, payload.subphaseID, &(ack_payload.command_obj) );
+    
+    ret = simple_send_ack_to_app(client_fd, EAL_ERR_OK);
+    if (ret) {
+        return ret;
+    }
+    ret = simple_sent_packet_to_app(client_fd, &ack_payload, sizeof(ack_payload), "ack_payload");
     return ret;
 }
 
@@ -973,6 +1072,9 @@ eap_api_wrapper_fp api_wrapper_fp_arr[] = {
     /* traffic_signal_command_buffer.h */
     [API_ID_OF(command_buf_insert_effect_time)] = API_WRAPPER_OF(command_buf_insert_effect_time),
     [API_ID_OF(command_buf_insert_adjustment)] = API_WRAPPER_OF(command_buf_insert_adjustment),
+    [API_ID_OF(command_buf_delete_OBU)] = API_WRAPPER_OF(command_buf_delete_OBU),
+    [API_ID_OF(command_buf_resume_control)] = API_WRAPPER_OF(command_buf_resume_control),
+    [API_ID_OF(command_buf_search)] = API_WRAPPER_OF(command_buf_search),
 
     /* vms.h */
     [API_ID_OF(vms_request_start)] = API_WRAPPER_OF(vms_request_start),
