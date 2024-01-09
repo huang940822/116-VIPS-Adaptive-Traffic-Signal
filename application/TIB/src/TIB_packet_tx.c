@@ -81,6 +81,7 @@ void *SPaT_packet_tx_loop()
     uint8_t *tx_buf = NULL;
     int tx_buf_len = 0;
     int pior_stepID = -1;
+    int pior_second = -1;
     int fd = set_timer_fd(TIB_config.SPaT_packet_transfer_speed, "SPaT_packet_tx_loop");
 
     if (fd == -1) {
@@ -92,11 +93,13 @@ void *SPaT_packet_tx_loop()
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
         int stepID = get_current_step();
+        int second = get_current_second();
         // 在 stepID 換的時候更新
-        if (stepID != pior_stepID) {
+        if (stepID != pior_stepID || pior_second != second) {
             if (spat_msg_update(p_spat) < 0)
                 continue;
             pior_stepID = stepID;
+            pior_second = second;
         }
         // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);

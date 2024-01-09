@@ -9,6 +9,8 @@
 #include "TIB_config.h"
 #include "traffic_signal_status_updating.h"
 
+#define SPaT_Adjust_RegionalID 254
+
 time_t compare_to_tc_time;
 
 int spat_msg_init(SPAT **pp_spat);

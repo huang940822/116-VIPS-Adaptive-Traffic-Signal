@@ -18,6 +18,8 @@
     X(PedestrianGreen, 4)
 
 typedef enum GreenMask {
+    RedMask = 1,
+    YellowMask = 2,
 #define X(a, b) a##Mask = 1 << (b + 2),
     GreenSignalTable
 #undef X
@@ -32,6 +34,8 @@ typedef enum GreenIndex {
 
 int get_map_table(traffic_signal_status_t *signal_status, int map_table[COMPASS_NUM]);
 int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSignalMap[COMPASS_NUM]);
+void set_adjust_time(int time);
+int get_adjust_time();
 
 extern const uint8_t signal_mask_arr[NumOfGreen];
 extern const uint8_t GreenMask;

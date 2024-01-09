@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 #include "log.h"
 
 SPAT *p_spat;
+Reg_IntersectionState reg_spat[1];
 
 // #define SPaT_debug(...) printf(__VA_ARGS__)
 #define SPaT_debug(...) ;
@@ -160,6 +162,11 @@ int spat_msg_update(SPAT *pp_spat)
     SPaT_debug("SubPhaseID %d\n", signal_status.SubPhaseID);
     SPaT_debug("StepID %d\n", signal_status.StepID);
     SPaT_debug("StepSec %d\n", signal_status.StepSec);
+
+    static int adjust_time = 0;
+    static uint8_t pre_signal_table[8] = {0};
+    uint8_t signal_table[8] = {0};
+
     for (int i = 0; i < signal_status.SignalCount; i++) {
         for (int j = 0; j < sizeof(signal_mask_arr); j++) {
             if (greenSignalMap[i] & signal_mask_arr[j]) {
@@ -173,7 +180,7 @@ int spat_msg_update(SPAT *pp_spat)
                     statesList->count--;
                     continue;
                 }
-                if (signal_mask_arr[j] != PedestrianGreenMask) {
+                if (signal_mask_arr[j] != PedestrianGreenMask) {  // 行車綠
                     // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
                     greenType = signal_mask_arr[j] == RroundHeadGreenMask ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
                     if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
@@ -205,6 +212,8 @@ int spat_msg_update(SPAT *pp_spat)
                             after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                             SPaT_debug("red %d ", cur_subphase);
                             after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+
+                            signal_table[i] |= RroundHeadGreenMask;  // 綠燈
                             break;
                         case 4:
                             // 遲閉
@@ -222,6 +231,8 @@ int spat_msg_update(SPAT *pp_spat)
                                 after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                                 SPaT_debug("red %d ", cur_subphase);
                                 after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+
+                                signal_table[i] |= RroundHeadGreenMask;  // 綠燈
                             } else {
                                 offset = -(signal_status.plan[cur_subphase].Yellow - signal_status.StepSec);
 
@@ -231,6 +242,8 @@ int spat_msg_update(SPAT *pp_spat)
                                 after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
                                 SPaT_debug("green %d ", cur_subphase);
                                 after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+
+                                signal_table[i] |= YellowMask;  // 黃燈
                             }
                             break;
                         case 5:
@@ -242,6 +255,8 @@ int spat_msg_update(SPAT *pp_spat)
                             after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                             SPaT_debug("yellow %d ", cur_subphase);
                             after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
+
+                            signal_table[i] |= RedMask;  // 紅燈
                         }
                     } else {
                         SPaT_debug("---\n");
@@ -281,8 +296,10 @@ int spat_msg_update(SPAT *pp_spat)
                         after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                         SPaT_debug("yellow %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
+
+                        signal_table[i] |= RedMask;  // 紅燈
                     }
-                } else {
+                } else {  // 行人綠
                     if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
                         SPaT_debug("---++**\n");
                         int red_offset = signal_status.plan[cur_subphase].PedRed + signal_status.plan[cur_subphase].AllRed;
@@ -323,7 +340,7 @@ int spat_msg_update(SPAT *pp_spat)
                         default:
                             break;
                         }
-                    } else {
+                    } else {  // 目前分相第一步接是紅燈
                         SPaT_debug("---**\n");
                         state->state_time_speed.count++;
                         state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
@@ -369,6 +386,27 @@ int spat_msg_update(SPAT *pp_spat)
     }
     if (statesList->count == 0)
         return -1;
+
+    // 如果有延長縮短指令放在 regional
+    int_state->regional_option = FALSE;
+    if (memcmp(signal_table, pre_signal_table, sizeof(signal_table)) == 0) {
+        if (adjust_time == 0)
+            adjust_time = get_adjust_time();
+        if (adjust_time != 0) {
+            int_state->regional_option = TRUE;
+            int_state->regional.count = 1;
+            int_state->regional.tab = reg_spat;
+            int_state->regional.tab[0].regionId = SPaT_Adjust_RegionalID;
+
+            int tmp = htonl(adjust_time);
+            asn1_ostr_clone_cstr(&int_state->regional.tab[0].u.unknown, (char *) &tmp, sizeof(tmp));
+            printf("adjust time %d\n", adjust_time);
+        }
+    } else {
+        adjust_time = 0;
+        memcpy(pre_signal_table, signal_table, sizeof(signal_table));
+    }
+
     return 1;
 }
 #undef to_TimeMark

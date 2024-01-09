@@ -369,7 +369,7 @@ typedef struct traffic_signal_command_arg {
     uint8_t phase;
     uint8_t step;
     uint8_t effect_time;
-    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
 
 typedef struct wifi_adapter_device {

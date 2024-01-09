@@ -13,6 +13,8 @@ const uint8_t signal_mask_arr[] = {GreenSignalTable};
 const uint8_t GreenMask = (GreenSignalTable 0);
 #undef X
 
+int adjust_time;
+
 int get_map_table(traffic_signal_status_t *signal_status, int map_table[COMPASS_NUM])
 {
     if (signal_status->SubPhaseCount == 0 || signal_status->SignalCount == 0)
@@ -42,4 +44,16 @@ int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSign
     }
 
     return signal_status->SignalCount;
+}
+
+void set_adjust_time(int time)
+{
+    adjust_time = time;
+}
+
+int get_adjust_time()
+{
+    int tmp = adjust_time;
+    adjust_time = 0; 
+    return tmp;
 }

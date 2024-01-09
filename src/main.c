@@ -131,7 +131,7 @@ int main()
     app_obj_t *app_arr[] = {
         // &MMP,
         &EVSP,
-        // &TSP,
+        &TSP,
         // &CPS,
         &TIB,
         // &SPM,

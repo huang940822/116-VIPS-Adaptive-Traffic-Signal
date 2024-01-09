@@ -231,7 +231,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     command.phase = current_SubPhaseID;
     command.step = 1;
     command.effect_time = command_obj->effect_time;
-    memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
+    memcpy(command.host_OBU_name, command_obj->host_OBU_name, sizeof(command.host_OBU_name));
 
     // 執行callback 完全不管app_id了 event signal packet tx
     // goto TSP_report_command()
