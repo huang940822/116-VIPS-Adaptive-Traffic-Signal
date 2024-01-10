@@ -7,7 +7,8 @@
 #include "typedefine.h"
 #include "vector.h"
 
-#define TIB_CONFIG_FILE FILE_PATH "application/TIB/config/config.txt"
+#define TIB_CONFIG_DIR FILE_PATH "application/TIB/config/"
+#define TIB_CONFIG_FILENAME "_config.txt"
 
 #define LANE_MAX_NUMBER 5
 #define DIRECTION_MAX_NUMBER 8

@@ -21,12 +21,28 @@ TIB_config_object_t TIB_config = {
 int TIB_config_init()
 {
     FILE *fp;
-    fp = fopen(TIB_CONFIG_FILE, "r");
+
+    /* Get file path */
+    char file_path[256] = {0};
+    char rsu_name[RSU_NAME_MAX_LEN + 1] = {0};
+    strncpy(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN);
+    trim_space(rsu_name);
+
+    if (rsu_name == NULL) {
+        log_file_write_fatal_error("error name %s", config.RSU_name);
+    }
+
+    memset(file_path, 0, sizeof(file_path));
+    strcat(file_path, TIB_CONFIG_DIR);
+    strcat(file_path, rsu_name);
+    strcat(file_path, TIB_CONFIG_FILENAME);
+
+    fp = fopen(file_path, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", TIB_CONFIG_FILE);
+        log_file_write_fatal_error("error opening %s", file_path);
         return TIB_CONFIG_INVALID_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully", TIB_CONFIG_FILE);
+        log_file_write("%s opened successfully", file_path);
     }
 
     char read_buf[CONFIG_LINE_BUFFER_SIZE];
@@ -427,7 +443,7 @@ void print_config_map(MapData *map, char *buf, int buf_len)
     }
     snprintf(buf + strlen(buf), buf_len - strlen(buf), "connectsTo_list \n");
     for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {
-        MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);        
+        MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);
         log_snprintf(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
         for (int j = 0; j < connectsTo->left_laneId.size; j++) {
             log_snprintf(buf, "%d ", vector_at(connectsTo->left_laneId, j));

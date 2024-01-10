@@ -390,8 +390,8 @@ int spat_msg_update(SPAT *pp_spat)
     // 如果有延長縮短指令放在 regional
     int_state->regional_option = FALSE;
     if (memcmp(signal_table, pre_signal_table, sizeof(signal_table)) == 0) {
-        if (adjust_time == 0)
-            adjust_time = get_adjust_time();
+        int tmp = get_adjust_time();
+        adjust_time = tmp != 0 ? tmp : adjust_time;
         if (adjust_time != 0) {
             int_state->regional_option = TRUE;
             int_state->regional.count = 1;
