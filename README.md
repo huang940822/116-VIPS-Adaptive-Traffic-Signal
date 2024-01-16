@@ -164,4 +164,5 @@ Relationship to the image:
 
 # External application proxy
 文件: https://hackmd.io/@4pZMYslMRO6uDxY8ZEHjvg/Sk5QJHg8a
-
+EA Library 的 repo
+https://github.com/oslab-csie-ncku/external_app_sup_for_RSU
