@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g
+CFLAGS = -g 
 # WARN_OPT = -Wall
 WARN_OPT =
 LIB_PATH := $(realpath j2735lib)

@@ -30,7 +30,7 @@
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = EVSP_ID,
-    .priority = 1,
+    .priority = 3,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
@@ -40,9 +40,8 @@ app_obj_t EVSP = {
     .on_traffic_signal_command_tx = NULL,
     .on_registration = &EVSP_on_registration,
     .next = NULL,
-    .dontSend2TC = 1,
+    .dontSend2TC = 0,
 };
-
 
 int EVSP_on_CLOUD_packet_rx(void *arg)
 {
@@ -198,12 +197,13 @@ int static inline EVSP_rolling_to_target_phase(int target_phase, char *OBU_name,
 }
 #undef insert_command_and_log
 
+
 int EVSP_on_OBU_packet_rx(void *arg)
 {
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
-    if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
+    if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE) {
         return 0;
-
+    }
     // printf("EVSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
@@ -217,8 +217,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 if (srm->requests.tab[i].request.id.id == config.RSU_id)
                     break;
             }
-            if (i == srm->requests.count)
+            if (i == srm->requests.count) {
                 return -1;
+            }
         } else {
             return -1;
         }
@@ -472,5 +473,6 @@ int EVSP_on_registration(void *arg)
 
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, SignalRequestMessage_Id, &EVSP_on_OBU_packet_rx);
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, EVSP.name, EVSP.priority, BasicSafetyMessage_Id, &EVSP_on_OBU_packet_rx);
+
     return 0;
 }

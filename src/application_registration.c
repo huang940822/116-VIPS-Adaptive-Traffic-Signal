@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
+#include "typedefine.h"
 #include "application_registration.h"
 #include "error_status.h"
 #include "log.h"
@@ -11,6 +13,43 @@
 uint8_t app_num;
 app_obj_t app_list;
 event_callback_t callback_list[EVENT_TYPE_NUMBER];
+
+/* since now dispatcher and ea_app_proxy,
+ * both might read/write app_list, we add a mutex_lock */ 
+pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
+
+/* since now dispatcher, ea_app_proxy, command_buf_send(), 
+ * all might read/write callback_list, we add a mutex_lock */
+pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
+
+/* this function assume the caller have grabbed the mutex_callback_list  */
+static inline __attribute__((always_inline)) 
+app_obj_t* get_app_obj_by_app_name(char* name_p)
+{
+    // check app name
+    if ( !name_p ){
+        return NULL;
+    }
+
+    if ( strlen(name_p) == 0 ) {
+        return NULL;
+    }
+
+    app_obj_t *current = app_list.next;
+    if (current == NULL) { 
+        return NULL;   /* empty list */
+    }
+    else{
+        /* traverse to last node */
+        while (current != NULL) {
+            if ( strncmp(current->name, name_p, APP_NAME_MAX_LEN) == 0 ) {
+                return current;
+            }
+            current = current->next;
+        }
+    }
+    return NULL;   /* empty list */
+}
 
 /*****************************************************************************
 ** Function:    event_callback_new
@@ -23,23 +62,35 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
 {
     event_callback_t *event_callback =
         (event_callback_t *) malloc(sizeof(event_callback_t));
+        
+    app_obj_t* app_obj_p;
+    
     if (event_callback == NULL) {
         set_memory_error();
         log_file_write_fatal_error("event_callback_new: malloc");
         perror("event_callback_new: malloc");
         exit(errno);
-    } else {
-        clear_memory_error();
-        strncpy(event_callback->name, name, APP_NAME_MAX_LEN);
-
-        event_callback->event_callback_id.choice = id_chioce;
-        event_callback->event_callback_id.u.app_id = id;
-        event_callback->priority = priority;
-        event_callback->callback = callback;
-        event_callback->next = NULL;
-        return event_callback;
     }
+
+    app_obj_p = get_app_obj_by_app_name(name);
+    if(!app_obj_p){
+        log_file_write_fatal_error("event_callback_new: get_app_obj_by_app_name() find no matching app");
+        perror("event_callback_new: get_app_obj_by_app_name() find no matching app");
+        exit(errno);
+    }
+
+    clear_memory_error();
+    strncpy(event_callback->name, name, APP_NAME_MAX_LEN);
+    event_callback->event_callback_id.choice = id_chioce;
+    event_callback->event_callback_id.u.app_id = id;
+    event_callback->priority = priority;
+    event_callback->callback = callback;
+    event_callback->next = NULL;
+    event_callback->app_obj_p = app_obj_p;
+
+    return event_callback;
 }
+
 /*****************************************************************************
 ** Function:    event_callback_msg_id_insert
 ** Description: Create a new event callback node.
@@ -56,6 +107,11 @@ void event_callback_msg_id_insert(event_type_t event_type,
                                   DSRCmsgID msg_id,
                                   int (*callback)(void *))
 {
+    /* since now dispatcher, ea_app_proxy, command_buf_send() 
+     * all might read/write callback_list we add a mutex_lock */
+    
+    pthread_mutex_lock(&mutex_callback_list); 
+    
     event_callback_t *previous = &callback_list[event_type];
     event_callback_t *current = previous->next;
     event_callback_t *event_callback = NULL;
@@ -68,12 +124,15 @@ void event_callback_msg_id_insert(event_type_t event_type,
             event_callback->next = current;
             previous->next = event_callback;
             // printf("insert callback\n");
-            return;
+            goto unlock_ret;
         }
         previous = current;
         current = current->next;
     }
     previous->next = event_callback_new(name, priority, event_callback_id_msg_id, msg_id, callback);
+
+unlock_ret:
+    pthread_mutex_unlock(&mutex_callback_list);
 }
 /*****************************************************************************
 ** Function:    event_callback_insert
@@ -87,6 +146,10 @@ void event_callback_insert(event_callback_t *head,
                            app_obj_t *app,
                            int (*callback)(void *))
 {
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+     * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
+
     event_callback_t *previous = head;
     event_callback_t *current = head->next;
     event_callback_t *event_callback = NULL;
@@ -97,7 +160,7 @@ void event_callback_insert(event_callback_t *head,
         if (current->event_callback_id.choice == event_callback_id_app_id &&
             current->event_callback_id.u.app_id == app->id) {
             // printf("callback with same app_id exist\n");
-            return;
+            goto unlock_ret;
         }
         /* priority higher than next node, insert callback here */
         if (current->priority > app->priority) {
@@ -105,12 +168,15 @@ void event_callback_insert(event_callback_t *head,
             event_callback->next = current;
             previous->next = event_callback;
             // printf("insert callback\n");
-            return;
+            goto unlock_ret;
         }
         previous = current;
         current = current->next;
     }
     previous->next = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
+
+unlock_ret:
+    pthread_mutex_unlock(&mutex_callback_list);
 }
 
 /*****************************************************************************
@@ -123,22 +189,29 @@ void event_callback_insert(event_callback_t *head,
 ******************************************************************************/
 int app_obj_insert(app_obj_t *app)
 {
+    /* since now dispatcher and ea_app_proxy,
+     * both might read/write app_list, we add a mutex_lock */ 
+    int ret;
+    pthread_mutex_lock(&mutex_app_list); 
+
     app_obj_t *current = app_list.next;
     uint8_t num = 0;
 
     /* empty list */
     if (current == NULL) {
         app_list.next = app;
-        return num;
+        goto unlock_ret;
     }
 
     /* traverse to last node */
     while (current->next != NULL) {
         if (strncmp(current->name, app->name, APP_NAME_MAX_LEN) == 0) {
-            return APP_REGISTER_DUPLICATE_APP_NAME;
+            ret = APP_REGISTER_DUPLICATE_APP_NAME;
+            goto unlock_ret;
         }
         if (current->id == app->id) {
-            return APP_REGISTER_DUPLICATE_APP_ID;
+            ret = APP_REGISTER_DUPLICATE_APP_ID;
+            goto unlock_ret;
         }
         num++;
         current = current->next;
@@ -146,34 +219,21 @@ int app_obj_insert(app_obj_t *app)
 
     /* last node */
     if (strncmp(current->name, app->name, APP_NAME_MAX_LEN) == 0) {
-        return APP_REGISTER_DUPLICATE_APP_NAME;
+        ret = APP_REGISTER_DUPLICATE_APP_NAME;
+        goto unlock_ret;
     }
     if (current->id == app->id) {
-        return APP_REGISTER_DUPLICATE_APP_ID;
+        ret = APP_REGISTER_DUPLICATE_APP_ID;
+        goto unlock_ret;
     }
 
-    num++;
     current->next = app;
-    return num;
-}
-
-app_obj_t *app_obj_search_by_id(int appid)
-{
-    app_obj_t *current = app_list.next;
-
-    /* empty list */
-    if (current == NULL) {
-        return NULL;
-    }
-
-    /* traverse to last node */
-    while (current->next != NULL) {
-        if (current->id == appid) {
-            return current;
-        }
-        current = current->next;
-    }
-    return NULL;
+    num++;
+    ret = num;
+    
+unlock_ret:
+    pthread_mutex_unlock(&mutex_app_list); 
+    return ret;
 }
 
 /*****************************************************************************
@@ -185,7 +245,7 @@ app_obj_t *app_obj_search_by_id(int appid)
 **               <0: registration failed
 ******************************************************************************/
 int app_register(app_obj_t *app)
-{
+{   
     // check app name
     if (strlen(app->name) == 0) {
         return APP_REGISTER_INVALID_APP_NAME;
@@ -202,7 +262,7 @@ int app_register(app_obj_t *app)
     // insert app in app list
     int ret = app_obj_insert(app);
     if (ret < 0) {
-        // printf("error inserting app in list: %d\n", ret);
+        printf("error inserting app in list: %d\n", ret);
         return ret;
     } else {
         app_num = ret + 1;
@@ -257,6 +317,10 @@ void event_callback_print()
              LOG_CONTENT_LEN - strlen(log_content), "%-50s%s",
              "callback_list[EVENT_TYPE_NAME]:",
              "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
+
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+     * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list); 
 
     event_callback_t *current;
     for (int i = 0; i < EVENT_TYPE_NUMBER; i++) {
@@ -319,6 +383,7 @@ void event_callback_print()
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "(%d)",
                      current->next->priority);
+            
             current = current->next;
             if (current->next != NULL) {
                 snprintf(log_content + strlen(log_content),
@@ -326,20 +391,30 @@ void event_callback_print()
             }
         }
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
     log_file_write(log_content);
 }
 
 void app_list_print()
-{
+{   
+    /* since now dispatcher and ea_app_proxy,
+     * both might read/write app_list, we add a mutex_lock */ 
+    pthread_mutex_lock(&mutex_app_list); 
+
     app_obj_t *current = app_list.next;
 
     if (current == NULL) {
-        return;
+        goto unlock_ret;
     }
 
     while (current != NULL) {
         printf("%s\n", current->name);
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_app_list); 
+
+unlock_ret:
     return;
 }

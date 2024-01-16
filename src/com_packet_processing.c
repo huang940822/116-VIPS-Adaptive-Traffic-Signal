@@ -20,9 +20,13 @@
 #include "timer_event.h"
 #include "traffic_signal_packet_rx.h"
 #include "typedefine.h"
+#include "external_app_proxy_server.h"
+#include "external_app_proxy_callback_msg_forward.h"
 
 #include "error_code_user.h"
 #include "j2735_codec.h"
+
+int cb_counter;
 
 #define CPS_ID 3
 extern threadpool_t *pool;
@@ -71,6 +75,7 @@ void OBU_j2735_tx(DSRCmsgID magId, void *data)
     j2735_buf_free(buf);
     return;
 }
+
 void OBU_packet_tx(uint16_t len,
                    uint8_t service_id,
                    unsigned char *specific_field)
@@ -208,7 +213,7 @@ void cloud_packet_tx(uint16_t len,
         log_file_write_fatal_error("cloud_packet_tx: com_send");
     }
 
-    usleep(50000);  //直接註解com layer會錯
+    //usleep(50000);  //直接註解com layer會錯  //學陽測試時發現可以註解掉
 
     if (write_buf.content != NULL) {
         free(write_buf.content);
@@ -303,17 +308,25 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         clear_memory_error();
         memcpy(app_section.payload, &msg->msg[read_buf.index],
                app_section.payload_len);
-        app_section.com_id = msg->handle_id;
+        //app_section.com_id = msg->handle_id;
     }
+
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current = &callback_list[EVENT_CLOUD_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_app_id && 
-            common_field.service_id == current->next->event_callback_id.u.app_id) {
+            common_field.service_id == current->next->event_callback_id.u.app_id) 
+        {
+            proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) &app_section);  // what com_id for?
         }
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
 
     if (read_buf.content != NULL) {
         free(read_buf.content);
@@ -324,6 +337,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     return PACKET_PROCESSING_ACCEPT;
 }
 
+static inline __attribute__((always_inline)) 
 void get_payload(V2R_app_section_t *app_section, MessageFrame *msgf)
 {
     switch (msgf->messageId)
@@ -341,10 +355,47 @@ void get_payload(V2R_app_section_t *app_section, MessageFrame *msgf)
     }
 }
 
+static inline __attribute__((always_inline)) 
+void fill_V2R_self_defined_section(V2R_self_defined_section_t *self_section_p,
+                                   OBU_object_t *OBU_object_p,
+                                   V2R_app_section_t *app_section_p)
+{
+    strncpy(self_section_p->obu_name, 
+            OBU_object_p->OBU_name, OBU_NAME_MAX_LEN);
+    self_section_p->vehical_type = OBU_object_p->vehicle_type;
+
+    uint8_t last_record_pointer = OBU_object_p->record_ring.last_record_pointer;
+    OBU_record_t *last_record_p = &(OBU_object_p->record_ring.record[last_record_pointer]);
+    self_section_p->time_second = last_record_p->time_second;
+    self_section_p->lon = last_record_p->position_lon;
+    self_section_p->lat = last_record_p->position_lat;
+    self_section_p->speed = last_record_p->speed;
+    self_section_p->direction = last_record_p->direction;
+
+    self_section_p->msgID = app_section_p->msgID;
+    if( self_section_p->msgID == BasicSafetyMessage_Id){
+        self_section_p->data_len = app_section_p->payload_len;
+        //self_section_p->data = app_section_p->payload;
+    }
+    else{
+        self_section_p->data_len = 0;
+        //self_section_p->data = app_section_p->data;
+    }
+
+    if(self_section_p->vehical_type == VEHICLE_AMBULANCE){
+        ;//currently evsp_on_duty_flag... is directly read from payload_len
+    }
+    else if( self_section_p->vehical_type == VEHICLE_BUS){
+        ;//currently tsp_passenger_num... is not in use
+    }
+    else{
+        ;//currently no other vehical_type
+    }
+}
+
 int OBU_packet_rx_event_handler(msg_obj_t *msg)
 {
     printf("get in obu rx handler\n\r");
-
     // event_callback_t *current_c = &callback_list[EVENT_CAMERA_PACKET_RX];
     // //pthread_t APP_thread;
     // while (current_c->next != NULL) {
@@ -371,6 +422,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         log_file_write(log_content);
     }
+
     MessageFrame *msgf = NULL;
     int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
     if (ret < 0) {
@@ -399,6 +451,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     case VEHICLE_NORMAL:
         object = normal_OBU_record_insert(&record);
         break;
+    default:
+        break;
     }
 
     OBU_object_print();
@@ -420,15 +474,52 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     get_payload(&app_section, msgf);
     
+    void* callback_parameter_pointer = 0;    
+    #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
+        /* 有保留能傳送 struct: V2R_app_section_t 給外部 APP 的 code */
+        wrapper_arg_for_obu_packet_t wrapper_arg_for_obu;
+        wrapper_arg_for_obu.msg_p = msg;
+        wrapper_arg_for_obu.app_section_p = &app_section;
+        callback_parameter_pointer = &wrapper_arg_for_obu;
+    #else
+        /* * 依據老師的 idea，在未來，struct: V2R_app_section_t 
+        * 可能不會直接傳出去給外部 app
+        * 因此多了定義了這個 struct: V2R_self_defined_section_t
+        * 用來傳給外部 APP
+        * In addition, to handle j2735 decoding issue, 
+        * we will send msg->msg and msg->msg_len to external-library,
+        * the library will decode the msg and complete the V2R_self_defined_section_t
+        * at the external client side.
+        * */
+        V2R_self_defined_section_t V2R_self_defined_section;
+        fill_V2R_self_defined_section(&V2R_self_defined_section, object, &app_section);
+        V2R_self_defined_section.data = msg->msg;
+        V2R_self_defined_section.data_len = msg->msg_len;
+        callback_parameter_pointer = &V2R_self_defined_section;
+    #endif
+
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
+    pthread_mutex_lock(&mutex_callback_list);
     while (current->next != NULL) {
-        if (current->next->event_callback_id.choice == event_callback_id_msg_id &&
-            msgf->messageId == current->next->event_callback_id.u.msg_id) {
-            current->next->callback((void *) &app_section);
+        proxy_handling_app_p = current->next->app_obj_p;
+
+        if (current->next->event_callback_id.choice == event_callback_id_msg_id 
+            && msgf->messageId == current->next->event_callback_id.u.msg_id) 
+        {   
+            if(proxy_handling_app_p->ea_info_p){
+                current->next->callback( callback_parameter_pointer );
+            }
+            else{
+                current->next->callback( (void *)&app_section ); /* original internal APPs */
+            }
         }
         current = current->next;
     }
-    // free resource just
+    pthread_mutex_unlock(&mutex_callback_list);
+    
+    // free resource 
     if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
     if (msgf != NULL)
@@ -488,6 +579,11 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 
         read_buf.index += 16;
     }
+
+    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    * all might read/write callback_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_app_id && 
@@ -496,15 +592,20 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
             // != 0){
             //     printf("threadpool adding error!\n");//ERROR
             // }
+            proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) obstaclelist);
         }
         current = current->next;
     }
+
+    pthread_mutex_unlock(&mutex_callback_list);
+
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }
     return 0;
 }
+
 int Is_Heartbeat(msg_obj_t *msg)
 {
     msg_buf_t read_buf;
@@ -560,3 +661,4 @@ int Is_Heartbeat(msg_obj_t *msg)
     }
     return 0;
 }
+

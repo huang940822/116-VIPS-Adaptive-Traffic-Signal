@@ -162,5 +162,7 @@ Relationship to the image:
 山佇沒有步階二，他的行人綠閃的機制包含在步階一，步階二都會是 0。<br>
 而成龍有步階二。
 
-
-
+# External application proxy
+文件: https://hackmd.io/@4pZMYslMRO6uDxY8ZEHjvg/Sk5QJHg8a
+EA Library 的 repo
+https://github.com/oslab-csie-ncku/external_app_sup_for_RSU
