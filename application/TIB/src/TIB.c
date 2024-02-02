@@ -127,10 +127,10 @@ int TIB_on_traffic_signal_command_tx(void *arg)
     traffic_signal_command_arg_t *command = (traffic_signal_command_arg_t *) arg;
     traffic_signal_status_t status;
 
-    if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME) - 1) == 0 ||
-        strncmp(command->host_OBU_name, RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
-        return 0;
-    }
+    // if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME) - 1) == 0 ||
+    //     strncmp(command->host_OBU_name, RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
+    //     return 0;
+    // }
 
     get_traffic_signal_status(&status);
     set_adjust_time(command->effect_time - status.StepSec);

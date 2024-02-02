@@ -164,7 +164,9 @@ int spat_msg_update(SPAT *pp_spat)
     SPaT_debug("StepSec %d\n", signal_status.StepSec);
 
     static int adjust_time = 0;
+    static uint8_t adjust_flag = 0;
     static uint8_t pre_signal_table[8] = {0};
+    static int preSec = 0;
     uint8_t signal_table[8] = {0};
 
     for (int i = 0; i < signal_status.SignalCount; i++) {
@@ -291,6 +293,7 @@ int spat_msg_update(SPAT *pp_spat)
 
                         SPaT_debug("%d\n", offset);
                         state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                        state->state_time_speed.tab[index].timing_option = TRUE;
                         cur_subphase = next_subphase(cur_subphase);
                         SPaT_debug("green %d ", cur_subphase);
                         after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
@@ -374,6 +377,7 @@ int spat_msg_update(SPAT *pp_spat)
 
                         SPaT_debug("%d\n", offset);
                         state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                        state->state_time_speed.tab[index].timing_option = TRUE;
                         cur_subphase = next_subphase(cur_subphase);
                         SPaT_debug("green %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_permissive_Movement_Allowed, offset += signal_status.plan[cur_subphase].PreGreen, );
@@ -392,7 +396,8 @@ int spat_msg_update(SPAT *pp_spat)
     if (memcmp(signal_table, pre_signal_table, sizeof(signal_table)) == 0) {
         int tmp = get_adjust_time();
         adjust_time = tmp != 0 ? tmp : adjust_time;
-        if (adjust_time != 0) {
+        if (adjust_time != 0 && (adjust_flag || abs((signal_status.StepSec - preSec) > 3))) {
+            adjust_flag = true;
             int_state->regional_option = TRUE;
             int_state->regional.count = 1;
             int_state->regional.tab = reg_spat;
@@ -403,9 +408,10 @@ int spat_msg_update(SPAT *pp_spat)
             printf("adjust time %d\n", adjust_time);
         }
     } else {
-        adjust_time = 0;
+        adjust_flag = adjust_time = 0;
         memcpy(pre_signal_table, signal_table, sizeof(signal_table));
     }
+    preSec = signal_status.StepSec;
 
     return 1;
 }
