@@ -9,6 +9,7 @@ Create two threads for regular transferring SPaT and MAP packets respectively.
 會在 step 轉換的時候更新。
 
 ## TIB config 設定
+放在 `application/TIB/config/` 下，命名為 `<RSU_NAME>_config.txt`，例如 `S270901` 就是 `S270901_config.txt`，`config_example` 跟 `config_example_2` 各是兩個路口的範例。<br>
 總共有三個 table 要設定 `LaneSet_table`、`LaneSet_connectsTo_table` 跟 `SignalGroupID_table`。詳細的填寫方式在 `config_example` 中。 `config_example` 描述高發二路，`config_example_2` 描述平實四街與後甲三街口。
 
 ### LaneSet_table
