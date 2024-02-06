@@ -22,3 +22,5 @@ Create two threads for regular transferring SPaT and MAP packets respectively.
 ### 繪製地圖
 可以使用 Google 我的地圖繪製車道點位，在用匯出資料下載 CSV 檔的方式填寫。
 ![messageImage_1707196534127](https://hackmd.io/_uploads/rkt5lSyj6.jpg)
+在車道的尾端最好稍為的超過前一個路口這樣前後兩個路口間會比較連續。
+![image](https://hackmd.io/_uploads/BySg6I1sa.png)
