@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 
 #include "TIB_config.h"
@@ -12,6 +13,10 @@ const uint8_t signal_mask_arr[] = {GreenSignalTable};
 #define X(a, b) a##Mask |
 const uint8_t GreenMask = (GreenSignalTable 0);
 #undef X
+
+pthread_mutex_t adjust_time_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int adjust_time;
 
 int get_map_table(traffic_signal_status_t *signal_status, int map_table[COMPASS_NUM])
 {
@@ -42,4 +47,20 @@ int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSign
     }
 
     return signal_status->SignalCount;
+}
+
+void set_adjust_time(int time)
+{
+    pthread_mutex_lock(&adjust_time_mutex);
+    adjust_time = time;
+    pthread_mutex_unlock(&adjust_time_mutex);
+}
+
+int get_adjust_time()
+{
+    pthread_mutex_lock(&adjust_time_mutex);
+    int tmp = adjust_time;
+    adjust_time = 0;
+    pthread_mutex_unlock(&adjust_time_mutex);
+    return tmp;
 }

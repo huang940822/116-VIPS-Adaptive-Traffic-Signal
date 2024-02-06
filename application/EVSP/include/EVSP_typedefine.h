@@ -87,7 +87,7 @@ typedef struct EVSP_plan_list_t {
 } EVSP_plan_list_t;
 
 typedef struct EVSP_host_OBU_obj {
-    char OBU_name[OBU_NAME_MAX_LEN + 1];
+    char OBU_name[ID_MAX_LEN + 1];
     uint8_t passenger;
     uint8_t target_phase;
     uint16_t distance;

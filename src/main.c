@@ -175,8 +175,7 @@ int main()
         // &EVSP,
         // &TSP,
         // &CPS,
-        // &SPaT,
-        // &TIB,
+        &TIB,
         // &SPM,
     };
     

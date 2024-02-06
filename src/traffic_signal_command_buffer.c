@@ -286,7 +286,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     command.phase = current_SubPhaseID;
     command.step = 1;
     command.effect_time = command_obj->effect_time;
-    memcpy(command.host_OBU_name, command_obj->host_OBU_name, OBU_NAME_MAX_LEN + 1);
+    memcpy(command.host_OBU_name, command_obj->host_OBU_name, sizeof(command.host_OBU_name));
 
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */

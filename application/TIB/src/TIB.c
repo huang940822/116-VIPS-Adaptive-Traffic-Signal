@@ -11,12 +11,15 @@
 #include "TIB_SPaT_utils.h"
 #include "TIB_config.h"
 #include "TIB_packet_tx.h"
+#include "TIB_utils.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"
 #include "error_status.h"
 #include "log.h"
 #include "timer_event.h"
+#include "traffic_compensation.h"
+#include "traffic_signal_command_buffer.h"
 
 #include "j2735_codec.h"
 #include "j2735_map.h"
@@ -34,7 +37,7 @@ app_obj_t TIB = {
     .on_cloud_packet_rx = &TIB_on_CLOUD_packet_rx,
     .on_cloud_packet_tx = NULL,
     .on_camera_packet_rx = NULL,
-    .on_traffic_signal_command_tx = NULL,
+    .on_traffic_signal_command_tx = &TIB_on_traffic_signal_command_tx,
     .on_registration = &TIB_on_registration,
     .dontSend2TC = 1,
     .next = NULL,
@@ -116,6 +119,21 @@ int TIB_on_CLOUD_packet_rx(void *arg)
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }
+    return 0;
+}
+
+int TIB_on_traffic_signal_command_tx(void *arg)
+{
+    traffic_signal_command_arg_t *command = (traffic_signal_command_arg_t *) arg;
+    traffic_signal_status_t status;
+
+    // if (strncmp(command->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME) - 1) == 0 ||
+    //     strncmp(command->host_OBU_name, RESUME_ID, sizeof(RESUME_ID) - 1) == 0) {
+    //     return 0;
+    // }
+
+    get_traffic_signal_status(&status);
+    set_adjust_time(command->effect_time - status.StepSec);
     return 0;
 }
 

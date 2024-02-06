@@ -281,7 +281,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         log_file_write(log_content);
     }
 
-    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
     memset(host_OBU_name, 0, sizeof(host_OBU_name));
     uint8_t target_phase;
     uint16_t frequency;

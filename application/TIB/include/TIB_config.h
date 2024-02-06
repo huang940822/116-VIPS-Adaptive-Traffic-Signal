@@ -7,7 +7,8 @@
 #include "typedefine.h"
 #include "vector.h"
 
-#define TIB_CONFIG_FILE FILE_PATH "application/TIB/config/config.txt"
+#define TIB_CONFIG_DIR FILE_PATH "application/TIB/config/"
+#define TIB_CONFIG_FILENAME "_config.txt"
 
 #define LANE_MAX_NUMBER 5
 #define DIRECTION_MAX_NUMBER 8
@@ -22,13 +23,12 @@ typedef struct MAP_Node {
 } MAP_Node_t;
 
 typedef struct MAP_config_lane {
-    struct list_head compass_node;
+    struct list_head approach_node;
     vector_t(MAP_Node_t) node_list;
     int32_t config_laneID;
     uint8_t direction;  // bit string 0 ingress 1 egress
     uint8_t approach;
     uint8_t lane_index;
-    uint8_t compass;
     LaneTypeAttributes_choice lane_type;
     uint16_t lane_attributes;
     uint8_t shared_with;
@@ -37,7 +37,7 @@ typedef struct MAP_config_lane {
 typedef struct MAP_config_connectsTo {
     uint8_t config_laneID;
     vector_t(uint8_t) left_laneId;
-    vector_t(uint8_t) stright_laneId;
+    vector_t(uint8_t) straight_laneId;
     vector_t(uint8_t) right_laneId;
 } MAP_config_connectsTo_t;
 
@@ -58,15 +58,14 @@ typedef struct TIB_config_object {
     uint8_t SPaT_packet_transfer_speed;
     vector_t(MAP_config_lane_t) lane_list;
     vector_t(MAP_config_connectsTo_t) connectsTo_list;
-    // N NE E SE S S W NW
+    // 用號控器上的第機車道區分 approachID
     // 只有是車道 並且是 ingress
-    struct list_head MAP_lane_compass[COMPASS_NUM];
+    struct list_head MAP_lane_approach[COMPASS_NUM];
     // 人行道的方向
-    struct list_head MAP_sidewalk_compass[COMPASS_NUM];
+    struct list_head MAP_sidewalk_approach[COMPASS_NUM];
 
-    // 0 向北  1 向東北  2 向東  3 向東南  4 向南  5 向西南  6 向西  7 向西北
-    // 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
-    uint8_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
+    // 對應號控器上哪一路有哪些綠燈 signalGroupId 是多少
+    int16_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
 } TIB_config_object_t;
 
 void print_config_map(MapData *map, char *buf, int buf_len);

@@ -195,7 +195,7 @@ typedef enum {
 } OBU_object_status;
 
 typedef struct OBU_object {
-    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
+    char OBU_name[ID_MAX_LEN + 1];  //+1 if for \0
     vehicle_type_t vehicle_type;    //enum type
     OBU_object_status status;       //enum type
     OBU_record_ring_t record_ring;
@@ -409,7 +409,7 @@ typedef struct traffic_signal_command_arg {
     uint8_t phase;
     uint8_t step;
     uint8_t effect_time;
-    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
 
 typedef struct wifi_adapter_device {

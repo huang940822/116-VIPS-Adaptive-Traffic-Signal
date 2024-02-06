@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +11,7 @@
 #include "log.h"
 
 SPAT *p_spat;
+Reg_IntersectionState reg_spat[1];
 
 // #define SPaT_debug(...) printf(__VA_ARGS__)
 #define SPaT_debug(...) ;
@@ -148,10 +150,7 @@ int spat_msg_update(SPAT *pp_spat)
         }                                                                                            \
     } while (0)
 
-    int map_table[COMPASS_NUM];
     if (get_greenSignalMap(&signal_status, greenSignalMap) < 0)
-        return -1;
-    if (get_map_table(&signal_status, map_table) < 0)
         return -1;
 
     SPaT_debug("----------\n");
@@ -163,6 +162,13 @@ int spat_msg_update(SPAT *pp_spat)
     SPaT_debug("SubPhaseID %d\n", signal_status.SubPhaseID);
     SPaT_debug("StepID %d\n", signal_status.StepID);
     SPaT_debug("StepSec %d\n", signal_status.StepSec);
+
+    static int adjust_time = 0;
+    static uint8_t adjust_flag = 0;
+    static uint8_t pre_signal_table[8] = {0};
+    static int preSec = 0;
+    uint8_t signal_table[8] = {0};
+
     for (int i = 0; i < signal_status.SignalCount; i++) {
         for (int j = 0; j < sizeof(signal_mask_arr); j++) {
             if (greenSignalMap[i] & signal_mask_arr[j]) {
@@ -171,8 +177,12 @@ int spat_msg_update(SPAT *pp_spat)
                 int index = 0, cur_subphase = signal_status.SubPhaseID - 1, offset = 0;
 
                 state->state_time_speed.count = 0;
-                state->signalGroup = TIB_config.signalGroupId_table[map_table[i]][j];
-                if (signal_mask_arr[j] != PedestrianGreenMask) {
+                state->signalGroup = TIB_config.signalGroupId_table[i][j];
+                if (state->signalGroup == -1) {
+                    statesList->count--;
+                    continue;
+                }
+                if (signal_mask_arr[j] != PedestrianGreenMask) {  // 行車綠
                     // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
                     greenType = signal_mask_arr[j] == RroundHeadGreenMask ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
                     if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
@@ -204,6 +214,8 @@ int spat_msg_update(SPAT *pp_spat)
                             after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                             SPaT_debug("red %d ", cur_subphase);
                             after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+
+                            signal_table[i] |= RroundHeadGreenMask;  // 綠燈
                             break;
                         case 4:
                             // 遲閉
@@ -221,6 +233,8 @@ int spat_msg_update(SPAT *pp_spat)
                                 after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
                                 SPaT_debug("red %d ", cur_subphase);
                                 after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
+
+                                signal_table[i] |= RroundHeadGreenMask;  // 綠燈
                             } else {
                                 offset = -(signal_status.plan[cur_subphase].Yellow - signal_status.StepSec);
 
@@ -230,6 +244,8 @@ int spat_msg_update(SPAT *pp_spat)
                                 after_cur_step(MovementPhaseState_stop_And_Remain, offset += signal_status.plan[cur_subphase].AllRed, increase_offset_red_signal());
                                 SPaT_debug("green %d ", cur_subphase);
                                 after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
+
+                                signal_table[i] |= YellowMask;  // 黃燈
                             }
                             break;
                         case 5:
@@ -241,6 +257,8 @@ int spat_msg_update(SPAT *pp_spat)
                             after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                             SPaT_debug("yellow %d ", cur_subphase);
                             after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
+
+                            signal_table[i] |= RedMask;  // 紅燈
                         }
                     } else {
                         SPaT_debug("---\n");
@@ -275,13 +293,16 @@ int spat_msg_update(SPAT *pp_spat)
 
                         SPaT_debug("%d\n", offset);
                         state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                        state->state_time_speed.tab[index].timing_option = TRUE;
                         cur_subphase = next_subphase(cur_subphase);
                         SPaT_debug("green %d ", cur_subphase);
                         after_cur_step(greenType, offset += signal_status.plan[cur_subphase].Green, leading_subphase_signal(); lagging_subphase_signal(););
                         SPaT_debug("yellow %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_protected_clearance, offset += signal_status.plan[cur_subphase].Yellow, );
+
+                        signal_table[i] |= RedMask;  // 紅燈
                     }
-                } else {
+                } else {  // 行人綠
                     if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
                         SPaT_debug("---++**\n");
                         int red_offset = signal_status.plan[cur_subphase].PedRed + signal_status.plan[cur_subphase].AllRed;
@@ -322,7 +343,7 @@ int spat_msg_update(SPAT *pp_spat)
                         default:
                             break;
                         }
-                    } else {
+                    } else {  // 目前分相第一步接是紅燈
                         SPaT_debug("---**\n");
                         state->state_time_speed.count++;
                         state->state_time_speed.tab[index].eventState = MovementPhaseState_stop_And_Remain;
@@ -356,6 +377,7 @@ int spat_msg_update(SPAT *pp_spat)
 
                         SPaT_debug("%d\n", offset);
                         state->state_time_speed.tab[index].timing.minEndTime = to_TimeMark(offset);
+                        state->state_time_speed.tab[index].timing_option = TRUE;
                         cur_subphase = next_subphase(cur_subphase);
                         SPaT_debug("green %d ", cur_subphase);
                         after_cur_step(MovementPhaseState_permissive_Movement_Allowed, offset += signal_status.plan[cur_subphase].PreGreen, );
@@ -368,6 +390,29 @@ int spat_msg_update(SPAT *pp_spat)
     }
     if (statesList->count == 0)
         return -1;
+
+    // 如果有延長縮短指令放在 regional
+    int_state->regional_option = FALSE;
+    if (memcmp(signal_table, pre_signal_table, sizeof(signal_table)) == 0) {
+        int tmp = get_adjust_time();
+        adjust_time = tmp != 0 ? tmp : adjust_time;
+        if (adjust_time != 0 && (adjust_flag || abs((signal_status.StepSec - preSec) > 3))) {
+            adjust_flag = true;
+            int_state->regional_option = TRUE;
+            int_state->regional.count = 1;
+            int_state->regional.tab = reg_spat;
+            int_state->regional.tab[0].regionId = SPaT_Adjust_RegionalID;
+
+            int tmp = htonl(adjust_time);
+            asn1_ostr_clone_cstr(&int_state->regional.tab[0].u.unknown, (char *) &tmp, sizeof(tmp));
+            printf("adjust time %d\n", adjust_time);
+        }
+    } else {
+        adjust_flag = adjust_time = 0;
+        memcpy(pre_signal_table, signal_table, sizeof(signal_table));
+    }
+    preSec = signal_status.StepSec;
+
     return 1;
 }
 #undef to_TimeMark
@@ -386,7 +431,7 @@ void spat_printf(SPAT *pp_spat)
     printf("id : %d\n", int_state->id.id);
     for (int i = 0; i < int_state->states.count; i++) {
         MovementState *state = &int_state->states.tab[i];
-        printf("\nsigmalGroup : %d %d\n", state->signalGroup, state->state_time_speed.count);
+        printf("\nsignalGroup : %d %d\n", state->signalGroup, state->state_time_speed.count);
 
         for (int j = 0; j < state->state_time_speed.count; j++) {
             if (state->state_time_speed.tab[j].timing_option == TRUE) {

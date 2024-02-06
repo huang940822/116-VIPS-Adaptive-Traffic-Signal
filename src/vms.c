@@ -24,7 +24,6 @@ wifi_adapter_device_t wifi_adapter;
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t VMS_program_update_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-traffic_signal_status_t signal_status;
 uint8_t rtm_phase[RTM_MAX] = {0};
 char current_step[RTM_MAX];
 
@@ -682,6 +681,8 @@ void phase_rtm_connect()
 
 void control_loop()
 {
+    traffic_signal_status_t signal_status;
+
     sequence_number = (sequence_number + 1) % 256;
     if (sequence_number == 0) {
         sequence_number++;
