@@ -183,7 +183,7 @@ typedef enum {
 } OBU_object_status;
 
 typedef struct OBU_object {
-    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
+    char OBU_name[ID_MAX_LEN + 1];  //+1 if for \0
     vehicle_type_t vehicle_type;
     OBU_object_status status;
     OBU_record_ring_t record_ring;

@@ -11,8 +11,6 @@
 
 #define SPaT_Adjust_RegionalID 254
 
-time_t compare_to_tc_time;
-
 int spat_msg_init(SPAT **pp_spat);
 int spat_msg_update(SPAT *pp_spat);
 void spat_printf(SPAT *pp_spat);

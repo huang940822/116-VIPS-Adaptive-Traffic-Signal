@@ -1,5 +1,6 @@
 #include "ae_timer_event.h"
 
+struct msg_obj *err_msg;
 
 /*This is just a test function that display current time*/
 int time_print_cur_time(ae_event_loop *event_loop,
