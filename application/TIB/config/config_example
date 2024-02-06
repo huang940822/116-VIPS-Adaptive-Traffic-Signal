@@ -11,16 +11,17 @@ MAP_packet_transfer_speed 1
 MAP_dontSend2TC 1
 
 # 從北端開始順時針 先離開路口再進入路口 從內車道到外車道
+# 不一定需要人行道
 
 # LaneId 一個路口中唯一個 id, 從 0 開始, 最大到 255
-
-# Compass N 向北  NE 向東北  E 向東  SE 向東南  S 向南  WS 向西南  W 向西  NW 向西北
-# 為了提供 signalGroupId
 
 # LaneDirection egress 是離開, ingress 是進入, both 是雙向
 
 # ApproachId 從位於北端的路 (ApproachId 1~8) 開始順時針遞增 從 1 開始
-# 就是號控器上的第幾路 需要調查 要看的是進入面向的
+# 成龍第一二路是北與南, 第三四路是東與西
+# 山住則按照順序第一二三四路就是東南西北
+# 但可能會因為皆先的順序
+# 因為是用在 signalGroupId 上的對應要確定現場路口有沒有對應正確不然 SPaT 會有問題
 
 # SharedWith 用同一個欄位 flag 之間用空白隔開 像是 2 4 5 這樣表示
 # TCROS 描述
@@ -118,31 +119,31 @@ LaneSet_table_end
 # LaneID 對應 LaneSet_table 的 LaneID, 只會有 ingress 的 LaneID
 # 後面接著 左轉 (LeftConnectingLane), 直走 (StraightConnectingLane), 右轉 (RightConnectingLane) 的 LaneIDSet
 # 三個都會包含一個 LaneIDCount 後面接著 LaneID 陣列
-# Use: The ConnectsToList data structure is used in the generic lane descriptions to provide a sequence of other defined 
-# lanes to which each lane connects beyond its stop point. See the Connection data frame entry for details. Note that this 
-# data frame is not used in some lane object types.
+# 表示這條車道可以通往哪裡
+# 像是 LaneID 2 的 StraightConnectingLane 12 就代表 1 號車道可以直走通往第 12 號車道
+# 
 
 LaneSet_connectsTo_table_start
 # LaneID, LeftConnectingLane, ..., StraightConnectingLane, ..., RightConnectingLane, ...
-1,  0,             1, 15, 0
+1,  0,             1, 15, 0 # 行人燈
 2,  3, 4, 5, 6,    1, 12, 3, 16, 17, 18
-3,  0,             1, 13, 0
+3,  0,             1, 13, 0 # 行人燈
 
-7,  0,             1, 23, 0
+7,  0,             1, 23, 0 # 行人燈
 8,  1, 12,         1, 16, 0
 9,  0,             1, 17, 0
 10, 0,             1, 18, 1, 0
-11, 0,             1, 19, 0
+11, 0,             1, 19, 0 # 行人燈
 
-13, 0,             1, 3,  0
+13, 0,             1, 3,  0 # 行人燈
 14, 3, 16, 17, 18, 1, 0,  3, 4, 5, 6
-15, 0,             1, 1,  0
+15, 0,             1, 1,  0 # 行人燈
 
-19, 0,             1, 11, 0
+19, 0,             1, 11, 0 # 行人燈
 20, 1, 0,          1, 4,  0
 21, 0,             1, 5,  0
 22, 0,             1, 6,  1, 12
-23, 0,             1, 7,  0
+23, 0,             1, 7,  0 # 行人燈
 LaneSet_connectsTo_table_end
 
 
@@ -158,6 +159,7 @@ SignalGroupID_table_start
 2, 2, 0
 3, 3, 0
 4, 4, 0
+# 行人燈
 5, 1, 4
 6, 2, 4
 7, 3, 4
