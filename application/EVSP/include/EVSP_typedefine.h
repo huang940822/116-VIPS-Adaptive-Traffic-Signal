@@ -1,9 +1,9 @@
 #ifndef EVSP_TYPEDEFINE_H
 #define EVSP_TYPEDEFINE_H
 
-#include "typedefine.h"
-#include <sys/types.h>
 #include <stdbool.h>
+#include <sys/types.h>
+#include "typedefine.h"
 
 #define EVSP_PHASE_MAX 8
 #define MIN_GREEN 5
@@ -69,7 +69,7 @@ typedef struct EVSP_plan_table {
     uint8_t plan_subPhase_count;
     uint8_t plan_subPhase_max;
 
-    uint8_t *plan_id; // 因為可能很多個 plan 都是用同一個 plan table
+    uint8_t *plan_id;  // 因為可能很多個 plan 都是用同一個 plan table
     EVSP_plan_subPhase_t *plan_subPhase;
 } EVSP_plan_table_t;
 
@@ -95,6 +95,8 @@ typedef struct EVSP_host_OBU_obj {
     timer_t host_OBU_list_timer;
     struct EVSP_touching_area *area_ptr;
     struct EVSP_host_OBU_obj *next;
+    float lon;
+    float lat;
 } EVSP_host_OBU_obj_t;
 
 #endif

@@ -9,6 +9,7 @@
 #include "EVSP_OBU_list.h"
 #include "EVSP_config.h"
 #include "EVSP_packet_tx.h"
+#include "EVSP_subphase_threshold.h"
 #include "EVSP_timer_event.h"
 #include "EVSP_touching_area.h"
 #include "EVSP_typedefine.h"
@@ -143,26 +144,11 @@ int static inline EVSP_rolling_to_target_phase(int target_phase, char *OBU_name,
     uint8_t current_step = signal_status->StepID;
     uint16_t current_second = signal_status->StepSec;
 
-    uint16_t pretime =
-        signal_status->plan[target_phase - 1].PreTimeCompensated;
+    uint16_t pretime = signal_status->plan[target_phase - 1].PreTimeCompensated;
     int ret = 0;
     int16_t EVSP_adjust_time = 0;
 
-    // Ｇmx＝ΣＰnb＋Ｔbf
-    // Ｇmx：延長最長綠燈秒數
-    // ΣＰnb：非公車各分相最短綠及清道時間總和
-    // Ｔbf：緩衝誤差值，約為１０-２０秒，視觸動之距離而調整
-    // 路口號誌為三時相，週期Ｃ為１２０秒，第一時相為公車方向６４秒綠燈、４秒黃燈、２秒全紅；
-    // 第二時相１０秒綠燈、３秒黃燈、２秒全紅；第三時相２９秒綠燈、３秒黃燈、３秒全紅；而第二時相最短綠為５秒、第三時相最短綠為１５秒
-    // Ｇmx＝【（５＋３＋２）＋（１５＋３＋３）】
-
-    for (int i = 1; i < 8; i++) {
-        if (i != target_phase)
-            EVSP_adjust_time += signal_status->plan[i - 1].MinGreen +
-                                signal_status->plan[i - 1].Yellow +
-                                signal_status->plan[i - 1].AllRed;
-    }
-    EVSP_adjust_time += 20;  // Gmx += 20 ，緩衝誤差值調最大
+    EVSP_adjust_time = EVSP_extend_formula(target_phase, signal_status, 20);  // Gmx += 20 ，緩衝誤差值調最大
     printf("new EVSP_adjust_time:%d\n", EVSP_adjust_time);
     // 因為只有 step 1 綠燈可以動態控制 所以不是在綠燈的時候就當作到下個時相了
     if (current_step != 1)
@@ -195,8 +181,46 @@ int static inline EVSP_rolling_to_target_phase(int target_phase, char *OBU_name,
     insert_command_and_log;
     return ret;
 }
-#undef insert_command_and_log
 
+static void VMS_activate(int direction)
+{
+    // 本案的 EVSP_VMS_SERVICE 受限於時間及沒有足夠的地理資訊，所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
+    // 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，那再改寫成更 general 的設計。
+
+    /*
+    1.根據方向更改 evsp_prog[]
+    2.呼叫VMS SERVICE
+    */
+    memset(evsp_prog, 255, sizeof(evsp_prog));
+
+    if (direction == 7 || direction == 0) {
+        // evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
+        evsp_prog[1] = 245;
+        evsp_prog[0] = 246;
+        evsp_prog[3] = 247;
+        evsp_prog[2] = 248;
+    } else if (direction == 1 || direction == 2) {
+        // evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
+        evsp_prog[1] = 248;
+        evsp_prog[0] = 245;
+        evsp_prog[3] = 246;
+        evsp_prog[2] = 247;
+    } else if (direction == 3 || direction == 4) {
+        // evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
+        evsp_prog[1] = 247;
+        evsp_prog[0] = 248;
+        evsp_prog[3] = 245;
+        evsp_prog[2] = 246;
+    } else if (direction == 5 || direction == 6) {
+        // evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
+        evsp_prog[1] = 246;
+        evsp_prog[0] = 247;
+        evsp_prog[3] = 248;
+        evsp_prog[2] = 245;
+    }
+
+    vms_request_start(EVSP.id, EVSP.priority);
+}
 
 int EVSP_on_OBU_packet_rx(void *arg)
 {
@@ -258,19 +282,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
     EVSP_report_host_obu(app_section->OBU_object, static_space.on_duty_flag);
 
     // obu與rsu的距離
-    uint16_t OBU_distance = (uint16_t) get_distance(
-        config.RSU_lat, config.RSU_lon,
-        app_section->OBU_object->record_ring.record[last_record_index]
-            .position_lat,
-        app_section->OBU_object->record_ring.record[last_record_index]
-            .position_lon);
+    float OBU_lat = app_section->OBU_object->record_ring.record[last_record_index].position_lat;
+    float OBU_lon = app_section->OBU_object->record_ring.record[last_record_index].position_lon;
+    uint16_t OBU_distance = (uint16_t) get_distance(config.RSU_lat, config.RSU_lon, OBU_lat, OBU_lon);
 
     log_snprintf(log_content,
                  "EVSP OBU packet rx: OBU POSITION\nlat, lon: %f, %f\n"
                  "OBU distance: %hd\nOBU direction: %hhd",
-                 app_section->OBU_object->record_ring.record[last_record_index].position_lat,
-                 app_section->OBU_object->record_ring.record[last_record_index].position_lon,
-                 OBU_distance,
+                 OBU_lat, OBU_lon, OBU_distance,
                  app_section->OBU_object->record_ring.record[last_record_index].direction);
 
     uint16_t last_record_distance = 0;
@@ -278,9 +297,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     // 有舊資料
     if (static_space.last_lon != 0 && static_space.last_lat != 0) {
         last_record_distance = (uint16_t) get_distance(
-            static_space.last_lat, static_space.last_lon,
-            app_section->OBU_object->record_ring.record[last_record_index].position_lat,
-            app_section->OBU_object->record_ring.record[last_record_index].position_lon);
+            static_space.last_lat, static_space.last_lon, OBU_lat, OBU_lon);
         log_snprintf(log_content,
                      "\nlast lat, last lon: %f, %f\nlast record distance: "
                      "%hd\nlast OBU direction: %hhd",
@@ -289,12 +306,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
     }
     // 位移有超過閥值 才會紀錄下來 or 第一筆資料
     if (last_record_distance > EVSP_config.valid_record_distance || last_record_distance == 0) {
-        static_space.last_lon = app_section->OBU_object->record_ring.record[last_record_index].position_lon;
-        static_space.last_lat = app_section->OBU_object->record_ring.record[last_record_index].position_lat;
+        static_space.last_lat = OBU_lat;
+        static_space.last_lon = OBU_lon;
         static_space.last_direction = app_section->OBU_object->record_ring.record[last_record_index].direction;
     }
-    memcpy(app_section->OBU_object->private_space->static_space,
-           &static_space, sizeof(EVSP_static_space_t));
+    memcpy(app_section->OBU_object->private_space->static_space, &static_space, sizeof(EVSP_static_space_t));
+
     log_file_write(log_content);
     memset(log_content, 0, sizeof(log_content));
 
@@ -314,13 +331,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
     /* already in host OBU list */
     if (host_OBU != NULL) {
+        host_OBU->lat = OBU_lat;
+        host_OBU->lon = OBU_lon;
+
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
         host_OBU->distance = OBU_distance;
-        EVSP_terminate_area_t *area_ptr = EVSP_terminate(
-            app_section->OBU_object->record_ring.record[last_record_index].position_lon,
-            app_section->OBU_object->record_ring.record[last_record_index].position_lat,
-            host_OBU->area_ptr);
+        EVSP_terminate_area_t *area_ptr = EVSP_terminate(OBU_lon, OBU_lat, host_OBU->area_ptr);
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
@@ -356,18 +373,24 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 }
                 return 0;
             }
-            target_phase = EVSP_activate(
-                app_section->OBU_object->record_ring.record[last_record_index].position_lon,
-                app_section->OBU_object->record_ring.record[last_record_index].position_lat,
-                static_space.last_direction, plan, &area_ptr);
+            target_phase = EVSP_activate(OBU_lon, OBU_lat, static_space.last_direction, plan, &area_ptr);
 
             if (target_phase == host_OBU->target_phase) {
                 command_buf_search(0, signal_status.SubPhaseID, &command_obj);
                 // 表示現在沒有指令
                 if (command_obj.app_id == 0 && command_obj.app_priority == 0) {
-                    printf("EVSP --- reactivate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
-                    log_snprintf(log_content, "\nEVSP reactivate");
-                    ret = EVSP_rolling_to_target_phase(target_phase, host_OBU->OBU_name, log_content, &signal_status);
+                    ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status);
+                    if (ret != -1) {
+                        EVSP_host_OBU_obj_print();
+                        tsc_command_t command = {0};
+                        command.app_id = EVSP.id;
+                        command.app_priority = EVSP.priority;
+                        command.target_phase = target_phase;
+                        strncpy(command.host_OBU_name, host_OBU->OBU_name, sizeof(host_OBU->OBU_name));
+                        command.phase = signal_status.SubPhaseID;
+                        command.effect_time = ret;
+                        insert_command_and_log;
+                    }
                 }
             }
         }
@@ -399,50 +422,24 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
             printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
 
-            EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
-                                     target_phase, area_ptr);
-            int ret = 0;
-            ret = EVSP_rolling_to_target_phase(target_phase, app_section->OBU_object->OBU_name, log_content, &signal_status);
+            host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr);
+            host_OBU->lat = OBU_lat;
+            host_OBU->lon = OBU_lon;
 
-            if (ret == INSERT_ACCEPT) {
-                // 本案的 EVSP_VMS_SERVICE 受限於時間及沒有足夠的地理資訊，所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
-                // 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，那再改寫成更 general 的設計。
-
-                /*
-                1.根據方向更改 evsp_prog[]
-                2.呼叫VMS SERVICE
-                */
-                memset(evsp_prog, 255, sizeof(evsp_prog));
-
-                if (static_space.last_direction == 7 || static_space.last_direction == 0) {
-                    // evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
-                    evsp_prog[1] = 245;
-                    evsp_prog[0] = 246;
-                    evsp_prog[3] = 247;
-                    evsp_prog[2] = 248;
-                } else if (static_space.last_direction == 1 || static_space.last_direction == 2) {
-                    // evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
-                    evsp_prog[1] = 248;
-                    evsp_prog[0] = 245;
-                    evsp_prog[3] = 246;
-                    evsp_prog[2] = 247;
-                } else if (static_space.last_direction == 3 || static_space.last_direction == 4) {
-                    // evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
-                    evsp_prog[1] = 247;
-                    evsp_prog[0] = 248;
-                    evsp_prog[3] = 245;
-                    evsp_prog[2] = 246;
-                } else if (static_space.last_direction == 5 || static_space.last_direction == 6) {
-                    // evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
-                    evsp_prog[1] = 246;
-                    evsp_prog[0] = 247;
-                    evsp_prog[3] = 248;
-                    evsp_prog[2] = 245;
-                }
-
-                vms_request_start(EVSP.id, EVSP.priority);
+            int ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status);
+            if (ret != -1) {
+                EVSP_host_OBU_obj_print();
+                tsc_command_t command = {0};
+                command.app_id = EVSP.id;
+                command.app_priority = EVSP.priority;
+                command.target_phase = target_phase;
+                strncpy(command.host_OBU_name, host_OBU->OBU_name, sizeof(host_OBU->OBU_name));
+                command.phase = signal_status.SubPhaseID;
+                command.effect_time = ret;
+                insert_command_and_log;
             }
 
+            VMS_activate(static_space.last_direction);
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr->touching_area_id);
         }
