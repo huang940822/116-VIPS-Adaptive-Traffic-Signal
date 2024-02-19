@@ -6,6 +6,7 @@
 #include "EVSP_touching_area.h"
 #include "config.h"
 #include "gps_information.h"
+#include "log.h"
 #include "typedefine.h"
 
 #define EXPECT_SPEED 17  // 17m/s 60 km/hr
@@ -43,18 +44,10 @@ float get_subphase_threshold(int target_phase, float expect_arrival_time, traffi
     return expect_arrival_time - EVSP_extend_formula(target_phase, signal_status, THESHOLD_BUFFER);
 }
 
-traffic_signal_status_t *_signal_status;
-// main_subphase 是主要分相的意思，幹道的分相。
-// 依照綠燈時間由大到小排列
-int main_subphase_cmpfunc(const void *a, const void *b)
-{
-    return ((int) _signal_status->plan[*(int *) b].Green - (int) _signal_status->plan[*(int *) a].Green);
-}
-
 /*
 
 */
-int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status)
+int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content)
 {
     int adjust_time = -1;
     int current_subPhase = signal_status->SubPhaseID;
@@ -68,16 +61,24 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
     float subphase_threshold = get_subphase_threshold(target_phase, expect_arrival_time, signal_status);
 
     EVSP_plan_table_t *plan = EVSP_plan_table_search(signal_status->PlanID);
-    uint32_t subPhaseIDs[plan->plan_subPhase_count];
+    uint16_t pretime = signal_status->plan[current_subPhase - 1].PreTimeCompensated;
+    int tmp = 0;
+    int target_green = signal_status->plan[target_phase - 1].Green;
+    bool is_main_subphase = true;  // 是不是主要分相
 
-    _signal_status = signal_status;
-    memcpy(subPhaseIDs, plan->plan_subPhase, plan->plan_subPhase_count * sizeof(uint32_t));
-    qsort(subPhaseIDs, sizeof(subPhaseIDs) / sizeof(uint32_t), sizeof(subPhaseIDs), main_subphase_cmpfunc);
+    log_snprintf(log_content, "\nexpect_arrival_time %.01f subphase_threshold %.01f\n", expect_arrival_time, subphase_threshold);
 
-    if (subPhaseIDs[0] != target_phase && plan->plan_subPhase_count >= 2 &&
-        signal_status->plan[subPhaseIDs[0]].Green != signal_status->plan[subPhaseIDs[1]].Green) {
+    for (int i = 0; i < plan->plan_subPhase_count; i++) {
+        int subPhaseID = plan->plan_subPhase[i].SubPhaseID;
+        if (subPhaseID != target_phase && target_green <= signal_status->plan[subPhaseID - 1].Green) {
+            is_main_subphase = false;
+            break;
+        }
+    }
+    if (is_main_subphase == false) {
         // 目標分相為次要分相使用長時間平滑控制
         // 如果有兩個以上的綠燈時間長度一樣代表兩向的權重一樣，這時候使用短時間快速輪轉
+        log_snprintf(log_content, "Long time smooth control\n");
         int subPhase_time = signal_status->StepSec + signal_status->plan[current_subPhase].PedGreenFlash +
                             signal_status->plan[current_subPhase].PedRed + signal_status->plan[current_subPhase].Yellow +
                             signal_status->plan[current_subPhase].AllRed;
@@ -85,35 +86,46 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
         int accumulation_target = 0;
         // 尋找主目標分相
         for (int i = current_subPhase; i == target_phase && subphase_threshold < accumulation_target + subPhase_time;) {
+            printf("asd\n");
             accumulation_target += subPhase_time;
             i = (current_subPhase + 1) % signal_status->SubPhaseCount;
             subPhase_time = signal_status->plan[i].Green + signal_status->plan[i].Yellow + signal_status->plan[i].AllRed;
             BeforeMtargetSubPhase++;
         }
         if (BeforeMtargetSubPhase == 0) {  // 在主目標分相
-            adjust_time = EVSP_extend_formula(target_phase, signal_status, 20);
+            adjust_time = pretime + EVSP_extend_formula(target_phase, signal_status, 20);
+            log_snprintf(log_content, "extend main target subphase, extend %d\n", adjust_time);
         } else {
+            log_snprintf(log_content, "BeforeMtargetSubPhase %d\n", BeforeMtargetSubPhase);
             if (expect_arrival_time < accumulation_target) {
                 // 預期抵達時間比主目標分相開始早
                 // 所以進行縮短
-                adjust_time = ceil(((float) accumulation_target - expect_arrival_time) / BeforeMtargetSubPhase);
+                tmp = ceil(((float) accumulation_target - expect_arrival_time) / BeforeMtargetSubPhase);
+                adjust_time = pretime - tmp;
+                log_snprintf(log_content, "arrive time is too early, shorten %d\n", tmp);
             } else if (accumulation_target + subPhase_time < expect_arrival_time) {
                 // 預期抵達時間比主目標分相結束晚
                 // 所以進行延長
-                adjust_time = ceil((expect_arrival_time - (accumulation_target + subPhase_time)) / BeforeMtargetSubPhase);
+                tmp = ceil((expect_arrival_time - (accumulation_target + subPhase_time)) / BeforeMtargetSubPhase);
+                adjust_time = pretime + tmp;
+                log_snprintf(log_content, "arrive time is too late, extend %d\n", tmp);
             } else {
                 // 預期抵達時間在主目標分相時段內就甚麼都不做
-                adjust_time = 0;
+                log_snprintf(log_content, "arrive time is in main target subphase\n");
+                adjust_time = pretime;
             }
         }
     } else {
         // 目標分相為主要分相使用短時間快速輪轉
+        log_snprintf(log_content, "short time quick control\n");
         if (signal_status->StepSec >= subphase_threshold) {
             // 如果現在的時相
             if (target_phase == current_subPhase) {
-                adjust_time = EVSP_extend_formula(target_phase, signal_status, 20);
+                adjust_time = pretime + EVSP_extend_formula(target_phase, signal_status, 20);
+                log_snprintf(log_content, "extend main target subphase\n");
             } else {
-                adjust_time = signal_status->plan[current_subPhase - 1].MinGreen;
+                adjust_time = 0;
+                log_snprintf(log_content, "change to next subphase\n");
             }
         }
     }

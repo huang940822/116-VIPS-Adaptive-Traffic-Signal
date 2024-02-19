@@ -5,6 +5,6 @@
 #include "typedefine.h"
 
 int EVSP_extend_formula(int target_phase, traffic_signal_status_t *signal_status, int Tbf);
-int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status);
+int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content);
 
 #endif

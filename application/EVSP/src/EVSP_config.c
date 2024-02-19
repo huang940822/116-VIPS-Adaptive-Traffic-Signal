@@ -4,9 +4,9 @@
 
 #include "EVSP.h"
 #include "EVSP_config.h"
+#include "config.h"
 #include "log.h"
 #include "typedefine.h"
-#include "config.h"
 
 // EVSP_config_object_t EVSP_config;
 
@@ -49,7 +49,7 @@ int EVSP_config_init()
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_packet_timeout = uint8_t_val;
                     log_file_write("config: evsp_host_obu_packet_timeout = %d",
-                             EVSP_config.evsp_host_obu_packet_timeout);
+                                   EVSP_config.evsp_host_obu_packet_timeout);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
@@ -65,13 +65,13 @@ int EVSP_config_init()
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_list_timeout = uint8_t_val;
                     log_file_write("config: evsp_host_obu_list_timeout = %d",
-                             EVSP_config.evsp_host_obu_list_timeout);
+                                   EVSP_config.evsp_host_obu_list_timeout);
                     continue;
                 } else {
-                    return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    return CONFIG_INVALID_EVSP_HOST_OBU_LIST_TIMEOUT;
                 }
             } else {
-                return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                return CONFIG_INVALID_EVSP_HOST_OBU_LIST_TIMEOUT;
             }
         }
 
@@ -83,10 +83,10 @@ int EVSP_config_init()
                     log_file_write("config: min_green = %d", EVSP_config.min_green);
                     continue;
                 } else {
-                    return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    return CONFIG_INVALID_MIN_GREEN;
                 }
             } else {
-                return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                return CONFIG_INVALID_MIN_GREEN;
             }
         }
 
@@ -98,10 +98,10 @@ int EVSP_config_init()
                     log_file_write("config: max_green = %d", EVSP_config.max_green);
                     continue;
                 } else {
-                    return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    return CONFIG_INVALID_MAX_GREEN;
                 }
             } else {
-                return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                return CONFIG_INVALID_MAX_GREEN;
             }
         }
 
@@ -111,13 +111,13 @@ int EVSP_config_init()
                 if (uint8_t_val >= 0) {
                     EVSP_config.valid_record_distance = uint8_t_val;
                     log_file_write("config: valid_record_distance = %d",
-                             EVSP_config.valid_record_distance);
+                                   EVSP_config.valid_record_distance);
                     continue;
                 } else {
-                    return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    return CONFIG_INVALID_VALID_RECORD_DISTANCE;
                 }
             } else {
-                return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                return CONFIG_INVALID_VALID_RECORD_DISTANCE;
             }
         }
 
@@ -130,12 +130,28 @@ int EVSP_config_init()
                 } else if (strncmp(val, "table", sizeof("table") - 1) == 0) {
                     EVSP_config.touching_area_config_type = EVSP_touching_area_TABLE;
                 } else {
-                    return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                    return CONFIG_INVALID_OTHER;
                 }
                 log_file_write("config: touching_area_config_type = %s", val);
                 continue;
             } else {
-                return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
+                return CONFIG_INVALID_OTHER;
+            }
+        }
+
+        // dontSend2TC
+        if (strstr(buf, "dontSend2TC ")) {
+            char val[MAX_CONFIG_VARIABLE_LEN];
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    EVSP.dontSend2TC = uint8_t_val;
+                    log_file_write("config: dontSend2TC = %d", EVSP.dontSend2TC);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_OTHER;
+                }
+            } else {
+                return CONFIG_INVALID_OTHER;
             }
         }
     }

@@ -405,7 +405,7 @@ int spat_msg_update(SPAT *pp_spat)
 
             int tmp = htonl(adjust_time);
             asn1_ostr_clone_cstr(&int_state->regional.tab[0].u.unknown, (char *) &tmp, sizeof(tmp));
-            printf("adjust time %d\n", adjust_time);
+            printf("TIB adjust time %d\n", adjust_time);
         }
     } else {
         adjust_flag = adjust_time = 0;

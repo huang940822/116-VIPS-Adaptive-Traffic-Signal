@@ -432,7 +432,7 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     if (command->phase == 0 || command->phase > SUBPHASEID_NUM) {
         return INVALID_PHASE;
     }
-    if (command->effect_time <= 0) {
+    if (command->effect_time < 0) {
         return INVALID_EFFECT_TIME;
     }
     if (strlen(command->host_OBU_name) == 0) {
@@ -445,9 +445,14 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     uint16_t pretime = signal_status.plan[command->phase - 1].PreTimeCompensated;
     uint16_t min_green = signal_status.plan[command->phase - 1].MinGreen;
     uint16_t max_green = signal_status.plan[command->phase - 1].MaxGreen;
+    uint16_t PedGreen = signal_status.plan[command->phase - 1].PedGreenFlash + signal_status.plan[command->phase - 1].PedRed;
 
-    command->effect_time = (command->effect_time < min_green) ? min_green : command->effect_time;
-    command->effect_time = (command->effect_time > max_green) ? max_green : command->effect_time;
+    if (command->effect_time + PedGreen < min_green) {
+        command->effect_time = min_green - PedGreen;
+    }
+    if (command->effect_time + PedGreen > max_green) {
+        command->effect_time = max_green - PedGreen;
+    }
 
     pthread_mutex_lock(&mutex_command_buf);
     // 抓出要處理的cmd buff object

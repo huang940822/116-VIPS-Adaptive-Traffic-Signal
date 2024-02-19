@@ -41,7 +41,7 @@ app_obj_t EVSP = {
     .on_traffic_signal_command_tx = NULL,
     .on_registration = &EVSP_on_registration,
     .next = NULL,
-    .dontSend2TC = 0,
+    .dontSend2TC = 1,
 };
 
 int EVSP_on_CLOUD_packet_rx(void *arg)
@@ -379,7 +379,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 command_buf_search(0, signal_status.SubPhaseID, &command_obj);
                 // 表示現在沒有指令
                 if (command_obj.app_id == 0 && command_obj.app_priority == 0) {
-                    ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status);
+                    ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status, log_content);
                     if (ret != -1) {
                         EVSP_host_OBU_obj_print();
                         tsc_command_t command = {0};
@@ -426,7 +426,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             host_OBU->lat = OBU_lat;
             host_OBU->lon = OBU_lon;
 
-            int ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status);
+            int ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status, log_content);
             if (ret != -1) {
                 EVSP_host_OBU_obj_print();
                 tsc_command_t command = {0};
