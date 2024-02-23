@@ -113,34 +113,15 @@ void OBU_record_ring_pop(OBU_object_t *object)
 ******************************************************************************/
 OBU_object_t *OBU_object_new(OBU_record_common_field_t *record_common)
 {
-    OBU_object_t *object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
-    if (object == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("OBU_object_new: malloc");
-        perror("OBU_object_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(object, 0, sizeof(OBU_object_t));
-    }
+    OBU_object_t *object;
+    Malloc(object, sizeof(OBU_object_t), "OBU_object_new");
     strncpy(object->OBU_name, record_common->OBU_name, OBU_NAME_MAX_LEN);
     object->vehicle_type = record_common->vehicle_type;
     object->status = OBU_object_processing;
+    object->prediction_speed = record_common->speed;
 
-    object->private_space = (app_private_space_t *) malloc(
-        sizeof(app_private_space_t));
-    if (object->private_space == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("OBU_object_new: malloc");
-        perror("OBU_object_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(object->private_space, 0,
-               sizeof(app_private_space_t));
-    }
-    object->prev = NULL;
-    object->next = NULL;
+    Malloc(object->private_space, sizeof(app_private_space_t), "OBU_object_new private_space");
+    object->prev = object->next = NULL;
     return object;
 }
 
@@ -255,6 +236,11 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
             OBU_record_ring_pop(object);
         }
         OBU_record_ring_push((OBU_record_t *) record, object);
+
+        /* use kalman filter to predict the speed of vehicle */
+        object->prediction_speed = (OBU_SPEED_KALMAN_GAIN * object->prediction_speed) +
+                                   ((1.0 - OBU_SPEED_KALMAN_GAIN) * record->speed);
+
         /* move target to head */
         if (special_OBU_list[type].next != object) {
             /* remove target */

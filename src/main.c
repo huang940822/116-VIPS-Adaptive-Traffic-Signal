@@ -49,7 +49,7 @@ void signalUnExpectedHandler(int sig_num)
 {
     //signal(SIGINT, sigintHandler);
     register_handler_for_unexpected_signal();
-    pthread_mutex_lock(&mutex_uart_comple_protect);
+    // pthread_mutex_lock(&mutex_uart_comple_protect);
     printf("get in mutex in signal handler for unexpected signal\r\n");
     printf("the signal number is %d\r\n", sig_num);
     printf("\nuart write actions has all be completed before exit from process\n");
@@ -175,7 +175,7 @@ int main()
         &EVSP,
         &TSP,
         // &CPS,
-        &TIB,
+        // &TIB,
         // &SPM,
     };
     

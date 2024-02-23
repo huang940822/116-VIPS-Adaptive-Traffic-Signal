@@ -97,6 +97,8 @@ typedef struct EVSP_host_OBU_obj {
     struct EVSP_host_OBU_obj *next;
     float lon;
     float lat;
+    float speed;
+    int direction;
 } EVSP_host_OBU_obj_t;
 
 #endif

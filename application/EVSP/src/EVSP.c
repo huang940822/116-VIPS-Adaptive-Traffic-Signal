@@ -31,7 +31,7 @@
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = EVSP_ID,
-    .priority = 3,
+    .priority = 1,
     .on_OBU_packet_rx = NULL,
     .on_OBU_packet_tx = NULL,
     .on_RSU_packet_rx = NULL,
@@ -266,9 +266,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     }
 
     EVSP_static_space_t static_space;
-    memcpy(&static_space,
-           app_section->OBU_object->private_space->static_space,
-           sizeof(EVSP_static_space_t));
+    memcpy(&static_space, app_section->OBU_object->private_space->static_space, sizeof(EVSP_static_space_t));
     read_uint8_t(&static_space.on_duty_flag, &read_buf);
     read_uint8_t(&static_space.weight, &read_buf);
     read_uint8_t(&static_space.error_code, &read_buf);
@@ -328,11 +326,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
         return 0;
     }  // tc箱出現錯誤 直接不做
-
     /* already in host OBU list */
     if (host_OBU != NULL) {
         host_OBU->lat = OBU_lat;
         host_OBU->lon = OBU_lon;
+        host_OBU->direction = static_space.last_direction;
+        host_OBU->speed = app_section->OBU_object->prediction_speed;
+        printf("-------asds--asd %f-- %f--- %d\n", host_OBU->lon, host_OBU->lat, host_OBU->direction);
+
 
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
@@ -345,6 +346,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                          app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             int target_phase = host_OBU->target_phase;
+            EVSP_OBU_activation_time_end();
             command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
@@ -359,40 +361,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
-        } else {  // 如果 OBU 還在觸碰點內查詢 command buf 如果
-            uint8_t plan_id = signal_status.PlanID;
-            EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
-            uint8_t target_phase = 0;
-            EVSP_touching_area_t *area_ptr = NULL;
-            tsc_command_object_t command_obj;
-            if (plan == NULL) {
-                log_snprintf(log_content, "\ntouching area plan not found");
-                log_file_write(log_content);
-                if (read_buf.content != NULL) {
-                    free(read_buf.content);
-                }
-                return 0;
-            }
-            target_phase = EVSP_activate(OBU_lon, OBU_lat, static_space.last_direction, plan, &area_ptr);
-
-            if (target_phase == host_OBU->target_phase) {
-                command_buf_search(0, signal_status.SubPhaseID, &command_obj);
-                // 表示現在沒有指令
-                if (command_obj.app_id == 0 && command_obj.app_priority == 0) {
-                    ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status, log_content);
-                    if (ret != -1) {
-                        EVSP_host_OBU_obj_print();
-                        tsc_command_t command = {0};
-                        command.app_id = EVSP.id;
-                        command.app_priority = EVSP.priority;
-                        command.target_phase = target_phase;
-                        strncpy(command.host_OBU_name, host_OBU->OBU_name, sizeof(host_OBU->OBU_name));
-                        command.phase = signal_status.SubPhaseID;
-                        command.effect_time = ret;
-                        insert_command_and_log;
-                    }
-                }
-            }
+        } else {
+            // 同時有兩台救護車
+            EVSP_OBU_activation_timer_start(host_OBU);
         }
     } else { /* not in host OBU list */
         // search plan
@@ -401,6 +372,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
         if (plan == NULL) {
             log_snprintf(log_content, "\ntouching area plan not found");
+            printf("touching area plan not found\n");
             log_file_write(log_content);
             if (read_buf.content != NULL) {
                 free(read_buf.content);
@@ -425,21 +397,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
             host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr);
             host_OBU->lat = OBU_lat;
             host_OBU->lon = OBU_lon;
+            host_OBU->direction = static_space.last_direction;
+            host_OBU->speed = app_section->OBU_object->prediction_speed;
 
-            int ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status, log_content);
+            int ret = EVSP_OBU_activation_timer_start(host_OBU);
             if (ret != -1) {
-                EVSP_host_OBU_obj_print();
-                tsc_command_t command = {0};
-                command.app_id = EVSP.id;
-                command.app_priority = EVSP.priority;
-                command.target_phase = target_phase;
-                strncpy(command.host_OBU_name, host_OBU->OBU_name, sizeof(host_OBU->OBU_name));
-                command.phase = signal_status.SubPhaseID;
-                command.effect_time = ret;
-                insert_command_and_log;
+                VMS_activate(static_space.last_direction);
             }
-
-            VMS_activate(static_space.last_direction);
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr->touching_area_id);
         }

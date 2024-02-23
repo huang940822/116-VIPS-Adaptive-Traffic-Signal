@@ -132,7 +132,9 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
     }
     packet->INFO[4] = effect_time;
 
-    uint8_t ret = TC_packet_tx(packet, "signal packet tx: EXTEND");
+    char describe[40] = {0};
+    snprintf(describe, sizeof(describe), "signal packet tx: EXTEND %d", effect_time);
+    uint8_t ret = TC_packet_tx(packet, describe);
     if (packet != NULL) {
         free(packet);
     }

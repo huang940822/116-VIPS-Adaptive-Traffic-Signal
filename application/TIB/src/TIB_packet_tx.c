@@ -15,31 +15,8 @@
 #include "com_packet_processing.h"
 #include "error_status.h"
 #include "log.h"
+#include "timer_event.h"
 #include "traffic_signal_status_updating.h"
-
-static inline int set_timer_fd(int transfer_speed, char *error_msg)
-{
-    int fd = timerfd_create(CLOCK_REALTIME, 0);
-    int t = 1000000000 / transfer_speed;
-    struct itimerspec timerValue = {0};
-
-    if (fd == -1) {
-        log_file_write_fatal_error("%s timefd create error.", error_msg);
-        return -1;
-    }
-
-    timerValue.it_value.tv_sec = t / 1000000000;
-    timerValue.it_value.tv_nsec = t % 1000000000;
-    timerValue.it_interval.tv_sec = t / 1000000000;
-    timerValue.it_interval.tv_nsec = t % 1000000000;
-
-    if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-        log_file_write_fatal_error("%s timerfd_settime, errno %d.", error_msg, errno);
-        close(fd);
-        return -1;
-    }
-    return fd;
-}
 
 void *MAP_packet_tx_loop()
 {
