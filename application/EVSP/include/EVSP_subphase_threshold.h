@@ -15,6 +15,6 @@ typedef struct EVSP_activate_OBU {
 int EVSP_extend_formula(int target_phase, traffic_signal_status_t *signal_status, int Tbf);
 int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content);
 int EVSP_OBU_activation_timer_start(EVSP_host_OBU_obj_t *host_OBU);
-void EVSP_OBU_activation_time_end();
+void EVSP_OBU_activation_time_end(char *OBU_name);
 
 #endif

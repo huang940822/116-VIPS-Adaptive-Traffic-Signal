@@ -16,7 +16,7 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-#define MIN_EXPECT_SPEED 11  // 11 m/s 40 km/hr
+#define MIN_EXPECT_SPEED 17  // 17 m/s 60 km/hr
 
 #define THESHOLD_BUFFER 5
 
@@ -50,8 +50,9 @@ int EVSP_extend_formula(int target_phase, traffic_signal_status_t *signal_status
 
 float get_expect_arrival_time(EVSP_host_OBU_obj_t *host_OBU)
 {
-    return get_distance(config.RSU_lat, config.RSU_lon, host_OBU->lat, host_OBU->lon) /
-           (host_OBU->speed > MIN_EXPECT_SPEED ? host_OBU->speed : MIN_EXPECT_SPEED);
+    return (get_distance(config.RSU_lat, config.RSU_lon, host_OBU->lat, host_OBU->lon) /
+            (host_OBU->speed > MIN_EXPECT_SPEED ? host_OBU->speed : MIN_EXPECT_SPEED)) -
+           THESHOLD_BUFFER;
 }
 
 float get_subphase_threshold(int target_phase, float expect_arrival_time, traffic_signal_status_t *signal_status)
@@ -60,7 +61,9 @@ float get_subphase_threshold(int target_phase, float expect_arrival_time, traffi
 }
 
 /*
-
+幹道的分相為主要分相
+如果 target phase 在主要分相使用短時間快速輪轉
+如果不是使用長時間平滑控制
 */
 int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content)
 {
@@ -76,12 +79,12 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
     float subphase_threshold = get_subphase_threshold(target_phase, expect_arrival_time, signal_status);
 
     EVSP_plan_table_t *plan = EVSP_plan_table_search(signal_status->PlanID);
-    uint16_t pretime = signal_status->plan[current_subPhase - 1].PreTimeCompensated;
+    uint16_t pretime = signal_status->plan[current_subPhase - 1].PreGreen;
     int tmp = 0;
     int target_green = signal_status->plan[target_phase - 1].Green;
-    int subPhase_time = signal_status->StepSec + signal_status->plan[current_subPhase].PedGreenFlash +
-                        signal_status->plan[current_subPhase].PedRed + signal_status->plan[current_subPhase].Yellow +
-                        signal_status->plan[current_subPhase].AllRed;
+    int subPhase_time = signal_status->StepSec + signal_status->plan[current_subPhase - 1].PedGreenFlash +
+                        signal_status->plan[current_subPhase - 1].PedRed + signal_status->plan[current_subPhase - 1].Yellow +
+                        signal_status->plan[current_subPhase - 1].AllRed;
     bool is_main_subphase = true;  // 是不是主要分相
 
     log_snprintf(log_content,
@@ -129,9 +132,17 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
             if (expect_arrival_time < accumulation_target) {
                 // 預期抵達時間比主目標分相開始早
                 // 所以進行縮短
+                int remain = 0;
                 tmp = ceil(((float) accumulation_target - expect_arrival_time) / BeforeMtargetSubPhase);
-                adjust_time = pretime - tmp;
-                log_snprintf(log_content, "arrive time is too early, shorten %d\n", tmp);
+                // 如果其他分相不夠扣會優先從現在分相扣
+                for (int i = (current_subPhase - 1), j = 1; j < BeforeMtargetSubPhase; j++) {
+                    i = (i + 1) % signal_status->SubPhaseCount;
+                    if (signal_status->plan[i].PreGreen - signal_status->plan[i].MinGreen < tmp)
+                        remain += (tmp - (signal_status->plan[i].PreGreen - signal_status->plan[i].MinGreen));
+                }
+                adjust_time = pretime - tmp - remain;
+                adjust_time = adjust_time < 0 ? 0 : adjust_time;  // 避免小於 0
+                log_snprintf(log_content, "arrive time is too early, shorten %d(+%d)\n", tmp, remain);
             } else if (accumulation_target + subPhase_time < expect_arrival_time) {
                 // 預期抵達時間比主目標分相結束晚
                 // 所以進行延長
@@ -187,52 +198,48 @@ void *EVSP_OBU_activation_timer()
     while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
         if (s != sizeof(uint64_t))
-            log_file_write_fatal_error("EVSP_OBU_activation_timer timer read error");
+            log_file_write_fatal_error("EVSP_OBU_activation_timer timer read error %d\n", s);
+        if (activate_OBU.stop == 0) {
+            break;
+        }
+
         memset(log_content, 0, sizeof(log_content));
         get_traffic_signal_status(&signal_status);
 
         EVSP_plan_table_t *plan = EVSP_plan_table_search(signal_status.PlanID);
         int ret = -1;
-        int target_phase;
         if (plan == NULL) {
             log_snprintf(log_content, "EVSP_OBU_activation_timer touching area plan not found");
             log_file_write(log_content);
             break;
         }
 
-
+        log_snprintf(log_content, "EVSP_OBU_activation_timer run\n");
         if (signal_status.SubPhaseID == activate_OBU.control_subphaseID) {
+            log_snprintf(log_content, "signal_status.SubPhaseID == activate_OBU.control_subphaseID %d", activate_OBU.control_subphaseID);
             log_file_write(log_content);
             continue;
         }
 
         pthread_mutex_lock(&activate_OBU.activate_mutex);
-        host_OBU = EVSP_host_OBU_obj_search(activate_OBU.host_OBU_name);
-        if (activate_OBU.stop == 0 || host_OBU == NULL) {
+        host_OBU = EVSP_host_OBU_obj_search(activate_OBU.host_OBU_name, NULL);
+        if (host_OBU == NULL) {
             pthread_mutex_unlock(&activate_OBU.activate_mutex);
             break;
         }
 
+        printf("host_OBU->target_phase -------%d\n", host_OBU->target_phase);
+        ret = EVSP_opptimiztion(host_OBU->target_phase, host_OBU, &signal_status, log_content);
+        if (ret != -1) {
+            command.target_phase = host_OBU->target_phase;
+            command.phase = signal_status.SubPhaseID;
+            command.effect_time = ret;
+            ret = command_buf_insert_effect_time(&command);
 
-        target_phase = EVSP_activate(host_OBU->lon, host_OBU->lat,
-                                     host_OBU->direction, plan, &area_ptr);
-        printf("asds-------adasdasdasd %d-- %d---\n", target_phase, host_OBU->target_phase);
-        printf("asds--asd %f-- %f--- %d\n", host_OBU->lon, host_OBU->lat, host_OBU->direction);
-        if (target_phase == host_OBU->target_phase) {
-            ret = EVSP_opptimiztion(target_phase, host_OBU, &signal_status, log_content);
-            printf("asdsadasdasdasd %d-----\n", ret);
+            log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d (%d)",
+                         command.cycle, command.phase, command.effect_time, ret);
             if (ret != -1) {
-                printf("asdsadasdasdasd\n");
-                command.target_phase = target_phase;
-                command.phase = signal_status.SubPhaseID;
-                command.effect_time = ret;
-                ret = command_buf_insert_effect_time(&command);
-
-                log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                             command.cycle, command.phase, command.effect_time, ret);
-                if (ret != -1) {
-                    activate_OBU.control_subphaseID = signal_status.SubPhaseID;
-                }
+                activate_OBU.control_subphaseID = signal_status.SubPhaseID;
             }
         }
         pthread_mutex_unlock(&activate_OBU.activate_mutex);
@@ -265,9 +272,11 @@ int EVSP_OBU_activation_timer_start(EVSP_host_OBU_obj_t *host_OBU)
     return 1;
 }
 
-void EVSP_OBU_activation_time_end()
+void EVSP_OBU_activation_time_end(char *OBU_name)
 {
-    pthread_mutex_lock(&activate_OBU.activate_mutex);
-    activate_OBU.stop = 0;
-    pthread_mutex_unlock(&activate_OBU.activate_mutex);
+    if (strncmp(OBU_name, activate_OBU.host_OBU_name, sizeof(activate_OBU.host_OBU_name)) == 0) {
+        pthread_mutex_lock(&activate_OBU.activate_mutex);
+        activate_OBU.stop = 0;
+        pthread_mutex_unlock(&activate_OBU.activate_mutex);
+    }
 }

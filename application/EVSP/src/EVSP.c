@@ -313,7 +313,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
     log_file_write(log_content);
     memset(log_content, 0, sizeof(log_content));
 
-    EVSP_host_OBU_obj_t *host_OBU = EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
+    EVSP_OBU_update_info_t update_info;
+    update_info.lat = OBU_lat;
+    update_info.lon = OBU_lon;
+    update_info.direction = static_space.last_direction;
+    update_info.speed = app_section->OBU_object->prediction_speed;
+    EVSP_host_OBU_obj_t *host_OBU = EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name, &update_info);
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
@@ -328,13 +333,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
     }  // tc箱出現錯誤 直接不做
     /* already in host OBU list */
     if (host_OBU != NULL) {
-        host_OBU->lat = OBU_lat;
-        host_OBU->lon = OBU_lon;
-        host_OBU->direction = static_space.last_direction;
-        host_OBU->speed = app_section->OBU_object->prediction_speed;
-        printf("-------asds--asd %f-- %f--- %d\n", host_OBU->lon, host_OBU->lat, host_OBU->direction);
-
-
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
         host_OBU->distance = OBU_distance;
@@ -346,7 +344,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                          app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             int target_phase = host_OBU->target_phase;
-            EVSP_OBU_activation_time_end();
+            EVSP_OBU_activation_time_end(host_OBU->OBU_name);
             command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
@@ -394,11 +392,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
             printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
 
-            host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr);
-            host_OBU->lat = OBU_lat;
-            host_OBU->lon = OBU_lon;
-            host_OBU->direction = static_space.last_direction;
-            host_OBU->speed = app_section->OBU_object->prediction_speed;
+            host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr, &update_info);
 
             int ret = EVSP_OBU_activation_timer_start(host_OBU);
             if (ret != -1) {
