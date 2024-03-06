@@ -101,7 +101,7 @@ int main()
     /* log init */
     log_file_init();  // 一個timer被created
 
-    log_file_write("version : v2.5.2");
+    log_file_write("version : v2.5.3");
 
     /* read config file*/
     ret = config_init();
@@ -175,7 +175,7 @@ int main()
         &EVSP,
         &TSP,
         // &CPS,
-        // &TIB,
+        &TIB,
         // &SPM,
     };
     
