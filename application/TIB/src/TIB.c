@@ -151,7 +151,6 @@ int TIB_on_registration(void *arg)
     spat_msg_init(&p_spat);
     char log_content[LOG_CONTENT_LEN + 1] = {0};
     print_config_map(map, log_content, LOG_CONTENT_LEN);
-    log_file_write("Map Config init %s", log_content);
 
     pthread_t MAP_packet_tx_thread;
     ret = pthread_create(&MAP_packet_tx_thread, NULL, MAP_packet_tx_loop, NULL);

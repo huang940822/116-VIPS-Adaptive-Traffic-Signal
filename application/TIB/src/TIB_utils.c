@@ -32,6 +32,7 @@ int get_map_table(traffic_signal_status_t *signal_status, int map_table[COMPASS_
     return 1;
 }
 
+// 確定每個方向的燈號在號控器設定中有哪些綠燈，像是直綠 右綠 圓頭綠等
 int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSignalMap[COMPASS_NUM])
 {
     int map_table[COMPASS_NUM];

@@ -46,7 +46,8 @@ void *MAP_packet_tx_loop()
             // map_print(map);
             pior_planID = planID;
         }
-        // map_print(map);
+        printf("=========================\n");
+        map_print(map);
         OBU_j2735_tx(MapData_Id, map);
     }
     close(fd);
@@ -78,6 +79,7 @@ void *SPaT_packet_tx_loop()
             pior_stepID = stepID;
             pior_second = second;
         }
+        // printf("=========================\n");
         // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);
     }

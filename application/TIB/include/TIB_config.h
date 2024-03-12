@@ -52,6 +52,14 @@ typedef enum TIB_config_err {
     TIB_CONFIG_SignalGroupID_table_INVALID = -6,
 } TIB_config_err_t;
 
+typedef struct signalGroupId_table_lane {
+    int signalGroupID;
+    int approachId;
+    int signalGreenType;
+    // 有可能五字路口但是使用十字
+    int tranferSGID;
+} signalGroupId_table_lane_t;
+
 typedef struct TIB_config_object {
     uint8_t TIB_dontSend2TC;
     uint8_t MAP_packet_transfer_speed;
@@ -66,6 +74,8 @@ typedef struct TIB_config_object {
 
     // 對應號控器上哪一路有哪些綠燈 signalGroupId 是多少
     int16_t signalGroupId_table[COMPASS_NUM][NumOfGreen];
+    // 避免 ApproachID 與 號控器內的 SignalID 不同
+    vector_t(int16_t) signalId_table[COMPASS_NUM][NumOfGreen];
 } TIB_config_object_t;
 
 void print_config_map(MapData *map, char *buf, int buf_len);
