@@ -148,6 +148,9 @@ static inline void get_nearly_segment(ArgTrafficStatus, AllDay_plan_t *segment)
     segment->Min = signal_status->allday_plan[signal_status->SegmentCount - 1].Min;
 }
 
+
+// 在沒有額外設定下 成龍為時段基準點 山佇為零時零分基準點
+// 如果不是按照這個規則他會
 static inline int16_t get_total_compensation_second_with_status(ArgTrafficStatus)
 {
     AllDay_plan_t segment;
