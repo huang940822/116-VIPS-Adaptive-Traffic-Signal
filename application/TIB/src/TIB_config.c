@@ -375,7 +375,8 @@ int TIB_config_init()
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table element err");
 
                 int index = 0;
-                int16_t signalGroupId = -1, approachID, SignalGreenType, SignalID;
+                int16_t signalGroupId = -1, approachID, SignalGreenType, SignalID, MapGreenType;
+                signalID_obj_t sGobj = {0};
                 // SignalGroupID
                 char *substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hd", &signalGroupId) != 1 || signalGroupId == -1)
@@ -399,7 +400,14 @@ int TIB_config_init()
                 if (substr == NULL || sscanf(substr, "%hd", &SignalID) != 1 || SignalID > COMPASS_NUM)
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table SignalID err");
 
-                vector_push_back(TIB_config.signalId_table[SignalID - 1][SignalGreenType], signalGroupId);
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%hd", &MapGreenType) != 1 || MapGreenType > 4)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table MapGreenType err");
+                sGobj.signalGroupID = signalGroupId;
+                sGobj.approachId = approachID;
+                sGobj.signalGreenType = SignalGreenType;
+
+                vector_push_back(TIB_config.signalId_table[SignalID - 1][MapGreenType], sGobj);
                 vector_free(str_arr);
             }
         }
@@ -479,7 +487,8 @@ void print_config_map(MapData *map, char *buf, int buf_len)
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
             for (int k = 0; k < vector_size(TIB_config.signalId_table[i][j]); k++) {
-                log_snprintf(buf, "%d %d %d\n", i, j, vector_at(TIB_config.signalId_table[i][j], k));
+                signalID_obj_t *obj = &vector_at(TIB_config.signalId_table[i][j], k);
+                log_snprintf(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
             }
         }
     }

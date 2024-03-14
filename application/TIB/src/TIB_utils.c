@@ -46,6 +46,10 @@ int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSign
             greenSignalMap[j] |= (signal_status->phaseorder_plan[i][j].SignalStatus & GreenMask);
         }
     }
+    // 在驗證綠燈的時候可以使用這段 他只會讓 SPaT 傳有綠燈的方向
+    // for (int j = 0; j < signal_status->SignalCount; j++) {
+    //     greenSignalMap[j] |= (signal_status->phaseorder_plan[signal_status->SubPhaseID - 1][j].SignalStatus & GreenMask);
+    // }
 
     return signal_status->SignalCount;
 }

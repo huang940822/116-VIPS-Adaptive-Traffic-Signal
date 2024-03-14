@@ -168,7 +168,6 @@ int spat_msg_update(SPAT *pp_spat)
     static uint8_t pre_signal_table[8] = {0};
     static int preSec = 0;
     uint8_t signal_table[8] = {0};
-
     for (int i = 0; i < signal_status.SignalCount; i++) {
         for (int j = 0; j < sizeof(signal_mask_arr); j++) {
             if (greenSignalMap[i] & signal_mask_arr[j]) {
@@ -178,11 +177,12 @@ int spat_msg_update(SPAT *pp_spat)
                     int index = 0, cur_subphase = signal_status.SubPhaseID - 1, offset = 0;
 
                     state->state_time_speed.count = 0;
-                    state->signalGroup = vector_at(TIB_config.signalId_table[i][j], k);
+                    signalID_obj_t *sGobj = &vector_at(TIB_config.signalId_table[i][j], k);
+                    state->signalGroup = sGobj->signalGroupID;
 
-                    if (signal_mask_arr[j] != PedestrianGreenMask) {  // 行車綠
+                    if (sGobj->signalGreenType != PedestrianGreenIndex) {  // 行車綠
                         // 圓頭 MovementPhaseState_permissive_Movement_Allowed, 箭頭 MovementPhaseState_protected_Movement_Allowed
-                        greenType = signal_mask_arr[j] == RroundHeadGreenMask ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
+                        greenType = (sGobj->signalGreenType == RroundHeadGreenIndex) ? MovementPhaseState_permissive_Movement_Allowed : MovementPhaseState_protected_Movement_Allowed;
                         if (signal_status.phaseorder_plan[cur_subphase][i].SignalStatus & signal_mask_arr[j]) {
                             SPaT_debug("---++\n");
                             // 早開

@@ -95,6 +95,10 @@ void packet_5FC8(traffic_signal_packet_t *packet)
 
     signal_status.PlanID = packet->INFO[2];
 
+    if (signal_status.PhaseOrder != packet->INFO[4]) {
+        command_buf_clear();
+        guarenteed_cmd_set._5F43_count = 0;
+    }
     signal_status.PhaseOrder = packet->INFO[4];
     signal_status.SubPhaseCount = packet->INFO[5];
     // printf("signal_status.SubPhaseCount:%d\r\n",signal_status.SubPhaseCount);

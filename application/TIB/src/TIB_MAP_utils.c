@@ -109,9 +109,6 @@ static inline int map_connectTo_clean(MapData *map)
 
 int map_signal_group(MapData *map)
 {
-    traffic_signal_status_t signal_status;
-    get_traffic_signal_status(&signal_status);
-
     map_connectTo_clean(map);
     LaneList *laneSet = &map->intersections.tab->laneSet;
 
