@@ -10,7 +10,8 @@
 
 config_object_t config = {
     .RSU_name = "S428901   ",
-    .RSU_id = 0,
+    .RSU_id = 4289,
+    .RSU_region = 701,
     .RSU_lat = 22.996714,
     .RSU_lon = 120.237009,
     .RSU_elev = 0,
@@ -248,8 +249,15 @@ int config_init()
         if (strstr(buf, "RSU_NAME ")) {
             if (read_name_from_config_line(buf, string_val)) {
                 if (strlen(string_val) <= 10) {
+                    char extracted[5];
+
                     strncpy(config.RSU_name, string_val, 10);
                     log_file_write("config: RSU_name = %s", config.RSU_name);
+
+                    strncpy(extracted, config.RSU_name + 1, 4);
+                    extracted[4] = '\0';
+                    config.RSU_id = atoi(extracted);
+                    log_file_write("config: RSU_id = %d", config.RSU_id);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_NAME;
