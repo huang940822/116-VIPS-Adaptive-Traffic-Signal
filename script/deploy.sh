@@ -41,3 +41,6 @@ chmod +x $DEPLOT_DIR/log_usage_check.sh
 
 cp script/ping_test.sh $DEPLOT_DIR/
 chmod +x $DEPLOT_DIR/ping_test.sh
+
+cp script/gnss_status_check.sh $DEPLOT_DIR/
+chmod +x $DEPLOT_DIR/gnss_status_check.sh

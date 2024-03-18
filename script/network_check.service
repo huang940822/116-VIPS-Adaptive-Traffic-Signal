@@ -4,8 +4,8 @@ after=network.target
 
 [Service]
 User=root
-ExecStart=/home/oslab/RSU_Controller_master/ping_test.sh
-WorkingDirectory=/home/oslab/RSU_Controller_master
+ExecStart=/home/oslab/RSU_Controller/ping_test.sh
+WorkingDirectory=/home/oslab/RSU_Controller
 Restart=always
 RestartSec=10s
 TimeoutSec=infinity
