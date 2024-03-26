@@ -192,6 +192,8 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
             // time += pretime;
             time += (pretime - 4);  // 要想一下 -4是因為機器限制的關係
         }
+        // 因為如果成龍的 time 是 0 的話沒有反應
+        time = (time == 0) ? 1 : time;
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP
         break;
