@@ -8,6 +8,7 @@
 
 #define HASH_TABLE_SIZE 10
 #define OBU_OBJECT_EXPIRE_TIME 60
+#define OBU_SPEED_KALMAN_GAIN 0.6
 
 extern OBU_object_t normal_OBU_list[HASH_TABLE_SIZE];
 extern OBU_object_t special_OBU_list[VEHICLE_TYPE_NUMBER];

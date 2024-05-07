@@ -144,13 +144,13 @@ int TIB_on_registration(void *arg)
     if (ret != 0) {
         printf("error TIB reading config file: %d\n", ret);
         log_file_write_fatal_error("error TIB reading config file: %d", ret);
+        return 0;
     }
     /* SPaT / MAP msg init */
     map_msg_init(&map);
     spat_msg_init(&p_spat);
     char log_content[LOG_CONTENT_LEN + 1] = {0};
     print_config_map(map, log_content, LOG_CONTENT_LEN);
-    log_file_write("Map Config init %s", log_content);
 
     pthread_t MAP_packet_tx_thread;
     ret = pthread_create(&MAP_packet_tx_thread, NULL, MAP_packet_tx_loop, NULL);
@@ -158,4 +158,6 @@ int TIB_on_registration(void *arg)
     pthread_t SPaT_packet_tx_thread;
     ret = pthread_create(&SPaT_packet_tx_thread, NULL, SPaT_packet_tx_loop, NULL);
     pthread_detach(SPaT_packet_tx_thread);
+
+    return 0;
 }

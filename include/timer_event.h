@@ -23,6 +23,7 @@ int set_timer(timer_t timer_id,
               uint32_t initial_sec,
               uint32_t initial_nsec);
 int delete_timer(timer_t timer_id);
+int set_timer_fd(int transfer_speed, char *error_msg);
 
 extern Guaranteed_command_set_t guarenteed_cmd_set;
 

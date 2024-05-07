@@ -20,6 +20,7 @@ pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
 
 /* since now dispatcher, ea_app_proxy, command_buf_send(), 
  * all might read/write callback_list, we add a mutex_lock */
+// 目前 mutex_callback_list 有問題需要修正要想辦法把這個 lock 拿掉 不然同時間拿了太多 lock 會太複雜
 pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
 /* this function assume the caller have grabbed the mutex_callback_list  */
@@ -412,9 +413,7 @@ void app_list_print()
         printf("%s\n", current->name);
         current = current->next;
     }
-
-    pthread_mutex_unlock(&mutex_app_list); 
-
 unlock_ret:
+    pthread_mutex_unlock(&mutex_app_list); 
     return;
 }

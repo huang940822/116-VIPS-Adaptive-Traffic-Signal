@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -96,7 +98,7 @@ void timer_event_handler(__sigval_t value)
 
         if (guarenteed_cmd_set._0F42_count == 0) {
             temp_ack_seq = tsc_0F42();  // 查詢日期、時間
-            WAIT_ACK_LOOP
+            // WAIT_ACK_LOOP
         } else {
             guarenteed_cmd_set._0F42_count++;
             guarenteed_cmd_set._0F42_count %= 3600;
@@ -109,12 +111,12 @@ void timer_event_handler(__sigval_t value)
             time(&currentTime);
             localtime_r(&currentTime, &localTime);
             temp_ack_seq = tsc_5F46(localTime.tm_wday);
-            WAIT_ACK_LOOP
+            // WAIT_ACK_LOOP
         }
 
         if (guarenteed_cmd_set._5F43_count == 0) {
             temp_ack_seq = tsc_5F43();
-            WAIT_ACK_LOOP
+            // WAIT_ACK_LOOP
         }
 
         pthread_mutex_unlock(&mutex_uart_comple_protect);
@@ -224,4 +226,28 @@ int delete_timer(timer_t timer_id)
     } else {
         return 0;
     }
+}
+
+int set_timer_fd(int transfer_speed, char *error_msg)
+{
+    int fd = timerfd_create(CLOCK_REALTIME, 0);
+    int t = 1000000000 / transfer_speed;
+    struct itimerspec timerValue = {0};
+
+    if (fd == -1) {
+        log_file_write_fatal_error("%s timefd create error.", error_msg);
+        return -1;
+    }
+
+    timerValue.it_value.tv_sec = t / 1000000000;
+    timerValue.it_value.tv_nsec = t % 1000000000;
+    timerValue.it_interval.tv_sec = t / 1000000000;
+    timerValue.it_interval.tv_nsec = t % 1000000000;
+
+    if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+        log_file_write_fatal_error("%s timerfd_settime, errno %d.", error_msg, errno);
+        close(fd);
+        return -1;
+    }
+    return fd;
 }

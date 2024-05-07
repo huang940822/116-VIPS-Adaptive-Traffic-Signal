@@ -152,9 +152,11 @@ LaneSet_connectsTo_table_end
 # SignalGroupID 0 ~ 255
 # ApproachId 號控器上的第幾路 對應 LaneSet_table
 # SignalGreenType 
-# 0 圓頭綠  1 箭頭直  2 箭頭左  3 箭頭右  4 行人綠
+# 0 圓頭綠  1 箭頭左  2 箭頭直  3 箭頭右  4 行人綠
+
+# SignalID 避免號控器接線問題把
 SignalGroupID_table_start
-# SignalGroupID, ApproachId, SignalGreenType
+# SignalGroupID, ApproachId, SignalGreenType, SignalID
 1, 1, 0
 2, 2, 0
 3, 3, 0

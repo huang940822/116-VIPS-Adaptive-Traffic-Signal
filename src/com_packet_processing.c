@@ -313,7 +313,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
 
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list);
+    // pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current = &callback_list[EVENT_CLOUD_PACKET_RX];
     while (current->next != NULL) {
@@ -326,7 +326,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         current = current->next;
     }
 
-    pthread_mutex_unlock(&mutex_callback_list);
+    // pthread_mutex_unlock(&mutex_callback_list);
 
     if (read_buf.content != NULL) {
         free(read_buf.content);
@@ -501,7 +501,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
-    pthread_mutex_lock(&mutex_callback_list);
+    // pthread_mutex_lock(&mutex_callback_list);
     while (current->next != NULL) {
         proxy_handling_app_p = current->next->app_obj_p;
 
@@ -517,7 +517,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         current = current->next;
     }
-    pthread_mutex_unlock(&mutex_callback_list);
+    // pthread_mutex_unlock(&mutex_callback_list);
     
     // free resource 
     if (app_section.OBU_object != NULL)
@@ -582,7 +582,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 
     /* since now dispatcher, ea_app_proxy, command_buf_send(), 
     * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list);
+    // pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {
@@ -598,7 +598,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         current = current->next;
     }
 
-    pthread_mutex_unlock(&mutex_callback_list);
+    // pthread_mutex_unlock(&mutex_callback_list);
 
     if (read_buf.content != NULL) {
         free(read_buf.content);

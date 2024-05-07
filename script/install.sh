@@ -33,6 +33,21 @@ TimeoutSec=infinity
 [Install]
 WantedBy=multi-user.target" > network_check.service
 
+# gnss_status_check.service
+echo "[Unit]
+Description=GNSS Status Check Service
+after=network.target
+
+[Service]
+User=oslab
+ExecStart=$path/gnss_status_check.sh
+WorkingDirectory=$path
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target" > gnss_status_check.service
+
 # middleware.service
 echo "[Unit]
 Description=middleware daemon
@@ -55,6 +70,9 @@ chmod 644 /etc/systemd/system/capacity_check.service
 mv network_check.service /etc/systemd/system/network_check.service
 chmod 644 /etc/systemd/system/network_check.service
 
+mv gnss_status_check.service /etc/systemd/system/gnss_status_check.service
+chmod 644 /etc/systemd/system/gnss_status_check.service
+
 mv middleware.service /etc/systemd/system/middleware.service
 chmod 644 /etc/systemd/system/middleware.service
 
@@ -63,6 +81,8 @@ systemctl enable capacity_check.service
 systemctl start capacity_check.service
 systemctl enable network_check.service
 systemctl start network_check.service
+systemctl enable gnss_status_check.service
+systemctl start gnss_status_check.service
 systemctl enable middleware.service
 systemctl start middleware.service
 

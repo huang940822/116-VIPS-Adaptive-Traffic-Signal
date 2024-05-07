@@ -375,7 +375,8 @@ int TIB_config_init()
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table element err");
 
                 int index = 0;
-                int16_t signalGroupId = -1, approachID, SignalGreenType;
+                int16_t signalGroupId = -1, approachID, SignalGreenType, SignalID, MapGreenType;
+                signalID_obj_t sGobj = {0};
                 // SignalGroupID
                 char *substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%hd", &signalGroupId) != 1 || signalGroupId == -1)
@@ -394,6 +395,19 @@ int TIB_config_init()
                 if (TIB_config.signalGroupId_table[approachID][SignalGreenType] != -1)
                     FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table signalGroupId_table err");
                 TIB_config.signalGroupId_table[approachID][SignalGreenType] = signalGroupId;
+
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%hd", &SignalID) != 1 || SignalID > COMPASS_NUM)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table SignalID err");
+
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%hd", &MapGreenType) != 1 || MapGreenType > 4)
+                    FreeAndReturnInvalid(str_arr, SignalGroupID_table, "SignalGroupID_table MapGreenType err");
+                sGobj.signalGroupID = signalGroupId;
+                sGobj.approachId = approachID;
+                sGobj.signalGreenType = SignalGreenType;
+
+                vector_push_back(TIB_config.signalId_table[SignalID - 1][MapGreenType], sGobj);
                 vector_free(str_arr);
             }
         }
@@ -441,7 +455,11 @@ void print_config_map(MapData *map, char *buf, int buf_len)
         }
         snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
     }
-    snprintf(buf + strlen(buf), buf_len - strlen(buf), "connectsTo_list \n");
+
+    log_file_write("Map Config init %s", buf);
+    memset(buf, 0, buf_len);
+
+    log_snprintf(buf, "connectsTo_list \n");
     for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {
         MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);
         log_snprintf(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
@@ -461,8 +479,19 @@ void print_config_map(MapData *map, char *buf, int buf_len)
     snprintf(buf + strlen(buf), buf_len - strlen(buf), "signalGroupId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", TIB_config.signalGroupId_table[i][j]);
+            log_snprintf(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+        log_snprintf(buf, "\n");
     }
+    log_snprintf(buf, "signalId_table \n");
+    for (int i = 0; i < COMPASS_NUM; i++) {
+        for (int j = 0; j < NumOfGreen; j++) {
+            for (int k = 0; k < vector_size(TIB_config.signalId_table[i][j]); k++) {
+                signalID_obj_t *obj = &vector_at(TIB_config.signalId_table[i][j], k);
+                log_snprintf(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
+            }
+        }
+    }
+    log_snprintf(buf, "\n");
+    log_file_write("Map Config init %s", buf);
 }

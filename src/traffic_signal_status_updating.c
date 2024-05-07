@@ -91,26 +91,32 @@ void packet_5FC8(traffic_signal_packet_t *packet)
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
-    pthread_mutex_lock(&mutex_current_signal_status);
+    pthread_mutex_lock(&mutex_signal_status);
 
     signal_status.PlanID = packet->INFO[2];
 
-    current_signal_status.PhaseOrder = packet->INFO[4];
-    current_signal_status.SubPhaseCount = packet->INFO[5];
-    // printf("current_signal_status.SubPhaseCount:%d\r\n",current_signal_status.SubPhaseCount);
-    for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
-        current_signal_status.plan[i].Green =
+    if (signal_status.PhaseOrder != packet->INFO[4]) {
+        command_buf_clear();
+        guarenteed_cmd_set._5F43_count = 0;
+    }
+    signal_status.PhaseOrder = packet->INFO[4];
+    signal_status.SubPhaseCount = packet->INFO[5];
+    // printf("signal_status.SubPhaseCount:%d\r\n",signal_status.SubPhaseCount);
+    for (int i = 0; i < signal_status.SubPhaseCount; i++) {
+        signal_status.plan[i].Green =
             (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
     }
-    for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
-        signal_status.plan[i].PreTimeCompensated = current_signal_status.plan[i].Green;
+    for (int i = 0; i < signal_status.SubPhaseCount; i++) {
+        signal_status.plan[i].PreTimeCompensated =
+            signal_status.plan[i].Green -
+            signal_status.plan[i].PedGreenFlash - signal_status.plan[i].PedRed;
     }
-    current_signal_status.CycleTime =
-        packet->INFO[6 + current_signal_status.SubPhaseCount * 2] << 8 |
-        packet->INFO[7 + current_signal_status.SubPhaseCount * 2];
-    current_signal_status.Offset =
-        packet->INFO[8 + current_signal_status.SubPhaseCount * 2] << 8 |
-        packet->INFO[9 + current_signal_status.SubPhaseCount * 2];
+    signal_status.CycleTime =
+        packet->INFO[6 + signal_status.SubPhaseCount * 2] << 8 |
+        packet->INFO[7 + signal_status.SubPhaseCount * 2];
+    signal_status.Offset =
+        packet->INFO[8 + signal_status.SubPhaseCount * 2] << 8 |
+        packet->INFO[9 + signal_status.SubPhaseCount * 2];
     if (config.log_signal_packet_info) {
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
@@ -120,28 +126,28 @@ void packet_5FC8(traffic_signal_packet_t *packet)
                  signal_status.PlanID);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nPhaseOrder: %d",
-                 current_signal_status.PhaseOrder);
+                 signal_status.PhaseOrder);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d",
-                 current_signal_status.SubPhaseCount);
-        for (int i = 0; i < current_signal_status.SubPhaseCount; i++) {
+                 signal_status.SubPhaseCount);
+        for (int i = 0; i < signal_status.SubPhaseCount; i++) {
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d",
-                     current_signal_status.plan[i].Green);
+                     signal_status.plan[i].Green);
             snprintf(log_content + strlen(log_content),
                      LOG_CONTENT_LEN - strlen(log_content), "\nPreTimeCompensated: %d",
                      signal_status.plan[i].PreTimeCompensated);
         }
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nCycleTime: %d",
-                 current_signal_status.CycleTime);
+                 signal_status.CycleTime);
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content), "\nOffset: %d",
-                 current_signal_status.Offset);
+                 signal_status.Offset);
         log_file_write(log_content);
     }
 
-    pthread_mutex_unlock(&mutex_current_signal_status);
+    pthread_mutex_unlock(&mutex_signal_status);
     return;
 }
 /* 5F C5 回報時制計畫編號與資料庫 */  // 收tc箱資料

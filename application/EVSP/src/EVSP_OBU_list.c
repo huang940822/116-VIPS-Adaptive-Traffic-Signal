@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "EVSP_OBU_list.h"
 #include "EVSP_config.h"
 #include "EVSP_timer_event.h"
 #include "EVSP_touching_area.h"
@@ -35,12 +36,23 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
     return host_OBU;
 }
 
+static inline void EVSP_host_OBU_obj_update(EVSP_host_OBU_obj_t *host_OBU, EVSP_OBU_update_info_t *info)
+{
+    if (info == NULL)
+        return;
+    host_OBU->lat = info->lat;
+    host_OBU->lon = info->lon;
+    host_OBU->direction = info->direction;
+    host_OBU->speed = info->speed;
+}
+
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
                                               uint8_t target_phase,
-                                              EVSP_touching_area_t *area_ptr)
+                                              EVSP_touching_area_t *area_ptr,
+                                              EVSP_OBU_update_info_t *info)
 {
     EVSP_host_OBU_obj_t *current, *previous;
-    pthread_mutex_lock(&EVSP_host_OBU_list_mutex); 
+    pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
     /* empty list */
     if (EVSP_host_OBU_list_head == NULL) {
         EVSP_host_OBU_list_head = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
@@ -50,6 +62,7 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
         previous = current;
         while (current) {
             if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
+                EVSP_host_OBU_obj_update(current, info);
                 pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
                 return NULL;
             }
@@ -59,11 +72,12 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
         previous->next = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
         current = previous->next;
     }
+    EVSP_host_OBU_obj_update(current, info);
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
     return current;
 }
 
-EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name)
+EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name, EVSP_OBU_update_info_t *info)
 {
     pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
 
@@ -71,8 +85,10 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name)
     /* traverse host OBU list */
     while (current != NULL) {
         /* host OBU already exist */
-        if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0)
+        if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
+            EVSP_host_OBU_obj_update(current, info);
             break;
+        }
         current = current->next;
     }
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);

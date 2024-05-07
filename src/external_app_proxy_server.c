@@ -33,7 +33,7 @@
  * to try to register to the middleware (EAP).
  * And the EAL internal codes will and should use the exact same file as the middleware */
 // #define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
-#define MY_UNIX_SOCKET_PATH "../RSU_Controller_master/config/my_unix_socket_file_for_eap"
+#define MY_UNIX_SOCKET_PATH "../config/my_unix_socket_file_for_eap"
 #define EPOLL_MAX_EVENTS 64
 
 /* The backlog argument defines the maximum length to which the

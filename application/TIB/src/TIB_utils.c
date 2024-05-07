@@ -32,6 +32,7 @@ int get_map_table(traffic_signal_status_t *signal_status, int map_table[COMPASS_
     return 1;
 }
 
+// 確定每個方向的燈號在號控器設定中有哪些綠燈，像是直綠 右綠 圓頭綠等
 int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSignalMap[COMPASS_NUM])
 {
     int map_table[COMPASS_NUM];
@@ -45,6 +46,10 @@ int get_greenSignalMap(traffic_signal_status_t *signal_status, uint8_t greenSign
             greenSignalMap[j] |= (signal_status->phaseorder_plan[i][j].SignalStatus & GreenMask);
         }
     }
+    // 在驗證綠燈的時候可以使用這段 他只會讓 SPaT 傳有綠燈的方向
+    // for (int j = 0; j < signal_status->SignalCount; j++) {
+    //     greenSignalMap[j] |= (signal_status->phaseorder_plan[signal_status->SubPhaseID - 1][j].SignalStatus & GreenMask);
+    // }
 
     return signal_status->SignalCount;
 }
