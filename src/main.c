@@ -16,12 +16,13 @@
 #include "OBU_record_processing.h"
 #include "application_registration.h"
 #include "byte_processing.h"
+#include "cms.h"
 #include "config.h"
 #include "dispatcher.h"
-#include "external_app_proxy_server.h"
-#include "external_app_proxy_callback_msg_forward.h"
 #include "error_code_user.h"
 #include "error_status.h"
+#include "external_app_proxy_callback_msg_forward.h"
+#include "external_app_proxy_server.h"
 #include "j2735_codec.h"
 #include "log.h"
 #include "msg_queue.h"
@@ -42,12 +43,12 @@ extern uint8_t flag_query_firm_ver;
 
 pthread_mutex_t mutex_uart_comple_protect = PTHREAD_MUTEX_INITIALIZER;
 
-//declaration here
+// declaration here
 int register_handler_for_unexpected_signal();
 
 void signalUnExpectedHandler(int sig_num)
 {
-    //signal(SIGINT, sigintHandler);
+    // signal(SIGINT, sigintHandler);
     register_handler_for_unexpected_signal();
     // pthread_mutex_lock(&mutex_uart_comple_protect);
     printf("get in mutex in signal handler for unexpected signal\r\n");
@@ -55,43 +56,44 @@ void signalUnExpectedHandler(int sig_num)
     printf("\nuart write actions has all be completed before exit from process\n");
 
     event_middleware_restart_handler();
-    
+
     fflush(stdout);
     fflush(stderr);
     exit(0);
     pthread_mutex_unlock(&mutex_uart_comple_protect);
 }
 
-//definition here
+// definition here
 int register_handler_for_unexpected_signal()
-{   
-    __sighandler_t ret_p = 0;    
+{
+    __sighandler_t ret_p = 0;
     /* handling unexpected SIGINT signal */
     ret_p = signal(SIGINT, signalUnExpectedHandler);
-    if(ret_p == SIG_ERR){
+    if (ret_p == SIG_ERR) {
         printf("Err: signal(SIGINT, ...) failed\r\n");
         return -1;
     }
     /* handling unexpected SIGPIPE signal */
     ret_p = signal(SIGPIPE, signalUnExpectedHandler);
-    if(ret_p == SIG_ERR){
+    if (ret_p == SIG_ERR) {
         printf("Err: signal(SIGPIPE, ...) failed\r\n");
         return -2;
     }
-    /* other signal if you want ... */        
-    
+    /* other signal if you want ... */
+
     return 0;
 }
 
 int main()
-{   
+{
     int ret = 0;
 
-    //signal(SIGINT, sigintHandler); //old version
+    // signal(SIGINT, sigintHandler); //old version
     ret = register_handler_for_unexpected_signal();
-    if(ret){
+    if (ret) {
         printf("%s, register_handler_for_unexpected_signal() failed\r\n", __func__);
-        printf("return value is %d\r\n", ret);;
+        printf("return value is %d\r\n", ret);
+        ;
         fflush(stdout);
         exit(0);
     }
@@ -117,7 +119,7 @@ int main()
 
     // init dsrc error detect
     dsrc_error_detect_init();
-    
+
     // init tc fail detect
     tc_5fcc_error_detect_init();
 
@@ -146,6 +148,8 @@ int main()
         perror("main: pthread_create");
         exit(errno);
     }
+
+    CMS_handler_init();
 
     /* command buffer init & command buffer polling timer event*/
     command_buf_init();  // 這裡面又一個timer被created
@@ -178,13 +182,13 @@ int main()
         &TIB,
         // &SPM,
     };
-    
+
     /* 注意有些 app 的 on_registration() 會 create timer */
     /* 已知的有 MAP, TSP(預計會改至 MMP), */
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {
         printf("handling app_name: %s, id: %d, prio: %d\n",
-               app_arr[i]->name, app_arr[i]->id,  app_arr[i]->priority );
+               app_arr[i]->name, app_arr[i]->id, app_arr[i]->priority);
         ret = app_register(app_arr[i]);
         if (ret != 0) {
             log_file_write_fatal_error("error registering application: %d (%s)",

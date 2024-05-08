@@ -212,16 +212,7 @@ void VMS_report_programs_id(uint8_t cmd)
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("VMS_report_programs_id: malloc");
-        perror("VMS_report_programs_id: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "VMS_report_programs_id");
 
     // cmd
     write_uint8_t(cmd, &write_buf);
@@ -277,16 +268,7 @@ void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
     // 回傳給雲端
     msg_buf_t write_buf;
     write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("VMS_report_programs_name: malloc");
-        perror("VMS_report_programs_name: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "VMS_report_programs_name");
 
     // cmd
     write_uint8_t(cmd, &write_buf);
@@ -717,7 +699,6 @@ void control_loop()
             strcat(vms_packet_tx, VMS_PACKET_COMMA);
             strcat(vms_packet_tx, uint8_t_to_char);
         }
-
     } break;
     case CAROUSEL_NUM: {
         uint8_t current_phase = 1 << (signal_status.SubPhaseID - 1);
