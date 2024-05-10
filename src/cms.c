@@ -154,7 +154,6 @@ int CMS_img_hash(FILE *input_file, char *hashcode)
     unsigned char SHA256_hash[SHA256_DIGEST_LENGTH];
     EVP_MD_CTX *sha_ctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(sha_ctx, EVP_sha256(), NULL);
-
     while ((n = fread(input_buffer, 1, BUFFER_SIZE, input_file)) > 0) {
         EVP_DigestUpdate(sha_ctx, input_buffer, n);
     }
@@ -191,7 +190,7 @@ int CMS_update_img(int imgID, char *imgName)
 
     FILE *encrypted_file = fopen("./" CMS_encrypt_img, "w");
     if (encrypted_file == NULL) {
-        log_file_write_with_errno("Error opening encrypted file " CMS_pic_path CMS_encrypt_img);
+        log_file_write_with_errno("Error opening encrypted file ./" CMS_encrypt_img);
         perror("Error opening encrypted file");
         fclose(input_file);
         return -1;
@@ -202,21 +201,24 @@ int CMS_update_img(int imgID, char *imgName)
     fclose(input_file);
     fclose(encrypted_file);
 
+    // SCP 上傳圖片
     char scp_command[1024];
     char ip[INET_ADDRSTRLEN];
     int fail = 0;
+    char filename[120];
+    snprintf(filename, sizeof(filename), "%03d_%s", imgID, imgName);
     for (int i = 0; i < cms_num; i++) {
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
-        snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/%03d_%s", ip, imgID, imgName);
+        snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/%s", ip, filename);
 
         int result = system(scp_command);
         if (result == 0) {
             printf("File transferred successfully.\n");
-            log_file_write_fatal_error("CMS SCP file transferred successfully. cms id %d ip %s", imgID, ip);
+            log_file_write_fatal_error("CMS error SCP file transferred successfully. cms id %d ip %s", imgID, ip);
         } else {
-            log_file_write_fatal_error("CMS SCP failed. cms id %d ip %s", imgID, ip);
+            log_file_write_fatal_error("CMS error SCP failed. cms id %d ip %s", imgID, ip);
             printf("SCP failed.\n");
-            fail++;
+            fail++;  // 上船十次失敗回報
             i--;
             if (fail > CMS_update_fail_time) {
                 remove("./" CMS_encrypt_img);
@@ -228,8 +230,34 @@ int CMS_update_img(int imgID, char *imgName)
 
     remove("./" CMS_encrypt_img);
 
+    // 更新資料庫
     if (CMS_update_database(imgID, imgName) < 0)
         return -1;
+
+    // 發送更新指令
+    char buffer[100];
+    int buffer_len = 0;
+    struct sockaddr_in addr;
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+    addr.sin_port = htons(CMS_PORT);
+
+
+    buffer_len = 1;
+    buffer[buffer_len++] = 1;  // CMD
+    buffer[buffer_len++] = 1;  // type
+    strcpy(buffer + 3, filename);
+    buffer_len += strlen(filename);
+
+    buffer[0] = buffer_len;
+    if (sendto(cms_sockfd, buffer, buffer_len, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        perror("sendto failed");
+        close(cms_sockfd);
+        exit(EXIT_FAILURE);
+    }
+
     return 1;
 }
 
@@ -238,9 +266,9 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     if (*hash_code != NULL && memcmp(*hash_code, imghash, 16) == 0) {
         return 1;
     }
-
     if (*hash_code)
         free(*hash_code);
+    *hash_code = NULL;
 
     FILE *database = fopen(CMS_pic_database_path, "r");
     if (database == NULL) {
@@ -318,15 +346,17 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     }
     int ret = -1;
     if (memcmp(*hash_code, imghash, 16) != 0) {
-        free(*hash_code);
+        if (*hash_code)
+            free(*hash_code);
+        *hash_code = NULL;
         uint8_t *hash_ptr = NULL;
         Malloc(hash_ptr, 16, "cms hash code");
-        if (CMS_img_hash(imgID, hash_ptr) < 0) {
+        fseek(input_file, 0, SEEK_SET);
+        if (CMS_img_hash(input_file, hash_ptr) < 0) {
             free(hash_ptr);
             log_file_write_fatal_error("cms error cmsID %d imgID %d img_hash read error.", cmsID, imgID);
             set_vms_error();
         } else {
-            *hash_code = hash_ptr;
             if (memcmp(*hash_code, imghash + 6, 16) != 0) {
                 log_file_write_fatal_error("cms error cmsID %d imgID %d hash not match.", cmsID, imgID);
                 for (int i = 0; i < 16; i++) {
@@ -338,6 +368,8 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
                 }
                 printf("\n");
                 set_vms_error();
+                *hash_code = NULL;
+                free(hash_ptr);
             } else {
                 ret = 1;
             }
@@ -561,5 +593,6 @@ void CMS_handler_init()
         exit(errno);
     }
     sleep(5);
+    // CMS_update_img(14, "BkF3.gif");
     CMS_update_img(14, "4456.gif");
 }
