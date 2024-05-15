@@ -14,7 +14,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "byte_processing.h"
 #include "cms.h"
+#include "com_packet_processing.h"
 #include "config.h"
 #include "log.h"
 #include "typedefine.h"
@@ -22,21 +24,67 @@
 
 #define BUFFER_SIZE 1024
 #define TIMEOUT_SEC 1
-#define CMS_NUM_MAX 8
 
 const char CMS_header[] = {'m', '5', 'm', 'm', '4', 'm'};
 const unsigned char CMS_key[16] = {'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K'};
 
 int cms_sockfd;
-pthread_mutex_t cms_prog_mutex = PTHREAD_MUTEX_INITIALIZER;
-uint8_t cms_prog[CMS_NUM_MAX] = {14, 0, 0, 0, 0, 0, 0, 0};
 
-int cms_num = 1;
+typedef struct CMS_update_args {
+    uint8_t program_id;
+    char program_name[100];
+} CMS_update_args;
 
 struct CMS_elememt {
     struct sockaddr_in addr;
 };
 struct CMS_elememt cms_addrs[CMS_NUM_MAX] = {0};
+
+struct {
+    uint8_t app_id;
+    uint8_t app_priority;
+    time_t request_time;
+    uint8_t buffer[CMS_NUM_MAX];
+    pthread_mutex_t buffer_mutex;
+    pthread_mutex_t update_mutex;
+} cms_display_buffer = {
+    .app_id = 0,
+    .app_priority = 0,
+    .request_time = 0,
+    .buffer = {0},
+    .buffer_mutex = PTHREAD_MUTEX_INITIALIZER,
+    .update_mutex = PTHREAD_MUTEX_INITIALIZER,
+};
+
+int CMS_request_start(int appID, uint8_t priority, uint8_t display_buffer[CMS_NUM_MAX])
+{
+    int ret = -1;
+    pthread_mutex_lock(&cms_display_buffer.buffer_mutex);
+    if (cms_display_buffer.app_id == 0 || cms_display_buffer.app_priority > priority) {
+        cms_display_buffer.app_id = appID;
+        cms_display_buffer.app_priority = priority;
+        cms_display_buffer.request_time = time(NULL);
+        memcpy(cms_display_buffer.buffer, display_buffer, CMS_NUM_MAX);
+        ret = 1;
+    }
+    pthread_mutex_unlock(&cms_display_buffer.buffer_mutex);
+    return ret;
+}
+
+int CMS_request_end(int appID)
+{
+    int ret = -1;
+    pthread_mutex_lock(&cms_display_buffer.buffer_mutex);
+    if (appID == cms_display_buffer.app_id) {
+        cms_display_buffer.app_id = 0;
+        cms_display_buffer.app_priority = 0;
+        cms_display_buffer.request_time = 0;
+        memset(cms_display_buffer.buffer, 0, CMS_NUM_MAX);
+        ret = 1;
+    }
+    pthread_mutex_unlock(&cms_display_buffer.buffer_mutex);
+    return ret;
+}
 
 void CMS_encryptAES(FILE *input, FILE *output, const unsigned char *key)
 {
@@ -70,12 +118,12 @@ int CMS_update_database(int imgID, char *imgName)
     int n;
     FILE *database = fopen(CMS_pic_database_path, "r");
     if (database == NULL) {
-        log_file_write_with_errno("Error opening input file %s", CMS_pic_database_path);
+        log_file_write_fatal_error("Error opening input file %s", CMS_pic_database_path);
         perror("Error opening input file");
         database = fopen(CMS_pic_database_path, "w");
         if (database == NULL) {
             perror("Error opening/creating input file");
-            log_file_write_with_errno("Error opening/creating input file %s", CMS_pic_database_path);
+            log_file_write_fatal_error("Error opening/creating input file %s", CMS_pic_database_path);
             return -1;
         }
         log_file_write("creating input file %s", CMS_pic_database_path);
@@ -83,7 +131,8 @@ int CMS_update_database(int imgID, char *imgName)
         goto WRITEDATABASE;
     }
 
-    while (n = fread(buffer, 1, sizeof(buffer), database) > 0) {
+    while (!feof(database)) {
+        fgets(buffer, sizeof(buffer), database);
         vector_t(char *) str_arr;
         vector_init(str_arr);
         read_string_arr_from_config_line(buffer, &str_arr, " ");
@@ -120,7 +169,7 @@ WRITEDATABASE:
     int ret = -1;
     database = fopen(CMS_pic_database_path, "w");
     if (database == NULL) {
-        log_file_write_with_errno("Error output input file %s", CMS_pic_database_path);
+        log_file_write_fatal_error("Error output input file %s", CMS_pic_database_path);
         perror("Error opening output file");
         for (int i = 0; i < 256; i++)
             if (filename[i])
@@ -167,6 +216,22 @@ int CMS_img_hash(FILE *input_file, char *hashcode)
     return 1;
 }
 
+int CMS_check_img(char imgName[100])
+{
+    char path[120];
+    strcpy(path, CMS_pic_path);
+    strncat(path, imgName, sizeof(path));
+
+    FILE *file;
+    file = fopen(path, "r");
+
+    if (file != NULL) {
+        fclose(file);
+        return 1;
+    }
+    return -1;
+}
+
 // 上傳圖片交由 middleware 執行，application 只有變更顯示圖片的權力
 int CMS_update_img(int imgID, char *imgName)
 {
@@ -183,14 +248,14 @@ int CMS_update_img(int imgID, char *imgName)
     strcat(path, imgName);
     FILE *input_file = fopen(path, "rb");
     if (input_file == NULL) {
-        log_file_write_with_errno("Error opening input file %s", path);
+        log_file_write_fatal_error("Error opening input file %s", path);
         perror("Error opening input file");
         return -1;
     }
 
     FILE *encrypted_file = fopen("./" CMS_encrypt_img, "w");
     if (encrypted_file == NULL) {
-        log_file_write_with_errno("Error opening encrypted file ./" CMS_encrypt_img);
+        log_file_write_fatal_error("Error opening encrypted file ./" CMS_encrypt_img);
         perror("Error opening encrypted file");
         fclose(input_file);
         return -1;
@@ -201,26 +266,32 @@ int CMS_update_img(int imgID, char *imgName)
     fclose(input_file);
     fclose(encrypted_file);
 
+    printf("imgName %s\n", imgName);
+
     // SCP 上傳圖片
     char scp_command[1024];
     char ip[INET_ADDRSTRLEN];
     int fail = 0;
     char filename[120];
     snprintf(filename, sizeof(filename), "%03d_%s", imgID, imgName);
-    for (int i = 0; i < cms_num; i++) {
+    for (int i = 0; i < config.cms_number; i++) {
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
         snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/%s", ip, filename);
 
+        system("ls");
         int result = system(scp_command);
         if (result == 0) {
             printf("File transferred successfully.\n");
-            log_file_write_fatal_error("CMS error SCP file transferred successfully. cms id %d ip %s", imgID, ip);
+            log_file_write("CMS SCP file transferred successfully. cms id %d ip %s", imgID, ip);
+            fail = 0;
         } else {
             log_file_write_fatal_error("CMS error SCP failed. cms id %d ip %s", imgID, ip);
             printf("SCP failed.\n");
             fail++;  // 上船十次失敗回報
             i--;
             if (fail > CMS_update_fail_time) {
+                log_file_write_fatal_error("CMS error SCP failed. cms id %d ip %s, timeout", imgID, ip);
+            printf("SCP failed., timeout\n");
                 remove("./" CMS_encrypt_img);
                 set_vms_error();
                 return -1;
@@ -261,6 +332,56 @@ int CMS_update_img(int imgID, char *imgName)
     return 1;
 }
 
+void *CMS_program_update(void *data)
+{
+    CMS_update_args *args = (CMS_update_args *) (data);
+    int ret = CMS_update_img(args->program_id, args->program_name);
+    free(data);
+
+    if (ret < 0) {
+        // 回傳雲端上傳成功
+        // 暫時使用與 TSP ack 相同的封包格式
+        // cmd 9, status 0
+        msg_buf_t write_buf;
+        write_buf.index = 0;
+        Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "TSP_send_ack: malloc");
+
+        // cmd
+        write_uint8_t(9, &write_buf);
+        write_uint8_t(0, &write_buf);
+
+        cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
+        free(write_buf.content);
+        clear_vms_error();
+    } else {
+        set_vms_error();
+    }
+
+    pthread_mutex_unlock(&cms_display_buffer.update_mutex);
+    pthread_detach(pthread_self());
+}
+
+int CMS_update_activate(int Program_ID, char Program_Name[100])
+{
+    if (pthread_mutex_trylock(&cms_display_buffer.update_mutex) == 0) {
+        CMS_update_args *args;
+        Malloc(args, sizeof(CMS_update_args), "cms program update CMS_update_args");
+        args->program_id = Program_ID;
+        memcpy(args->program_name, Program_Name, 100);
+
+        pthread_t CMS_program_update_handler;
+        int ret = pthread_create(&CMS_program_update_handler, NULL, CMS_program_update, args);
+        if (ret != 0) {
+            pthread_mutex_unlock(&cms_display_buffer.update_mutex);
+            log_file_write_fatal_error("error creating CMS_program_update_handler: %d", ret);
+            perror("cms: pthread_create");
+            exit(errno);
+        }
+        return 1;
+    }
+    return -1;
+}
+
 int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code)
 {
     if (*hash_code != NULL && memcmp(*hash_code, imghash, 16) == 0) {
@@ -272,14 +393,15 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
 
     FILE *database = fopen(CMS_pic_database_path, "r");
     if (database == NULL) {
-        log_file_write_with_errno("Error opening database file %s", CMS_pic_database_path);
+        log_file_write_fatal_error("CMS error opening database file %s", CMS_pic_database_path);
         perror("Error opening database file");
         return -1;
     }
 
     char buffer[120];
     int n, flag = 0;
-    while (n = fread(buffer, 1, sizeof(buffer), database) > 0) {
+    while (!feof(database)) {
+        fgets(buffer, sizeof(buffer), database);
         vector_t(char *) str_arr;
         vector_init(str_arr);
         read_string_arr_from_config_line(buffer, &str_arr, " ");
@@ -299,7 +421,7 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     }
     fclose(database);
     if (flag == 0) {
-        log_file_write_with_errno("hash can't find imgID %s", imgID);
+        log_file_write_fatal_error("cms hash can't find imgID %d", imgID);
         printf("hash can't find imgID %d", imgID);
         return -1;
     }
@@ -309,14 +431,14 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     strcat(path, buffer);
     FILE *input_file = fopen(path, "rb");
     if (input_file == NULL) {
-        log_file_write_with_errno("Error opening input file %s", path);
+        log_file_write_fatal_error("cms error opening input file %s", path);
         perror("Error opening input file");
         return -1;
     }
 
     FILE *encrypted_file = fopen("./" CMS_encrypt_img, "w");
     if (encrypted_file == NULL) {
-        log_file_write_with_errno("Error opening encrypted file %s", CMS_encrypt_img);
+        log_file_write_fatal_error("cms error opening encrypted file %s", CMS_encrypt_img);
         perror("Error opening encrypted file");
         fclose(input_file);
         return -1;
@@ -328,7 +450,7 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
 
     input_file = fopen("./" CMS_encrypt_img, "r");
     if (input_file == NULL) {
-        log_file_write_with_errno("Error opening input file %s", "./" CMS_encrypt_img);
+        log_file_write_fatal_error("cmse error opening input file %s", "./" CMS_encrypt_img);
         perror("Error opening input file");
         return -1;
     }
@@ -412,7 +534,7 @@ int CMS_recv_timeout(char *buffer, int buffer_len, struct sockaddr *client_addr,
     int activity = select(cms_sockfd + 1, &readfds, NULL, NULL, &timeout);
 
     if (activity == -1) {
-        log_file_write_with_errno("cms select");
+        log_file_write_fatal_error("cms select");
         exit(EXIT_FAILURE);
     } else if (activity == 0) {
         return ret;
@@ -444,12 +566,20 @@ static void *CMS_handler()
         buffer[buffer_len++] = 2;  // CMD
         buffer[buffer_len++] = 1;  // type
 
-        pthread_mutex_lock(&cms_prog_mutex);
-        for (int i = 0; i < sizeof(cms_prog); i++) {
+        pthread_mutex_lock(&cms_display_buffer.buffer_mutex);
+        for (int i = 0; i < sizeof(cms_display_buffer.buffer); i++) {
             buffer[buffer_len++] = i + 1;
-            buffer[buffer_len++] = cms_prog[i];
+            buffer[buffer_len++] = cms_display_buffer.buffer[i];
         }
-        pthread_mutex_unlock(&cms_prog_mutex);
+        if (cms_display_buffer.app_id != 0 && time(NULL) - cms_display_buffer.request_time > CMS_request_timeout) {
+            cms_display_buffer.app_id = 0;
+            cms_display_buffer.app_priority = 0;
+            cms_display_buffer.request_time = 0;
+            memset(cms_display_buffer.buffer, 0, CMS_NUM_MAX);
+            printf("cms display timeout.\n");
+            log_file_write("cms display timeout.");
+        }
+        pthread_mutex_unlock(&cms_display_buffer.buffer_mutex);
 
         buffer[0] = buffer_len;
         if (sendto(cms_sockfd, buffer, buffer_len, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
@@ -466,7 +596,7 @@ static void *CMS_handler()
                 recv_flag++;
             } else {
                 recv_flag = -1;
-                if (buffer_len > 4 && buffer[0] == buffer_len && buffer[3] <= cms_num) {
+                if (buffer_len > 4 && buffer[0] == buffer_len && buffer[3] <= config.cms_number) {
                     recvflags[buffer[3]] = 1;
                     CMS_update_client_addr(buffer[3], &client_addr);
                 }
@@ -483,9 +613,9 @@ static void *CMS_handler()
                     } else if (status == 2) {
                         log_file_write_fatal_error("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
                         set_vms_error();
-                    } else {
+                    } else if (imgID != 0) {
                         if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
-                            printf("------not match\n");
+                            printf("--8858------not match\n");
                         } else {
                             printf("------match\n");
                         }
@@ -498,7 +628,7 @@ static void *CMS_handler()
                     } else if (status == 2) {
                         log_file_write_fatal_error("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
                         set_vms_error();
-                    } else {
+                    } else if (imgID != 0) {
                         if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
                             printf("------not match\n");
                         } else {
@@ -508,7 +638,7 @@ static void *CMS_handler()
                 } break;
                 }
 
-                for (int i = 0; i < cms_num; i++) {
+                for (int i = 0; i < config.cms_number; i++) {
                     if (recvflags[i] == 0) {
                         recv_flag = 0;
                         break;
@@ -560,7 +690,7 @@ void CMS_handler_init()
     // 設定允許廣播
     int broadcast_enable = 1;
     if (setsockopt(cms_sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) == -1) {
-        log_file_write_with_errno("cms setsockopt");
+        log_file_write_fatal_error("cms setsockopt");
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
@@ -571,7 +701,7 @@ void CMS_handler_init()
     addr.sin_port = htons(CMS_PORT);
 
     if (bind(cms_sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-        log_file_write_with_errno("cms bind failed");
+        log_file_write_fatal_error("cms bind failed");
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
@@ -580,7 +710,7 @@ void CMS_handler_init()
     timeout.tv_sec = TIMEOUT_SEC;
     timeout.tv_usec = 0;
     if (setsockopt(cms_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        log_file_write_with_errno("cms setsockopt failed");
+        log_file_write_fatal_error("cms setsockopt failed");
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
@@ -592,7 +722,4 @@ void CMS_handler_init()
         perror("main: pthread_create");
         exit(errno);
     }
-    sleep(5);
-    // CMS_update_img(14, "BkF3.gif");
-    CMS_update_img(14, "4456.gif");
 }
