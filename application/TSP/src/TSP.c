@@ -611,10 +611,10 @@ int TSP_on_cloud_packet_rx(void *arg)
             ret = CMS_update_activate(Program_ID, Program_Name);
             if (ret < 0) {
                 log_file_write_fatal_error("cms program update is process.");
-                ack_status = 2;
             } else {
                 log_file_write("cms program update thread activate.");
             }
+            ack_status = 2;
         } else {
             int res;
             // 檢查檔案存不存在資料夾中

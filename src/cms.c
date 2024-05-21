@@ -278,7 +278,6 @@ int CMS_update_img(int imgID, char *imgName)
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
         snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/%s", ip, filename);
 
-        system("ls");
         int result = system(scp_command);
         if (result == 0) {
             printf("File transferred successfully.\n");
@@ -291,7 +290,7 @@ int CMS_update_img(int imgID, char *imgName)
             i--;
             if (fail > CMS_update_fail_time) {
                 log_file_write_fatal_error("CMS error SCP failed. cms id %d ip %s, timeout", imgID, ip);
-            printf("SCP failed., timeout\n");
+                printf("SCP failed., timeout\n");
                 remove("./" CMS_encrypt_img);
                 set_vms_error();
                 return -1;
@@ -336,9 +335,8 @@ void *CMS_program_update(void *data)
 {
     CMS_update_args *args = (CMS_update_args *) (data);
     int ret = CMS_update_img(args->program_id, args->program_name);
-    free(data);
 
-    if (ret < 0) {
+    if (ret > 0) {
         // 回傳雲端上傳成功
         // 暫時使用與 TSP ack 相同的封包格式
         // cmd 9, status 0
@@ -353,9 +351,11 @@ void *CMS_program_update(void *data)
         cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
         free(write_buf.content);
         clear_vms_error();
+        log_file_write("CMS update img. id %d, name %s", args->program_id, args->program_name);
     } else {
         set_vms_error();
     }
+    free(data);
 
     pthread_mutex_unlock(&cms_display_buffer.update_mutex);
     pthread_detach(pthread_self());
