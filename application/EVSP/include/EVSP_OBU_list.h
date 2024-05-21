@@ -22,5 +22,6 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name, EVSP_OBU_update_in
 void EVSP_host_OBU_obj_delete(char *OBU_name);
 void EVSP_host_OBU_obj_print();
 bool EVSP_host_OBU_obj_resume(uint8_t target_phase);
+void EVSP_OBU_obj_terminate(char *OBU_name);
 
 #endif

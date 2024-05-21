@@ -20,6 +20,8 @@
 
 #define THESHOLD_BUFFER 5
 
+// EVSP 一次只會服務一台 OBU
+// activate_OBU 最多只會有一個 thread 服務一台 OBU
 EVSP_activate_OBU_t activate_OBU = {
     .host_OBU_name = {0},
     .activate_mutex = PTHREAD_MUTEX_INITIALIZER,

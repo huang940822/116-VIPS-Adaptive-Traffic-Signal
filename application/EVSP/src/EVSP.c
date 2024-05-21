@@ -331,6 +331,20 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
         return 0;
     }  // tc箱出現錯誤 直接不做
+
+    // 避免重複觸發
+    if (host_OBU != NULL && host_OBU->terminate_time != 0) {
+        if (time(NULL) - host_OBU->terminate_time > EVSP_config.cooling_time) {
+            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
+            host_OBU = NULL;
+        } else {
+            log_snprintf(log_content, "%s is terminate %ld second before.\n",
+                         app_section->OBU_object->OBU_name, time(NULL) - host_OBU->terminate_time);
+            goto EVSP_OBU_PAKET_END;
+        }
+    }
+
+
     /* already in host OBU list */
     if (host_OBU != NULL) {
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
@@ -346,7 +360,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             int target_phase = host_OBU->target_phase;
             EVSP_OBU_activation_time_end(host_OBU->OBU_name);
             command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
-            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
+            EVSP_OBU_obj_terminate(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(target_phase) == true) {
@@ -359,6 +373,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
+            EVSP_OBU_obj_clean();
         } else {
             // 同時有兩台救護車
             EVSP_OBU_activation_timer_start(host_OBU);
@@ -403,6 +418,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
     }
 
+EVSP_OBU_PAKET_END:
     log_file_write(log_content);
     if (read_buf.content != NULL) {
         free(read_buf.content);

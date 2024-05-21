@@ -42,7 +42,7 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     int target_phase = ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
 
     command_buf_delete_OBU(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
-    EVSP_host_OBU_obj_delete(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
+    EVSP_OBU_obj_terminate(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
@@ -70,7 +70,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     int target_phase = ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
 
     command_buf_delete_OBU(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
-    EVSP_host_OBU_obj_delete(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
+    EVSP_OBU_obj_terminate(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
 
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
