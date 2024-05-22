@@ -218,7 +218,7 @@ void *EVSP_OBU_activation_timer()
 
         log_snprintf(log_content, "EVSP_OBU_activation_timer run\n");
         if (signal_status.SubPhaseID == activate_OBU.control_subphaseID) {
-            log_snprintf(log_content, "signal_status.SubPhaseID == activate_OBU.control_subphaseID %d", activate_OBU.control_subphaseID);
+            log_snprintf(log_content, "do not thing");
             log_file_write(log_content);
             continue;
         }
