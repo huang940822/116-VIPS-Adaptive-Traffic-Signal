@@ -16,7 +16,7 @@ EVSP_config_object_t EVSP_config = {
     .min_green = 5,
     .max_green = 120,
     .valid_record_distance = 5,
-    .cooling_time = 600,
+    .cooling_time = 360,
     .touching_area_config_type = EVSP_touching_area_DEFAULT,
 };
 

@@ -15,6 +15,42 @@
 EVSP_host_OBU_obj_t *EVSP_host_OBU_list_head = NULL;
 pthread_mutex_t EVSP_host_OBU_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+LIST_HEAD(EVSP_cooling_list_head);
+pthread_mutex_t EVSP_cooling_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void EVSP_cooling_list_insert(char *OBU_name, EVSP_touching_area_t *area_ptr)
+{
+    EVSP_cooling_info_t *node;
+    Malloc(node, sizeof(EVSP_cooling_info_t), "EVSP cooling list new");
+    strncpy(node->OBU_name, OBU_name, OBU_NAME_MAX_LEN);
+    node->touching_area_id = area_ptr->touching_area_id;
+    INIT_LIST_HEAD(&node->node);
+    node->terminate_time = time(NULL);
+    pthread_mutex_lock(&EVSP_cooling_list_mutex);
+    list_add_tail(&EVSP_cooling_list_head, &node->node);
+    pthread_mutex_unlock(&EVSP_cooling_list_mutex);
+}
+
+int EVSP_cooling_list_sreach(char *OBU_name, EVSP_touching_area_t *area_ptr)
+{
+    EVSP_cooling_info_t *pos, *safe;
+    time_t now = time(NULL);
+    int ret = -1;
+    pthread_mutex_lock(&EVSP_cooling_list_mutex);
+    list_for_each_entry_safe(pos, safe, &EVSP_cooling_list_head, node)
+    {
+        if (now - pos->terminate_time > EVSP_config.cooling_time) {
+            list_del(&pos->node);
+            free(pos);
+        } else if (strncmp(pos->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0 &&
+                   pos->touching_area_id == area_ptr->touching_area_id) {
+            ret = 1;
+        }
+    }
+    pthread_mutex_unlock(&EVSP_cooling_list_mutex);
+    return ret;
+}
+
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
                                            uint8_t target_phase,
                                            EVSP_touching_area_t *area_ptr)
@@ -96,48 +132,6 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name, EVSP_OBU_update_in
     return current;
 }
 
-void EVSP_OBU_obj_terminate(char *OBU_name)
-{
-    pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
-    EVSP_host_OBU_obj_t *current = EVSP_host_OBU_list_head;
-
-    /* traverse host OBU list */
-    while (current != NULL && strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) != 0) {
-        current = current->next;
-    }
-    if (current != NULL) {
-        delete_timer(current->host_OBU_packet_timer);
-        delete_timer(current->host_OBU_list_timer);
-        current->terminate_time = time(NULL);
-    }
-    pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-}
-
-// 清除之前留下的 OBU_obj
-void EVSP_OBU_obj_clean()
-{
-    pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
-    time_t cur_time = time(NULL);
-    EVSP_host_OBU_obj_t *previous = NULL, *current = EVSP_host_OBU_list_head;
-    while (current != NULL) {
-        if (cur_time - current->terminate_time > EVSP_config.cooling_time) {
-            if (current == EVSP_host_OBU_list_head) {
-                EVSP_host_OBU_list_head = current->next;
-                free(current);
-                current = EVSP_host_OBU_list_head;
-            } else {
-                previous->next = current->next;
-                free(current);
-                current = previous->next;
-            }
-        } else {
-            previous = current;
-            current = current->next;
-        }
-    }
-    pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-}
-
 void EVSP_host_OBU_obj_delete(char *OBU_name)
 {
     pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
@@ -154,6 +148,8 @@ void EVSP_host_OBU_obj_delete(char *OBU_name)
         previous->next = current->next;
     }
     if (current != NULL) {
+        delete_timer(current->host_OBU_packet_timer);
+        delete_timer(current->host_OBU_list_timer);
         free(current);
     }
 
@@ -200,7 +196,7 @@ bool EVSP_host_OBU_obj_resume(uint8_t target_phase)
     EVSP_host_OBU_obj_t *current = EVSP_host_OBU_list_head;
     /* traverse host OBU list */
     while (current != NULL) {
-        if (current->target_phase == target_phase && current->terminate_time == 0) {
+        if (current->target_phase == target_phase) {
             pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
             return false;
         }

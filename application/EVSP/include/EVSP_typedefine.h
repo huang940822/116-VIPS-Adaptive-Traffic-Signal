@@ -99,7 +99,6 @@ typedef struct EVSP_host_OBU_obj {
     float lat;
     float speed;
     int direction;
-    time_t terminate_time;
 } EVSP_host_OBU_obj_t;
 
 #endif

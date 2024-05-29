@@ -35,20 +35,18 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     vms_request_end(EVSP.id);
 
     printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    log_snprintf(log_content, "EVSP host OBU packet timeout: %s",
-                 ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
-    int target_phase = ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
+    EVSP_host_OBU_obj_t *obu_obj = (EVSP_host_OBU_obj_t *) value.sival_ptr;
+    int target_phase = obu_obj->target_phase;
 
-    command_buf_delete_OBU(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
-    EVSP_OBU_obj_terminate(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
+    command_buf_delete_OBU(obu_obj->OBU_name);
+    EVSP_cooling_list_insert(obu_obj->OBU_name, obu_obj->area_ptr);
+    EVSP_host_OBU_obj_delete(obu_obj->OBU_name);
 
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
         command_buf_resume_control(EVSP.id);
     }
-    log_file_write(log_content);
+    log_file_write("EVSP host OBU packet timeout: %s", obu_obj->OBU_name);
 
     EVSP_host_OBU_obj_print();
 }
@@ -62,21 +60,18 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     vms_request_end(EVSP.id);
 
     printf("EVSP_host_OBU_list_timeout_timer_handler\n");
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    log_snprintf(log_content, "EVSP host OBU list timeout: %s",
-                 ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
+    EVSP_host_OBU_obj_t *obu_obj = (EVSP_host_OBU_obj_t *) value.sival_ptr;
+    int target_phase = obu_obj->target_phase;
 
-    int target_phase = ((EVSP_host_OBU_obj_t *) value.sival_ptr)->target_phase;
-
-    command_buf_delete_OBU(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
-    EVSP_OBU_obj_terminate(((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name);
+    command_buf_delete_OBU(obu_obj->OBU_name);
+    EVSP_cooling_list_insert(obu_obj->OBU_name, obu_obj->area_ptr);
+    EVSP_host_OBU_obj_delete(obu_obj->OBU_name);
 
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
         command_buf_resume_control(EVSP.id);
     }
-    log_file_write(log_content);
+    log_file_write("EVSP host OBU list timeout: %s", obu_obj->OBU_name);
 
     EVSP_host_OBU_obj_print();
 }
