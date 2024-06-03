@@ -15,6 +15,7 @@
 #include "EVSP_typedefine.h"
 #include "application_registration.h"
 #include "byte_processing.h"
+#include "cms.h"
 #include "com_packet_processing.h"
 #include "config.h"
 #include "error_status.h"
@@ -184,42 +185,68 @@ int static inline EVSP_rolling_to_target_phase(int target_phase, char *OBU_name,
 
 static void VMS_activate(int direction)
 {
-    // 本案的 EVSP_VMS_SERVICE 受限於時間及沒有足夠的地理資訊，所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
-    // 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，那再改寫成更 general 的設計。
+    if (config.cms_number != 0) {
+        uint8_t buf[CMS_NUM_MAX] = {0};
+        if (direction == 7 || direction == 0) {
+            buf[0] = 245;
+            buf[1] = 246;
+            buf[2] = 247;
+            buf[3] = 248;
+        } else if (direction == 1 || direction == 2) {
+            buf[0] = 248;
+            buf[1] = 245;
+            buf[2] = 246;
+            buf[3] = 247;
+        } else if (direction == 3 || direction == 4) {
+            buf[0] = 247;
+            buf[1] = 248;
+            buf[2] = 245;
+            buf[3] = 246;
+        } else if (direction == 5 || direction == 6) {
+            buf[0] = 246;
+            buf[1] = 247;
+            buf[2] = 248;
+            buf[3] = 245;
+        }
+        CMS_request_start(EVSP.id, EVSP.priority, buf);
+    } else {
+        // 本案的 EVSP_VMS_SERVICE 受限於時間及沒有足夠的地理資訊，所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
+        // 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，那再改寫成更 general 的設計。
 
-    /*
-    1.根據方向更改 evsp_prog[]
-    2.呼叫VMS SERVICE
-    */
-    memset(evsp_prog, 255, sizeof(evsp_prog));
+        /*
+        1.根據方向更改 evsp_prog[]
+        2.呼叫VMS SERVICE
+        */
+        memset(evsp_prog, 255, sizeof(evsp_prog));
 
-    if (direction == 7 || direction == 0) {
-        // evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
-        evsp_prog[1] = 245;
-        evsp_prog[0] = 246;
-        evsp_prog[3] = 247;
-        evsp_prog[2] = 248;
-    } else if (direction == 1 || direction == 2) {
-        // evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
-        evsp_prog[1] = 248;
-        evsp_prog[0] = 245;
-        evsp_prog[3] = 246;
-        evsp_prog[2] = 247;
-    } else if (direction == 3 || direction == 4) {
-        // evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
-        evsp_prog[1] = 247;
-        evsp_prog[0] = 248;
-        evsp_prog[3] = 245;
-        evsp_prog[2] = 246;
-    } else if (direction == 5 || direction == 6) {
-        // evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
-        evsp_prog[1] = 246;
-        evsp_prog[0] = 247;
-        evsp_prog[3] = 248;
-        evsp_prog[2] = 245;
+        if (direction == 7 || direction == 0) {
+            // evsp_prog = [245, 246, 247, 248, 0, 0, 0, 0];
+            evsp_prog[1] = 245;
+            evsp_prog[0] = 246;
+            evsp_prog[3] = 247;
+            evsp_prog[2] = 248;
+        } else if (direction == 1 || direction == 2) {
+            // evsp_prog = [248, 245, 246, 247, 0, 0, 0, 0];
+            evsp_prog[1] = 248;
+            evsp_prog[0] = 245;
+            evsp_prog[3] = 246;
+            evsp_prog[2] = 247;
+        } else if (direction == 3 || direction == 4) {
+            // evsp_prog = [247, 248, 245, 246, 0, 0, 0, 0];
+            evsp_prog[1] = 247;
+            evsp_prog[0] = 248;
+            evsp_prog[3] = 245;
+            evsp_prog[2] = 246;
+        } else if (direction == 5 || direction == 6) {
+            // evsp_prog = [246, 247, 248, 245, 0, 0, 0, 0];
+            evsp_prog[1] = 246;
+            evsp_prog[0] = 247;
+            evsp_prog[3] = 248;
+            evsp_prog[2] = 245;
+        }
+
+        vms_request_start(EVSP.id, EVSP.priority);
     }
-
-    vms_request_start(EVSP.id, EVSP.priority);
 }
 
 int EVSP_on_OBU_packet_rx(void *arg)
@@ -356,8 +383,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
                 command_buf_resume_control(EVSP.id);
 
-                // 結束 EVSP_VMS_SERVICE
-                vms_request_end(EVSP.id);
+                if (config.cms_number != 0) {
+                    CMS_request_end(EVSP.id);
+                } else {
+                    // 結束 EVSP_VMS_SERVICE
+                    vms_request_end(EVSP.id);
+                }
             }
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);

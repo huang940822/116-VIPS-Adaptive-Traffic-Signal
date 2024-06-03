@@ -34,6 +34,8 @@ typedef struct config_object {
     uint8_t traffic_compensation_cycle_number;
     float phase_weight[PHASE_COUNT_MAX_NUM];
 
+    uint8_t cms_number;
+
     bool log_middleware_timer_event;
     bool log_application_register_event;
     bool log_command_buffer;  // what for??
@@ -76,6 +78,7 @@ typedef enum config_err {
     CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD = -22,
     CONFIG_INVALID_PHASE_WEIGHT = -23,
     CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER = -24,
+    CONFIG_INVALID_CMS_NUMBER = -25,
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 

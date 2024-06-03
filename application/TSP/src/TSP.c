@@ -17,6 +17,7 @@
 #include "TSP_typedefine.h"
 #include "application_registration.h"
 #include "byte_processing.h"
+#include "cms.h"
 #include "config.h"
 #include "error_status.h"
 #include "gps_information.h"
@@ -602,28 +603,41 @@ int TSP_on_cloud_packet_rx(void *arg)
         read_uint8_t(&Program_ID, &read_buf);
         read_char(Program_Name, &read_buf, PROGRAM_NAME_LEN);
         trim_space(Program_Name);
-        int res;
-        // 檢查檔案存不存在資料夾中
-        res = VMS_search_program(Program_Name);
-
-        switch (res) {
-        case -1: {
-            log_file_write_fatal_error("VMS_search_program: open directory failed");
-        } break;
-        case 0: {
-            if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
-                log_file_write("vms program update thread activate.");
-            } else {  // 正在上傳
-                log_file_write_fatal_error("vms program update is process.");
+        if (config.cms_number != 0) {
+            int ret = CMS_check_img(Program_Name);
+            if (ret < 0) {
+                 log_file_write_fatal_error("CMS_search_program: open directory failed %s", Program_Name);
+            }
+            ret = CMS_update_activate(Program_ID, Program_Name);
+            if (ret < 0) {
+                log_file_write_fatal_error("cms program update is process.");
+            } else {
+                log_file_write("cms program update thread activate.");
             }
             ack_status = 2;
-        } break;
-        case 1: {
-            log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
-            ack_status = res;
-        } break;
-        }
+        } else {
+            int res;
+            // 檢查檔案存不存在資料夾中
+            res = VMS_search_program(Program_Name);
 
+            switch (res) {
+            case -1: {
+                log_file_write_fatal_error("VMS_search_program: open directory failed");
+            } break;
+            case 0: {
+                if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
+                    log_file_write("vms program update thread activate.");
+                } else {  // 正在上傳
+                    log_file_write_fatal_error("vms program update is process.");
+                }
+                ack_status = 2;
+            } break;
+            case 1: {
+                log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
+                ack_status = res;
+            } break;
+            }
+        }
     } break;
     case 10:  // 雲端更改 VMS 播放，設計成只有封包內容都正常才ACK
     {

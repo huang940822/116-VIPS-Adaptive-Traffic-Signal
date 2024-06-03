@@ -32,6 +32,7 @@ config_object_t config = {
     0,
     0,
     0,
+    .cms_number = 0,
     .log_middleware_timer_event = 1,
     .log_application_register_event = 1,
     .log_command_buffer = 1,
@@ -497,6 +498,22 @@ int config_init()
                 return CONFIG_INVALID_PHASE_WEIGHT;
             }
         }
+
+        // number of CMS
+        if (strstr(buf, "CMS_NUMBER ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    config.cms_number = uint8_t_val;
+                    log_file_write("config: CMS_NUMBER = %d", config.cms_number);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_CMS_NUMBER;
+                }
+            } else {
+                return CONFIG_INVALID_CMS_NUMBER;
+            }
+        }
+
         // log middleware timer event
         if (strstr(buf, "LOG_MIDDLEWARE_TIMER_EVENT ")) {
             if (read_string_from_config_line(buf, string_val)) {
