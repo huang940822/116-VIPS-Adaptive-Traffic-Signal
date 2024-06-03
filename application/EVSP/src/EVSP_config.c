@@ -16,6 +16,7 @@ EVSP_config_object_t EVSP_config = {
     .min_green = 5,
     .max_green = 120,
     .valid_record_distance = 5,
+    .cooling_time = 360,
     .touching_area_config_type = EVSP_touching_area_DEFAULT,
 };
 
@@ -33,6 +34,7 @@ int EVSP_config_init()
     char buf[CONFIG_LINE_BUFFER_SIZE];
 
     uint8_t uint8_t_val;
+    uint32_t uint32_t_val;
     float float_val;
     char string_val[MAX_CONFIG_VARIABLE_LEN];
 
@@ -152,6 +154,22 @@ int EVSP_config_init()
                 }
             } else {
                 return CONFIG_INVALID_OTHER;
+            }
+        }
+
+        // cooling_time
+        if (strstr(buf, "cooling_time ")) {
+            char val[MAX_CONFIG_VARIABLE_LEN];
+            if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
+                if (uint32_t_val >= 0) {
+                    EVSP_config.cooling_time = uint32_t_val;
+                    log_file_write("config: cooling_time = %u", EVSP_config.cooling_time);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_COOLING_TIME;
+                }
+            } else {
+                return CONFIG_INVALID_COOLING_TIME;
             }
         }
     }

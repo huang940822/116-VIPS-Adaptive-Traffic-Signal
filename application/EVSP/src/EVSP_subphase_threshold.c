@@ -20,6 +20,8 @@
 
 #define THESHOLD_BUFFER 5
 
+// EVSP 一次只會服務一台 OBU
+// activate_OBU 最多只會有一個 thread 服務一台 OBU
 EVSP_activate_OBU_t activate_OBU = {
     .host_OBU_name = {0},
     .activate_mutex = PTHREAD_MUTEX_INITIALIZER,
@@ -216,7 +218,7 @@ void *EVSP_OBU_activation_timer()
 
         log_snprintf(log_content, "EVSP_OBU_activation_timer run\n");
         if (signal_status.SubPhaseID == activate_OBU.control_subphaseID) {
-            log_snprintf(log_content, "signal_status.SubPhaseID == activate_OBU.control_subphaseID %d", activate_OBU.control_subphaseID);
+            log_snprintf(log_content, "do not thing");
             log_file_write(log_content);
             continue;
         }

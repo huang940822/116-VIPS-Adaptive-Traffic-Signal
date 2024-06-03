@@ -1,11 +1,11 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <stdio.h>
-#include "typedefine.h"
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+#include "typedefine.h"
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
 #define VMS_CONFIG_FILE FILE_PATH "config/vms_config.txt"
@@ -115,6 +115,7 @@ char *trim_comments(char *buf);
 char *read_line(char *read_buf, int read_buf_len, FILE *fp);
 
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
+bool read_uint32_t_from_config_line(char *config_line, uint32_t *val);
 // val 的長度使用 MAX_CONFIG_VARIABLE_LEN
 bool read_string_from_config_line(char *config_line, char *val);
 bool read_string_arr_from_config_line(char *config_line, void *val, const char delim[]);

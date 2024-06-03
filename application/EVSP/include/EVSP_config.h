@@ -17,8 +17,9 @@ typedef enum EVSP_config_err {
     CONFIG_INVALID_MIN_GREEN = -3,
     CONFIG_INVALID_MAX_GREEN = -4,
     CONFIG_INVALID_VALID_RECORD_DISTANCE = -5,
-    CONFIG_INVALID_EVSP_OPEN_FILE = -6,
-    CONFIG_INVALID_OTHER = -7
+    CONFIG_INVALID_COOLING_TIME = -6,
+    CONFIG_INVALID_EVSP_OPEN_FILE = -7,
+    CONFIG_INVALID_OTHER = -8
 } EVSP_config_err_t;
 
 typedef enum EVSP_touching_area_config_type {
@@ -32,8 +33,8 @@ typedef struct EVSP_config_object {
     uint8_t min_green;
     uint8_t max_green;
     uint8_t valid_record_distance;
+    uint32_t cooling_time;
     EVSP_touching_area_config_type_t touching_area_config_type;
-
 } EVSP_config_object_t;
 
 extern EVSP_config_object_t EVSP_config;

@@ -331,6 +331,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
         return 0;
     }  // tc箱出現錯誤 直接不做
+
     /* already in host OBU list */
     if (host_OBU != NULL) {
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
@@ -345,8 +346,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
             int target_phase = host_OBU->target_phase;
             EVSP_OBU_activation_time_end(host_OBU->OBU_name);
-            command_buf_delete_OBU(app_section->OBU_object->OBU_name);  // 刪除在 command buf 還沒下下去的指令
-            EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
+            command_buf_delete_OBU(host_OBU->OBU_name);  // 刪除在 command buf 還沒下下去的指令
+            EVSP_cooling_list_insert(host_OBU->OBU_name, host_OBU->area_ptr);
+            EVSP_host_OBU_obj_delete(host_OBU->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(target_phase) == true) {
@@ -384,6 +386,15 @@ int EVSP_on_OBU_packet_rx(void *arg)
             app_section->OBU_object->record_ring.record[last_record_index].position_lon,
             app_section->OBU_object->record_ring.record[last_record_index].position_lat,
             static_space.last_direction, plan, &area_ptr);
+
+        // 檢查 OBU name 與同方向是否有還在冷卻時間
+        if (area_ptr != NULL && EVSP_cooling_list_sreach(app_section->OBU_object->OBU_name, area_ptr) > 0) {
+            printf("\nOBU %s is at touching area %d in cooling time\n",
+                   app_section->OBU_object->OBU_name, area_ptr->touching_area_id);
+            log_snprintf(log_content, "\nOBU %s is at touching area %d in cooling time",
+                         app_section->OBU_object->OBU_name, area_ptr->touching_area_id);
+            goto EVSP_OBU_PAKET_END;
+        }
         // enter activate area
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
@@ -403,6 +414,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
     }
 
+EVSP_OBU_PAKET_END:
     log_file_write(log_content);
     if (read_buf.content != NULL) {
         free(read_buf.content);
