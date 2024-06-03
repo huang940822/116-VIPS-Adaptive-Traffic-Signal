@@ -192,7 +192,6 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // �
 
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
-        object->hash_code = hash_code;
 
         /* insert OBU record */  // 如果世新的object 那record ring一定是空的
                                  // 似乎沒有檢查的必要 直接push進去就好？

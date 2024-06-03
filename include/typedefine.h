@@ -387,6 +387,8 @@ typedef struct tsc_command {
     // buffer object".
     uint8_t cycle;
     uint8_t phase;
+    int16_t effect_time;  // is the length of time that the application requests
+                          // to be adjusted to.
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
     char host_OBU_name[ID_MAX_LEN + 1];
