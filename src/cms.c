@@ -658,6 +658,8 @@ static void *CMS_handler()
 
 void CMS_handler_init()
 {
+    if (config.cms_number == 0)
+        return;
     struct sockaddr_in addr;
     cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (cms_sockfd < 0) {
