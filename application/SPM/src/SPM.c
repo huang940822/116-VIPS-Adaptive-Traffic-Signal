@@ -9,6 +9,7 @@
 #include "log.h"
 
 #include <stdio.h>
+#include "sys/time.h"
 
 app_obj_t SPM = {
     .name = "SPM",
@@ -41,11 +42,21 @@ int SPM_on_OBU_packet_rx(void *arg)
     } else {
         return -1;
     }
+
+    time_t timestamp = app_section->OBU_object->record_ring
+                           .record[app_section->OBU_object->record_ring.last_record_pointer]
+                           .time_second;
+    time_t nsec = app_section->OBU_object->record_ring
+                      .record[app_section->OBU_object->record_ring.last_record_pointer]
+                      .time_nsec;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
     if (SPM.dontSend2TC)
         return 1;
-    printf("SPM recv-----\n");
-    SPM_OBU_obj_insert(app_section->OBU_object, srm);
-    SPM_repeater_start();
+
+    // SPM_OBU_obj_insert(app_section->OBU_object, srm);
+    // SPM_repeater_start(false);
+    SPM_repeater_start(SPM_OBU_obj_insert(app_section->OBU_object, srm));
 }
 
 int SPM_on_registration(void *arg)

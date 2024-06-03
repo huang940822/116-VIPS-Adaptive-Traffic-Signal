@@ -31,8 +31,6 @@ void *dispatcher_handler()
 
     for (;;) {
         msg = msg_queue_dequeue();
-
-        log_file_write("dispatcher: MSG(%d)", msg->device_id);
         if (msg->device_id == FROM_CLOUD) {
             // printf("cloud_rx_event\n");
 
