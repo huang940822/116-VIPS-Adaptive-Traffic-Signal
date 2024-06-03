@@ -153,17 +153,21 @@ LaneSet_connectsTo_table_end
 # ApproachId 號控器上的第幾路 對應 LaneSet_table
 # SignalGreenType 
 # 0 圓頭綠  1 箭頭左  2 箭頭直  3 箭頭右  4 行人綠
+# SignalID 是在 3.0 內的 5F13 的 SignalCount 哪一個方向的燈的對應，正常來說 ApproachId 與 SignalID 是一樣的，
+#          但有時候因為現場接線問題所以可能會有對應的問題，像是把原本東端路的線同時接給了西端與東北端，
+#          原本是一對一的東端只會接給東端
+# MapGreenType 是在 3.0 內的 5F13 的 SignalStatus 哪一種燈號的對應，正常 SignalGreenType 與 MapGreenType 是一樣的，
+#          但有時候因為現場接線問題可能不同的燈號線接到不對的燈號上，像是把右轉箭頭率接到圓頭綠
 
-# SignalID 避免號控器接線問題把
 SignalGroupID_table_start
-# SignalGroupID, ApproachId, SignalGreenType, SignalID
-1, 1, 0
-2, 2, 0
-3, 3, 0
-4, 4, 0
+# SignalGroupID, ApproachId, SignalGreenType, SignalID, MapGreenType
+1, 1, 0, 1, 0
+2, 2, 0, 2, 0
+3, 3, 0, 3, 0
+4, 4, 0, 4, 0
 # 行人燈
-5, 1, 4
-6, 2, 4
-7, 3, 4
-8, 4, 4
+5, 1, 4, 1, 4
+6, 2, 4, 2, 4
+7, 3, 4, 3, 4
+8, 4, 4, 4, 4
 SignalGroupID_table_end

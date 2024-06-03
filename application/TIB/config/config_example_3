@@ -1,0 +1,64 @@
+# any line started with '#' '\n' ' ' will be ignored
+# 東豐路與林森路三段口
+
+# SPaT packet tranfer speed
+# default 10 Hz
+SPaT_packet_transfer_speed 1
+
+# MAP packet tranfer speed
+# default 1 Hz
+MAP_packet_transfer_speed 1
+MAP_dontSend2TC 1
+
+
+LaneSet_table_start
+# LaneId, LaneDirection, ApproachId, LaneIndex, SharedWith, LaneType, LaneAttributes, NodeCount, NodeLon NodeLat, ...
+0, egress,  1, 1, 3 4 5 7, vehicle, 0, 2, 120.2247292 23.0027173, 120.2249303 23.0047727 # 北端
+1, egress,  1, 2, 3 4 5 7, vehicle, 0, 2, 120.2247626 23.0027152, 120.2249665 23.0047756
+2, ingress, 1, 1, 3 4 5 7, vehicle, 0, 2, 120.2246633 23.0027294, 120.2248578 23.0047774
+3, ingress, 1, 2, 3 4 5 7, vehicle, 0, 2, 120.2246288 23.0027371, 120.2248286 23.0047752
+
+4, egress,  2, 1, 3 4 5 7, vehicle, 0, 2, 120.22489 23.0023812, 120.2270921 23.0020331 # 東端
+5, egress,  2, 2, 3 4 5 7, vehicle, 0, 2, 120.224885 23.0023525, 120.2270831 23.0020032
+6, ingress, 2, 1, 3 4 5 7, vehicle, 0, 2, 120.2249023 23.0024456, 120.2271138 23.0020963
+7, ingress, 2, 2, 3 4 5 7, vehicle, 0, 2, 120.2249076 23.0024721, 120.2271178 23.002119
+
+8, egress,  3, 1, 3 4 5 7, vehicle, 0, 2, 120.2246185 23.0021685, 120.2244616 23.0003513 # 南端
+9, egress,  3, 2, 3 4 5 7, vehicle, 0, 2, 120.2245923 23.0021779, 120.2244314 23.0003571
+10, ingress, 3, 1, 3 4 5 7, vehicle, 0, 2, 120.2246897 23.0021521, 120.2245221 23.0003436
+11, ingress, 3, 2, 3 4 5 7, vehicle, 0, 2, 120.2247195 23.0021433, 120.2245546 23.0003434
+
+12, egress,  4, 1, 3 4 5 7, vehicle, 0, 2, 120.2245321 23.0024986, 120.2235692 23.0026405 # 西端
+13, egress,  4, 2, 3 4 5 7, vehicle, 0, 2, 120.2245348 23.0025282, 120.2235759 23.0026689
+14, ingress, 4, 1, 3 4 5 7, vehicle, 0, 2, 120.2245245 23.0024347, 120.2235563 23.0025804
+15, ingress, 4, 2, 3 4 5 7, vehicle, 0, 2, 120.2245165 23.0024112, 120.2235536 23.002552
+LaneSet_table_end
+
+LaneSet_connectsTo_table_start
+# LaneID, LeftConnectingLane, ..., StraightConnectingLane, ..., RightConnectingLane, ...
+2, 2, 4, 5, 2, 8, 9, 2, 12, 13
+3, 2, 4, 5, 2, 8, 9, 2, 12, 13
+6, 2, 8, 9, 2, 12, 13, 2, 0, 1
+7, 2, 8, 9, 2, 12, 13, 2, 0, 1
+10, 2, 12, 13, 2, 0, 1, 2, 4, 5
+11, 2, 12, 13, 2, 0, 1, 2, 4, 5
+14, 2, 0, 1, 2, 4, 5, 2, 8, 9
+15, 2, 0, 1, 2, 4, 5, 2, 8, 9
+LaneSet_connectsTo_table_end
+
+
+SignalGroupID_table_start
+# SignalGroupID, ApproachId, SignalGreenType
+0,  1, 1, 1, 1 # 北
+1,  1, 2, 1, 2
+2,  1, 3, 1, 2
+3,  2, 1, 2, 1 # 東
+4,  2, 2, 2, 2
+5,  2, 3, 2, 2
+6,  3, 1, 3, 1 # 南
+7,  3, 2, 3, 2
+8,  3, 3, 3, 2
+9,  4, 1, 4, 1 # 西
+10, 4, 2, 4, 2
+11, 4, 3, 4, 2
+SignalGroupID_table_end
