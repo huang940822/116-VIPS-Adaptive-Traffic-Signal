@@ -51,8 +51,8 @@ int SPM_on_OBU_packet_rx(void *arg)
                       .time_nsec;
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    if (SPM.dontSend2TC)
-        return 1;
+    // if (SPM.dontSend2TC)
+    //     return 1;
 
     // SPM_OBU_obj_insert(app_section->OBU_object, srm);
     // SPM_repeater_start(false);

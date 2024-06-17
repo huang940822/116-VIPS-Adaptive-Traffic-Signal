@@ -73,9 +73,8 @@ void *SPM_repeater()
 
     int32_t sequenceNumber = 0;
 
-    while (!SPM.dontSend2TC) {
+    while (1) {
         s = read(SPM_repeater_fd, &exp, sizeof(uint64_t));
-
         pthread_mutex_lock(&SPM_OBU_obj_mutex);
         SPM_OBU_obj_t *current = list_entry(SPM_OBU_list_head.next, SPM_OBU_obj_t, node);
         struct timeval tv;
@@ -140,6 +139,7 @@ void *SPM_repeater()
                                 ssp->status = PrioritizationResponseStatus_processing;
                                 break;
                             case OBU_object_granted: {
+                                // 會在成功更新 command buf 後 granted
                                 ssp->status = PrioritizationResponseStatus_granted;
                                 // 如果同方向都是 granted 第二個會是 reserviceLocked
                                 for (int k = 0; k < status->sigStatus.count - 1; k++) {
@@ -166,7 +166,7 @@ void *SPM_repeater()
                         ssp->requester_option = TRUE;
                         ssp->requester.id.choice = VehicleID_stationID;
                         if (current->id.choice == current->id.choice)
-                            ssp->requester.id.u.stationID = *(uint32_t *)current->id.u.buf;
+                            ssp->requester.id.u.stationID = *(uint32_t *) current->id.u.buf;
                         else
                             ssp->requester.id.u.stationID = current->id.u.stationID;
 

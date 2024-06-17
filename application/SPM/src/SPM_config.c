@@ -9,7 +9,7 @@
 
 SPM_config_object_t SPM_config = {
     .spm_host_obu_packet_timeout = 20,
-    .SPM_packet_transfer_speed = 10,
+    .SPM_packet_transfer_speed = 1,
     .SPM_dontSend2TC = 1,
 };
 
