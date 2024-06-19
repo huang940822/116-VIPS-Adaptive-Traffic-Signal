@@ -103,12 +103,6 @@ void *SPM_repeater()
             ssm->second = (timeinfo->tm_sec * 1000) + (tv.tv_usec / 1000);
 
             ssm->status.count = 0;
-            // 給測試用的
-            ssm->regional_option = true;
-            ssm->regional.count = 1;
-            ssm->regional.tab->u.unknown.buf = (uint8_t *) &tv;
-            ssm->regional.tab->u.unknown.len = sizeof(struct timeval);
-
             while (&current->node != &SPM_OBU_list_head && ssm->status.count < SignalStatusList_MAX_SIZE) {
                 SignalStatus *status = &ssm->status.tab[ssm->status.count++];
                 status->sigStatus.count = 0;
@@ -124,12 +118,15 @@ void *SPM_repeater()
 
                     for (int j = 0; j <= current->sigRequest_count && status->sigStatus.count < SignalStatusList_MAX_SIZE; j++) {
                         SignalStatusPackage *ssp = &status->sigStatus.tab[status->sigStatus.count++];
-
+                        /*
+                        每一個 SignalStatusPackage 都是算一次請求所以在一個 SSM 裡面可以有很多個請求
+                        會有三個階段 HandShake, Pooling, Close
+                        */
                         switch (current->sigRequestList[j].request.requestType) {
-                        case PriorityRequestType_priorityRequest:
+                        case PriorityRequestType_priorityRequest: // HandShake
                             ssp->status = PrioritizationResponseStatus_requested;
                             break;
-                        case PriorityRequestType_priorityRequestUpdate: {
+                        case PriorityRequestType_priorityRequestUpdate: { // Pooling
                             switch (special_OBU_list_search_status(current->vehicle_type, current->OBU_name)) {
                             case OBU_object_unknown:
                                 status->sigStatus.count--;
@@ -157,7 +154,7 @@ void *SPM_repeater()
                             }
                         } break;
                         case PriorityRequestType_priorityRequestTypeReserved:
-                        case PriorityRequestType_priorityCancellation:
+                        case PriorityRequestType_priorityCancellation: // Close
                             status->sigStatus.count--;
                             continue;
                             break;
