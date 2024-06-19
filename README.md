@@ -28,12 +28,13 @@ Another use the `make deploy`, will generate the new folder `RSU_Controller\`.<b
 Put it into the IPC which want to deploy and paste it on the correct path then install.<br>
 **In other IPC**
 ```
-sudo ./install
+sudo ./install.sh
 ```
 Finally can see the three system service.
 ```
 systemctl status capacity_check.service
 systemctl status network_check.service
+systemctl statys gnss_status_check.service
 systemctl status middleware.service
 ```
 
