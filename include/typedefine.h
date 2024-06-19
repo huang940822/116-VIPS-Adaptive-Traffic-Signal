@@ -54,11 +54,11 @@ typedef enum application_id {
 } application_id_t;
 
 typedef enum vehicle_type {
-    VEHICLE_NORMAL = 0,
-    VEHICLE_AMBULANCE = 1,
-    VEHICLE_BUS = 2,
-    VEHICLE_FIRE_TRUCK = 3,
-    VEHICLE_POLICE_CAR = 4,
+    VEHICLE_NORMAL = -1,
+    VEHICLE_AMBULANCE = 0,
+    VEHICLE_BUS = 1,
+    VEHICLE_FIRE_TRUCK = 2,
+    VEHICLE_POLICE_CAR = 3,
     VEHICLE_TYPE_NUMBER
 } vehicle_type_t;
 
@@ -159,6 +159,7 @@ typedef struct event_callback {
 
 typedef struct OBU_record_common_field {
     time_t time_second;
+    time_t time_nsec;
     float position_lon;
     float position_lat;
     uint8_t speed;  // m/s
@@ -169,6 +170,7 @@ typedef struct OBU_record_common_field {
 
 typedef struct OBU_record {
     time_t time_second;
+    time_t time_nsec;
     float position_lon;
     float position_lat;
     uint8_t speed;  // m/s
@@ -390,6 +392,7 @@ typedef struct tsc_command {
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
     char host_OBU_name[ID_MAX_LEN + 1];
+    vehicle_type_t vehicle_type;
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
@@ -402,6 +405,7 @@ typedef struct tsc_command_object {
     uint8_t adjusted_time;  // is the length of time that the traffic signal
                             // controller is adjusted to.
     char host_OBU_name[ID_MAX_LEN + 1];
+    vehicle_type_t vehicle_type;
     bool send_flag;
 } tsc_command_object_t;
 

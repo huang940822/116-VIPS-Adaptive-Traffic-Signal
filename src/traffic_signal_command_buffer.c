@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "EVSP.h"
+#include "OBU_record_processing.h"
 #include "TSP.h"
 #include "application_management_helper.h"
 #include "application_registration.h"
@@ -433,8 +434,6 @@ int command_buf_insert_effect_time(tsc_command_t *command)
     // resume command
     if (strncmp(command->host_OBU_name, RESUME_ID, sizeof(RESUME_ID)) == 0) {
         if (target_command_obj->app_id == command->app_id) {
-            // 還是會使用 special_OBU_list_update_status
-            // 但是會在 OBU_object_search 的時候沒有找到
             goto COMMAND_BUF_INSERT_ACCEPT_OBU_NAME;
         } else {
             goto COMMAND_BUF_IMPROPER_PRIORITY;
@@ -486,6 +485,9 @@ COMMAND_BUF_INSERT_ACCEPT_EFFECT_TIME:
 COMMAND_BUF_INSERT_ACCEPT:
     pthread_mutex_unlock(&mutex_command_buf);
     command_buf_print();
+    if (command->phase == command->target_phase) {
+        special_OBU_list_update_status(command->host_OBU_name, command->vehicle_type, OBU_object_granted);
+    }
     return INSERT_ACCEPT;
 COMMAND_BUF_IMPROPER_PRIORITY:
     pthread_mutex_unlock(&mutex_command_buf);

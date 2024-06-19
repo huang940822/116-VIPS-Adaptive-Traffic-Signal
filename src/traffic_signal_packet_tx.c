@@ -63,6 +63,7 @@ uint8_t tsc_dynamic()
     return ret;
 }
 
+// 下 5F10 啟動自動控制
 uint8_t tsc_pretime()
 {
     traffic_signal_packet_t *packet;

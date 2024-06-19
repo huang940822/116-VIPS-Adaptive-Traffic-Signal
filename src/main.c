@@ -93,7 +93,6 @@ int main()
     if (ret) {
         printf("%s, register_handler_for_unexpected_signal() failed\r\n", __func__);
         printf("return value is %d\r\n", ret);
-        ;
         fflush(stdout);
         exit(0);
     }
@@ -103,7 +102,7 @@ int main()
     /* log init */
     log_file_init();  // 一個timer被created
 
-    log_file_write("version : v2.5.7");
+    log_file_write("version : v2.5.8");
 
     /* read config file*/
     ret = config_init();
@@ -180,7 +179,7 @@ int main()
         &TSP,
         // &CPS,
         &TIB,
-        // &SPM,
+        &SPM,
     };
 
     /* 注意有些 app 的 on_registration() 會 create timer */
