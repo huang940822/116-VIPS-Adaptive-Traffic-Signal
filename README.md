@@ -38,6 +38,10 @@ systemctl statys gnss_status_check.service
 systemctl status middleware.service
 ```
 
+### Setup watchdog
+Copy the folder in `support_daemon/watchdog` to the target IPC then execute `sudo ./install.sh` in the target IPC.<br>
+Configure the BIOS in the IPC turn on watchdog and power on the boot.
+
 ## Setup and Start Program
 
 1. Go to home directory
