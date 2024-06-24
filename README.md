@@ -64,11 +64,26 @@ make
     * *config* file for TSP application is placed in `RSU_Controller_master/application/TSP/config` directory   
     * *Supermatrix* file is placed in `RSU_Controller_master/application/TSP/config/RSU_supermatrix` directory
 
-## Execute at systemd
-* There are three service in RSU_Controller_master as folloe
+6. Connect with the traffic signal controller and execute `start.sh`. It checks if there is only one middleware process in IPC and starts it.
+```
+./start.sh
+```
+## Execute at systemd (command also included in install.sh)
+- **Below operations have been included in `install.sh`. To complete installation, the RSU Controller only needs to execute `install.sh` in privilege. Finally, reboot and check all of the services are running correctly.**
+```
+sudo ./install.sh
+sudo reboot
+systemctl status middleware.service
+systemctl status capacity_check_service
+systemctl status network_check.service
+systemctl status gnss_status_check.service
+```
+
+* There are four service in RSU_Controller_master as follow
     1. *middleware.service*
     2. *capacity_check_service*
     3. *network_check.service*
+    4. *gnss_status_check.service*
 
 You have to make sure path is correct.
 
