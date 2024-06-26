@@ -5,7 +5,7 @@
 # RSU_id is RSU_NAME last four number
 # RSU_region is the first alphabetically concatenated the second number
 # RSU_id and RSU_region is use on j2735 format
-RSU_NAME "S429001   "   
+RSU_NAME "S269901   "   
 RSU_id 29001
 RSU_region 164
 

@@ -1,6 +1,8 @@
 # any line started with '#' '\n' ' ' will be ignored
 # 高發二路
 
+#file name roadname_config.txt
+
 # SPaT packet tranfer speed
 # default 10 Hz
 SPaT_packet_transfer_speed 1
@@ -22,6 +24,9 @@ MAP_dontSend2TC 1
 # 山住則按照順序第一二三四路就是東南西北
 # 但可能會因為皆先的順序
 # 因為是用在 signalGroupId 上的對應要確定現場路口有沒有對應正確不然 SPaT 會有問題
+
+
+# LaneIdx表示內外車道
 
 # SharedWith 用同一個欄位 flag 之間用空白隔開 像是 2 4 5 這樣表示
 # TCROS 描述
@@ -85,6 +90,7 @@ MAP_dontSend2TC 1
 # NodeCount 表示後面有幾個 node
 # NodeLon NodeLat 車道的路線點, 從停止線開始往外畫, 經度 緯度 用空白分割
 
+# MAP資訊
 LaneSet_table_start
 # LaneId, LaneDirection, ApproachId, LaneIndex, SharedWith, LaneType, LaneAttributes, NodeCount, NodeLon NodeLat, ...
 0,  egress,  1, 1, 3 4 5 7, vehicle,  0,   2, 120.29077 22.92458, 120.290339 22.925588 # 北端
