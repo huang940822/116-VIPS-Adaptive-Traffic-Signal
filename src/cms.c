@@ -29,6 +29,7 @@ const char CMS_header[] = {'m', '5', 'm', 'm', '4', 'm'};
 const unsigned char CMS_key[16] = {'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K'};
 
 int cms_sockfd;
+struct sockaddr_in ipc_addr;
 
 typedef struct CMS_update_args {
     uint8_t program_id;
@@ -592,6 +593,14 @@ static void *CMS_handler()
         do {
             buffer_len = CMS_recv_timeout(buffer, BUFFER_SIZE, (struct sockaddr *) &client_addr, &client_addr_len);
             printf("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
+
+            // 避免收到自己發出的封包
+            if (client_addr.sin_addr.s_addr == 0 ||
+                client_addr.sin_addr.s_addr == ipc_addr.sin_addr.s_addr) {
+                printf("------------------\n");
+                continue;
+            }
+
             if (buffer_len < 0) {
                 recv_flag++;
             } else {
@@ -660,7 +669,7 @@ void CMS_handler_init()
 {
     if (config.cms_number == 0)
         return;
-    struct sockaddr_in addr;
+
     cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (cms_sockfd < 0) {
         perror("socket creation failed");
@@ -697,12 +706,12 @@ void CMS_handler_init()
         exit(EXIT_FAILURE);
     }
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(broadcast_ip);
-    addr.sin_port = htons(CMS_PORT);
+    memset(&ipc_addr, 0, sizeof(ipc_addr));
+    ipc_addr.sin_family = AF_INET;
+    ipc_addr.sin_addr.s_addr = inet_addr(broadcast_ip);
+    ipc_addr.sin_port = htons(CMS_PORT);
 
-    if (bind(cms_sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+    if (bind(cms_sockfd, (struct sockaddr *) &ipc_addr, sizeof(ipc_addr)) < 0) {
         log_file_write_fatal_error("cms bind failed");
         close(cms_sockfd);
         exit(EXIT_FAILURE);

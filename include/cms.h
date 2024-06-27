@@ -4,7 +4,7 @@
 #include "vms.h"
 
 #define CMS_PORT 20204
-#define CMS_INTERFACE_NAME "enp2s0"
+#define CMS_INTERFACE_NAME "enp4s0"
 #define CMS_pic_path VMS_pic_path
 #define CMS_pic_database_path VMS_pic_database_path
 #define CMS_encrypt_img "tmp_encrypt_img"
