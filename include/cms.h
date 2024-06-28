@@ -4,11 +4,11 @@
 #include "vms.h"
 
 #define CMS_PORT 20204
-#define CMS_INTERFACE_NAME "enp4s0"
+#define CMS_INTERFACE_NAME "enp4s0" //檢查CMS連到哪一個網卡
 #define CMS_pic_path VMS_pic_path
 #define CMS_pic_database_path VMS_pic_database_path
 #define CMS_encrypt_img "tmp_encrypt_img"
-#define CMS_scp_path "asrlab@"
+#define CMS_scp_path "asrlab@" //之後從RSU接圖片要用的path
 #define CMS_update_fail_time 10
 #define CMS_request_timeout 60
 #define CMS_NUM_MAX 16
