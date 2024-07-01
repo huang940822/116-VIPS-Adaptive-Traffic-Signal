@@ -9,7 +9,7 @@
 #include "log.h"
 
 #include <stdio.h>
-
+// SSM (RSU發出) /SRM (OBU發出)代傳
 app_obj_t SPM = {
     .name = "SPM",
     .id = SPM_ID,

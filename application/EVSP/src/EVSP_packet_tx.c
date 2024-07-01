@@ -12,7 +12,7 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
-void EVSP_send_ack()
+void EVSP_send_ack() //緊急交通工具方傳送ACK訊息
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
@@ -49,6 +49,8 @@ void EVSP_report_host_obu(OBU_object_t *OBU_object, uint8_t on_duty_flag)
         // clear mem content which is malloced
         memset(write_buf.content, 0, 42);
     }
+
+    //以下開始填入封包訊息
 
     // write cmd
     write_uint8_t(0, &write_buf);

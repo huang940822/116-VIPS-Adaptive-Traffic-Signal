@@ -40,6 +40,7 @@ int DSRC_send_timer_handler(buffer_ring_t *buffer)
         }
     }
 }
+//向OBU發送符合j2735規範訊息
 void OBU_j2735_tx(DSRCmsgID magId, void *data)
 {
     int buf_len;
@@ -71,6 +72,7 @@ void OBU_j2735_tx(DSRCmsgID magId, void *data)
     j2735_buf_free(buf);
     return;
 }
+//向OBU發送封包訊息
 void OBU_packet_tx(uint16_t len,
                    uint8_t service_id,
                    unsigned char *specific_field)
@@ -130,7 +132,7 @@ void OBU_packet_tx(uint16_t len,
         }
         log_file_write(log_content);
     }
-
+    //送出OBU packet
     int ret = com_send(OBU_com_id, write_buf.content, write_buf.index);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("OBU_packet_tx: com_send");
@@ -215,7 +217,7 @@ void cloud_packet_tx(uint16_t len,
     }
     return;
 }
-
+//RSU從雲端收到封包
 int cloud_packet_rx_event_handler(msg_obj_t *msg)
 {
     char log_content[LOG_CONTENT_LEN + 1];
@@ -263,6 +265,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     // service id
     read_uint8_t(&common_field.service_id, &read_buf);
 
+    //檢查雲端封包是否完整
     /* common field value valid */
     if (common_field.packet_len < C2R_COMMON_FIELD_LEN) {
         if (read_buf.content != NULL) {
@@ -401,10 +404,11 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         break;
     }
 
-    OBU_object_print();
+    OBU_object_print(); 
 
     V2R_app_section_t app_section;
     memset(&app_section, 0, sizeof(V2R_app_section_t));
+    //記錄從OBU收到的封包 (OBU to RSU)
     app_section.msgID = msgf->messageId;
     app_section.data = msgf->u.data;
     app_section.OBU_object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
@@ -436,7 +440,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     return PACKET_PROCESSING_ACCEPT;
 }
-
+//接收smart AVI回傳的封包
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 {
     int cnt = 0;
@@ -505,8 +509,10 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     }
     return 0;
 }
+//確認是否接到OBU方heartbeat
 int Is_Heartbeat(msg_obj_t *msg)
 {
+    //接收OBU封包
     msg_buf_t read_buf;
     V2R_common_field_t common_field;
     read_buf.index = 0;
@@ -525,6 +531,7 @@ int Is_Heartbeat(msg_obj_t *msg)
     // service id
     read_uint8_t(&common_field.service_id, &read_buf);
 
+    //檢查天線
     uint8_t antenna_status;
     read_uint8_t(&antenna_status, &read_buf);
     switch (antenna_status) {
@@ -543,6 +550,7 @@ int Is_Heartbeat(msg_obj_t *msg)
     default:
         break;
     }
+    //接收DSRC格式heartbeat封包
     if (common_field.service_id == 0 &&
         common_field.packet_len == 512) {  // dsrc heart beat packet
         printf("dsrc alive and postpone the timer handle execution\r\n");

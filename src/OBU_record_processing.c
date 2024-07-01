@@ -389,7 +389,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
     return 1;
 }
 
-void OBU_object_garbage_collection_init()
+void OBU_object_garbage_collection_init() //清掉太久的obu object
 {
     for (int i = 0; i < HASH_TABLE_SIZE; i++) {
         normal_OBU_list[i].next = &normal_OBU_list[i];
@@ -413,7 +413,7 @@ void OBU_object_garbage_collection_timer(__sigval_t value)
     OBU_object_print();
 }
 
-void OBU_object_garbage_collection()
+void OBU_object_garbage_collection() //清掉太久的obu object
 {
     time_t current_time;
     time(&current_time);

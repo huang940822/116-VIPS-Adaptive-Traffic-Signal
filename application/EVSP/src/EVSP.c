@@ -27,6 +27,7 @@
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
 
+// 預備EVSP object
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = EVSP_ID,
@@ -44,7 +45,7 @@ app_obj_t EVSP = {
 };
 
 
-int EVSP_on_CLOUD_packet_rx(void *arg)
+int EVSP_on_CLOUD_packet_rx(void *arg) //EVSP接收到雲端封包
 {
     // printf("\nTSP_on_cloud_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
@@ -56,6 +57,7 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     // } C2R_app_section_t;
     C2R_app_section_t *app_section = (C2R_app_section_t *) arg;
 
+    //開始讀取雲端封包
     msg_buf_t read_buf;
     read_buf.index = 0;
     Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
@@ -63,7 +65,7 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
         return -1;
     memcpy(read_buf.content, app_section->payload, app_section->payload_len);
 
-    // needs a evsp sned ack function to send ack to cloud
+    // needs a evsp send ack function to send ack to cloud
     EVSP_send_ack();
 
     // read cmd
@@ -89,7 +91,7 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
              "EVSP cloud packet rx: CMD(%d)", cmd);
 
     switch (cmd) {
-    case 0: {  // disable/enalbe:1/2
+    case 0: {  // disable/enable:1/2
         uint8_t enableOrdisable = 0;
         // uint8_t type=0;
         read_int8_t(&enableOrdisable, &read_buf);
@@ -125,9 +127,9 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
     return 0;
 }
 
-int EVSP_on_OBU_packet_rx(void *arg)
+int EVSP_on_OBU_packet_rx(void *arg) //EVSP接收到OBU封包
 {
-    V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
+    V2R_app_section_t *app_section = (V2R_app_section_t *) arg; //vechicle to roadside unit
     if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE)
         return 0;
 
@@ -188,8 +190,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
     // 轉傳緊急封包到雲端
     EVSP_report_host_obu(app_section->OBU_object, static_space.on_duty_flag);
 
-    // obu與rsu的距離
-    uint16_t OBU_distance = (uint16_t) get_distance(
+    // obu與rsu的距離 (from gps_information.c)
+    uint16_t OBU_distance = (uint16_t) get_distance( 
         config.RSU_lat, config.RSU_lon,
         app_section->OBU_object->record_ring.record[last_record_index]
             .position_lat,
@@ -260,11 +262,12 @@ int EVSP_on_OBU_packet_rx(void *arg)
                  command.cycle, command.phase, command.effect_time, \
                  ret);                                              \
     } while (0);
-    /* already in host OBU list */
+    /* already in host OBU list (已經進入偵測範圍，現在要離開) */
     if (host_OBU != NULL) {
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
         host_OBU->distance = OBU_distance;
+        //準備進入EVSP離開點/結束點
         EVSP_terminate_area_t *area_ptr = EVSP_terminate(
             app_section->OBU_object->record_ring.record[last_record_index].position_lon,
             app_section->OBU_object->record_ring.record[last_record_index].position_lat,
@@ -275,7 +278,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
                      app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
-
+            //紀錄EVSP指令
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
             command.app_id = EVSP.id;
@@ -284,7 +287,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             strncpy(command.host_OBU_name, RESUME_ID, OBU_NAME_MAX_LEN);
             command.phase = command.target_phase;
             command.effect_time = signal_status.plan[command.target_phase - 1].PreTimeCompensated;
-
+            //EVSP離開路口，刪除紀錄
             EVSP_host_OBU_obj_delete(app_section->OBU_object->OBU_name);
 
             // no other host OBU with same target phase in host_OBU_list
@@ -304,11 +307,11 @@ int EVSP_on_OBU_packet_rx(void *arg)
                 vms_request_end(EVSP.id);
             }
 
-            // 回報碰到觸碰點 id
+            // 回報碰到結束點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         }
 
-    } else { /* not in host OBU list */
+    } else { /* not in host OBU list (新EVSP進入路口觸碰點) */
         // search plan
         uint8_t plan_id = get_plan_id();
         EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
@@ -337,10 +340,11 @@ int EVSP_on_OBU_packet_rx(void *arg)
                      LOG_CONTENT_LEN - strlen(log_content),
                      "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
                      app_section->OBU_object->OBU_name, target_phase, area_ptr->touching_area_id);
-
+            //加入新EVSP
             EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name,
                                      target_phase, area_ptr);
             EVSP_host_OBU_obj_print();
+            //準備指令
             tsc_command_t command;
             memset(&command, 0, sizeof(tsc_command_t));
             command.app_id = EVSP.id;
@@ -348,7 +352,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             command.target_phase = target_phase;
             strncpy(command.host_OBU_name, app_section->OBU_object->OBU_name,
                     OBU_NAME_MAX_LEN);
-
+            //號誌計畫
             uint8_t current_phase = signal_status.SubPhaseID;
             uint8_t current_step = signal_status.StepID;
             uint16_t current_second = signal_status.StepSec;

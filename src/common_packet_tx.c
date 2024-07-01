@@ -10,8 +10,9 @@
 #include "error_status.h"
 #include "log.h"
 #include "traffic_signal_status_updating.h"
+//常用訊息傳送 (ACK訊息、補償策略)
 
-void common_send_ack(uint8_t cmd, uint8_t status)
+void common_send_ack(uint8_t cmd, uint8_t status) //訊息接收正常，回傳ACK
 {
     printf("common send ack, CMD is %d %d\r\n", cmd, status);
     log_file_write("common send ack, CMD is %d %d\r\n", cmd, status);
@@ -28,7 +29,7 @@ void common_send_ack(uint8_t cmd, uint8_t status)
     return;
 }
 
-void report_compensation_time()
+void report_compensation_time() //回報補償時間
 {
     printf("report compensation time\r\n");
     msg_buf_t write_buf;

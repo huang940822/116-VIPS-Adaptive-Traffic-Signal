@@ -52,6 +52,7 @@ int readCnt;
 
 char *VMS_name[4] = {VMS_2, VMS_1, VMS_4, VMS_3};
 
+//更新交通訊息
 bool vms_program_update_thread_activate(uint8_t Program_ID, char *Program_Name)
 {
     if (pthread_mutex_trylock(&VMS_program_update_thread_mutex) == 0) {

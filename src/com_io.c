@@ -39,6 +39,7 @@ int com_send(int com_id, unsigned char *buf, size_t send_len)
     }
     return COM_IO_OK;
 }
+//移除還在連線的RSU_server
 int com_unlink(int com_id)
 {
     client_t *client = comm_dict_find(RSU_server.broker->client_dict, com_id);

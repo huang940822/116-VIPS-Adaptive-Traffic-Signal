@@ -700,7 +700,7 @@ void report_plan()
         write_uint8_t(signal_status.plan[i].MinGreen, &write_buf);
     }
     pthread_mutex_unlock(&mutex_signal_status);
-
+    //上述封包送到OBU
     OBU_packet_tx(write_buf.index, 0, write_buf.content);
     free(write_buf.content);
     return;
