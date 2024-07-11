@@ -7,8 +7,9 @@
 #include "typedefine.h"
 #include "config.h"
 
+
 SPM_config_object_t SPM_config = {
-    .spm_host_obu_packet_timeout = 20,
+    .spm_host_obu_packet_timeout = 20,// do nothing
     .SPM_packet_transfer_speed = 1,
     .SPM_dontSend2TC = 1,
 };

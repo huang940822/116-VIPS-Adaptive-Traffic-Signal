@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include "sys/time.h"
-
+// SSM/SRM代傳
 app_obj_t SPM = {
     .name = "SPM",
     .id = SPM_ID,

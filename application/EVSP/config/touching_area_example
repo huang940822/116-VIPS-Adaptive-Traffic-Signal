@@ -1,6 +1,6 @@
 # 井字號 # 是註解
 
-# 檔名為 (RSU_name)_touching_area.txt
+# 檔名為 <RSU_name>_touching_area.txt
 # 例如路徑為 application/EVSP/config/S429001_touching_area.txt
 
 # 每一個表的開始都會是表的名稱
@@ -39,6 +39,7 @@ touching_area_table
 touching_area_table_end
 
 # plan_table 表是一個 plan 後面會有一串數字表示 plan_id，以逗點隔開
+# plan_table 1,2,3 代表 ID 1,2,3共用同一個plan
 # plan_table 接在後面的 plan_id 要是唯一的不能跟其他 plan_table 的 plan_id 重複
 # SubphaseId 分相編號
 # touching_area_num 有幾個觸碰點
