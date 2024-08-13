@@ -277,7 +277,7 @@ int CMS_update_img(int imgID, char *imgName)
     snprintf(filename, sizeof(filename), "%03d_%s", imgID, imgName);
     for (int i = 0; i < config.cms_number; i++) {
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
-        snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/%s", ip, filename);
+        snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/CMS_img/%s", ip, filename);
 
         int result = system(scp_command);
         if (result == 0) {
@@ -550,6 +550,7 @@ int CMS_recv_timeout(char *buffer, int buffer_len, struct sockaddr *client_addr,
 
 static void *CMS_handler()
 {
+    log_file_write("CMS init success.");
     struct sockaddr_in addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
 
@@ -585,6 +586,7 @@ static void *CMS_handler()
         buffer[0] = buffer_len;
         if (sendto(cms_sockfd, buffer, buffer_len, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             perror("sendto failed");
+            log_file_write_fatal_error("sendto() cms failed.");
             close(cms_sockfd);
             exit(EXIT_FAILURE);
         }
@@ -593,13 +595,6 @@ static void *CMS_handler()
         do {
             buffer_len = CMS_recv_timeout(buffer, BUFFER_SIZE, (struct sockaddr *) &client_addr, &client_addr_len);
             printf("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
-
-            // 避免收到自己發出的封包
-            if (client_addr.sin_addr.s_addr == 0 ||
-                client_addr.sin_addr.s_addr == ipc_addr.sin_addr.s_addr) {
-                printf("------------------\n");
-                continue;
-            }
 
             if (buffer_len < 0) {
                 recv_flag++;
@@ -613,6 +608,12 @@ static void *CMS_handler()
                 int cmsID = buffer[3];
                 int status = buffer[4];
                 int imgID = buffer[5];
+
+                printf("cmd = %d, cmsID = %d, status = %d, imgID = %d\n", 
+                        buffer[2],
+                        buffer[3],
+                        buffer[4],
+                        buffer[5]);
 
                 switch (cmd) {
                 case 1: {
@@ -638,11 +639,11 @@ static void *CMS_handler()
                         log_file_write_fatal_error("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
                         set_vms_error();
                     } else if (imgID != 0) {
-                        if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
-                            printf("------not match\n");
-                        } else {
-                            printf("------match\n");
-                        }
+                        // if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
+                        //     printf("------not match\n");
+                        // } else {
+                        //     printf("------match\n");
+                        // }
                     }
                 } break;
                 }
@@ -654,6 +655,14 @@ static void *CMS_handler()
                     }
                 }
             }
+
+            // 避免收到自己發出的封包
+            if (client_addr.sin_addr.s_addr == 0 ||
+                client_addr.sin_addr.s_addr == ipc_addr.sin_addr.s_addr) {
+                printf("------------------\n");
+                continue;
+            }
+
         } while (recv_flag < 2 && recv_flag <= 0);
         if (recv_flag == -1) {
             clear_vms_error();
