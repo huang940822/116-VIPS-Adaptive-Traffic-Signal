@@ -130,6 +130,7 @@ int main()
 
     /* Receive traffic signal packet */
     pthread_t traffic_signal_packet_rx_thread;
+    // 從socket收取不同類型的packet並處理轉義字節
     ret = pthread_create(&traffic_signal_packet_rx_thread, NULL,
                          traffic_signal_packet_rx_handler, NULL);
     if (ret != 0) {
@@ -148,21 +149,22 @@ int main()
         exit(errno);
     }
 
-    CMS_handler_init();
+    CMS_handler_init(); // cms.c中在一個指定的網絡socket上創建一個 UDP broacast來接訊息，並設置相關參數，以便接收和處理來自 CMS（Content Management System）的消息
 
     /* command buffer init & command buffer polling timer event*/
     command_buf_init();  // 這裡面又一個timer被created
 
-    /* traffic signal status report timer event */  // 這裡是幹麻看不懂 r2v???
+    //config.signal_status_report_active被set時創建和設置一個計時器，用於報告交通訊號狀態
     if (config.signal_status_report_active) {
         timer_t traffic_signal_status_report_timer_id;
         uint8_t traffic_signal_status_report_timer_num =
             TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT;
 
+        // 計時器的 ID 和事件編號分別傳遞給函式，以便在計時器觸發時進行相應的處理。timer_event_handler 是計時器觸發時調用的回調函式
         create_timer(&traffic_signal_status_report_timer_id,
                      &traffic_signal_status_report_timer_num,
-                     timer_event_handler);
-        set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);
+                     timer_event_handler); //time_event.c
+        set_timer(traffic_signal_status_report_timer_id, 1, 0, 1, 0);   //每隔一秒觸發一次
     }
 
     J2735Config cfg;
@@ -189,6 +191,7 @@ int main()
         printf("handling app_name: %s, id: %d, prio: %d\n",
                app_arr[i]->name, app_arr[i]->id, app_arr[i]->priority);
         ret = app_register(app_arr[i]);
+        // printf("register = %s\n", app_arr[i]->name);
         if (ret != 0) {
             log_file_write_fatal_error("error registering application: %d (%s)",
                                        ret, app_arr[i]->name);
@@ -198,11 +201,12 @@ int main()
     }
 
     /* OBU list garbage collection timer event */  // 清掉太久的obu object
-    OBU_object_garbage_collection_init();
+    OBU_object_garbage_collection_init(); //呼叫OBU_record_processing.c
 
     // log application register event
     if (config.log_application_register_event) {
-        event_callback_print();
+        // 遍歷所有事件類型，並將每個事件的callback list及其優先權列印到log中，使用mutex lock處理threads
+        event_callback_print(); //application_registration.c中
     }
 
     /* Packet dispatcher */
@@ -216,6 +220,7 @@ int main()
 
     /* create external-application-proxy main thread */
     pthread_t external_app_proxy_thread;
+    // UNIX domain socket和 epoll 的綜合應用，適合用於需要高效管理多個客戶端連接和事件的應用場景
     ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_main_handler, NULL);
     if (ret != 0) {
         log_file_write_fatal_error("error creating external_app_proxy_main_handler: %d", ret);

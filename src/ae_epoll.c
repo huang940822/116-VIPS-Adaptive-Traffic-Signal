@@ -48,6 +48,10 @@ int ae_epoll_add_event(ae_event_loop *event_loop, int fd, int mask)
     if (mask & AE_WRITABLE)
         ee.events |= (EPOLLOUT);
     ee.data.fd = fd;
+    if (op == EPOLL_CTL_ADD)
+        printf("create (ADD) comm event success , fd = %d\n", fd);
+    else if (op == EPOLL_CTL_MOD)
+        printf("create (MOD) comm event success , fd = %d\n", fd);
     if (epoll_ctl(state->epfd, op, fd, &ee) == -1)
         return -1;
     return 0;
@@ -65,18 +69,28 @@ void ae_epoll_del_event(ae_event_loop *event_loop, int fd, int delmask)
     ee.data.fd = fd;
     if (mask != AE_NONE) {
         epoll_ctl(state->epfd, EPOLL_CTL_MOD, fd, &ee);
+        printf("delete (MOD) event fd = %d\n", fd);
     } else {
         /* Note, Kernel < 2.6.9 requires a non null event pointer even for
          * EPOLL_CTL_DEL. */
         epoll_ctl(state->epfd, EPOLL_CTL_DEL, fd, &ee);
+        printf("delete (DEL) event fd = %d\n", fd);
+
     }
 }
 int ae_epoll_poll(ae_event_loop *event_loop, struct timeval *tvp)
 {
     ae_epoll_state *state = event_loop->apidata;
     int retval, numevents = 0;
+
+    // 調用 epoll_wait 函式，等待事件發生。
+    // state->epfd 是 epoll fd。
+    // event_loop->setsize 是event_state的大小。
+    // tvp 是等待時間，如果為 NULL 則表示無限等待，否則轉換成毫秒。
     retval = epoll_wait(state->epfd, state->events, event_loop->setsize,
                         tvp ? (tvp->tv_sec * 1000 + tvp->tv_usec / 1000) : -1);
+    
+    // 依照return值遍歷處理
     if (retval > 0) {
         int j;
         numevents = retval;

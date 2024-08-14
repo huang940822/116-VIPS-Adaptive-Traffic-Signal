@@ -676,21 +676,25 @@ static void *CMS_handler()
 
 void CMS_handler_init()
 {
-    if (config.cms_number == 0)
+    if (config.cms_number == 0) //沒有配置CMS直接return
         return;
 
     cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in addr;
+    cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0); //創建UDP socket
     if (cms_sockfd < 0) {
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    struct ifaddrs *ifaddr, *ifa;
+    //使用 getifaddrs 函式獲取當前系統的網絡socket地址。如果失敗，則輸出錯誤訊息並退出。
+    struct ifaddrs *ifaddr, *ifa; 
     if (getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs");
         exit(EXIT_FAILURE);
     }
 
+    //遍歷網路socketlist，查找名為 CMS_INTERFACE_NAME 的socket並獲取其 IPv4 地址。
     char broadcast_ip[INET_ADDRSTRLEN];
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr != NULL && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, CMS_INTERFACE_NAME) == 0) {
@@ -715,10 +719,17 @@ void CMS_handler_init()
         exit(EXIT_FAILURE);
     }
 
+
     memset(&ipc_addr, 0, sizeof(ipc_addr));
     ipc_addr.sin_family = AF_INET;
     ipc_addr.sin_addr.s_addr = inet_addr(broadcast_ip);
     ipc_addr.sin_port = htons(CMS_PORT);
+
+    // 設定地址並綁定socket
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr(broadcast_ip);
+    addr.sin_port = htons(CMS_PORT);
 
     if (bind(cms_sockfd, (struct sockaddr *) &ipc_addr, sizeof(ipc_addr)) < 0) {
         log_file_write_fatal_error("cms bind failed");
@@ -726,6 +737,7 @@ void CMS_handler_init()
         exit(EXIT_FAILURE);
     }
 
+    //設置及接收超時
     struct timeval timeout;
     timeout.tv_sec = TIMEOUT_SEC;
     timeout.tv_usec = 0;
@@ -734,7 +746,7 @@ void CMS_handler_init()
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
-
+    // 創建一個thread來處理CMS
     pthread_t cms_thread;
     int ret = pthread_create(&cms_thread, NULL, CMS_handler, NULL);
     if (ret != 0) {
