@@ -166,6 +166,7 @@ typedef struct OBU_record_common_field {
     uint8_t direction;
     char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
+    int fd;
 } OBU_record_common_field_t;
 
 typedef struct OBU_record {
@@ -205,6 +206,8 @@ typedef struct OBU_object {
     app_private_space_t *private_space;
     struct OBU_object *prev;  // should not pass to external app
     struct OBU_object *next;  // should not pass to external app
+    int fd;
+    bool redund ;
 } OBU_object_t;
 
 typedef struct traffic_signal_packet {
@@ -349,7 +352,7 @@ typedef struct V2R_app_section {
     OBU_object_t *OBU_object;
     DSRCmsgID msgID;
     void *data;  // use j2735 lib to encode and decodes
-} V2R_app_section_t;
+} V2R_app_section_t; //汽車到遠端裝置app
 
 typedef struct V2R_self_defined_section {
     char obu_name[OBU_NAME_MAX_LEN];

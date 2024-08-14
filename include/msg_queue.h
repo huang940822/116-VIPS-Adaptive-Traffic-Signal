@@ -32,11 +32,13 @@
 #define SET_DEVICE_DISCONNECTED(x) (SET_BIT(x, DEVICE_DISCONNECT_BIT_POS))
 #define CLEAR_DEVICE_ID(x, device_bit) (CLEAR_BIT(x, device_bit))
 
+
 struct msg_obj {
     unsigned char msg[MSG_Default_LEN];
     size_t msg_len;
     uint8_t device_id;
     uint8_t handle_id;
+    int fd;
     QUEUE queue;
 };
 
@@ -56,5 +58,8 @@ int8_t msg_queue_init();
 
 struct msg_obj *msg_obj_create(buffer_t *buf,
                                  uint8_t device_id,
-                                 uint8_t handle_id);
+                                 uint8_t handle_id,
+                                 int fd);
+
+unsigned int hash(int key, int size);
 #endif
