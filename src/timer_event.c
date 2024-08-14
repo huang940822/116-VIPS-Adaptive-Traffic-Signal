@@ -162,17 +162,17 @@ int create_timer(timer_t *timer_id,
     /* Set and enable alarm */
     /* SIGEV_NONE：什麼都不做,只提供通過 timer_gettime 和 timer_getoverrun
      * 查詢超時訊息 */
-    /* SIGEV_SIGNAL: 當定時器到期,內核會將 sigev_signo 所指定的信號傳給進程
-     * 在信號處理程序中 si_value 會被設定為 sigev_value */
-    /* SIGEV_THREAD: 當定時器到期,內核會(在此進程內)以
-     * sigev_notification_attributes 為線程屬性創建一個線程,並且讓它執行
+    /* SIGEV_SIGNAL: 當定時器到期,內核會將 sigev_signo 所指定的訊號傳給process
+     * 在訊號處理程序中 si_value 會被設定為 sigev_value */
+    /* SIGEV_THREAD: 當定時器到期,內核會(在此process內)以
+     * sigev_notification_attributes 為thread屬性創建一個thread,並且讓它執行
      * sigev_notify_function,並傳入 sigev_value 作為參數 */
 
     evp.sigev_value.sival_ptr =
         signal_value;                             // 用於標識定時器
                                                   //(這和timerid有什麼區別？回調函數可以獲得)
-    evp.sigev_notify = SIGEV_THREAD;              // 線程通知的方式，派駐新線程
-    evp.sigev_notify_function = notify_function;  // 線程函數地址
+    evp.sigev_notify = SIGEV_THREAD;              // thread通知的方式，派駐新thread
+    evp.sigev_notify_function = notify_function;  // thread函數地址
     if (timer_create(CLOCK_REALTIME, &evp, timer_id) == -1) {
         log_file_write_fatal_error("create_timer: timer_create");
         perror("create_timer: timer_create");

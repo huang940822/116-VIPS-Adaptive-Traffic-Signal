@@ -35,5 +35,4 @@ void OBU_object_print();
 
 int V2R_msgf2OBU_record(MessageFrame *, OBU_record_common_field_t *);
 
-
 #endif

@@ -327,7 +327,7 @@ static int _dict_clear(dict *ht)
     return DICT_OK; /*Actually,this never fail*/
 }
 /* Clear & Release the hash table */
-static void dict_realease(dict *ht)
+static void dict_release(dict *ht)
 {
     _dict_clear(ht);
     free(ht);
