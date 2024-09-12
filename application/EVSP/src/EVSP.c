@@ -257,7 +257,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
     &&  app_section->OBU_object->vehicle_type != VEHICLE_POLICE_CAR) {
         return 0;
     }
-    // printf("EVSP_on_OBU_packet_rx function\n");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
@@ -305,7 +304,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         app_section->OBU_object->record_ring
             .last_record_pointer;  // back of queue; 最新推入的資料？
 
-    // 轉傳緊急封包到雲端
+    // 轉傳緊急封包到雲端 (測試模式下註解掉)
     EVSP_report_host_obu(app_section->OBU_object, static_space.on_duty_flag);
 
     // obu與rsu的距離
@@ -343,13 +342,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
     log_file_write(log_content);
     memset(log_content, 0, sizeof(log_content));
 
+    //紀錄目前OBU位置
     EVSP_OBU_update_info_t update_info;
     update_info.lat = OBU_lat;
     update_info.lon = OBU_lon;
     update_info.direction = static_space.last_direction;
     update_info.speed = app_section->OBU_object->prediction_speed;
+    // 確認接收的EVSP是否已在RSU紀錄中，如果沒有會新建立一份紀錄
     EVSP_host_OBU_obj_t *host_OBU = EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name, &update_info);
-
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
 
@@ -362,12 +362,15 @@ int EVSP_on_OBU_packet_rx(void *arg)
         return 0;
     }  // tc箱出現錯誤 直接不做
 
-    /* already in host OBU list */
+    /* already in host OBU list (thus already in activate area) */
     if (host_OBU != NULL) {
+        printf("OBU is found in list\n");
+        // 新增觸發次數threshold判斷
+        
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
-        host_OBU->distance = OBU_distance;
-        EVSP_terminate_area_t *area_ptr = EVSP_terminate(OBU_lon, OBU_lat, host_OBU->area_ptr);
+        host_OBU->distance = OBU_distance;  
+        EVSP_terminate_area_t *area_ptr = EVSP_terminate(OBU_lon, OBU_lat, host_OBU->area_ptr);      
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
@@ -403,6 +406,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         }
     } else { /* not in host OBU list */
         // search plan
+        printf("newcomer OBU\n");
         uint8_t plan_id = signal_status.PlanID;
         EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
 
@@ -416,6 +420,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             return 0;
         }
 
+        //檢查EVSP是否觸動到路口activate area
         uint8_t target_phase = 0;
         EVSP_touching_area_t *area_ptr = NULL;
         target_phase = EVSP_activate(

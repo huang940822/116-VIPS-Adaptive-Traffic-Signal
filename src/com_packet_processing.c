@@ -22,13 +22,14 @@
 #include "typedefine.h"
 #include "external_app_proxy_server.h"
 #include "external_app_proxy_callback_msg_forward.h"
-
 #include "error_code_user.h"
+#include "error_code_enum.h"
 #include "j2735_codec.h"
 
 int cb_counter;
 
 #define CPS_ID 3
+
 extern threadpool_t *pool;
 
 int DSRC_send_timer_handler(buffer_ring_t *buffer)
@@ -44,6 +45,7 @@ int DSRC_send_timer_handler(buffer_ring_t *buffer)
         }
     }
 }
+//以j2735格式訊息傳送至OBU
 void OBU_j2735_tx(DSRCmsgID magId, void *data)
 {
     int buf_len;
@@ -67,21 +69,22 @@ void OBU_j2735_tx(DSRCmsgID magId, void *data)
         printf("  [error msg] %s\n", err.msg);
         log_file_write("failed to encode msg\r\n  [error msg] %s");
     } else {
+        
         int ret = com_send(OBU_com_id, buf, buf_len);
         if (ret == COM_IO_ERR) {
             log_file_write_fatal_error("OBU_j2735_tx: com_send");
         }
     }
+    
     j2735_buf_free(buf);
     return;
 }
-
+//以雲端封包傳送訊息至OBU
 void OBU_packet_tx(uint16_t len,
                    uint8_t service_id,
                    unsigned char *specific_field)
 {
     char log_content[LOG_CONTENT_LEN + 1];
-
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(R2V_COMMON_FIELD_LEN + len);
@@ -135,9 +138,10 @@ void OBU_packet_tx(uint16_t len,
         }
         log_file_write(log_content);
     }
-
+    //傳送指令到OBU
     int ret = com_send(OBU_com_id, write_buf.content, write_buf.index);
     if (ret == COM_IO_ERR) {
+        //傳送過程出錯
         log_file_write_fatal_error("OBU_packet_tx: com_send");
     }
 
@@ -208,6 +212,8 @@ void cloud_packet_tx(uint16_t len,
         log_file_write(log_content);
     }
     log_file_write("in cloud packet tx cloud_com_id is %d\n", cloud_com_id);
+    
+    //send packet to TCP or UDP (todo: add http REST API version for transmit (Osborn 20240829) )
     int ret = com_send(cloud_com_id, write_buf.content, write_buf.index);
     if (ret == COM_IO_ERR) {
         log_file_write_fatal_error("cloud_packet_tx: com_send");
@@ -223,10 +229,10 @@ void cloud_packet_tx(uint16_t len,
 
 int cloud_packet_rx_event_handler(msg_obj_t *msg)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-
+    char log_content[LOG_CONTENT_LEN + 1];    
     msg_buf_t read_buf;
     C2R_common_field_t common_field;
+
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(C2R_COMMON_FIELD_LEN);
     if (read_buf.content == NULL) {
@@ -238,7 +244,6 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         clear_memory_error();
         memcpy(read_buf.content, msg->msg, C2R_COMMON_FIELD_LEN);
     }
-
     read_buf.index = C2R_COMMON_FIELD_LEN;
 
     if (config.log_cloud_packet_rx) {
@@ -393,6 +398,7 @@ void fill_V2R_self_defined_section(V2R_self_defined_section_t *self_section_p,
     }
 }
 
+//OBU傳雲端封包給RSU
 int OBU_packet_rx_event_handler(msg_obj_t *msg)
 {
     printf("get in obu rx handler\n\r");
@@ -422,7 +428,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         }
         log_file_write(log_content);
     }
-
+    
     MessageFrame *msgf = NULL;
     int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
     if (ret < 0) {
