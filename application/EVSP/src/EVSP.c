@@ -28,7 +28,6 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
-
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = EVSP_ID,
@@ -251,8 +250,11 @@ static void VMS_activate(int direction)
 
 int EVSP_on_OBU_packet_rx(void *arg)
 {
+    printf("=======enter evsp_on_OBU_packet_rx=======\n");
     V2R_app_section_t *app_section = (V2R_app_section_t *) arg;
-    if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE) {
+    if (app_section->OBU_object->vehicle_type != VEHICLE_AMBULANCE 
+    &&  app_section->OBU_object->vehicle_type != VEHICLE_FIRE_TRUCK
+    &&  app_section->OBU_object->vehicle_type != VEHICLE_POLICE_CAR) {
         return 0;
     }
     // printf("EVSP_on_OBU_packet_rx function\n");
@@ -312,8 +314,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
     uint16_t OBU_distance = (uint16_t) get_distance(config.RSU_lat, config.RSU_lon, OBU_lat, OBU_lon);
 
     log_snprintf(log_content,
+                "OBU name = %s\n"
                  "EVSP OBU packet rx: OBU POSITION\nlat, lon: %f, %f\n"
-                 "OBU distance: %hd\nOBU direction: %hhd",
+                 "OBU distance: %hd\nOBU direction: %hhd", app_section->OBU_object->OBU_name,
                  OBU_lat, OBU_lon, OBU_distance,
                  app_section->OBU_object->record_ring.record[last_record_index].direction);
 
@@ -372,13 +375,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
                          app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             int target_phase = host_OBU->target_phase;
-            EVSP_OBU_activation_time_end(host_OBU->OBU_name);
+            EVSP_OBU_activation_time_end(host_OBU->OBU_name); //activate.stop 設為0，break loop
             command_buf_delete_OBU(host_OBU->OBU_name);  // 刪除在 command buf 還沒下下去的指令
-            EVSP_cooling_list_insert(host_OBU->OBU_name, host_OBU->area_ptr);
-            EVSP_host_OBU_obj_delete(host_OBU->OBU_name);
+            EVSP_cooling_list_insert(host_OBU->OBU_name, host_OBU->area_ptr); // 加入cooling_list
+            EVSP_host_OBU_obj_delete(host_OBU->OBU_name); //　從host_OBU_list中移除
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(target_phase) == true) {
+            if (EVSP_host_OBU_obj_resume(target_phase) == true) { // resume是如果有用到延長時間才需要做補償
                 // 進行補償
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
                 command_buf_resume_control(EVSP.id);
@@ -390,11 +393,13 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     vms_request_end(EVSP.id);
                 }
             }
-            // 回報碰到觸碰點 id
+            // 回報碰到離開點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
         } else {
             // 同時有兩台救護車
-            EVSP_OBU_activation_timer_start(host_OBU);
+            // 判斷有無建立thread，有就直接return，
+            // 沒有就把host_OBU資料copy到activate_OBU中並創造一條EVSP_OBU_activation_timer的thread
+            EVSP_OBU_activation_timer_start(host_OBU); 
         }
     } else { /* not in host OBU list */
         // search plan
@@ -419,18 +424,18 @@ int EVSP_on_OBU_packet_rx(void *arg)
             static_space.last_direction, plan, &area_ptr);
 
         // 檢查 OBU name 與同方向是否有還在冷卻時間
-        if (area_ptr != NULL && EVSP_cooling_list_sreach(app_section->OBU_object->OBU_name, area_ptr) > 0) {
+        if (area_ptr != NULL && EVSP_cooling_list_search(app_section->OBU_object->OBU_name, area_ptr) > 0) {
             printf("\nOBU %s is at touching area %d in cooling time\n",
                    app_section->OBU_object->OBU_name, area_ptr->touching_area_id);
             log_snprintf(log_content, "\nOBU %s is at touching area %d in cooling time",
                          app_section->OBU_object->OBU_name, area_ptr->touching_area_id);
             goto EVSP_OBU_PAKET_END;
         }
-        // enter activate area
+
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
             log_snprintf(log_content, "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
-                         app_section->OBU_object->OBU_name, target_phase, area_ptr->touching_area_id);
+                         app_section->OBU_object->OBU_name, target_phase, area_ptr->touching_area_id);                         
 
             printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
 

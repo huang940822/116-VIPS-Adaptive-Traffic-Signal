@@ -181,9 +181,9 @@ int special_OBU_list_update_status(const char *name, vehicle_type_t type, OBU_ob
 ******************************************************************************/
 OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // 這裡用hash table
 {
+    printf("normal obu insert\n");
     if (record->vehicle_type != VEHICLE_NORMAL)
         return NULL;
-
     int hash_code = djb2_hash(
         record->OBU_name);  // hash code is array index for having use mod
     pthread_mutex_lock(&mutex_normal_OBU_list[hash_code]);
@@ -193,7 +193,7 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // �
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
 
-        /* insert OBU record */  // 如果世新的object 那record ring一定是空的
+        /* insert OBU record */  // 如果是新的object 那record ring一定是空的
                                  // 似乎沒有檢查的必要 直接push進去就好？
         if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
@@ -233,15 +233,14 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // �
 ******************************************************************************/
 OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 {
+    printf("special obu insert\n");
     if (record->vehicle_type == VEHICLE_NORMAL)
         return NULL;
-
     uint8_t type = record->vehicle_type;
 
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
-
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
         /* insert OBU record */
@@ -252,7 +251,8 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 
         special_OBU_list[type].next->prev = object;
         special_OBU_list[type].next = object;
-    } else { /* OBU object exist */
+    } else { 
+        /* OBU object exist */
         /* insert OBU record */
         if (OBU_record_ring_full(object->record_ring.first_record_pointer,
                                  object->record_ring.last_record_pointer)) {
@@ -302,11 +302,13 @@ static int yday2month_day(struct tm *timeinfo, int yday)
     timeinfo->tm_mday = yday;
     return 1;
 }
-
+//  從 msgf 的 messageID 中判斷訊息是 BSM 或是 SRM，
+//  並將 OBU_name 和 time 等資訊記錄到 record 中
 int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 {
     switch (msgf->messageId) {
     case BasicSafetyMessage_Id: {
+        printf("msg type = BSM\n");
         BasicSafetyMessage *bsm = msgf->u.data;
         if (bsm->partII_option != TRUE || bsm->partII.count != 1 || bsm->partII.tab[0].partII_Id != SupplementalVehicleExt) {
             return -1;
@@ -327,6 +329,16 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;
             break;
+        case 63:  // j2735 classification  emergency-Fire-Heavy-Vehicle
+            strcpy(record->OBU_name, "fir_");
+            strncat(record->OBU_name, bsm->coreData.id.buf, 4);
+            record->vehicle_type = VEHICLE_FIRE_TRUCK;
+            break;
+        case 66:  // j2735 classification  emergency-Police-Light-Vehicle
+            strcpy(record->OBU_name, "pol_");
+            strncat(record->OBU_name, bsm->coreData.id.buf, 4);
+            record->vehicle_type = VEHICLE_POLICE_CAR;
+            break;  
         default:
             break;
         }
@@ -350,6 +362,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         record->direction &= 0b111;
     } break;
     case SignalRequestMessage_Id: {
+        printf("msg type = SRM\n");
         SignalRequestMessage *srm = msgf->u.data;
         if (srm->requestor.type_option != TRUE || srm->requestor.type.hpmsType_option != TRUE ||
             srm->requestor.type.hpmsType != VehicleType_car || srm->requestor.position_option != TRUE ||
@@ -366,6 +379,22 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
             else
                 strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;
+            break;
+        case BasicVehicleRole_fire:
+            strcpy(record->OBU_name, "fir_");
+            if (requestor->id.choice == VehicleID_entityID)
+                strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            else
+                strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
+            record->vehicle_type = VEHICLE_FIRE_TRUCK;
+            break;
+        case BasicVehicleRole_police:
+            strcpy(record->OBU_name, "pol_");
+            if (requestor->id.choice == VehicleID_entityID)
+                strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            else
+                strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
+            record->vehicle_type = VEHICLE_POLICE_CAR;
             break;
         default:
             return -1;
@@ -427,8 +456,11 @@ void OBU_object_garbage_collection_timer(__sigval_t value)
     OBU_object_print();
 }
 
+// 遍歷hash table 中的每一個普通 OBU list，
+// 檢查並移除已經過期的 OBU 對象。
 void OBU_object_garbage_collection()
 {
+    printf("OBU garbage collect\n");
     time_t current_time;
     time(&current_time);
     OBU_object_t *current = NULL;
@@ -440,6 +472,11 @@ void OBU_object_garbage_collection()
 
         while (current != &normal_OBU_list[i]) {
             target = NULL;
+            /*
+            *檢查當前 OBU 對象的最後一次記錄時間是否超過了
+            *允許的過期時間 OBU_OBJECT_EXPIRE_TIME。
+            *如果 OBU 對象已過期，則將 target 設置為 current，並將其從list中移除
+            */    
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]
@@ -449,6 +486,7 @@ void OBU_object_garbage_collection()
                 target->prev->next = target->next;
             }
             current = current->next;
+            // 如果 target 不為空，表示有 OBU 對象被移除，則釋放其佔用的空間
             if (target) {
                 free(target->private_space);
                 free(target);
@@ -485,7 +523,6 @@ void OBU_object_print()
     if (config.log_OBU_list == 0) {
         return;
     }
-
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     snprintf(log_content + strlen(log_content),
