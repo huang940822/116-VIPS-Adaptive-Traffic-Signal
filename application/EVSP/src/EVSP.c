@@ -369,8 +369,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
         
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
                   EVSP_config.evsp_host_obu_packet_timeout, 0);
-        host_OBU->distance = OBU_distance;  
-        EVSP_terminate_area_t *area_ptr = EVSP_terminate(OBU_lon, OBU_lat, host_OBU->area_ptr);      
+        host_OBU->distance = OBU_distance;
+        EVSP_terminate_area_t *area_ptr = EVSP_terminate(OBU_lon, OBU_lat, host_OBU->area_ptr);
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
@@ -396,13 +396,65 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     vms_request_end(EVSP.id);
                 }
             }
-            // 回報碰到離開點 id
-            EVSP_report_activate_area(app_section->OBU_object, TERMINATE_ATRA, area_ptr->terminate_area_id);
-        } else {
-            // 同時有兩台救護車
-            // 判斷有無建立thread，有就直接return，
-            // 沒有就把host_OBU資料copy到activate_OBU中並創造一條EVSP_OBU_activation_timer的thread
-            EVSP_OBU_activation_timer_start(host_OBU); 
+            // 回報碰到觸碰點 id
+            EVSP_report_activate_area(app_section->OBU_object, TERMINATE_AREA, area_ptr->terminate_area_id);
+        } else { // is not in terminate area, but may be in activate area
+            // 新增觸發次數threshold判斷
+            printf("OBU %s is not in terminate area\n",host_OBU->OBU_name);
+            // todo(侑融): 同時有兩台救護車且同向行駛的處理方式
+            if (host_OBU->is_activate==2) {
+                printf("OBU has been activated\n");
+                EVSP_OBU_activation_timer_start(host_OBU);
+            } else if (host_OBU->is_activate==1) {
+                printf("OBU is in pre-activation\n");
+                
+                uint8_t plan_id = signal_status.PlanID;
+                EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
+                if (plan == NULL) {
+                    printf("touching area plan not found\n");
+                    log_file_write(log_content);
+                    if (read_buf.content != NULL) {
+                        free(read_buf.content);
+                    }
+                    return 0;
+                }
+                //更新activate status
+                uint8_t target_phase = 0;
+                EVSP_touching_area_t *area_ptr_touch = NULL;
+                target_phase = EVSP_activate(
+                    app_section->OBU_object->record_ring.record[last_record_index].position_lon,
+                    app_section->OBU_object->record_ring.record[last_record_index].position_lat,
+                    static_space.last_direction, plan, &area_ptr_touch);
+
+                if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
+                    printf("OBU is also found in pre_activate list and is currently in activate area\n");
+                    printf("EVSP_pre_activate SubPhaseID %d touching_area_Id %d touched_amount %d time(s) ---\n", target_phase, area_ptr_touch->touching_area_id, host_OBU->touched_amount);
+                    // 已滿足觸發次數條件，啟動OBU activation timer
+                    if (host_OBU->touched_amount+1>=EVSP_config.touching_threshold) {
+                        update_info.is_activate = 2;
+                        update_info.is_touching = 1;
+                        log_snprintf(log_content, "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
+                            app_section->OBU_object->OBU_name, host_OBU->target_phase, area_ptr_touch->touching_area_id);
+                        printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", host_OBU->target_phase, area_ptr_touch->touching_area_id);
+                        host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr_touch, &update_info);
+                        // 標記該OBU為已觸發，並啟動相關timer
+                        int ret = EVSP_OBU_activation_timer_start(app_section->OBU_object);
+                        if (ret != -1) {
+                            VMS_activate(static_space.last_direction);
+                        }
+                        EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr_touch->touching_area_id);
+                    }
+                    // 未滿足觸發次數條件，紀錄觸發次數+1
+                    else {
+                        update_info.is_activate = 1;
+                        update_info.is_touching = 1;
+                        host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr_touch, &update_info);
+                    }                    
+                }
+            }                
+            else {
+                printf("OBU is not activated\n");
+            }     
         }
     } else { /* not in host OBU list */
         // search plan
@@ -439,19 +491,14 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
-            log_snprintf(log_content, "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
-                         app_section->OBU_object->OBU_name, target_phase, area_ptr->touching_area_id);                         
-
-            printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", target_phase, area_ptr->touching_area_id);
-
+            printf("newcomer OBU has activated\n");
+            //紀錄OBU狀態並將OBU設為pre_activate狀態
+            update_info.is_touching = 1;
+            update_info.is_activate = 1;
             host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr, &update_info);
-
-            int ret = EVSP_OBU_activation_timer_start(host_OBU);
-            if (ret != -1) {
-                VMS_activate(static_space.last_direction);
-            }
+            
             // 回報碰到觸碰點 id
-            EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr->touching_area_id);
+            EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr->touching_area_id);            
         }
     }
 

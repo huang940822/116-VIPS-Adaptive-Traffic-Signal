@@ -226,7 +226,7 @@ EVSP_default_config_error:
     printf("EVSP touching area default config read fail.\n");
     return -1;
 }
-
+// 領取表格式的EVSP touching area
 int EVSP_table_config()
 {
     memset(&EVSP_plan_list, 0, sizeof(EVSP_plan_list_t));
@@ -240,7 +240,7 @@ int EVSP_table_config()
     if (rsu_name == NULL) {
         log_file_write_fatal_error("error name %s", config.RSU_name);
     }
-
+    // touching area的設定檔放在./application/EVSP/config
     memset(file_path, 0, sizeof(file_path));
     strcat(file_path, EVSP_CONFIG_DIR);
     strcat(file_path, rsu_name);
@@ -419,7 +419,6 @@ int EVSP_table_config()
             EVSP_plan_list_Vector_Increase(EVSP_plan_list, ., plan_table);
             EVSP_plan_table_t *plan_table = &EVSP_plan_list.plan_table[EVSP_plan_list.plan_table_count];
             EVSP_plan_list.plan_table_count++;
-
             uint8_t uint8_t_val;
 
             int plan_id_max = 0;
@@ -663,7 +662,6 @@ void EVSP_plan_list_print()
         }
     }
 
-    // printf("%s\n", log_content);
     log_file_write(log_content);
     return;
 }

@@ -34,6 +34,7 @@ typedef struct EVSP_config_object {
     uint8_t max_green;
     uint8_t valid_record_distance;
     uint32_t cooling_time;
+    uint8_t touching_threshold;
     EVSP_touching_area_config_type_t touching_area_config_type;
 } EVSP_config_object_t;
 

@@ -17,6 +17,7 @@ EVSP_config_object_t EVSP_config = {
     .max_green = 120,
     .valid_record_distance = 5,
     .cooling_time = 360,
+    .touching_threshold = 5,
     .touching_area_config_type = EVSP_touching_area_DEFAULT,
 };
 
@@ -92,7 +93,7 @@ int EVSP_config_init()
             }
         }
 
-        // evsp_host_obu_packet_timeout
+        // max_green
         if (strstr(buf, "max_green ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
@@ -107,7 +108,7 @@ int EVSP_config_init()
             }
         }
 
-        // evsp_host_obu_packet_timeout
+        // valid_record_distance
         if (strstr(buf, "valid_record_distance ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
@@ -120,6 +121,22 @@ int EVSP_config_init()
                 }
             } else {
                 return CONFIG_INVALID_VALID_RECORD_DISTANCE;
+            }
+        }
+
+        // touching_threshold
+        if (strstr(buf, "touching_threshold ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    EVSP_config.touching_threshold = uint8_t_val;
+                    log_file_write("config: touching_threshold = %d",
+                                   EVSP_config.touching_threshold);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_OTHER;
+                }
+            } else {
+                return CONFIG_INVALID_OTHER;
             }
         }
 

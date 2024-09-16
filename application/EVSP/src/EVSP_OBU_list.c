@@ -50,7 +50,7 @@ int EVSP_cooling_list_search(char *OBU_name, EVSP_touching_area_t *area_ptr)
     pthread_mutex_unlock(&EVSP_cooling_list_mutex);
     return ret;
 }
-
+// 20240906: 在OBU object中新增activate欄位與觸發次數欄位
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
                                            uint8_t target_phase,
                                            EVSP_touching_area_t *area_ptr)
@@ -61,6 +61,8 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
     memcpy(host_OBU->OBU_name, OBU_name, OBU_NAME_MAX_LEN);
     host_OBU->target_phase = target_phase;
     host_OBU->area_ptr = area_ptr;
+    host_OBU->is_activate = 0;
+    host_OBU->touched_amount = 0;
     create_timer(&host_OBU->host_OBU_packet_timer, host_OBU,
                  EVSP_host_OBU_packet_timeout_timer_handler);
     set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
@@ -80,8 +82,15 @@ static inline void EVSP_host_OBU_obj_update(EVSP_host_OBU_obj_t *host_OBU, EVSP_
     host_OBU->lon = info->lon;
     host_OBU->direction = info->direction;
     host_OBU->speed = info->speed;
+    if (info->is_touching==1) {
+        host_OBU->touched_amount++;
+    }
+    if (info->is_activate!=NULL) {
+        host_OBU->is_activate=info->is_activate;
+    }
 }
 
+// 插入host OBU，若OBU已存在則更新紀錄並回傳NULL，若未存在或list為空，在尾端插入新OBU
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
                                               uint8_t target_phase,
                                               EVSP_touching_area_t *area_ptr,
@@ -108,6 +117,7 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
         previous->next = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
         current = previous->next;
     }
+    /* update last Host_OBU in list */
     EVSP_host_OBU_obj_update(current, info);
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
     return current;

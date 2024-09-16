@@ -99,6 +99,8 @@ typedef struct EVSP_host_OBU_obj {
     float lat;
     float speed;
     int direction;
+    uint8_t touched_amount; // 觸碰點觸碰次數
+    int is_activate; // 已觸發狀態 (0: 未觸發; 1: pre-activate (進入觸發領域，觸碰次數未超過閾值); 2: 已觸發)
 } EVSP_host_OBU_obj_t;
 
 #endif

@@ -11,6 +11,8 @@ typedef struct EVSP_OBU_update_info {
     float lon;
     float speed;
     uint8_t direction;
+    uint8_t is_touching; // 目前在觸發領域裡
+    uint8_t is_activate; // 目前觸發狀態 (0: 未觸發; 1: pre-activate (進入觸發領域，觸碰次數未超過閾值); 2: 已觸發)
 } EVSP_OBU_update_info_t;
 
 typedef struct EVSP_cooling_info {

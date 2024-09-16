@@ -9,7 +9,7 @@
 
 typedef enum area_type {
     TOUCHING_AREA = 0,
-    TERMINATE_ATRA = 1,
+    TERMINATE_AREA = 1,
     TIMEOUT = 2,
 } area_type_t;
 
