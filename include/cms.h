@@ -8,7 +8,8 @@
 #define CMS_pic_path "CMS_img/"
 #define CMS_pic_database_path CMS_pic_path "program_id.txt"
 #define CMS_encrypt_img "tmp_encrypt_img"
-#define CMS_scp_path "oslab@" // cms 的使用者帳號名稱
+#define CMS_scp_user "oslab@" // cms 的使用者帳號名稱
+#define CMS_scp_path "~/CMS/CMS_img/" // cms 的照片路徑
 #define CMS_update_fail_time 10
 #define CMS_request_timeout 10
 #define CMS_NUM_MAX 16

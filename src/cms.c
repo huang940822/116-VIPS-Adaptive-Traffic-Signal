@@ -277,20 +277,20 @@ int CMS_update_img(int imgID, char *imgName)
     snprintf(filename, sizeof(filename), "%03d_%s", imgID, imgName);
     for (int i = 0; i < config.cms_number; i++) {
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
-        snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_path "%s:~/CMS/CMS_img/%s", ip, filename);
+        snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_user "%s:" CMS_scp_path "%s", ip, filename);
 
         int result = system(scp_command);
         if (result == 0) {
             printf("File transferred successfully.\n");
-            log_file_write("CMS SCP file transferred successfully. cms id %d ip %s", imgID, ip);
+            log_file_write("CMS SCP file transferred successfully. cms id %d ip %s", i + 1, ip);
             fail = 0;
         } else {
-            log_file_write_fatal_error("CMS error SCP failed. cms id %d ip %s", imgID, ip);
-            printf("SCP failed.\n");
+            log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s", i + 1, scp_command);
+            printf("SCP failed, system() return value: %d \n", result);
             fail++;  // 上船十次失敗回報
             i--;
             if (fail > CMS_update_fail_time) {
-                log_file_write_fatal_error("CMS error SCP failed. cms id %d ip %s, timeout", imgID, ip);
+                log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s, timeout", i + 1, scp_command);
                 printf("SCP failed., timeout\n");
                 remove("./" CMS_encrypt_img);
                 set_vms_error();
@@ -563,6 +563,13 @@ static void *CMS_handler()
     uint8_t buffer[BUFFER_SIZE];
     uint8_t recvflags[CMS_NUM_MAX];
     uint8_t *img_hash[256];
+
+    // variable for cms lighting packet collect.
+    bool cms_lighting_check[16];
+    uint8_t cms_lighting_id[16];
+    memset(cms_lighting_check, false, sizeof(cms_lighting_check));
+    memset(cms_lighting_id, 0, sizeof(cms_lighting_id));
+
     while (1) {
         buffer_len = 1;
         buffer[buffer_len++] = 2;  // CMD
@@ -604,13 +611,13 @@ static void *CMS_handler()
                     recvflags[buffer[3]] = 1;
                     CMS_update_client_addr(buffer[3], &client_addr);
                 }
-                int cmd = buffer[2];
+                int cmd = buffer[1];
                 int cmsID = buffer[3];
                 int status = buffer[4];
                 int imgID = buffer[5];
 
                 printf("cmd = %d, cmsID = %d, status = %d, imgID = %d\n", 
-                        buffer[2],
+                        buffer[1],
                         buffer[3],
                         buffer[4],
                         buffer[5]);
@@ -639,11 +646,42 @@ static void *CMS_handler()
                         log_file_write_fatal_error("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
                         set_vms_error();
                     } else if (imgID != 0) {
+                        
+                        // [Shao-Hua 2024.08.18]
+                        // TODO:"Hash 比較"的功能會導致 segmentation fault，先註解掉。
                         // if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
                         //     printf("------not match\n");
                         // } else {
                         //     printf("------match\n");
                         // }
+
+                        /**
+                         * service 0(MMP) cmd 6：RSU2Cloud 回報 CMS 點燈
+                         * 蒐集所有 CMS 點燈的 IMG ID，再一次回報，為避免有一面 CMS 
+                         * 故障導致無限等待，因此同一面 CMS 已經回報點燈兩次時，就送出雲端封包。
+                         * 可能問題：所有 CMS 皆故障，則永遠不會回報。(但此時應該從硬體故障封包知道)
+                         */ 
+                        if (cms_lighting_check[cmsID - 1]) {
+                            msg_buf_t write_buf;
+                            write_buf.index = 0;
+                            Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "CMS_handler(): report CMS lighting malloc");
+
+                            write_uint8_t(6, &write_buf);
+                            for (int i = 1; i < 17; i++) { // CMS 從 1 開始編號
+                                write_uint8_t(i, &write_buf); 
+                                write_uint8_t(cms_lighting_id[i - 1], &write_buf);
+                            }
+
+                            cloud_packet_tx(write_buf.index, MMP_ID, write_buf.content);
+                            free(write_buf.content);
+                            clear_vms_error();
+                            memset(cms_lighting_check, false, sizeof(cms_lighting_check));
+                            memset(cms_lighting_id, 0, sizeof(cms_lighting_id));
+                        }
+
+                        cms_lighting_check[cmsID - 1] = true;
+                        cms_lighting_id[cmsID - 1] = (uint8_t)imgID;
+                        log_file_write("CMS %d lighting img: %d.", cmsID, imgID);
                     }
                 } break;
                 }

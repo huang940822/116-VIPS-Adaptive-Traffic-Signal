@@ -606,7 +606,9 @@ int TSP_on_cloud_packet_rx(void *arg)
         if (config.cms_number != 0) {
             int ret = CMS_check_img(Program_Name);
             if (ret < 0) {
-                 log_file_write_fatal_error("CMS_search_program: open directory failed %s", Program_Name);
+                log_file_write_fatal_error("CMS_check_img(): open directory failed %s", Program_Name);
+            } else {
+                log_file_write("CMS_check_img(): find %s/%s success.", CMS_pic_path, Program_Name);
             }
             ret = CMS_update_activate(Program_ID, Program_Name);
             if (ret < 0) {
