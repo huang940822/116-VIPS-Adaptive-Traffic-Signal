@@ -48,10 +48,6 @@ int ae_epoll_add_event(ae_event_loop *event_loop, int fd, int mask)
     if (mask & AE_WRITABLE)
         ee.events |= (EPOLLOUT);
     ee.data.fd = fd;
-    if (op == EPOLL_CTL_ADD)
-        printf("create (ADD) comm event success , fd = %d\n", fd);
-    else if (op == EPOLL_CTL_MOD)
-        printf("create (MOD) comm event success , fd = %d\n", fd);
     if (epoll_ctl(state->epfd, op, fd, &ee) == -1)
         return -1;
     return 0;
@@ -69,13 +65,10 @@ void ae_epoll_del_event(ae_event_loop *event_loop, int fd, int delmask)
     ee.data.fd = fd;
     if (mask != AE_NONE) {
         epoll_ctl(state->epfd, EPOLL_CTL_MOD, fd, &ee);
-        printf("delete (MOD) event fd = %d\n", fd);
     } else {
         /* Note, Kernel < 2.6.9 requires a non null event pointer even for
          * EPOLL_CTL_DEL. */
         epoll_ctl(state->epfd, EPOLL_CTL_DEL, fd, &ee);
-        printf("delete (DEL) event fd = %d\n", fd);
-
     }
 }
 int ae_epoll_poll(ae_event_loop *event_loop, struct timeval *tvp)
