@@ -31,7 +31,7 @@ void EVSP_cooling_list_insert(char *OBU_name, EVSP_touching_area_t *area_ptr)
     pthread_mutex_unlock(&EVSP_cooling_list_mutex);
 }
 
-int EVSP_cooling_list_sreach(char *OBU_name, EVSP_touching_area_t *area_ptr)
+int EVSP_cooling_list_search(char *OBU_name, EVSP_touching_area_t *area_ptr)
 {
     EVSP_cooling_info_t *pos, *safe;
     time_t now = time(NULL);

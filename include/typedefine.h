@@ -206,8 +206,6 @@ typedef struct OBU_object {
     app_private_space_t *private_space;
     struct OBU_object *prev;  // should not pass to external app
     struct OBU_object *next;  // should not pass to external app
-    int fd;
-    bool redund ;
 } OBU_object_t;
 
 typedef struct traffic_signal_packet {

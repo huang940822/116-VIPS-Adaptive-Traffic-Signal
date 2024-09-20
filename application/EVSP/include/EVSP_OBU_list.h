@@ -33,6 +33,6 @@ void EVSP_host_OBU_obj_print();
 bool EVSP_host_OBU_obj_resume(uint8_t target_phase);
 
 void EVSP_cooling_list_insert(char *OBU_name, EVSP_touching_area_t *area_ptr);
-int EVSP_cooling_list_sreach(char *OBU_name, EVSP_touching_area_t *area_ptr);
+int EVSP_cooling_list_search(char *OBU_name, EVSP_touching_area_t *area_ptr);
 
 #endif

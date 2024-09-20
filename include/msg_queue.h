@@ -38,7 +38,6 @@ struct msg_obj {
     size_t msg_len;
     uint8_t device_id;
     uint8_t handle_id;
-    int fd;
     QUEUE queue;
 };
 
@@ -57,9 +56,7 @@ void msg_queue_enqueue(struct msg_obj *new_msg_obj);
 int8_t msg_queue_init();
 
 struct msg_obj *msg_obj_create(buffer_t *buf,
-                                 uint8_t device_id,
-                                 uint8_t handle_id,
-                                 int fd);
+                                uint8_t device_id,
+                                 uint8_t handle_id);
 
-unsigned int hash(int key, int size);
 #endif

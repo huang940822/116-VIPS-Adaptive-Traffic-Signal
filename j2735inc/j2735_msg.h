@@ -45,7 +45,6 @@ typedef enum DSRCmsgID {
 
 typedef struct MessageFrame {
     DSRCmsgID messageId;
-    int fd;
     uintptr_t *asn1Type; /* Don't modify it. It is for internal processing. */
     union {
         void *data;

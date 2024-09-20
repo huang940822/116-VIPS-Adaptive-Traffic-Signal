@@ -42,8 +42,7 @@ int8_t msg_queue_init()
 }
 msg_obj_t *msg_obj_create(buffer_t *buf,
                                  uint8_t device_id,
-                                 uint8_t handle_id,
-                                 int fd)
+                                 uint8_t handle_id)
 {
     msg_obj_t *_msg_obj = malloc(sizeof(msg_obj_t));
     if (_msg_obj != NULL) {
@@ -51,7 +50,6 @@ msg_obj_t *msg_obj_create(buffer_t *buf,
         memcpy(_msg_obj->msg, buf->buff, MSG_Default_LEN);
         _msg_obj->msg_len = buf->size;
         _msg_obj->handle_id = handle_id;
-        _msg_obj->fd = fd;
         return _msg_obj;
     }
     return NULL;

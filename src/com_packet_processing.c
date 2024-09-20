@@ -444,7 +444,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     //放到obu list裡面的哪個obu object
     switch (record.vehicle_type) {
     /* Ambulance */ /* bus */
-    case VEHICLE_AMBULANCE: case VEHICLE_BUS:
+    case VEHICLE_AMBULANCE: case VEHICLE_BUS: case VEHICLE_FIRE_TRUCK: case VEHICLE_POLICE_CAR:
         object = special_OBU_record_insert(&record);
         break;
     /* normal vehicle */
