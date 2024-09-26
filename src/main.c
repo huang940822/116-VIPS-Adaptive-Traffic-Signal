@@ -39,8 +39,9 @@
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
+uint32_t activate_amount=0;
 extern uint8_t flag_query_firm_ver;
-
+pthread_rwlock_t lock_rw_active = PTHREAD_RWLOCK_INITIALIZER;
 pthread_mutex_t mutex_uart_comple_protect = PTHREAD_MUTEX_INITIALIZER;
 
 // declaration here

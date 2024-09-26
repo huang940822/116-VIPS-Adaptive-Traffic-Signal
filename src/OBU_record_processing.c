@@ -236,7 +236,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
     if (record->vehicle_type == VEHICLE_NORMAL)
         return NULL;
     uint8_t type = record->vehicle_type;
-
+    
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);

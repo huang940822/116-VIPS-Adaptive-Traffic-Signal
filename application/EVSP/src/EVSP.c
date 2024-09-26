@@ -26,8 +26,12 @@
 #include "timer_event.h"
 #include "traffic_compensation.h"
 #include "traffic_signal_command_buffer.h"
+#include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
+
+extern uint8_t activate_amount; //已觸發的EVSP數量
+pthread_mutex_t mutex_active_EVSP = PTHREAD_MUTEX_INITIALIZER;
 app_obj_t EVSP = {
     .name = "EVSP",
     .id = EVSP_ID,
@@ -41,7 +45,7 @@ app_obj_t EVSP = {
     .on_traffic_signal_command_tx = NULL,
     .on_registration = &EVSP_on_registration,
     .next = NULL,
-    .dontSend2TC = 1,
+    .dontSend2TC = 0,
 };
 
 int EVSP_on_CLOUD_packet_rx(void *arg)
@@ -57,7 +61,7 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
         return -1;
     memcpy(read_buf.content, app_section->payload, app_section->payload_len);
 
-    // needs a evsp sned ack function to send ack to cloud
+    // needs a evsp send ack function to send ack to cloud
     EVSP_send_ack();
 
     // read cmd
@@ -83,11 +87,9 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
              "EVSP cloud packet rx: CMD(%d)", cmd);
 
     switch (cmd) {
-    case 0: {  // disable/enalbe:1/2
+    case 0: {  // disable/enable:1/2
         uint8_t enableOrdisable = 0;
-        // uint8_t type=0;
         read_int8_t(&enableOrdisable, &read_buf);
-        // read_int8_t(&type, &read_buf);
         if (enableOrdisable == 1 &&
             EVSP.dontSend2TC == 0) {  // enable/clear command buffer
             EVSP.dontSend2TC = 1;
@@ -104,10 +106,9 @@ int EVSP_on_CLOUD_packet_rx(void *arg)
         } else {
             log_file_write(
                 "invalid cloud pcket disable/enable packet to tc machine\r\n");
-        }
-        // printf("not implement evsp on cloud rx action yet when cmd is
-        // 0\r\n");
+        }        
     } break;
+    
     default:
         break;
     }
@@ -346,7 +347,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     msg_buf_t read_buf;
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
-    Malloc(read_buf.content, app_section->payload_len, "EVSP_on_cloud_packet_rx");
+    Malloc(read_buf.content, app_section->payload_len, "EVSP_on_OBU_packet_rx");
 
     memcpy(read_buf.content, app_section->payload, app_section->payload_len);
 
@@ -408,7 +409,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     log_file_write(log_content);
     memset(log_content, 0, sizeof(log_content));
 
-    //紀錄目前OBU位置
+    // 紀錄目前OBU位置
     EVSP_OBU_update_info_t update_info;
     update_info.lat = OBU_lat;
     update_info.lon = OBU_lon;
@@ -432,7 +433,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
     /* already in host OBU list (thus already in activate area) */
     if (host_OBU != NULL) {
-        printf("OBU is found in list\n");
         // 新增觸發次數threshold判斷
         
         set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
@@ -442,7 +442,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
-            log_snprintf(log_content, "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d\n\n",
+            log_snprintf(log_content, "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d\n",
                          app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             int target_phase = host_OBU->target_phase;
@@ -452,10 +452,11 @@ int EVSP_on_OBU_packet_rx(void *arg)
              * 2: terminate 的 host_OBU 是 activate list 中的最後一台
             */
             int terminate_flag = EVSP_OBU_activation_time_end(host_OBU->OBU_name); 
-            command_buf_delete_OBU(host_OBU->OBU_name);  // 刪除在 command buf 還沒下下去的指令
+            command_buf_delete_OBU(host_OBU->OBU_name);  // 刪除在 command buf 還沒下下去的指令，並減少路口已觸發EVSP數
             EVSP_cooling_list_insert(host_OBU->OBU_name, host_OBU->area_ptr); // 加入 cooling_list
-            EVSP_host_OBU_obj_delete(host_OBU->OBU_name); //　從 host_OBU_list 中移除
-
+            EVSP_host_OBU_obj_delete(host_OBU->OBU_name); //　從 host_OBU_list 中移除            
+            log_snprintf(log_content,"Amount of active EVSPs left: %d\n",activate_amount);
+            
             // no other host OBU with same target phase in host_OBU_list
             if (EVSP_host_OBU_obj_resume(target_phase) == true) { // resume 是如果有用到延長時間才需要做補償
                 // 進行補償
@@ -496,10 +497,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
             // todo(侑融): 同時有兩台救護車且同向行駛的處理方式
             if (host_OBU->is_activate==2) {
                 log_snprintf(log_content, "OBU %s has been activated\n", host_OBU->OBU_name);
+                // 判斷有無建立thread，有就直接return，
+                // 沒有就把host_OBU資料copy到activate_OBU中並創造一條EVSP_OBU_activation_timer的thread
                 EVSP_OBU_activation_timer_start(host_OBU);
-            } else if (host_OBU->is_activate==1) {
-                log_snprintf(log_content, "OBU %s is in pre-activation\n", host_OBU->OBU_name);
-                
+            } else if (host_OBU->is_activate==1) {                
                 uint8_t plan_id = signal_status.PlanID;
                 EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
                 if (plan == NULL) {
@@ -519,8 +520,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     static_space.last_direction, plan, &area_ptr_touch);
 
                 if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
-                    log_snprintf(log_content, "OBU is also found in pre_activate list and is currently in activate area\n");
-                    log_snprintf(log_content, "EVSP_pre_activate SubPhaseID %d touching_area_Id %d touched_amount %d time(s) ---\n", target_phase, area_ptr_touch->touching_area_id, host_OBU->touched_amount);
                     // 已滿足觸發次數條件，啟動OBU activation timer
                     if (host_OBU->touched_amount+1>=EVSP_config.touching_threshold) {
                         update_info.is_activate = 2;
@@ -534,6 +533,11 @@ int EVSP_on_OBU_packet_rx(void *arg)
                             log_snprintf(log_content, "CMS activate\n");
                             VMS_activate(static_space.last_direction, host_OBU->vehicle_type);
                         }
+                        
+                        pthread_mutex_lock(&mutex_active_EVSP);
+                        activate_amount++;
+                        pthread_mutex_unlock(&mutex_active_EVSP);                        
+                        log_snprintf(log_content,"Amount of current active EVSPs: %d\n",activate_amount);
                         EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr_touch->touching_area_id);
                     }
                     // 未滿足觸發次數條件，紀錄觸發次數+1
@@ -551,7 +555,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
     } 
     else { /* not in host OBU list */
         // search plan
-        log_snprintf(log_content, "new OBU %s\n", host_OBU->OBU_name);
         uint8_t plan_id = signal_status.PlanID;
         EVSP_plan_table_t *plan = EVSP_plan_table_search(plan_id);
 
@@ -581,7 +584,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
 
         // phase 的範圍是 1~8
         if (target_phase >= 1 && target_phase <= EVSP_PHASE_MAX) {
-            printf("newcomer OBU has activated\n");
+            log_snprintf(log_content, "new OBU %s\n", app_section->OBU_object->OBU_name);        
             //紀錄OBU狀態並將OBU設為pre_activate狀態
             update_info.is_touching = 1;
             update_info.is_activate = 1;
