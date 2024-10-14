@@ -9,12 +9,17 @@ typedef struct EVSP_activate_OBU {
     pthread_t activate_thread;
     pthread_mutex_t activate_mutex;
     int control_subphaseID;
-    int stop;
+    int target_phase;
+    struct EVSP_activate_OBU *next;
+    struct EVSP_activate_OBU *prev;
+    int list_len;
 } EVSP_activate_OBU_t;
 
 int EVSP_extend_formula(int target_phase, traffic_signal_status_t *signal_status, int Tbf);
-int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content);
+int EVSP_optimization(EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content);
 int EVSP_OBU_activation_timer_start(EVSP_host_OBU_obj_t *host_OBU);
-void EVSP_OBU_activation_time_end(char *OBU_name);
-
+int EVSP_OBU_activation_time_end(char *OBU_name);
+void init_activate_OBU_head();
+EVSP_activate_OBU_t* search_activate_OBU(EVSP_host_OBU_obj_t *host_OBU);
+void add_activate_OBU(EVSP_host_OBU_obj_t *host_OBU);
 #endif

@@ -27,8 +27,37 @@ EVSP_activate_OBU_t activate_OBU = {
     .activate_mutex = PTHREAD_MUTEX_INITIALIZER,
     .activate_thread = 0,
     .control_subphaseID = 0,
-    .stop = 0,
+    .list_len = 0,
+    .target_phase = 0,
 };
+
+EVSP_activate_OBU_t *activate_OBU_head = NULL;
+void init_activate_OBU_head() {
+    activate_OBU_head = (EVSP_activate_OBU_t*)malloc(sizeof(EVSP_activate_OBU_t));
+    if (activate_OBU_head == NULL) {
+        perror("Failed to allocate memory for activate_OBU_head");
+        return;
+    }
+
+    memset(activate_OBU_head->host_OBU_name, '\0', sizeof(activate_OBU_head->host_OBU_name));
+    activate_OBU_head->activate_thread = 0;
+    activate_OBU_head->control_subphaseID = 0;
+    activate_OBU_head->target_phase = 0;
+    activate_OBU_head->prev = NULL;
+    activate_OBU_head->next = NULL;
+
+    if (pthread_mutex_init(&activate_OBU_head->activate_mutex, NULL) != 0) {
+        perror("Failed to initialize mutex");
+        free(activate_OBU_head);  
+        activate_OBU_head = NULL;
+        return;
+    }
+}
+
+/**
+ * 使用其他各分項最短綠與黃燈紅燈總和(快速輪轉)加上約20秒緩衝作為延長綠燈秒數Gmx
+ * 若預計抵達時間超過Gmx表示使用快速輪轉即可，不需要用延長解
+ */
 
 int EVSP_extend_formula(int target_phase, traffic_signal_status_t *signal_status, int Tbf)
 {
@@ -40,6 +69,7 @@ int EVSP_extend_formula(int target_phase, traffic_signal_status_t *signal_status
     // 路口號誌為三時相，週期Ｃ為１２０秒，第一時相為公車方向６４秒綠燈、４秒黃燈、２秒全紅；
     // 第二時相１０秒綠燈、３秒黃燈、２秒全紅；第三時相２９秒綠燈、３秒黃燈、３秒全紅；而第二時相最短綠為５秒、第三時相最短綠為１５秒
     // Ｇmx＝【（５＋３＋２）＋（１５＋３＋３）】
+    // 分相若是行人專屬時相 yellow = 0
 
     for (int i = 1; i < 8; i++) {
         if (i != target_phase)
@@ -67,7 +97,7 @@ float get_subphase_threshold(int target_phase, float expect_arrival_time, traffi
 如果 target phase 在主要分相使用短時間快速輪轉
 如果不是使用長時間平滑控制
 */
-int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content)
+int EVSP_optimization(EVSP_host_OBU_obj_t *host_OBU, traffic_signal_status_t *signal_status, char *log_content)
 {
     int adjust_time = -1;
     int current_subPhase = signal_status->SubPhaseID;
@@ -76,18 +106,20 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
     // 只有在步階一才能調整
     if (current_step != 1)
         return adjust_time;
-
+    int target_phase = host_OBU->target_phase;
     float expect_arrival_time = get_expect_arrival_time(host_OBU);
     float subphase_threshold = get_subphase_threshold(target_phase, expect_arrival_time, signal_status);
+    
 
     EVSP_plan_table_t *plan = EVSP_plan_table_search(signal_status->PlanID);
     uint16_t pretime = signal_status->plan[current_subPhase - 1].PreGreen;
-    int tmp = 0;
+    int shorten_estimate = 0, extend_estimate = 0;
     int target_green = signal_status->plan[target_phase - 1].Green;
     int subPhase_time = signal_status->StepSec + signal_status->plan[current_subPhase - 1].PedGreenFlash +
                         signal_status->plan[current_subPhase - 1].PedRed + signal_status->plan[current_subPhase - 1].Yellow +
                         signal_status->plan[current_subPhase - 1].AllRed;
     bool is_main_subphase = true;  // 是不是主要分相
+
 
     log_snprintf(log_content,
                  "\ncurrent_subPhase %d target_phase %d\n"
@@ -121,7 +153,6 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
             BeforeMtargetSubPhase++;
         }
         log_snprintf(log_content, "main target subphase start %d, end %d\n", accumulation_target, accumulation_target + subPhase_time);
-
         if (BeforeMtargetSubPhase >= 10) {
             log_snprintf(log_content, "BeforeMtargetSubPhase over limit, %d\n", BeforeMtargetSubPhase);
             return -1;
@@ -132,31 +163,31 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
         } else {
             log_snprintf(log_content, "BeforeMtargetSubPhase %d\n", BeforeMtargetSubPhase);
             if (expect_arrival_time < accumulation_target) {
-                // 預期抵達時間比主目標分相開始早
-                // 所以進行縮短
-                int remain = 0;
-                tmp = ceil(((float) accumulation_target - expect_arrival_time) / BeforeMtargetSubPhase);
-                // 如果其他分相不夠扣會優先從現在分相扣
-                for (int i = (current_subPhase - 1), j = 1; j < BeforeMtargetSubPhase; j++) {
-                    i = (i + 1) % signal_status->SubPhaseCount;
-                    if (signal_status->plan[i].PreGreen - signal_status->plan[i].MinGreen < tmp)
-                        remain += (tmp - (signal_status->plan[i].PreGreen - signal_status->plan[i].MinGreen));
-                }
-                adjust_time = pretime - tmp - remain;
-                adjust_time = adjust_time < 0 ? 0 : adjust_time;  // 避免小於 0
-                log_snprintf(log_content, "arrive time is too early, shorten %d(+%d)\n", tmp, remain);
+                    // 預期抵達時間比主目標分相開始早
+                    // 所以進行縮短
+                    int remain = 0;
+                    shorten_estimate = ceil(((float) accumulation_target - expect_arrival_time) / BeforeMtargetSubPhase);
+                    // 如果其他分相不夠扣會優先從現在分相扣
+                    for (int i = (current_subPhase - 1), j = 1; j < BeforeMtargetSubPhase; j++) {
+                        i = (i + 1) % signal_status->SubPhaseCount;
+                        if (signal_status->plan[i].PreGreen - signal_status->plan[i].MinGreen < shorten_estimate)
+                            remain += (shorten_estimate - (signal_status->plan[i].PreGreen - signal_status->plan[i].MinGreen));
+                    }
+                    adjust_time = pretime - shorten_estimate - remain;
+                    adjust_time = adjust_time < 0 ? 0 : adjust_time;  // 避免小於 0
+                    log_snprintf(log_content, "arrive time is too early, shorten %d(+%d)\n", shorten_estimate, remain);
             } else if (accumulation_target + subPhase_time < expect_arrival_time) {
-                // 預期抵達時間比主目標分相結束晚
-                // 所以進行延長
-                tmp = ceil((expect_arrival_time - (accumulation_target + subPhase_time)) / BeforeMtargetSubPhase);
-                adjust_time = pretime + tmp;
-                log_snprintf(log_content, "arrive time is too late, extend %d\n", tmp);
+                // 比主目標分相結束晚，所以進行延長
+                extend_estimate = ceil((expect_arrival_time - (accumulation_target + subPhase_time)) / BeforeMtargetSubPhase);
+                adjust_time = pretime + extend_estimate;
+                log_snprintf(log_content, "arrive time is too late, extend %d\n", extend_estimate);
             } else {
                 // 預期抵達時間在主目標分相時段內就甚麼都不做
                 log_snprintf(log_content, "arrive time is in main target subphase\n");
                 adjust_time = pretime;
             }
         }
+           
     } else {
         // 目標分相為主要分相使用短時間快速輪轉 (目標分相在幹道)
         log_snprintf(log_content, "short time quick control\ncursubphase end %d subphase_threshold %.2f\n",
@@ -182,6 +213,8 @@ int EVSP_opptimiztion(int target_phase, EVSP_host_OBU_obj_t *host_OBU, traffic_s
 void *EVSP_OBU_activation_timer()
 {
     int fd = set_timer_fd(1, "EVSP_OBU_activation_timer");
+    int optim = 1;      //  1 表示要做optimization (有 activate OBU 加入或離開 or 時相變換都要做)
+    int old_list_len = 0;   //  記錄前一輪 activate list長度，當activate.list_len != old_list_len 表示有 activate OBU 加入或離開
     traffic_signal_status_t signal_status;
     tsc_command_t command = {0};
     EVSP_touching_area_t *area_ptr = NULL;
@@ -192,22 +225,20 @@ void *EVSP_OBU_activation_timer()
     if (fd == -1) {
         return NULL;
     }
-
+    
+    //把activate資訊複製進去command中準備執行
     command.app_id = EVSP.id;
     command.app_priority = EVSP.priority;
-    strncpy(command.host_OBU_name, activate_OBU.host_OBU_name, sizeof(activate_OBU.host_OBU_name));
 
-    while (1) {
+
+    while (1) { 
         int s = read(fd, &exp, sizeof(uint64_t));
         if (s != sizeof(uint64_t))
             log_file_write_fatal_error("EVSP_OBU_activation_timer timer read error %d\n", s);
-        if (activate_OBU.stop == 0) {
-            break;
-        }
 
         memset(log_content, 0, sizeof(log_content));
         get_traffic_signal_status(&signal_status);
-
+        // 獲取交通訊號狀態並嘗試查找對應的計劃表。如果計劃表找不到，則記錄錯誤並跳出。
         EVSP_plan_table_t *plan = EVSP_plan_table_search(signal_status.PlanID);
         int ret = -1;
         if (plan == NULL) {
@@ -216,69 +247,246 @@ void *EVSP_OBU_activation_timer()
             break;
         }
 
-        log_snprintf(log_content, "EVSP_OBU_activation_timer run\n");
-        if (signal_status.SubPhaseID == activate_OBU.control_subphaseID) {
-            log_snprintf(log_content, "do not thing");
+        //terminate area後OBU會被刪除，thread這邊就會進行釋放
+        pthread_mutex_lock(&activate_OBU.activate_mutex);
+        pthread_mutex_lock(&activate_OBU_head->activate_mutex);
+        EVSP_activate_OBU_t *tmp = activate_OBU_head;
+        // pthread_mutex_lock(&tmp->activate_mutex);
+        while(activate_OBU_head != NULL){
+            host_OBU = EVSP_host_OBU_obj_search(activate_OBU_head->host_OBU_name, NULL);
+            EVSP_host_OBU_obj_print();
+            //如果查不到代表已經terminate了(執行過EVSP_host_OBU_obj_delete)
+            if (host_OBU == NULL){
+                //代表此activate head是最後一台且已經terminated，結束thread
+                if (activate_OBU_head->next == NULL){
+                    printf("last one terminated\nhost_OBU_name = %s\n", tmp->host_OBU_name);
+                    log_snprintf(log_content, "last one terminated\nhost_OBU_name = %s\n", tmp->host_OBU_name);
+                    activate_OBU_head = activate_OBU_head->next;
+                    free(tmp);
+                    activate_OBU.list_len -- ;
+                    pthread_mutex_unlock(&activate_OBU.activate_mutex);
+                    goto thread_end;
+                }  
+                else{   //有下一個OBU就更換acitivate head
+                    activate_OBU_head = activate_OBU_head->next;
+                    free(tmp);
+                    activate_OBU.list_len -- ;
+                    tmp = activate_OBU_head;
+                }
+                optim = 1; //有更換就要做optimization
+            }
+            else{
+                break;
+            }        
+        }
+
+        //有增刪activate_OBU也要再重optimization
+        if (activate_OBU.list_len != old_list_len || signal_status.SubPhaseID != activate_OBU_head->control_subphaseID)
+            optim = 1;
+
+        //如果要optimization，要更新command.host_OBU_name
+        if (optim == 1){ 
+            strncpy(command.host_OBU_name, activate_OBU_head->host_OBU_name, sizeof(activate_OBU_head->host_OBU_name)); 
+        }
+
+        // 如果當前subphaseID與thread的subphaseID一致且未有變動，且 activate list 也沒有變化，則不執行任何操作，繼續下一次
+        if (signal_status.SubPhaseID == activate_OBU_head->control_subphaseID && optim == 0) {
+            log_snprintf(log_content, "do nothing");
             log_file_write(log_content);
+            pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
+            pthread_mutex_unlock(&activate_OBU.activate_mutex);
             continue;
         }
+    
+        if (optim == 1){
+            tmp = activate_OBU_head;
+            int max_adjust_time = -1, min_adjust_time = 1000;
+            /*
+             * 對所有 activate OBU 做 optimization
+             * 並取最大和最小 (最大會是請求延長的OBU，最小是請求縮短的OBU)
+             * 其餘情況都是以延長為優先
+             *  */ 
+            while (tmp != NULL){
+                host_OBU = EVSP_host_OBU_obj_search(tmp->host_OBU_name, NULL);
+                ret = EVSP_optimization(host_OBU, &signal_status, log_content);
+                max_adjust_time = (ret >= max_adjust_time) ? ret : max_adjust_time;
+                min_adjust_time = (ret < min_adjust_time && ret != -1) ? ret : min_adjust_time;
+                tmp = tmp->next;
+            }
+        
+            optim = 0;
+            old_list_len = activate_OBU.list_len;
+        
+            if (max_adjust_time != -1 && min_adjust_time != -1) {
+                command.target_phase = host_OBU->target_phase;
+                command.phase = signal_status.SubPhaseID;
+                /**
+                 * 依照情境調整 effect time
+                 * 若 max_adjust_time 不比目前綠燈秒數 preGreen 大(表示沒有車要請求延長)，才處理縮短請求，以min_adjust_time調整
+                 */
+                command.effect_time = (signal_status.plan[signal_status.SubPhaseID - 1].PreGreen >= max_adjust_time) ? min_adjust_time : max_adjust_time;
+                ret = command_buf_insert_effect_time(&command);
 
-        pthread_mutex_lock(&activate_OBU.activate_mutex);
-        host_OBU = EVSP_host_OBU_obj_search(activate_OBU.host_OBU_name, NULL);
-        if (host_OBU == NULL) {
-            pthread_mutex_unlock(&activate_OBU.activate_mutex);
-            break;
-        }
-
-        printf("host_OBU->target_phase -------%d\n", host_OBU->target_phase);
-        ret = EVSP_opptimiztion(host_OBU->target_phase, host_OBU, &signal_status, log_content);
-        if (ret != -1) {
-            command.target_phase = host_OBU->target_phase;
-            command.phase = signal_status.SubPhaseID;
-            command.effect_time = ret;
-            ret = command_buf_insert_effect_time(&command);
-
-            log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d (%d)",
-                         command.cycle, command.phase, command.effect_time, ret);
-            if (ret != -1) {
-                activate_OBU.control_subphaseID = signal_status.SubPhaseID;
+                log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d (%d)",
+                            command.cycle, command.phase, command.effect_time, ret);
+                if (ret != -1) {
+                    tmp = activate_OBU_head;
+                    while (tmp != NULL){
+                        // 將 conttrol_subphaseID 調整成和 signal_status 相同
+                        tmp->control_subphaseID = signal_status.SubPhaseID;
+                        tmp = tmp->next;
+                    }
+                }
             }
         }
+        pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
         pthread_mutex_unlock(&activate_OBU.activate_mutex);
         if (ret != -1) {
             EVSP_host_OBU_obj_print();
         }
         log_file_write(log_content);
     }
-    pthread_mutex_lock(&activate_OBU.activate_mutex);
-    activate_OBU.activate_thread = 0;
-    activate_OBU.control_subphaseID = 0;
-    memset(activate_OBU.host_OBU_name, 0, sizeof(activate_OBU.host_OBU_name));
-    pthread_mutex_unlock(&activate_OBU.activate_mutex);
-    log_file_write("EVSP_OBU_activation_timer close");
-    close(fd);
-    pthread_detach(pthread_self());
+    thread_end:
+        pthread_mutex_lock(&activate_OBU.activate_mutex);
+        activate_OBU.activate_thread = 0;
+        activate_OBU.control_subphaseID = 0;
+        activate_OBU.list_len = 0;
+        memset(activate_OBU.host_OBU_name, 0, sizeof(activate_OBU.host_OBU_name));
+        pthread_mutex_unlock(&activate_OBU.activate_mutex);
+        log_snprintf(log_content, "EVSP_OBU_activation_timer close\n");
+        log_file_write(log_content);
+        close(fd);
+        pthread_detach(pthread_self());
 }
-
+/**
+ * 負責
+ * 1.   檢查 host_OBU 與 activate_OBU_head 的同相關係及註冊情形判斷
+ * 2.   符合條件之 host_OBU 加入 activate list ，並為首個 activate OBU 創造執行秒數 optimization 的 thread
+ * 3.   return value
+ *      -1 : host_OBU 與 activate_OBU_head 不同相或是已經在 activate list 中了 
+ *       1 : 首個 activate OBU 加入，需 create thread 並觸動 CMS
+ *       2 : 符合條件之同相 OBU ，加入activate list 但不做 CMS 的觸動
+ */
 int EVSP_OBU_activation_timer_start(EVSP_host_OBU_obj_t *host_OBU)
 {
-    pthread_mutex_lock(&activate_OBU.activate_mutex);
-    if (activate_OBU.activate_thread != 0) {
-        pthread_mutex_unlock(&activate_OBU.activate_mutex);
+    char log_content[LOG_CONTENT_LEN + 1] = {0};
+    if (host_OBU == NULL)
         return -1;
+    pthread_mutex_lock(&activate_OBU.activate_mutex);
+    if (activate_OBU.activate_thread == 0){
+        init_activate_OBU_head();   // 初次執行 thread 要初始化 activate_OBU_head
+        log_snprintf(log_content, "init activate head success\n");
     }
-    memcpy(activate_OBU.host_OBU_name, host_OBU->OBU_name, sizeof(activate_OBU.host_OBU_name));
-    activate_OBU.stop = 1;
-    int ret = pthread_create(&activate_OBU.activate_thread, NULL, EVSP_OBU_activation_timer, NULL);
+    //如果已經有執行中的 OBU，需要判斷目前的 host_OBU 和 activate_OBU_head 是否同相和是否已經加入 activate 的行列 
+    else{
+        pthread_mutex_lock(&activate_OBU_head->activate_mutex);
+        //  不同相就退出跳過
+        if (activate_OBU_head->target_phase != host_OBU->target_phase) {
+            log_file_write(log_content);
+            pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
+            pthread_mutex_unlock(&activate_OBU.activate_mutex);
+            return -1;
+        }
+        
+        //  已經在 activate OBU list 的也跳過
+        if (search_activate_OBU(host_OBU) != NULL){
+            log_file_write(log_content);
+            pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
+            pthread_mutex_unlock(&activate_OBU.activate_mutex);
+            return -1;
+        }
+        pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
+    }
+
+    add_activate_OBU(host_OBU);
+    activate_OBU.list_len++;
+    log_snprintf(log_content, "add activate OBU success\nhost_OBU_name = %s\n", host_OBU->OBU_name);
+    //如果是第一個 activate 的就 create timer thread
+    if (activate_OBU.activate_thread == 0) {
+        int ret = pthread_create(&activate_OBU.activate_thread, NULL, EVSP_OBU_activation_timer, NULL);
+        if (ret != 0) {
+            log_snprintf(log_content, "Failed to create thread\n");
+            log_file_write(log_content);
+            pthread_mutex_unlock(&activate_OBU.activate_mutex);
+            return -1;
+        }
+        log_file_write(log_content);
+        pthread_mutex_unlock(&activate_OBU.activate_mutex);
+        return 1; //return 1 才開啟CMS
+    }
+    log_file_write(log_content);
     pthread_mutex_unlock(&activate_OBU.activate_mutex);
-    return 1;
+    return 2;
 }
 
-void EVSP_OBU_activation_time_end(char *OBU_name)
+/**
+ * 當 terminate 的是 activate_OBU_head 及是最後一台車之結束判斷
+ * terminate_flag
+ *  0: 當terminate 的不是 activate_OBU_head 就不動作
+ *  1: 當terminate 的是 activate_OBU_head 且 activate list 尚有其他 OBU，需要變更 CMS
+ *  2: 當terminate 的是 activate_OBU_head 且已是最後一個 OBU，不需再重啟 CMS
+ */
+int EVSP_OBU_activation_time_end(char *OBU_name)
 {
-    if (strncmp(OBU_name, activate_OBU.host_OBU_name, sizeof(activate_OBU.host_OBU_name)) == 0) {
-        pthread_mutex_lock(&activate_OBU.activate_mutex);
-        activate_OBU.stop = 0;
-        pthread_mutex_unlock(&activate_OBU.activate_mutex);
+    int terminate_flag = 0;
+    pthread_mutex_lock(&activate_OBU.activate_mutex);
+    pthread_mutex_lock(&activate_OBU_head->activate_mutex);
+    // 如果 terminate 的是 activate_head，就設定 flag 為 1，表示需要再重新啟動CMS
+    if (strncmp(OBU_name, activate_OBU_head->host_OBU_name, sizeof(activate_OBU_head->host_OBU_name)) == 0) {
+        terminate_flag = 1;
+        if(activate_OBU_head->next == NULL) //  若 activate_OBU_head 是最後一台就不用再重啟 CMS 了，設定為2
+            terminate_flag = 2;
     }
+    if (activate_OBU.list_len == 0) //  若 activate list 已全部 terminate 就不用再重啟 CMS 了，設定為2
+        terminate_flag = 2;
+    pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
+    pthread_mutex_unlock(&activate_OBU.activate_mutex);
+    return terminate_flag;
+}
+
+//搜尋 host_OBU 是否已經在 activate_OBU 的 list 中
+EVSP_activate_OBU_t* search_activate_OBU(EVSP_host_OBU_obj_t *host_OBU) {
+    EVSP_activate_OBU_t *current = activate_OBU_head;
+    while (current != NULL) {
+        if (strncmp(current->host_OBU_name, host_OBU->OBU_name, sizeof(current->host_OBU_name)) == 0) {
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+void add_activate_OBU(EVSP_host_OBU_obj_t *host_OBU) {
+    
+    EVSP_activate_OBU_t *new_activate_OBU = (EVSP_activate_OBU_t*)malloc(sizeof(EVSP_activate_OBU_t));
+    if (new_activate_OBU == NULL)
+        return;
+
+    if (pthread_mutex_init(&new_activate_OBU->activate_mutex, NULL) != 0) {
+        free(new_activate_OBU);  
+        return;
+    }
+    pthread_mutex_lock(&activate_OBU_head->activate_mutex);
+    pthread_mutex_lock(&new_activate_OBU->activate_mutex);
+    strncpy(new_activate_OBU->host_OBU_name, host_OBU->OBU_name, sizeof(new_activate_OBU->host_OBU_name));
+    new_activate_OBU->activate_thread = 0;
+    new_activate_OBU->list_len = activate_OBU.list_len + 1;
+    new_activate_OBU->control_subphaseID = 0;
+    new_activate_OBU->target_phase = host_OBU->target_phase;
+    new_activate_OBU->next = NULL;
+    new_activate_OBU->prev = NULL;
+    //  如果是第一個 activate 的 OBU ，就把 activate_OBU_head 指向該 OBU
+    
+    if (strlen(activate_OBU_head->host_OBU_name) == 0) {
+        activate_OBU_head = new_activate_OBU;
+    } else {
+        EVSP_activate_OBU_t *temp = activate_OBU_head;
+        while (temp->next != NULL) {
+            temp = temp->next;
+        }
+        temp->next = new_activate_OBU;
+        new_activate_OBU->prev = temp;
+    }
+    pthread_mutex_unlock(&new_activate_OBU->activate_mutex);
+    pthread_mutex_unlock(&activate_OBU_head->activate_mutex);
 }
