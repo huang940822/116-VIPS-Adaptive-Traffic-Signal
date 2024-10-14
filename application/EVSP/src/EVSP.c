@@ -348,6 +348,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     update_info.lon = OBU_lon;
     update_info.direction = static_space.last_direction;
     update_info.speed = app_section->OBU_object->prediction_speed;
+    update_info.is_activate = 0;
     // 確認接收的EVSP是否已在RSU紀錄中，如果沒有會新建立一份紀錄
     EVSP_host_OBU_obj_t *host_OBU = EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name, &update_info);
     traffic_signal_status_t signal_status;
@@ -374,21 +375,30 @@ int EVSP_on_OBU_packet_rx(void *arg)
         int ret = 0;
         // enter terminate area
         if (area_ptr != NULL) {
-            log_snprintf(log_content, "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d",
+            log_snprintf(log_content, "EVSP OBU packet rx: TERMINATE\nOBU ID: %s\nterminate area id %d\n\n",
                          app_section->OBU_object->OBU_name, area_ptr->terminate_area_id);
 
             int target_phase = host_OBU->target_phase;
-            EVSP_OBU_activation_time_end(host_OBU->OBU_name); //activate.stop 設為0，break loop
+            /**
+             * 0: terminate 的 host_OBU 不是 activate_OBU_head
+             * 1: terminate 的 host_OBU 是 activate_OBU_head 且尚有其他 activate_OBU
+             * 2: terminate 的 host_OBU 是 activate list 中的最後一台
+            */
+            int terminate_flag = EVSP_OBU_activation_time_end(host_OBU->OBU_name); 
             command_buf_delete_OBU(host_OBU->OBU_name);  // 刪除在 command buf 還沒下下去的指令
-            EVSP_cooling_list_insert(host_OBU->OBU_name, host_OBU->area_ptr); // 加入cooling_list
-            EVSP_host_OBU_obj_delete(host_OBU->OBU_name); //　從host_OBU_list中移除
+            EVSP_cooling_list_insert(host_OBU->OBU_name, host_OBU->area_ptr); // 加入 cooling_list
+            EVSP_host_OBU_obj_delete(host_OBU->OBU_name); //　從 host_OBU_list 中移除
 
             // no other host OBU with same target phase in host_OBU_list
-            if (EVSP_host_OBU_obj_resume(target_phase) == true) { // resume是如果有用到延長時間才需要做補償
+            if (EVSP_host_OBU_obj_resume(target_phase) == true) { // resume 是如果有用到延長時間才需要做補償
                 // 進行補償
                 // 移到command_buffer_send執行，resume instruction 執行完才進行補償.
                 command_buf_resume_control(EVSP.id);
-
+        
+            }
+            // 發生terminate就關CMS
+            if (terminate_flag != 0){
+                log_snprintf(log_content, "CMS end\n");        
                 if (config.cms_number != 0) {
                     CMS_request_end(EVSP.id);
                 } else {
@@ -396,9 +406,17 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     vms_request_end(EVSP.id);
                 }
             }
-            // 回報碰到觸碰點 id
+            // 如果不是最後一台車就要再重啟
+            if (terminate_flag == 1){
+                log_snprintf(log_content, "activate head host terminated, change CMS display\n");
+                VMS_activate(static_space.last_direction);
+            }
+            else if (terminate_flag == 2)
+                log_snprintf(log_content, "last activate head host terminated\n");
+            // 回報碰到離開點 id
             EVSP_report_activate_area(app_section->OBU_object, TERMINATE_AREA, area_ptr->terminate_area_id);
-        } else { // is not in terminate area, but may be in activate area
+        } 
+        else { // is not in terminate area, but may be in activate area
             // 新增觸發次數threshold判斷
             printf("OBU %s is not in terminate area\n",host_OBU->OBU_name);
             // todo(侑融): 同時有兩台救護車且同向行駛的處理方式
@@ -438,8 +456,9 @@ int EVSP_on_OBU_packet_rx(void *arg)
                         printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", host_OBU->target_phase, area_ptr_touch->touching_area_id);
                         host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr_touch, &update_info);
                         // 標記該OBU為已觸發，並啟動相關timer
-                        int ret = EVSP_OBU_activation_timer_start(app_section->OBU_object);
-                        if (ret != -1) {
+                        int ret = EVSP_OBU_activation_timer_start(host_OBU);
+                        if (ret == 1) {
+                            log_snprintf(log_content, "CMS activate\n");
                             VMS_activate(static_space.last_direction);
                         }
                         EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr_touch->touching_area_id);
@@ -454,9 +473,10 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }                
             else {
                 printf("OBU is not activated\n");
-            }     
+            }   
         }
-    } else { /* not in host OBU list */
+    } 
+    else { /* not in host OBU list */
         // search plan
         printf("newcomer OBU\n");
         uint8_t plan_id = signal_status.PlanID;
@@ -496,7 +516,6 @@ int EVSP_on_OBU_packet_rx(void *arg)
             update_info.is_touching = 1;
             update_info.is_activate = 1;
             host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr, &update_info);
-            
             // 回報碰到觸碰點 id
             EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr->touching_area_id);            
         }

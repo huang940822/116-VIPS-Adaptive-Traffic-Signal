@@ -85,8 +85,8 @@ static inline void EVSP_host_OBU_obj_update(EVSP_host_OBU_obj_t *host_OBU, EVSP_
     if (info->is_touching==1) {
         host_OBU->touched_amount++;
     }
-    if (info->is_activate!=NULL) {
-        host_OBU->is_activate=info->is_activate;
+    if (info->is_activate != 0) {
+        host_OBU->is_activate = info->is_activate;
     }
 }
 
@@ -109,7 +109,7 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
             if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
                 EVSP_host_OBU_obj_update(current, info);
                 pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-                return NULL;
+                return current;
             }
             previous = current;
             current = current->next;
