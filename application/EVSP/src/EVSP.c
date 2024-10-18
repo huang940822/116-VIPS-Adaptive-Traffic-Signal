@@ -182,40 +182,108 @@ int static inline EVSP_rolling_to_target_phase(int target_phase, char *OBU_name,
     return ret;
 }
 
-static void VMS_activate(int direction)
+static void VMS_activate(int direction, vehicle_type_t vehicle_type)
 {
+    /** TODO
+     * 目前的 EVSP VMS/CMS Service 受限於時間及沒有足夠的地理資訊，
+     * 所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
+     * 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，
+     * 那再改寫成更 general 的設計。
+     */
+    
+    /**
+     * 245~254 EVSP 救護車 Reserved，以 245 為北順時針遞增編號
+     * 235~244 EVSP 消防車 Reserved，以 235 為北順時針遞增編號
+     * 225~234 EVSP 警車 Reserved，以 225 為北順時針遞增編號
+     * 255 黑色
+     */
     if (config.cms_number != 0) {
         uint8_t buf[CMS_NUM_MAX] = {0};
-        if (direction == 7 || direction == 0) {
-            buf[0] = 245;
-            buf[1] = 246;
-            buf[2] = 247;
-            buf[3] = 248;
-        } else if (direction == 1 || direction == 2) {
-            buf[0] = 248;
-            buf[1] = 245;
-            buf[2] = 246;
-            buf[3] = 247;
-        } else if (direction == 3 || direction == 4) {
-            buf[0] = 247;
-            buf[1] = 248;
-            buf[2] = 245;
-            buf[3] = 246;
-        } else if (direction == 5 || direction == 6) {
-            buf[0] = 246;
-            buf[1] = 247;
-            buf[2] = 248;
-            buf[3] = 245;
+        switch (vehicle_type)
+        {
+            case VEHICLE_AMBULANCE:   
+                if (direction == 7 || direction == 0) {
+                    buf[0] = 245;
+                    buf[1] = 246;
+                    buf[2] = 247;
+                    buf[3] = 248;
+                } else if (direction == 1 || direction == 2) {
+                    buf[0] = 248;
+                    buf[1] = 245;
+                    buf[2] = 246;
+                    buf[3] = 247;
+                } else if (direction == 3 || direction == 4) {
+                    buf[0] = 247;
+                    buf[1] = 248;
+                    buf[2] = 245;
+                    buf[3] = 246;
+                } else if (direction == 5 || direction == 6) {
+                    buf[0] = 246;
+                    buf[1] = 247;
+                    buf[2] = 248;
+                    buf[3] = 245;
+                }
+                break;
+
+            case VEHICLE_FIRE_TRUCK:
+                if (direction == 7 || direction == 0) {
+                    buf[0] = 235;
+                    buf[1] = 236;
+                    buf[2] = 237;
+                    buf[3] = 238;
+                } else if (direction == 1 || direction == 2) {
+                    buf[0] = 238;
+                    buf[1] = 235;
+                    buf[2] = 236;
+                    buf[3] = 237;
+                } else if (direction == 3 || direction == 4) {
+                    buf[0] = 237;
+                    buf[1] = 238;
+                    buf[2] = 235;
+                    buf[3] = 236;
+                } else if (direction == 5 || direction == 6) {
+                    buf[0] = 236;
+                    buf[1] = 237;
+                    buf[2] = 238;
+                    buf[3] = 235;
+                }
+                break;
+
+            case VEHICLE_POLICE_CAR:
+                if (direction == 7 || direction == 0) {
+                    buf[0] = 225;
+                    buf[1] = 226;
+                    buf[2] = 227;
+                    buf[3] = 228;
+                } else if (direction == 1 || direction == 2) {
+                    buf[0] = 228;
+                    buf[1] = 225;
+                    buf[2] = 226;
+                    buf[3] = 227;
+                } else if (direction == 3 || direction == 4) {
+                    buf[0] = 227;
+                    buf[1] = 228;
+                    buf[2] = 225;
+                    buf[3] = 226;
+                } else if (direction == 5 || direction == 6) {
+                    buf[0] = 226;
+                    buf[1] = 227;
+                    buf[2] = 228;
+                    buf[3] = 225;
+                }
+                break;
+
+            default:
+                log_file_write("VMS_activate(): get wrong vehicle_type: %d", vehicle_type);
+                return;
         }
+        log_file_write("VMS_activate(): vehicle_type = %d, CMS buffer = %d %d %d %d\n", vehicle_type, buf[0], buf[1], buf[2], buf[3]);
         CMS_request_start(EVSP.id, EVSP.priority, buf);
     } else {
-        // 本案的 EVSP_VMS_SERVICE 受限於時間及沒有足夠的地理資訊，所以採取寫死的方案去 mapping 車輛的 direction 和 VMS 編號。
-        // 未來如果有新增讓每一個 touching area 歸屬到一條道路的資訊，那再改寫成更 general 的設計。
-
-        /*
-        1.根據方向更改 evsp_prog[]
-        2.呼叫VMS SERVICE
-        */
+        /**
+         * 1.根據方向更改 evsp_prog[]
+         * 2.呼叫VMS SERVICE
+         */
         memset(evsp_prog, 255, sizeof(evsp_prog));
 
         if (direction == 7 || direction == 0) {
@@ -349,6 +417,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
     update_info.direction = static_space.last_direction;
     update_info.speed = app_section->OBU_object->prediction_speed;
     update_info.is_activate = 0;
+    update_info.vehicle_type = app_section->OBU_object->vehicle_type;
     // 確認接收的EVSP是否已在RSU紀錄中，如果沒有會新建立一份紀錄
     EVSP_host_OBU_obj_t *host_OBU = EVSP_host_OBU_obj_search(app_section->OBU_object->OBU_name, &update_info);
     traffic_signal_status_t signal_status;
@@ -408,8 +477,15 @@ int EVSP_on_OBU_packet_rx(void *arg)
             }
             // 如果不是最後一台車就要再重啟
             if (terminate_flag == 1){
+                EVSP_host_OBU_obj_t host_OBU_head = EVSP_get_host_OBU_head();
                 log_snprintf(log_content, "activate head host terminated, change CMS display\n");
-                VMS_activate(static_space.last_direction);
+                if (host_OBU_head.OBU_name == 0) {
+                    log_snprintf(log_content, "Error: terminate_flag = 1, but host_OBU_head = NULL\n");
+                    CMS_request_end(EVSP.id);
+                } else {
+                    log_snprintf(log_content, "Change CMS display target to %s\n", host_OBU_head.OBU_name);
+                    VMS_activate(static_space.last_direction, host_OBU_head.vehicle_type);
+                }
             }
             else if (terminate_flag == 2)
                 log_snprintf(log_content, "last activate head host terminated\n");
@@ -451,7 +527,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     if (host_OBU->touched_amount+1>=EVSP_config.touching_threshold) {
                         update_info.is_activate = 2;
                         update_info.is_touching = 1;
-                        log_snprintf(log_content, "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d",
+                        log_snprintf(log_content, "EVSP OBU packet rx: ACTIVATE\nOBU ID: %s\ntarget phase: %d\ntouching area id %d\n",
                             app_section->OBU_object->OBU_name, host_OBU->target_phase, area_ptr_touch->touching_area_id);
                         printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", host_OBU->target_phase, area_ptr_touch->touching_area_id);
                         host_OBU = EVSP_host_OBU_obj_insert(app_section->OBU_object->OBU_name, target_phase, area_ptr_touch, &update_info);
@@ -459,7 +535,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                         int ret = EVSP_OBU_activation_timer_start(host_OBU);
                         if (ret == 1) {
                             log_snprintf(log_content, "CMS activate\n");
-                            VMS_activate(static_space.last_direction);
+                            VMS_activate(static_space.last_direction, host_OBU->vehicle_type);
                         }
                         EVSP_report_activate_area(app_section->OBU_object, TOUCHING_AREA, area_ptr_touch->touching_area_id);
                     }

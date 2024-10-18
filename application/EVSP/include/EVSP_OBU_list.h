@@ -13,6 +13,7 @@ typedef struct EVSP_OBU_update_info {
     uint8_t direction;
     uint8_t is_touching; // 目前在觸發領域裡
     uint8_t is_activate; // 目前觸發狀態 (0: 未觸發; 1: pre-activate (進入觸發領域，觸碰次數未超過閾值); 2: 已觸發)
+    vehicle_type_t vehicle_type;
 } EVSP_OBU_update_info_t;
 
 typedef struct EVSP_cooling_info {
@@ -33,6 +34,7 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name, EVSP_OBU_update_in
 void EVSP_host_OBU_obj_delete(char *OBU_name);
 void EVSP_host_OBU_obj_print();
 bool EVSP_host_OBU_obj_resume(uint8_t target_phase);
+EVSP_host_OBU_obj_t EVSP_get_host_OBU_head();
 
 void EVSP_cooling_list_insert(char *OBU_name, EVSP_touching_area_t *area_ptr);
 int EVSP_cooling_list_search(char *OBU_name, EVSP_touching_area_t *area_ptr);

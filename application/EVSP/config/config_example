@@ -12,7 +12,7 @@ valid_record_distance 5
 # 觸發冷卻時間 (同台EVSP 600秒內不會重複觸發同一個觸碰點)
 cooling_time 600
 # 多次觸碰閾值 (觸碰點偵測次數超過3次才被判定為觸發)
-touching_threshold 3
+touching_threshold 1
 # default / table
 # touching_area_config_type is defined for the touching area config format
 # default is original format

@@ -82,6 +82,7 @@ static inline void EVSP_host_OBU_obj_update(EVSP_host_OBU_obj_t *host_OBU, EVSP_
     host_OBU->lon = info->lon;
     host_OBU->direction = info->direction;
     host_OBU->speed = info->speed;
+    host_OBU->vehicle_type = info->vehicle_type;
     if (info->is_touching==1) {
         host_OBU->touched_amount++;
     }
@@ -214,4 +215,13 @@ bool EVSP_host_OBU_obj_resume(uint8_t target_phase)
     }
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
     return true;
+}
+
+EVSP_host_OBU_obj_t EVSP_get_host_OBU_head()
+{
+    EVSP_host_OBU_obj_t EVSP_empty_obj = {0};
+    if (EVSP_host_OBU_list_head == NULL)
+        return EVSP_empty_obj;
+    else
+        return *EVSP_host_OBU_list_head;
 }
