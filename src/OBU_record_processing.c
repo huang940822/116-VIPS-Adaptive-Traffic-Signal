@@ -233,7 +233,6 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // é€
 ******************************************************************************/
 OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 {
-    printf("special obu insert\n");
     if (record->vehicle_type == VEHICLE_NORMAL)
         return NULL;
     uint8_t type = record->vehicle_type;
@@ -308,7 +307,6 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 {
     switch (msgf->messageId) {
     case BasicSafetyMessage_Id: {
-        printf("msg type = BSM\n");
         BasicSafetyMessage *bsm = msgf->u.data;
         if (bsm->partII_option != TRUE || bsm->partII.count != 1 || bsm->partII.tab[0].partII_Id != SupplementalVehicleExt) {
             return -1;
@@ -362,7 +360,6 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         record->direction &= 0b111;
     } break;
     case SignalRequestMessage_Id: {
-        printf("msg type = SRM\n");
         SignalRequestMessage *srm = msgf->u.data;
         if (srm->requestor.type_option != TRUE || srm->requestor.type.hpmsType_option != TRUE ||
             srm->requestor.type.hpmsType != VehicleType_car || srm->requestor.position_option != TRUE ||

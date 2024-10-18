@@ -401,7 +401,6 @@ void fill_V2R_self_defined_section(V2R_self_defined_section_t *self_section_p,
 //OBU傳雲端封包給RSU
 int OBU_packet_rx_event_handler(msg_obj_t *msg)
 {
-    printf("get in obu rx handler\n\r");
     // event_callback_t *current_c = &callback_list[EVENT_CAMERA_PACKET_RX];
     // //pthread_t APP_thread;
     // while (current_c->next != NULL) {

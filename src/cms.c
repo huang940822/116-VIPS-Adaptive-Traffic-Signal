@@ -239,7 +239,6 @@ int CMS_update_img(int imgID, char *imgName)
     // 檢查資料架是否存在
     struct stat stat_buffer;
     if (stat(CMS_pic_path, &stat_buffer) != 0 || !S_ISDIR(stat_buffer.st_mode)) {
-        printf(CMS_pic_path "does not exist.\n");
         log_file_write_fatal_error(CMS_pic_path "does not exist.");
         return -1;
     }
@@ -278,20 +277,18 @@ int CMS_update_img(int imgID, char *imgName)
     for (int i = 0; i < config.cms_number; i++) {
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
         snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_user "%s:" CMS_scp_path "%s", ip, filename);
+        log_file_write("scp command: %s", scp_command);
 
         int result = system(scp_command);
         if (result == 0) {
-            printf("File transferred successfully.\n");
             log_file_write("CMS SCP file transferred successfully. cms id %d ip %s", i + 1, ip);
             fail = 0;
         } else {
-            log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s", i + 1, scp_command);
-            printf("SCP failed, system() return value: %d \n", result);
+            log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s, system() return value: %d", i + 1, scp_command, result);
             fail++;  // 上船十次失敗回報
             i--;
             if (fail > CMS_update_fail_time) {
                 log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s, timeout", i + 1, scp_command);
-                printf("SCP failed., timeout\n");
                 remove("./" CMS_encrypt_img);
                 set_vms_error();
                 return -1;
@@ -423,7 +420,6 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     fclose(database);
     if (flag == 0) {
         log_file_write_fatal_error("cms hash can't find imgID %d", imgID);
-        printf("hash can't find imgID %d", imgID);
         return -1;
     }
 
@@ -616,7 +612,7 @@ static void *CMS_handler()
                 int status = buffer[4];
                 int imgID = buffer[5];
 
-                printf("cmd = %d, cmsID = %d, status = %d, imgID = %d\n", 
+                log_file_write("CMS_handler: cmd = %d, cmsID = %d, status = %d, imgID = %d\n", 
                         buffer[1],
                         buffer[3],
                         buffer[4],
@@ -697,7 +693,6 @@ static void *CMS_handler()
             // 避免收到自己發出的封包
             if (client_addr.sin_addr.s_addr == 0 ||
                 client_addr.sin_addr.s_addr == ipc_addr.sin_addr.s_addr) {
-                printf("------------------\n");
                 continue;
             }
 

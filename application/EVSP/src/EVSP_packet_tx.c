@@ -78,8 +78,6 @@ void EVSP_report_host_obu(OBU_object_t *OBU_object, uint8_t on_duty_flag)
     // write on_duty_flag
     write_uint8_t(on_duty_flag, &write_buf);
 
-    printf("route evsp to cloud\r\n");
-
     cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
     free(write_buf.content);
 }

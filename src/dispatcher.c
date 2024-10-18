@@ -48,11 +48,9 @@ void *dispatcher_handler()
             }
         }
         if (msg->device_id == FROM_DSRC) {
-            // printf("OBU_rx_event\n");
             if (Is_Heartbeat(msg) == 1) {
                 Heartbeat_com_id = msg->handle_id;
             } else {
-                printf("from dsrc\n");
                 // if(f_flag < 2)
                 OBU_com_id = msg->handle_id;
                 // f_flag++;
@@ -60,7 +58,6 @@ void *dispatcher_handler()
                 start_time = clock();
                 ret = OBU_packet_rx_event_handler(msg);
                 count++;
-                printf("count = %d\n",count);
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
                 total_time += cost_time;
