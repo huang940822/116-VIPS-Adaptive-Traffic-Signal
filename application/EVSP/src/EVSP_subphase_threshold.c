@@ -16,7 +16,7 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-#define MIN_EXPECT_SPEED 17  // 17 m/s 60 km/hr
+#define MIN_EXPECT_SPEED 15  // 15 m/s 54 km/hr
 
 #define THESHOLD_BUFFER 5
 

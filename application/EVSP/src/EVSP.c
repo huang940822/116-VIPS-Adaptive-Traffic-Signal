@@ -372,7 +372,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
             .last_record_pointer;  // back of queue; 最新推入的資料？
 
     // 轉傳緊急封包到雲端 (測試模式下註解掉)
-    EVSP_report_host_obu(app_section->OBU_object, static_space.on_duty_flag);
+    // EVSP_report_host_obu(app_section->OBU_object, static_space.on_duty_flag);
 
     // obu與rsu的距離
     float OBU_lat = app_section->OBU_object->record_ring.record[last_record_index].position_lat;
@@ -483,7 +483,8 @@ int EVSP_on_OBU_packet_rx(void *arg)
                     CMS_request_end(EVSP.id);
                 } else {
                     log_snprintf(log_content, "Change CMS display target to %s\n", host_OBU_head.OBU_name);
-                    VMS_activate(static_space.last_direction, host_OBU_head.vehicle_type);
+                    log_snprintf(log_content, "static last direction %d   host OBU head direction %d\n",static_space.last_direction, host_OBU_head.direction);
+                    VMS_activate(host_OBU_head.direction, host_OBU_head.vehicle_type);
                 }
             }
             else if (terminate_flag == 2)
@@ -531,7 +532,7 @@ int EVSP_on_OBU_packet_rx(void *arg)
                         int ret = EVSP_OBU_activation_timer_start(host_OBU);
                         if (ret == 1) {
                             log_snprintf(log_content, "CMS activate\n");
-                            VMS_activate(static_space.last_direction, host_OBU->vehicle_type);
+                            VMS_activate(host_OBU->direction, host_OBU->vehicle_type);
                         }
                         
                         pthread_mutex_lock(&mutex_active_EVSP);
