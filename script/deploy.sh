@@ -5,15 +5,18 @@ BUILD='build'
 EXEC_DIR='exec'
 APP_DIR='application'
 TARGET='middleware'
+CMS_DIR='CMS_img'
 
 rm -rf $DEPLOT_DIR
 mkdir -p $DEPLOT_DIR/
 mkdir -p $DEPLOT_DIR/$BUILD
 mkdir -p $DEPLOT_DIR/$BUILD/$EXEC_DIR
 mkdir -p $DEPLOT_DIR/$APP_DIR
+mkdir -p $DEPLOT_DIR/$CMS_DIR
 cp $BUILD/$EXEC_DIR/$TARGET $DEPLOT_DIR/$BUILD/$EXEC_DIR/
 cp -r j2735lib/ $DEPLOT_DIR/
 cp -r config/ $DEPLOT_DIR/
+cp CMS_img/program_id_example $DEPLOT_DIR/$CMS_DIR/program_id.txt
 rm -rf $DEPLOT_DIR/config/*_example
 
 array=(`ls $APP_DIR | tr ',' ' '` )
