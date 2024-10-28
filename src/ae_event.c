@@ -1,4 +1,5 @@
 #include "ae_event.h"
+#include "msg_queue.h"
 /*
     Since epoll and its related system call can only be used in the Linux
    operating system, I especially use extern to separate declarations and
@@ -86,11 +87,9 @@ int ae_create_comm_event(ae_event_loop *event_loop,
         ce->w_comm_proc = proc;
 
     ce->clientData = clientData;
-
     // If necessary, update the maximum fd of the event handler
     if (fd > event_loop->maxfd)
         event_loop->maxfd = fd;
-
     return AE_OK;
 }
 
@@ -197,8 +196,9 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
                 tvp = NULL; /* wait forever */
             }
         }
-        numevents = ae_epoll_poll(event_loop, tvp);
 
+        numevents = ae_epoll_poll(event_loop, tvp); 
+        //遍歷所有events並依序處理可寫和可讀的
         for (j = 0; j < numevents; j++) {
             ae_comm_event *ce = &event_loop->events[event_loop->fired[j].fd];
             int mask = event_loop->fired[j].mask;
@@ -211,8 +211,8 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
                 }
             }
             if (ce->mask & mask & AE_READABLE) {
-                fired++;
-                ce->r_comm_proc(event_loop, fd, ce->clientData, mask);
+                    fired++;
+                    ce->r_comm_proc(event_loop, fd, ce->clientData, mask);
             }
             processed++;
         }
@@ -229,7 +229,8 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
 void ae_main(ae_event_loop *event_loop)
 {
     event_loop->stop = 0;
-    while (!event_loop->stop) {
+    while (!event_loop->stop) {    
+        // 根據設定的flag來處理通訊事件和定時事件，並返回處理的事件數量。通過 epoll 機制和自定義的定時事件管理，實現了高效的事件循環
         ae_process_events(event_loop, AE_ALL_EVENTS);
     }
 }

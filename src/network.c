@@ -140,7 +140,7 @@ int net_UDP_server(char *err, int port, char *bindaddr)
             continue;
         }
         goto end;
-    }
+    }   
     if (p == NULL) {
         net_set_error(err, "unable to bind socket, errno: %d", errno);
         goto error;
@@ -170,6 +170,7 @@ int net_TCP_server(char *err, int port, char *bindaddr, int backlog)
         net_set_error(err, "%s", gai_strerror(ret));
         return NET_ERR;
     }
+    // 綁定到所有返回的地址資訊
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
             continue;
@@ -255,6 +256,10 @@ int net_UDP_accept(char *err,
     socklen_t len = sizeof(sin);
     int recv_bytes = recvfrom(listen_fd, recv_buf, MAX_BUF_LEN, 0,
                               (struct sockaddr *) &client_addr, &client_len);
+    char cipp[30] = {0}, sipp[30] = {0};
+    inet_ntop(AF_INET, &client_addr.sin_addr, cipp, sizeof(struct sockaddr_in)); 
+    printf("client addr = %s, port = %d\n", cipp, ntohs(client_addr.sin_port));
+
     if (recv_bytes > 0) {
         if (htons(client_addr.sin_port) == Heartbeat_PORT) {
             *Is_Heartbeat = 1;
@@ -289,6 +294,7 @@ int net_UDP_accept(char *err,
             return -1;
         }
     }
+    printf("recv_bytes = %d\n",recv_bytes);
     return cfd;
 err:
     close(cfd);

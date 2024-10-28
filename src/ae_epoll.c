@@ -75,8 +75,15 @@ int ae_epoll_poll(ae_event_loop *event_loop, struct timeval *tvp)
 {
     ae_epoll_state *state = event_loop->apidata;
     int retval, numevents = 0;
+
+    // 調用 epoll_wait 函式，等待事件發生。
+    // state->epfd 是 epoll fd。
+    // event_loop->setsize 是event_state的大小。
+    // tvp 是等待時間，如果為 NULL 則表示無限等待，否則轉換成毫秒。
     retval = epoll_wait(state->epfd, state->events, event_loop->setsize,
                         tvp ? (tvp->tv_sec * 1000 + tvp->tv_usec / 1000) : -1);
+    
+    // 依照return值遍歷處理
     if (retval > 0) {
         int j;
         numevents = retval;

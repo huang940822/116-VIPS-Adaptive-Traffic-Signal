@@ -2,8 +2,10 @@
 #define EVSP_CONFIG_H
 
 #include "typedefine.h"
-
+#include <stdint.h>
 #define EVSP_CONFIG_FILE FILE_PATH "application/EVSP/config/config.txt"
+
+
 
 int EVSP_config_init();
 
@@ -15,7 +17,9 @@ typedef enum EVSP_config_err {
     CONFIG_INVALID_MIN_GREEN = -3,
     CONFIG_INVALID_MAX_GREEN = -4,
     CONFIG_INVALID_VALID_RECORD_DISTANCE = -5,
-    CONFIG_INVALID_EVSP_OPEN_FILE = -6
+    CONFIG_INVALID_COOLING_TIME = -6,
+    CONFIG_INVALID_EVSP_OPEN_FILE = -7,
+    CONFIG_INVALID_OTHER = -8
 } EVSP_config_err_t;
 
 typedef enum EVSP_touching_area_config_type {
@@ -29,8 +33,9 @@ typedef struct EVSP_config_object {
     uint8_t min_green;
     uint8_t max_green;
     uint8_t valid_record_distance;
+    uint32_t cooling_time;
+    uint8_t touching_threshold;
     EVSP_touching_area_config_type_t touching_area_config_type;
-
 } EVSP_config_object_t;
 
 extern EVSP_config_object_t EVSP_config;

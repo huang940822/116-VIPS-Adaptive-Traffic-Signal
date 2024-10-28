@@ -1,5 +1,6 @@
 #include "ae_timer_event.h"
 
+struct msg_obj *err_msg;
 
 /*This is just a test function that display current time*/
 int time_print_cur_time(ae_event_loop *event_loop,
@@ -14,7 +15,7 @@ int time_print_cur_time(ae_event_loop *event_loop,
     char *time_str = ctime(&mytime);
     time_str[strlen(time_str) - 1] = '\0';
     // printf("Current Time : %s\n", time_str);
-    /*The four functions asctime(), ctime(), gmtime() and localtime() return a
+    /*The four functions asctime(), ctime(), gmtime() and localtime_r() return a
      * pointer to static data and hence are not thread-safe.*/
     /*ctime() returns a pointer to a static buffer, and must not be free()*/
     return SEC_TO_MSEC(5);

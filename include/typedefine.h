@@ -3,16 +3,16 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function \
-                     // ‘strptime’
+#include <unistd.h>
+#define __USE_XOPEN  // TO SOLVE WARNING MSG: implicit declaration of function ‘strptime’
 #include <time.h>
 #include "j2735_map.h"
 #include "j2735_msg.h"
 #include "util.h"
+
 #define FILE_PATH "./"
 #define OBU_NAME_MAX_LEN 10
 #define RSU_NAME_MAX_LEN 10
-#define COMPENSATION_MAX_LEN 15
 #define ID_MAX_LEN 15
 #define APP_NAME_MAX_LEN 10
 #define TIMESTAMP_LEN 19
@@ -20,7 +20,7 @@
 #define STATIC_APP_PRIVATE_SPACE_CAPACITY 256
 #define PHASE_COUNT_MAX_NUM 8
 #define SIGNAL_COUNT_MAX_NUM 8  // 岔路數目
-#define PLANID_MAX_NUM 48 
+#define PLANID_MAX_NUM 48
 #define RESTART_TOKEN "e5WJjskIJNGn1anL"
 #define TOKEN_LEN 16
 #define PROGRAM_NAME_LEN 100
@@ -48,25 +48,19 @@ typedef enum application_id {
     ATSC_ID = 3,
     CPS_ID = 4,
     SPAT_ID = 5,
-    MAP_ID = 6,
+    TIB_ID = 6,
     SPM_ID = 7,
     APPLICATION_ID_NUMBER
 } application_id_t;
 
 typedef enum vehicle_type {
-    VEHICLE_NORMAL = 0,
-    VEHICLE_AMBULANCE = 1,
-    VEHICLE_BUS = 2,
-    VEHICLE_FIRE_TRUCK = 3,
-    VEHICLE_POLICE_CAR = 4,
+    VEHICLE_NORMAL = -1,
+    VEHICLE_AMBULANCE = 0,
+    VEHICLE_BUS = 1,
+    VEHICLE_FIRE_TRUCK = 2,
+    VEHICLE_POLICE_CAR = 3,
     VEHICLE_TYPE_NUMBER
 } vehicle_type_t;
-
-typedef enum traffic_signal_controller_manufacturer {
-    CHENG_LONG = 0,
-    SHAN_ZHU = 1,
-    SHAN_ZHU_M = 2,
-} traffic_signal_controller_manufacturer_t;
 
 typedef enum event_type {
     EVENT_OBU_PACKET_RX = 0,
@@ -78,6 +72,7 @@ typedef enum event_type {
     EVENT_TRAFFIC_SIGNAL_COMMAND_TX = 6,
     EVENT_CAMERA_PACKET_RX = 7,
     EVENT_REGISTRATION = 8,
+    EVENT_MIDDLEWARE_RESTART, /* enum will auto increase */
     EVENT_TYPE_NUMBER
 } event_type_t;
 
@@ -112,6 +107,13 @@ typedef enum signalstatus {
     PEDESTRIAN_RED = 128,
 } SignalStatus_t;
 
+typedef struct external_app_info_type {
+    pid_t pid;             // process id of the external application
+    int notify_fd;         // middleware use this socket_fd to notify the app
+    int interact_fd;       // app will use this socket_fd to call middleware-api
+    uint8_t heartbeat_rc;  // heartbeat record, updated each time app send req to MW
+} ea_info_t;
+
 typedef struct application_object {
     char name[APP_NAME_MAX_LEN];
     uint8_t dontSend2TC;
@@ -127,6 +129,8 @@ typedef struct application_object {
     int (*on_camera_packet_rx)(void *);
     int (*on_traffic_signal_command_tx)(void *);
     int (*on_registration)(void *);
+    int (*on_middleware_restart)(void *);
+    ea_info_t *ea_info_p;  // if this is not NULL, indicate this is an external app
     struct application_object *next;
 } app_obj_t;
 
@@ -150,20 +154,24 @@ typedef struct event_callback {
     uint8_t priority;
     int (*callback)(void *);
     struct event_callback *next;
+    app_obj_t *app_obj_p;
 } event_callback_t;
 
 typedef struct OBU_record_common_field {
     time_t time_second;
+    time_t time_nsec;
     float position_lon;
     float position_lat;
     uint8_t speed;  // m/s
     uint8_t direction;
     char OBU_name[OBU_NAME_MAX_LEN + 1];
     vehicle_type_t vehicle_type;
+    int fd;
 } OBU_record_common_field_t;
 
 typedef struct OBU_record {
     time_t time_second;
+    time_t time_nsec;
     float position_lon;
     float position_lat;
     uint8_t speed;  // m/s
@@ -179,7 +187,7 @@ typedef struct OBU_record_ring {
 
 typedef struct application_private_space {
     uint8_t static_space[STATIC_APP_PRIVATE_SPACE_CAPACITY];
-    uint8_t *dynamic_space;
+    // uint8_t *dynamic_space;   //not in use currently
 } app_private_space_t;
 
 typedef enum {
@@ -190,13 +198,14 @@ typedef enum {
 } OBU_object_status;
 
 typedef struct OBU_object {
-    char OBU_name[OBU_NAME_MAX_LEN + 1];  //+1 if for \0
-    vehicle_type_t vehicle_type;
-    OBU_object_status status;
+    char OBU_name[ID_MAX_LEN + 1];  //+1 if for \0
+    vehicle_type_t vehicle_type;    // enum type
+    OBU_object_status status;       // enum type
+    float prediction_speed;         // m/s
     OBU_record_ring_t record_ring;
     app_private_space_t *private_space;
-    struct OBU_object *prev;
-    struct OBU_object *next;
+    struct OBU_object *prev;  // should not pass to external app
+    struct OBU_object *next;  // should not pass to external app
 } OBU_object_t;
 
 typedef struct traffic_signal_packet {
@@ -212,19 +221,30 @@ typedef struct traffic_signal_packet {
 } traffic_signal_packet_t;
 
 typedef struct static_plan {
-    // 5F C5
-    uint16_t Green;
-    // 5F C4
-    uint8_t MinGreen;
-    uint16_t MaxGreen;
-    uint8_t Yellow;
-    uint8_t AllRed;
-    uint8_t PedGreenFlash;
-    uint8_t PedRed;
+    // 不包含步階 1 ，從步階 2 到步階 5
+    union {
+        uint8_t StepArr[4];
+        struct
+        {
+            uint8_t PedGreenFlash;
+            uint8_t PedRed;
+            uint8_t Yellow;
+            uint8_t AllRed;
+        };
+    };
 
     // Green - PedGreenFlash
     uint16_t PreGreen;  // 原始步階1
+    // 正在執行的綠燈秒數
+    // 會因為執行延長、縮短或補償動態改變
+    // 如果沒有被延長或縮短等於 Green
     uint16_t PreTimeCompensated;
+
+    // 5F C5
+    uint16_t Green;
+    // 5F C4
+    uint16_t MaxGreen;
+    uint8_t MinGreen;
 } static_plan_t;
 
 // 是一個 bitString 要對照 enum SignalStatus_t 來看做 flag
@@ -260,6 +280,9 @@ typedef struct traffic_signal_status {
     uint8_t Hour;   // (00~23)
     uint8_t Min;    // (00~59)
     uint8_t Sec;    // (00~59)
+    // TC 與 IPC 相差的秒數 只有比較當天的相差 超過一天不會計算
+    // 正數表示 TC 時間較快 負數表示 IPC 時間較快
+    int tcTimeOffest;
     // 0F 04
     uint16_t original_tc_health_status;
 
@@ -271,6 +294,7 @@ typedef struct traffic_signal_status {
 
     uint8_t control_status;
 
+    // 5F C6
     uint8_t SegmentType;
     uint8_t SegmentCount;
     AllDay_plan_t allday_plan[PLANID_MAX_NUM];
@@ -316,17 +340,45 @@ typedef struct V2R_common_field {
 typedef struct C2R_app_section {
     uint32_t payload_len;
     char *payload;
-    uint8_t com_id;
+    // uint8_t com_id;
 } C2R_app_section_t;
 
 typedef struct V2R_app_section {
     uint32_t payload_len;
     char *payload;
-    uint8_t com_id;
+    // uint8_t com_id;
     OBU_object_t *OBU_object;
     DSRCmsgID msgID;
-    void *data;
-} V2R_app_section_t;
+    void *data;  // use j2735 lib to encode and decodes
+} V2R_app_section_t; //汽車到遠端裝置app
+
+typedef struct V2R_self_defined_section {
+    char obu_name[OBU_NAME_MAX_LEN];
+    uint8_t vehical_type;
+    // char time_stamp[TIMESTAMP_LEN];
+    time_t time_second;
+    float lon;
+    float lat;
+    uint8_t speed;
+    uint8_t direction;
+    DSRCmsgID msgID; /* id of bsm or srm */
+    size_t data_len; /* len of srm_msg or bsm_msg */
+    void *data;      /* srm_msg or bsm_msg */
+    union {
+        struct {  // EVSP
+            uint8_t evsp_on_duty_flag;
+            uint8_t evsp_weight;
+            uint8_t evsp_error_code;
+        };
+
+        struct {  // TSP
+            uint8_t tsp_on_duty_flag;
+            uint8_t tsp_passenger_num;
+        };
+
+        // struct{ }; //for future new app
+    };
+} V2R_self_defined_section_t;
 
 typedef struct tsc_command {
     uint8_t app_id;
@@ -340,10 +392,8 @@ typedef struct tsc_command {
                           // to be adjusted to.
     int8_t adjustment;    // the adjustment of time that the application requests
                           // to be adjusted.
-    int8_t compensation_time;
-    uint8_t compensation_cycle;
-
     char host_OBU_name[ID_MAX_LEN + 1];
+    vehicle_type_t vehicle_type;
 } tsc_command_t;
 
 // Each element of the command buffer is a command buffer object.
@@ -355,8 +405,8 @@ typedef struct tsc_command_object {
                             // to be adjusted to.
     uint8_t adjusted_time;  // is the length of time that the traffic signal
                             // controller is adjusted to.
-    int8_t compensation_time;
     char host_OBU_name[ID_MAX_LEN + 1];
+    vehicle_type_t vehicle_type;
     bool send_flag;
 } tsc_command_object_t;
 
@@ -365,7 +415,7 @@ typedef struct traffic_signal_command_arg {
     uint8_t phase;
     uint8_t step;
     uint8_t effect_time;
-    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
 } traffic_signal_command_arg_t;
 
 typedef struct wifi_adapter_device {

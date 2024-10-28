@@ -23,7 +23,7 @@
 #define FIRMQ_LEN0 0x00
 #define FIRMQ_LEN1 0x0C
 
-pthread_mutex_t mutex_rs232_write;
+extern pthread_mutex_t mutex_rs232_write;
 
 uint8_t tsc_dynamic();
 uint8_t tsc_pretime();

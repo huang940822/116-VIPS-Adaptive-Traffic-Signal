@@ -226,7 +226,7 @@ EVSP_default_config_error:
     printf("EVSP touching area default config read fail.\n");
     return -1;
 }
-
+// 領取表格式的EVSP touching area
 int EVSP_table_config()
 {
     memset(&EVSP_plan_list, 0, sizeof(EVSP_plan_list_t));
@@ -240,7 +240,7 @@ int EVSP_table_config()
     if (rsu_name == NULL) {
         log_file_write_fatal_error("error name %s", config.RSU_name);
     }
-
+    // touching area的設定檔放在./application/EVSP/config
     memset(file_path, 0, sizeof(file_path));
     strcat(file_path, EVSP_CONFIG_DIR);
     strcat(file_path, rsu_name);
@@ -419,7 +419,6 @@ int EVSP_table_config()
             EVSP_plan_list_Vector_Increase(EVSP_plan_list, ., plan_table);
             EVSP_plan_table_t *plan_table = &EVSP_plan_list.plan_table[EVSP_plan_list.plan_table_count];
             EVSP_plan_list.plan_table_count++;
-
             uint8_t uint8_t_val;
 
             int plan_id_max = 0;
@@ -492,7 +491,7 @@ int EVSP_table_config()
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
             uint8_t k;
-            for (k = 0; i < EVSP_plan_list.terminate_area_count; k++) {
+            for (k = 0; k < EVSP_plan_list.terminate_area_count; k++) {
                 if (EVSP_plan_list.touching_area[i].terminate_area_Id[j] == EVSP_plan_list.terminate_area[k].terminate_area_id) {
                     EVSP_plan_list.touching_area[i].terminate_area_Id[j] = k;
                     break;
@@ -663,7 +662,6 @@ void EVSP_plan_list_print()
         }
     }
 
-    // printf("%s\n", log_content);
     log_file_write(log_content);
     return;
 }
@@ -784,14 +782,11 @@ int EVSP_activate(float lon, float lat, uint8_t direction, EVSP_plan_table_t *pl
                 if (flag && touching_area->node_count == 2 &&
                     (touching_area->node[1].lat <= lat && lat <= touching_area->node[0].lat) &&
                     (touching_area->node[0].lon <= lon && lon <= touching_area->node[1].lon)) {
-                    printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID, plan->plan_subPhase[i].touching_area_Id[j]);
                     *area_ptr = touching_area;
                     return plan->plan_subPhase[i].SubPhaseID;
                 }
             } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
                 if (flag && checkInside(touching_area->node, touching_area->node_count, &(EVSP_Node_t){lon, lat})) {
-                    printf("EVSP_activate SubPhaseID %d touching_area_Id %d ---\n", plan->plan_subPhase[i].SubPhaseID,
-                           EVSP_plan_list.touching_area[plan->plan_subPhase[i].touching_area_Id[j]].touching_area_id);
                     *area_ptr = touching_area;
                     return plan->plan_subPhase[i].SubPhaseID;
                 }

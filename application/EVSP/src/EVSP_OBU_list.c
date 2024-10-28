@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "EVSP_OBU_list.h"
 #include "EVSP_config.h"
 #include "EVSP_timer_event.h"
 #include "EVSP_touching_area.h"
@@ -14,7 +15,42 @@
 EVSP_host_OBU_obj_t *EVSP_host_OBU_list_head = NULL;
 pthread_mutex_t EVSP_host_OBU_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-//創建新的EVSP OBU object/list
+LIST_HEAD(EVSP_cooling_list_head);
+pthread_mutex_t EVSP_cooling_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void EVSP_cooling_list_insert(char *OBU_name, EVSP_touching_area_t *area_ptr)
+{
+    EVSP_cooling_info_t *node;
+    Malloc(node, sizeof(EVSP_cooling_info_t), "EVSP cooling list new");
+    strncpy(node->OBU_name, OBU_name, OBU_NAME_MAX_LEN);
+    node->touching_area_id = area_ptr->touching_area_id;
+    INIT_LIST_HEAD(&node->node);
+    node->terminate_time = time(NULL);
+    pthread_mutex_lock(&EVSP_cooling_list_mutex);
+    list_add_tail(&EVSP_cooling_list_head, &node->node);
+    pthread_mutex_unlock(&EVSP_cooling_list_mutex);
+}
+
+int EVSP_cooling_list_search(char *OBU_name, EVSP_touching_area_t *area_ptr)
+{
+    EVSP_cooling_info_t *pos, *safe;
+    time_t now = time(NULL);
+    int ret = -1;
+    pthread_mutex_lock(&EVSP_cooling_list_mutex);
+    list_for_each_entry_safe(pos, safe, &EVSP_cooling_list_head, node)
+    {
+        if (now - pos->terminate_time > EVSP_config.cooling_time) {
+            list_del(&pos->node);
+            free(pos);
+        } else if (strncmp(pos->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0 &&
+                   pos->touching_area_id == area_ptr->touching_area_id) {
+            ret = 1;
+        }
+    }
+    pthread_mutex_unlock(&EVSP_cooling_list_mutex);
+    return ret;
+}
+// 20240906: 在OBU object中新增activate欄位與觸發次數欄位
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
                                            uint8_t target_phase,
                                            EVSP_touching_area_t *area_ptr)
@@ -25,6 +61,8 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
     memcpy(host_OBU->OBU_name, OBU_name, OBU_NAME_MAX_LEN);
     host_OBU->target_phase = target_phase;
     host_OBU->area_ptr = area_ptr;
+    host_OBU->is_activate = 0;
+    host_OBU->touched_amount = 0;
     create_timer(&host_OBU->host_OBU_packet_timer, host_OBU,
                  EVSP_host_OBU_packet_timeout_timer_handler);
     set_timer(host_OBU->host_OBU_packet_timer, 0, 0,
@@ -36,12 +74,31 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_new(char *OBU_name,
     return host_OBU;
 }
 
+static inline void EVSP_host_OBU_obj_update(EVSP_host_OBU_obj_t *host_OBU, EVSP_OBU_update_info_t *info)
+{
+    if (info == NULL)
+        return;
+    host_OBU->lat = info->lat;
+    host_OBU->lon = info->lon;
+    host_OBU->direction = info->direction;
+    host_OBU->speed = info->speed;
+    host_OBU->vehicle_type = info->vehicle_type;
+    if (info->is_touching==1) {
+        host_OBU->touched_amount++;
+    }
+    if (info->is_activate != 0) {
+        host_OBU->is_activate = info->is_activate;
+    }
+}
+
+// 插入host OBU，若OBU已存在則更新紀錄並回傳NULL，若未存在或list為空，在尾端插入新OBU
 EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
                                               uint8_t target_phase,
-                                              EVSP_touching_area_t *area_ptr)
+                                              EVSP_touching_area_t *area_ptr,
+                                              EVSP_OBU_update_info_t *info)
 {
     EVSP_host_OBU_obj_t *current, *previous;
-    pthread_mutex_lock(&EVSP_host_OBU_list_mutex); 
+    pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
     /* empty list */
     if (EVSP_host_OBU_list_head == NULL) {
         EVSP_host_OBU_list_head = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
@@ -51,8 +108,9 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
         previous = current;
         while (current) {
             if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
+                EVSP_host_OBU_obj_update(current, info);
                 pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-                return NULL;
+                return current;
             }
             previous = current;
             current = current->next;
@@ -60,20 +118,25 @@ EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_insert(char *OBU_name,
         previous->next = EVSP_host_OBU_obj_new(OBU_name, target_phase, area_ptr);
         current = previous->next;
     }
+    /* update last Host_OBU in list */
+    EVSP_host_OBU_obj_update(current, info);
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
     return current;
 }
 
-EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name)
+EVSP_host_OBU_obj_t *EVSP_host_OBU_obj_search(char *OBU_name, EVSP_OBU_update_info_t *info)
 {
+    time_t cur_time = time(NULL);
     pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
 
     EVSP_host_OBU_obj_t *current = EVSP_host_OBU_list_head;
     /* traverse host OBU list */
     while (current != NULL) {
         /* host OBU already exist */
-        if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0)
+        if (strncmp(current->OBU_name, OBU_name, OBU_NAME_MAX_LEN) == 0) {
+            EVSP_host_OBU_obj_update(current, info);
             break;
+        }
         current = current->next;
     }
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
@@ -142,27 +205,23 @@ bool EVSP_host_OBU_obj_resume(uint8_t target_phase)
 {
     pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
     EVSP_host_OBU_obj_t *current = EVSP_host_OBU_list_head;
-    /* empty list */
-    if (current == NULL) {
-        pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-        return true;
-    }
-
     /* traverse host OBU list */
     while (current != NULL) {
         if (current->target_phase == target_phase) {
             pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
             return false;
         }
-
-        /* last node */
-        if (current->next == NULL) {
-            pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-            return true;
-        }
         current = current->next;
     }
     pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-    log_file_write_fatal_error("error checking EVSP host OBU resume");
     return true;
+}
+
+EVSP_host_OBU_obj_t EVSP_get_host_OBU_head()
+{
+    EVSP_host_OBU_obj_t EVSP_empty_obj = {0};
+    if (EVSP_host_OBU_list_head == NULL)
+        return EVSP_empty_obj;
+    else
+        return *EVSP_host_OBU_list_head;
 }

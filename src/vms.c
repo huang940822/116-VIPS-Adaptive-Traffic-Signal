@@ -24,7 +24,6 @@ wifi_adapter_device_t wifi_adapter;
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t VMS_program_update_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-traffic_signal_status_t signal_status;
 uint8_t rtm_phase[RTM_MAX] = {0};
 char current_step[RTM_MAX];
 
@@ -94,6 +93,21 @@ void vms_request_end(uint8_t id)
         app_id = CAROUSEL_NUM;
     }
     pthread_mutex_unlock(&VMS_request_priority_mutex);
+}
+
+int vms_sync_evsp_prog(ea_info_t *ea_info_p, uint8_t *evsp_prog_p){
+    
+    if( evsp_prog_p ){
+        return -1;
+    }
+    /* ea_info_p will only be checked on external_app side library */
+
+    /* TODO: since NOW external _app_proxy and vms_thread will both access evsp_prog[], 
+     * depend on the behavior you observed, there might need a mutex-lock here */
+    for(int i =0; i < RTM_MAX; ++i ){
+        evsp_prog[i] = evsp_prog_p[i];
+    }
+    return 0;
 }
 
 int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  // 雲端下了更新輪播，就要執行這個函數來更新輪播陣列
@@ -199,16 +213,7 @@ void VMS_report_programs_id(uint8_t cmd)
 {
     msg_buf_t write_buf;
     write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("VMS_report_programs_id: malloc");
-        perror("VMS_report_programs_id: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "VMS_report_programs_id");
 
     // cmd
     write_uint8_t(cmd, &write_buf);
@@ -264,16 +269,7 @@ void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
     // 回傳給雲端
     msg_buf_t write_buf;
     write_buf.index = 0;
-    write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
-    if (write_buf.content == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("VMS_report_programs_name: malloc");
-        perror("VMS_report_programs_name: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(write_buf.content, 0, R2C_SPECIFIC_FIELD_MAX_LEN);
-    }
+    Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "VMS_report_programs_name");
 
     // cmd
     write_uint8_t(cmd, &write_buf);
@@ -556,7 +552,41 @@ void *VMS_program_update(void *data)
         uint8_t upload_error_cnt[RTM_MAX];
         memset(upload_error_cnt, 0, sizeof(upload_error_cnt));
 
-        for (int i = 0; i < 4; i++) {
+        // 因為改成每面 VMS 可以各自撥放不同的紅燈節目和綠燈節目，所以當要上傳紅綠燈的節目時(編號 2~17 )就要改成獨立上傳
+        if (program_id >= 2 && program_id <= 17) {
+            int VMS_id = 0;
+            if (program_id == 2 || program_id == 10) {
+                VMS_id = 0;
+            } else if (program_id == 3 || program_id == 11) {
+                VMS_id = 1;
+            } else if (program_id == 4 || program_id == 12) {
+                VMS_id = 2;
+            } else if (program_id == 5 || program_id == 13) {
+                VMS_id = 3;
+            }
+            while (upload_error_cnt[VMS_id] < VMS_RESEND_THRESHOLD) {
+                sleep(1);
+                res = VMS_wifi_connect(VMS_name[VMS_id]);
+                if (res == 0) {
+                    break;
+                }
+                upload_error_cnt[VMS_id]++;
+            }
+            // 表示成功連接 Wi-Fi，準備開始嘗試上傳 Program
+            if (res == 0) {
+                while (upload_error_cnt[VMS_id] < VMS_RESEND_THRESHOLD) {
+                    sleep(1);
+                    res = VMS_program_update_packet_tx(program_id, program_name);
+                    if (res == 0) {
+                        break;
+                    }
+                    upload_error_cnt[VMS_id]++;
+                }
+            }
+            sleep(1);
+            VMS_wifi_disconnect();
+        } else {
+            for (int i = 0; i < 4; i++) {
             while (upload_error_cnt[i] < VMS_RESEND_THRESHOLD) {
                 sleep(1);
                 res = VMS_wifi_connect(VMS_name[i]);
@@ -578,6 +608,7 @@ void *VMS_program_update(void *data)
             }
             sleep(1);
             VMS_wifi_disconnect();
+            }
         }
 
         // 檢查是否有 VMS 異常
@@ -622,6 +653,9 @@ void phase_rtm_connect()
     get_traffic_signal_status(&signal_status);
 
     memset(rtm_phase, 0, sizeof(rtm_phase));
+    /* 遍歷所有的子相位和訊號，並根據每個訊號的狀態更新 rtm_phase。
+    這個過程的主要目的是將每個訊號在不同子相位中的狀態進行編碼並存儲在 rtm_phase 陣列中。
+    這樣，在控制循環中可以快速查詢並根據這些狀態進行相應的控制和數據包構建。*/
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         for (int j = 0; j < signal_status.SignalCount && i < RTM_MAX; j++) {
             if ((signal_status.phaseorder_plan[i][j].SignalStatus & 0b00111100) > 0) {
@@ -633,7 +667,9 @@ void phase_rtm_connect()
 
 void control_loop()
 {
-    sequence_number = (sequence_number + 1) % 256;
+    traffic_signal_status_t signal_status;
+
+    sequence_number = (sequence_number + 1) % 256;//更新sequence_number in range(0,255)
     if (sequence_number == 0) {
         sequence_number++;
     }
@@ -650,15 +686,18 @@ void control_loop()
     }*/
 
     get_traffic_signal_status(&signal_status);
-    phase_rtm_connect();
-    // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
 
+    phase_rtm_connect(); //在控制循環中可以快速查詢並根據這些狀態進行相應的控制和數據包構建
+    // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
+    
+    // 清空接收緩衝區，構建packet
     memset(vms_packet_rx, 0, sizeof(vms_packet_tx));
 
     strcpy(vms_packet_tx, VMS_PACKET_BEGIN);
     sprintf(uint8_t_to_char, "%d", sequence_number);
     strcat(vms_packet_tx, uint8_t_to_char);
 
+    // 根據應用 ID 添加相應的數據。
     switch (app_id) {
     case EVSP_ID:  // EVSP
     {
@@ -667,7 +706,6 @@ void control_loop()
             strcat(vms_packet_tx, VMS_PACKET_COMMA);
             strcat(vms_packet_tx, uint8_t_to_char);
         }
-
     } break;
     case CAROUSEL_NUM: {
         uint8_t current_phase = 1 << (signal_status.SubPhaseID - 1);
@@ -710,6 +748,8 @@ void control_loop()
         log_file_write("vms_packet_tx: %s", vms_packet_tx);
         // printf("vms_packet_tx: %s", vms_packet_tx);
     }
+
+    // 發送數據包後，等待並接收 VMS 回應後處理
     sleep(1);
     res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
     // res == -1 case(EAGAIN)
@@ -784,8 +824,9 @@ void WiFi_adapter_search ()
 void vms_handler_init()
 {   
     
-    WiFi_adapter_search();
+    WiFi_adapter_search();//搜索wifi
 
+    //program_ids_green 和 program_ids_not_green 初始化為255。根据 vms_config.activate_directions進行過濾並設定ID 
     memset(program_ids_green, 255, sizeof(program_ids_green));
     memset(program_ids_not_green, 255, sizeof(program_ids_not_green));
     for (int i = 0, j = 0; i < RTM_MAX; i++) {
@@ -822,7 +863,8 @@ void vms_handler_init()
         log_file_write("%s opened successfully", VMS_SERIAL_PORT);
     }
 
-    vms_set_serial_attribs();
+    
+    vms_set_serial_attribs();//設置trunk attribute，port為non-blocking。
 
     res = net_non_block("set vms port non block.", port_fd);
 
@@ -908,6 +950,10 @@ void *vms_handler()
     while (1) {
         control_loop();
         sleep(1);
+        // 假設有一個全域變數控制循環是否繼續
+        // if (vms_config.vms_active == 0) {
+        //     break;
+        // }
     }
 
     close(port_fd);

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -27,10 +29,10 @@ extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
 extern uint8_t flag_query_firm_ver;
 extern uint8_t flag_switch2nextStep;
-extern uint8_t flag_PhaseOrder;
 extern pthread_mutex_t mutex_uart_comple_protect;
 extern buffer_ring_t *DSRC_send_buffer;
-static unsigned int _0F42_count = 0;
+
+Guaranteed_command_set_t guarenteed_cmd_set = {0};
 
 void timer_event_handler(__sigval_t value)
 {
@@ -49,7 +51,6 @@ void timer_event_handler(__sigval_t value)
         pthread_mutex_lock(&mutex_uart_comple_protect);
         // printf("get in uart mutex\r\n");
         // pthread_mutex_lock(&mutex_rs232_write);
-        static uint8_t flag_query_allday_plan = true;
         uint8_t temp_ack_seq;
 
         temp_ack_seq = tsc_5F48();  // 查詢目前時制計劃內容
@@ -61,24 +62,6 @@ void timer_event_handler(__sigval_t value)
         temp_ack_seq = tsc_5F44();
         // WAIT_ACK_LOOP
         command_buf_polling();
-        if (_0F42_count == 0) {
-            temp_ack_seq = tsc_0F42();  // 查詢日期、時間
-            WAIT_ACK_LOOP
-            _0F42_count++;
-        } else {
-            _0F42_count++;
-            _0F42_count %= 3600;
-        }
-        if (flag_PhaseOrder == true) {
-            temp_ack_seq = tsc_5F43();
-            WAIT_ACK_LOOP
-            flag_PhaseOrder = false;
-        }
-        if (flag_pretime == true) {
-            temp_ack_seq = tsc_pretime();
-            WAIT_ACK_LOOP
-            flag_pretime = false;
-        }
 
         if (flag_countdown_on == true) {
             temp_ack_seq =
@@ -112,15 +95,28 @@ void timer_event_handler(__sigval_t value)
                 "step sec higher than 255 happens and switch to next step "
                 "forcelly!!\r\n");
         }
-        if (flag_query_allday_plan == true) {
+
+        if (guarenteed_cmd_set._0F42_count == 0) {
+            temp_ack_seq = tsc_0F42();  // 查詢日期、時間
+            // WAIT_ACK_LOOP
+        } else {
+            guarenteed_cmd_set._0F42_count++;
+            guarenteed_cmd_set._0F42_count %= 3600;
+        }
+
+        if (guarenteed_cmd_set._5F46_count == 0) {
             time_t currentTime;
             struct tm localTime;
 
             time(&currentTime);
             localtime_r(&currentTime, &localTime);
             temp_ack_seq = tsc_5F46(localTime.tm_wday);
-            WAIT_ACK_LOOP
-            flag_query_allday_plan = false;
+            // WAIT_ACK_LOOP
+        }
+
+        if (guarenteed_cmd_set._5F43_count == 0) {
+            temp_ack_seq = tsc_5F43();
+            // WAIT_ACK_LOOP
         }
 
         pthread_mutex_unlock(&mutex_uart_comple_protect);
@@ -166,17 +162,17 @@ int create_timer(timer_t *timer_id,
     /* Set and enable alarm */
     /* SIGEV_NONE：什麼都不做,只提供通過 timer_gettime 和 timer_getoverrun
      * 查詢超時訊息 */
-    /* SIGEV_SIGNAL: 當定時器到期,內核會將 sigev_signo 所指定的信號傳給進程
-     * 在信號處理程序中 si_value 會被設定為 sigev_value */
-    /* SIGEV_THREAD: 當定時器到期,內核會(在此進程內)以
-     * sigev_notification_attributes 為線程屬性創建一個線程,並且讓它執行
+    /* SIGEV_SIGNAL: 當定時器到期,內核會將 sigev_signo 所指定的訊號傳給process
+     * 在訊號處理程序中 si_value 會被設定為 sigev_value */
+    /* SIGEV_THREAD: 當定時器到期,內核會(在此process內)以
+     * sigev_notification_attributes 為thread屬性創建一個thread,並且讓它執行
      * sigev_notify_function,並傳入 sigev_value 作為參數 */
 
     evp.sigev_value.sival_ptr =
         signal_value;                             // 用於標識定時器
                                                   //(這和timerid有什麼區別？回調函數可以獲得)
-    evp.sigev_notify = SIGEV_THREAD;              // 線程通知的方式，派駐新線程
-    evp.sigev_notify_function = notify_function;  // 線程函數地址
+    evp.sigev_notify = SIGEV_THREAD;              // thread通知的方式，派駐新thread
+    evp.sigev_notify_function = notify_function;  // thread函數地址
     if (timer_create(CLOCK_REALTIME, &evp, timer_id) == -1) {
         log_file_write_fatal_error("create_timer: timer_create");
         perror("create_timer: timer_create");
@@ -230,4 +226,28 @@ int delete_timer(timer_t timer_id)
     } else {
         return 0;
     }
+}
+
+int set_timer_fd(int transfer_speed, char *error_msg)
+{
+    int fd = timerfd_create(CLOCK_REALTIME, 0);
+    int t = 1000000000 / transfer_speed;
+    struct itimerspec timerValue = {0};
+
+    if (fd == -1) {
+        log_file_write_fatal_error("%s timefd create error.", error_msg);
+        return -1;
+    }
+
+    timerValue.it_value.tv_sec = t / 1000000000;
+    timerValue.it_value.tv_nsec = t % 1000000000;
+    timerValue.it_interval.tv_sec = t / 1000000000;
+    timerValue.it_interval.tv_nsec = t % 1000000000;
+
+    if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
+        log_file_write_fatal_error("%s timerfd_settime, errno %d.", error_msg, errno);
+        close(fd);
+        return -1;
+    }
+    return fd;
 }

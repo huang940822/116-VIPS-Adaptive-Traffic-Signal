@@ -37,4 +37,5 @@ void clear_655xx_error(void);
 
 void set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR(void);
 void clear_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR(void);
-#endif
+
+#endif  /* ERROR_STATUS_H */

@@ -483,7 +483,8 @@ void traffic_signal_port_init()
     set_serial_attribs(serial_port_fd, TC_BAUDRATE, TC_SERIAL_PORT);
 }
 
-/* traffic_signal_packet_thread */
+/* traffic_signal_packet_thread 
+從socket收取不同類型的packet並處理轉義字節 */
 void *traffic_signal_packet_rx_handler()
 {
     if (serial_port_fd == -1)
@@ -491,7 +492,7 @@ void *traffic_signal_packet_rx_handler()
 
     uint8_t read_buffer[1]; /* Buffer to store the data received */
     uint8_t bytes_read = 0; /* Number of bytes read by the read() system call */
-    bool escape_flag = 0;   // what for???
+    bool escape_flag = 0;   // 用來標記是否讀取到轉義字節
 
     traffic_signal_packet_t *packet =
         (traffic_signal_packet_t *) malloc(MAX_PACKET_LEN);
@@ -516,24 +517,25 @@ void *traffic_signal_packet_rx_handler()
             exit(errno);
         }
         /* 0xAA */
+        // 如果讀取到轉義字節，設置 escape_flag，然後繼續讀取下一個字節
         if (read_buffer[0] == DLE_VAL && escape_flag == 0) {
             escape_flag = 1;
             continue;
         }
 
         if (escape_flag == 1) {
-            /* 0xAA 0xBB */
+            /* 0xAA 0xBB 訊息包*/
             if (read_buffer[0] == STX_VAL) {
                 packet->TYPE = STX_VAL;
                 recv_info(serial_port_fd, packet);
             }
-            /* 0xAA 0xDD */
+            /* 0xAA 0xDD 確認包*/
             else if (read_buffer[0] == ACK_VAL) {
                 packet->TYPE = ACK_VAL;
                 ack_seq = recv_ack(serial_port_fd, packet);
                 // printf("ack seq is %d\r\n",ack_seq);
             }
-            /* 0xAA 0xEE */
+            /* 0xAA 0xEE 否認包*/
             else if (read_buffer[0] == NAK_VAL) {
                 packet->TYPE = NAK_VAL;
                 recv_nak(serial_port_fd, packet);

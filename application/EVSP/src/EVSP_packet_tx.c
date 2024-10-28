@@ -6,6 +6,7 @@
 #include "EVSP.h"
 #include "EVSP_packet_tx.h"
 #include "EVSP_touching_area.h"
+
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "error_status.h"
@@ -60,10 +61,10 @@ void EVSP_report_host_obu(OBU_object_t *OBU_object, uint8_t on_duty_flag)
     write_uint8_t(OBU_object->vehicle_type, &write_buf);
 
     char timestamp_t[20];
-    struct tm *timeinfo;
-    timeinfo = localtime(&OBU_object->record_ring.record[last_record_index].time_second);
+    struct tm timeinfo;
+    localtime_r(&OBU_object->record_ring.record[last_record_index].time_second, &timeinfo);
     // write timestamp
-    int length = strftime(timestamp_t, 20, "%Y-%m-%d %H:%M:%S\n", timeinfo);
+    int length = strftime(timestamp_t, 20, "%Y-%m-%d %H:%M:%S\n", &timeinfo);
     write_char(timestamp_t, &write_buf, TIMESTAMP_LEN, TIMESTAMP_LEN);
 
     // write lon
@@ -79,7 +80,6 @@ void EVSP_report_host_obu(OBU_object_t *OBU_object, uint8_t on_duty_flag)
     // write on_duty_flag
     write_uint8_t(on_duty_flag, &write_buf);
 
-    printf("route evsp to cloud\r\n");
     cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
     free(write_buf.content);
 }
@@ -118,6 +118,8 @@ void EVSP_report_activate_area(OBU_object_t *OBU_object, area_type_t type, int a
     write_uint8_t(OBU_object->record_ring.record[last_record_index].direction, &write_buf);
 
     log_file_write("report cloud area obu name %s type %d area id %d", OBU_object->OBU_name, type, areaId);
+    
     cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
+
     free(write_buf.content);
 }

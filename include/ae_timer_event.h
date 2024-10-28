@@ -3,7 +3,7 @@
 #include "ae_event.h"
 #include "msg_queue.h"
 #define SEC_TO_MSEC(sec) (640 * sec)
-struct msg_obj *err_msg;
+
 int time_print_cur_time(ae_event_loop *event_loop,
                         long long id,
                         void *clientData);

@@ -10,6 +10,10 @@
 int com_send(int com_id, unsigned char *buf, size_t send_len)
 {  // printf("com_send com_id: %d\n", com_id);
     struct ae_event_loop *event_loop = RSU_server.el;
+    // 剛開始啟動 broker 還沒被初始化
+    if (RSU_server.broker == NULL) {
+        return COM_IO_ERR;
+    }
     client_t *client = comm_dict_find(RSU_server.broker->client_dict, com_id);
     if (client == NULL) {
         log_file_write_fatal_error("com_send dict not found, com_id: %d", com_id);

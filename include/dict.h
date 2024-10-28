@@ -241,7 +241,7 @@ static dict_entry *dict_find(dict *ht, const void *key)
     dict_entry *he;
     unsigned int h;
 
-    if (ht->size == 0)
+    if (ht == 0 || ht->size == 0)
         return NULL;
     h = dict_hash_key(ht, key) & ht->sizemask;
     he = ht->table[h];
@@ -327,7 +327,7 @@ static int _dict_clear(dict *ht)
     return DICT_OK; /*Actually,this never fail*/
 }
 /* Clear & Release the hash table */
-static void dict_realease(dict *ht)
+static void dict_release(dict *ht)
 {
     _dict_clear(ht);
     free(ht);

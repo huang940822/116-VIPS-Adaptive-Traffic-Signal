@@ -5,7 +5,7 @@
 # RSU_id is RSU_NAME last four number
 # RSU_region is the first alphabetically concatenated the second number
 # RSU_id and RSU_region is use on j2735 format
-RSU_NAME "S429001   "   
+RSU_NAME "S269901   "   
 RSU_id 29001
 RSU_region 164
 
@@ -48,10 +48,17 @@ SIGNAL_ADJUST_LOWER_BOUND_PERCENTAGE 100
 # int number
 TRAFFIC_COMPENSATION_METHOD 3
 
+# traffic compensation baseline
+# ZERO_HOUR_ZERO_MIN_BASELINE \ DAILY_SEGMENT_BASELINE
+TRAFFIC_COMPENSATION_BASELINE ZERO_HOUR_ZERO_MIN_BASELINE
+
 # traffic compensation cycle number
 TRAFFIC_COMPENSATION_CYCLE_NUMBER 1
 
 PHASE_WEIGHT 50 50 0 0 0 0 0 0
+
+# number of CMS
+CMS_NUMBER 0
 
 # log middleware timer event
 # yes / no

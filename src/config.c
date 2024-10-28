@@ -6,10 +6,12 @@
 #include "config.h"
 #include "log.h"
 #include "typedefine.h"
+#include "vector.h"
 
 config_object_t config = {
     .RSU_name = "S428901   ",
-    .RSU_id = 0,
+    .RSU_id = 4289,
+    .RSU_region = 701,
     .RSU_lat = 22.996714,
     .RSU_lon = 120.237009,
     .RSU_elev = 0,
@@ -20,6 +22,7 @@ config_object_t config = {
     .signal_adjust_upper_bound_percentage = 60,
     .signal_adjust_lower_bound_percentage = 60,
     .traffic_compensation_method = 0,
+    .traffic_compensation_baseline = 0,
     .traffic_compensation_cycle_number = 1,
     .phase_weight = 0,
     0,
@@ -29,6 +32,7 @@ config_object_t config = {
     0,
     0,
     0,
+    .cms_number = 0,
     .log_middleware_timer_event = 1,
     .log_application_register_event = 1,
     .log_command_buffer = 1,
@@ -82,7 +86,7 @@ bool read_uint8_t_from_config_line(char *config_line, uint8_t *val)
     }
 }
 
-static bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
+bool read_uint32_t_from_config_line(char *config_line, uint32_t *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
     *val = 0;
@@ -161,6 +165,18 @@ static bool read_name_from_config_line(char *config_line, char *val)
     }
 }
 
+bool read_string_arr_from_config_line(char *config_line, void *val, const char delim[])
+{
+    vector_t(char *) *str_arr = val;
+    char *save_ptr = NULL;
+    char *substr = trim_comments(strtok_r(config_line, delim, &save_ptr));
+    while (substr != NULL) {
+        vector_push_back(*str_arr, substr);
+        substr = trim_comments(strtok_r(NULL, delim, &save_ptr));
+    }
+    return str_arr->size != 0 ? true : false;
+}
+
 void trim_space(char *str)
 {
     if (str == NULL)
@@ -170,7 +186,7 @@ void trim_space(char *str)
     while (isspace(*start))
         start++;
 
-    while (isspace(*end) && end > start)
+    while (end > start && isspace(*end))
         end--;
 
     *(end + 1) = '\0';
@@ -234,8 +250,15 @@ int config_init()
         if (strstr(buf, "RSU_NAME ")) {
             if (read_name_from_config_line(buf, string_val)) {
                 if (strlen(string_val) <= 10) {
+                    char extracted[5];
+
                     strncpy(config.RSU_name, string_val, 10);
                     log_file_write("config: RSU_name = %s", config.RSU_name);
+
+                    strncpy(extracted, config.RSU_name + 1, 4);
+                    extracted[4] = '\0';
+                    config.RSU_id = atoi(extracted);
+                    log_file_write("config: RSU_id = %d", config.RSU_id);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_NAME;
@@ -428,6 +451,24 @@ int config_init()
                 return CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD;
             }
         }
+        // traffic compensation baseline
+        if (strstr(buf, "TRAFFIC_COMPENSATION_BASELINE ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "ZERO_HOUR_ZERO_MIN_BASELINE") == 0) {
+                    config.traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE;
+                    log_file_write("config: traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE");
+                    continue;
+                } else if (strcmp(string_val, "DAILY_SEGMENT_BASELINE") == 0) {
+                    config.traffic_compensation_baseline = DAILY_SEGMENT_BASELINE;
+                    log_file_write("config: traffic_compensation_baseline = DAILY_SEGMENT_BASELINE");
+                    continue;
+                } else {
+                    return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;
+                }
+            } else {
+                return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;
+            }
+        }
         // traffic compensation cycle number
         if (strstr(buf, "TRAFFIC_COMPENSATION_CYCLE_NUMBER ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
@@ -457,6 +498,22 @@ int config_init()
                 return CONFIG_INVALID_PHASE_WEIGHT;
             }
         }
+
+        // number of CMS
+        if (strstr(buf, "CMS_NUMBER ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    config.cms_number = uint8_t_val;
+                    log_file_write("config: CMS_NUMBER = %d", config.cms_number);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_CMS_NUMBER;
+                }
+            } else {
+                return CONFIG_INVALID_CMS_NUMBER;
+            }
+        }
+
         // log middleware timer event
         if (strstr(buf, "LOG_MIDDLEWARE_TIMER_EVENT ")) {
             if (read_string_from_config_line(buf, string_val)) {

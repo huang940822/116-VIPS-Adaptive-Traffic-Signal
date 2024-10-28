@@ -18,6 +18,7 @@ pthread_mutex_t lock;
 // which will continuously dequeue message objects form the message queue
 void *dispatcher_handler()
 {
+    printf("Enter dispatcher handler\n");
     msg_queue_init();
     // pthread_mutex_init(&lock, NULL);
     int ret = 0;
@@ -28,31 +29,40 @@ void *dispatcher_handler()
     //         "Pool started with %d threads and "
     //         "queue size of %d\n",
     //         THREAD, THREADQUEUE);
-
+    clock_t start_time, finish_time;
+    int count = 0;
+    double total_time = 0;
     for (;;) {
         msg = msg_queue_dequeue();
-
-        log_file_write("dispatcher: MSG(%d)", msg->device_id);
+        //從queue中取出一個msg並判斷來自cloud, dsrc或是smart_avi
         if (msg->device_id == FROM_CLOUD) {
             // printf("cloud_rx_event\n");
 
             cloud_com_id = msg->handle_id;
             log_file_write("cloud_com_id in dispatcher is %d", cloud_com_id);
-            ret = cloud_packet_rx_event_handler(msg);
+            // 處理從雲端接收到的封包，解析封包中的通用欄位，驗證這些欄位是否有效，然後根據封包中的服務 ID 調用相應的回調函式進行應用層負載的處理
+            ret = cloud_packet_rx_event_handler(msg); // com_packet_processing.c
             if (ret < 0) {
                 log_file_write_fatal_error("invalid packet from cloud: %d\n",
                                            ret);
             }
         }
         if (msg->device_id == FROM_DSRC) {
-            // printf("OBU_rx_event\n");
             if (Is_Heartbeat(msg) == 1) {
                 Heartbeat_com_id = msg->handle_id;
             } else {
                 // if(f_flag < 2)
                 OBU_com_id = msg->handle_id;
                 // f_flag++;
+                // 處理從 OBU 接收到的封包，解碼消息，解析封包中的記錄，根據車輛類型將記錄插入適當的結構，然後調用回調函式進行處理
+                start_time = clock();
                 ret = OBU_packet_rx_event_handler(msg);
+                count++;
+                finish_time = clock();
+                double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
+                total_time += cost_time;
+                if (count == 100)
+                    printf("total time = %f\n", total_time); 
                 if (ret < 0) {
                     log_file_write_fatal_error("invalid packet from OBU: %d\n",
                                                ret);
@@ -61,6 +71,7 @@ void *dispatcher_handler()
         }
         if (msg->device_id == FROM_SMART_AVI) {
             AVI_com_id = msg->handle_id;
+            //從接收到的 Smart AVI 封包中提取障礙物list和時間戳訊息，然後調用相應的回調函式進行處理
             Smart_AVI_packet_rx_event_handler(msg);
         }
         free(msg);

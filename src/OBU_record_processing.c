@@ -113,34 +113,15 @@ void OBU_record_ring_pop(OBU_object_t *object)
 ******************************************************************************/
 OBU_object_t *OBU_object_new(OBU_record_common_field_t *record_common)
 {
-    OBU_object_t *object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
-    if (object == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("OBU_object_new: malloc");
-        perror("OBU_object_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(object, 0, sizeof(OBU_object_t));
-    }
+    OBU_object_t *object;
+    Malloc(object, sizeof(OBU_object_t), "OBU_object_new");
     strncpy(object->OBU_name, record_common->OBU_name, OBU_NAME_MAX_LEN);
     object->vehicle_type = record_common->vehicle_type;
     object->status = OBU_object_processing;
+    object->prediction_speed = record_common->speed;
 
-    object->private_space = (app_private_space_t *) malloc(
-        sizeof(app_private_space_t));
-    if (object->private_space == NULL) {
-        set_memory_error();
-        log_file_write_fatal_error("OBU_object_new: malloc");
-        perror("OBU_object_new: malloc");
-        exit(errno);
-    } else {
-        clear_memory_error();
-        memset(object->private_space, 0,
-               sizeof(app_private_space_t));
-    }
-    object->prev = NULL;
-    object->next = NULL;
+    Malloc(object->private_space, sizeof(app_private_space_t), "OBU_object_new private_space");
+    object->prev = object->next = NULL;
     return object;
 }
 
@@ -152,7 +133,7 @@ OBU_object_t *OBU_object_new(OBU_record_common_field_t *record_common)
 ** Return:      object: address of OBU obj
 **              NULL: OBU obj not found
 ******************************************************************************/
-inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, char *str)
+inline OBU_object_t *OBU_object_search(OBU_object_t *OBU_list_head, const char *str)
 {
     OBU_object_t *current = OBU_list_head->next;
     while (current != OBU_list_head) {
@@ -176,6 +157,22 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
     return status;
 }
 
+int special_OBU_list_update_status(const char *name, vehicle_type_t type, OBU_object_status status)
+{
+    if (type == VEHICLE_NORMAL)
+        return -1;
+    pthread_mutex_lock(&mutex_special_OBU_list[type]);
+    OBU_object_t *object = OBU_object_search(&special_OBU_list[type], name);
+    // 只可以 granted 跟 rejected
+    if (object == NULL || (status != OBU_object_granted && status != OBU_object_rejected)) {
+        pthread_mutex_unlock(&mutex_special_OBU_list[type]);
+        return -1;
+    }
+    object->status = status;
+    pthread_mutex_unlock(&mutex_special_OBU_list[type]);
+    return 1;
+}
+
 /*****************************************************************************
 ** Function:    normal_OBU_record_insert
 ** Description: Insert a normal OBU record in normal OBU list.
@@ -184,6 +181,9 @@ OBU_object_status special_OBU_list_search_status(vehicle_type_t type, char *name
 ******************************************************************************/
 OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // 這裡用hash table
 {
+    printf("normal obu insert\n");
+    if (record->vehicle_type != VEHICLE_NORMAL)
+        return NULL;
     int hash_code = djb2_hash(
         record->OBU_name);  // hash code is array index for having use mod
     pthread_mutex_lock(&mutex_normal_OBU_list[hash_code]);
@@ -193,7 +193,7 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // �
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
 
-        /* insert OBU record */  // 如果世新的object 那record ring一定是空的
+        /* insert OBU record */  // 如果是新的object 那record ring一定是空的
                                  // 似乎沒有檢查的必要 直接push進去就好？
         if (!OBU_record_ring_full(object->record_ring.first_record_pointer,
                                   object->record_ring.last_record_pointer)) {
@@ -233,11 +233,13 @@ OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // �
 ******************************************************************************/
 OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 {
+    if (record->vehicle_type == VEHICLE_NORMAL)
+        return NULL;
     uint8_t type = record->vehicle_type;
+    
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
-
     if (object == NULL) { /* new OBU object */
         object = OBU_object_new(record);
         /* insert OBU record */
@@ -248,13 +250,19 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 
         special_OBU_list[type].next->prev = object;
         special_OBU_list[type].next = object;
-    } else { /* OBU object exist */
+    } else { 
+        /* OBU object exist */
         /* insert OBU record */
         if (OBU_record_ring_full(object->record_ring.first_record_pointer,
                                  object->record_ring.last_record_pointer)) {
             OBU_record_ring_pop(object);
         }
         OBU_record_ring_push((OBU_record_t *) record, object);
+
+        /* use kalman filter to predict the speed of vehicle */
+        object->prediction_speed = (OBU_SPEED_KALMAN_GAIN * object->prediction_speed) +
+                                   ((1.0 - OBU_SPEED_KALMAN_GAIN) * record->speed);
+
         /* move target to head */
         if (special_OBU_list[type].next != object) {
             /* remove target */
@@ -282,7 +290,7 @@ static int yday2month_day(struct tm *timeinfo, int yday)
         months_arr[1]++;
 
     for (month; month < 12; month++) {
-        if (yday < months_arr[month]) {
+        if (yday <= months_arr[month]) {
             break;
         }
         yday -= months_arr[month];
@@ -293,7 +301,8 @@ static int yday2month_day(struct tm *timeinfo, int yday)
     timeinfo->tm_mday = yday;
     return 1;
 }
-
+//  從 msgf 的 messageID 中判斷訊息是 BSM 或是 SRM，
+//  並將 OBU_name 和 time 等資訊記錄到 record 中
 int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 {
     switch (msgf->messageId) {
@@ -308,28 +317,40 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         }
         memset(record->OBU_name, 0, OBU_NAME_MAX_LEN);
         switch (sup_ext->classification) {
-        case 50:
+        case 50:  // j2735 classification  transit-TypeUnknown -- default type
             strcpy(record->OBU_name, "bus_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_BUS;
             break;
-        case 60:
+        case 60:  // j2735 classification  emergency-TypeUnknown -- default type
             strcpy(record->OBU_name, "amb_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;
             break;
+        case 63:  // j2735 classification  emergency-Fire-Heavy-Vehicle
+            strcpy(record->OBU_name, "fir_");
+            strncat(record->OBU_name, bsm->coreData.id.buf, 4);
+            record->vehicle_type = VEHICLE_FIRE_TRUCK;
+            break;
+        case 66:  // j2735 classification  emergency-Police-Light-Vehicle
+            strcpy(record->OBU_name, "pol_");
+            strncat(record->OBU_name, bsm->coreData.id.buf, 4);
+            record->vehicle_type = VEHICLE_POLICE_CAR;
+            break;  
         default:
             break;
         }
 
         struct timeval tv;
+        struct tm localTime;
         gettimeofday(&tv, NULL);
         int second = tv.tv_sec % 60;
         int secMark = bsm->coreData.secMark / 1000;
         if (second > secMark && (second - secMark) > 30)
             tv.tv_sec -= 60;
         tv.tv_sec = tv.tv_sec - second + secMark;
-        record->time_second = mktime(localtime(&tv.tv_sec));
+        localtime_r(&tv.tv_sec, &localTime);
+        record->time_second = mktime(&localTime);
 
         record->position_lat = bsm->coreData.lat / 10000000.0;
         record->position_lon = bsm->coreData.Long / 10000000.0;
@@ -340,10 +361,9 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
     } break;
     case SignalRequestMessage_Id: {
         SignalRequestMessage *srm = msgf->u.data;
-        if (srm->requestor.id.choice != VehicleID_entityID || srm->requestor.type_option != TRUE ||
-            srm->requestor.type.hpmsType_option != TRUE || srm->requestor.type.hpmsType != VehicleType_car ||
-            srm->requestor.position_option != TRUE || srm->requestor.position.speed_option != TRUE ||
-            srm->requestor.position.heading_option != TRUE) {
+        if (srm->requestor.type_option != TRUE || srm->requestor.type.hpmsType_option != TRUE ||
+            srm->requestor.type.hpmsType != VehicleType_car || srm->requestor.position_option != TRUE ||
+            srm->requestor.position.speed_option != TRUE || srm->requestor.position.heading_option != TRUE) {
             return -1;
         }
         RequestorDescription *requestor = &srm->requestor;
@@ -351,8 +371,27 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         switch (srm->requestor.type.role) {
         case BasicVehicleRole_ambulance:
             strcpy(record->OBU_name, "amb_");
-            strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            if (requestor->id.choice == VehicleID_entityID)
+                strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            else
+                strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
             record->vehicle_type = VEHICLE_AMBULANCE;
+            break;
+        case BasicVehicleRole_fire:
+            strcpy(record->OBU_name, "fir_");
+            if (requestor->id.choice == VehicleID_entityID)
+                strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            else
+                strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
+            record->vehicle_type = VEHICLE_FIRE_TRUCK;
+            break;
+        case BasicVehicleRole_police:
+            strcpy(record->OBU_name, "pol_");
+            if (requestor->id.choice == VehicleID_entityID)
+                strncat(record->OBU_name, requestor->id.u.entityID.buf, 4);
+            else
+                strncat(record->OBU_name, (char *) &requestor->id.u.stationID, 4);
+            record->vehicle_type = VEHICLE_POLICE_CAR;
             break;
         default:
             return -1;
@@ -361,20 +400,20 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
 
         struct timeval tv;
         gettimeofday(&tv, NULL);
-        struct tm *timeinfo;
-        timeinfo = localtime(&tv.tv_sec);
+        struct tm timeinfo;
+        localtime_r(&tv.tv_sec, &timeinfo);
 
         int yday = (srm->timeStamp / 1440) + 1, dmin = srm->timeStamp % 1440;
 
-        if (yday2month_day(timeinfo, yday) == -1) {
+        if (yday2month_day(&timeinfo, yday) == -1) {
             return -1;
         }
 
-        timeinfo->tm_hour = dmin / 60;
-        timeinfo->tm_min = dmin % 60;
-        timeinfo->tm_sec = srm->second / 1000;
-        timeinfo->tm_isdst = -1;
-        record->time_second = mktime(timeinfo);
+        timeinfo.tm_hour = dmin / 60;
+        timeinfo.tm_min = dmin % 60;
+        timeinfo.tm_sec = srm->second / 1000;
+        timeinfo.tm_isdst = -1;
+        record->time_second = mktime(&timeinfo);
 
         record->position_lat = requestor->position.position.lat / 10000000.0;
         record->position_lon = requestor->position.position.Long / 10000000.0;
@@ -383,6 +422,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         record->direction &= 0b111;
     } break;
     default:
+        printf("other msg %d\n", msgf->messageId);
         return -1;
         break;
     }
@@ -413,8 +453,11 @@ void OBU_object_garbage_collection_timer(__sigval_t value)
     OBU_object_print();
 }
 
-void OBU_object_garbage_collection() //清掉太久的obu object
+// 遍歷hash table 中的每一個普通 OBU list，
+// 檢查並移除已經過期的 OBU 對象。
+void OBU_object_garbage_collection()
 {
+    printf("OBU garbage collect\n");
     time_t current_time;
     time(&current_time);
     OBU_object_t *current = NULL;
@@ -426,6 +469,11 @@ void OBU_object_garbage_collection() //清掉太久的obu object
 
         while (current != &normal_OBU_list[i]) {
             target = NULL;
+            /*
+            *檢查當前 OBU 對象的最後一次記錄時間是否超過了
+            *允許的過期時間 OBU_OBJECT_EXPIRE_TIME。
+            *如果 OBU 對象已過期，則將 target 設置為 current，並將其從list中移除
+            */    
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]
@@ -435,6 +483,7 @@ void OBU_object_garbage_collection() //清掉太久的obu object
                 target->prev->next = target->next;
             }
             current = current->next;
+            // 如果 target 不為空，表示有 OBU 對象被移除，則釋放其佔用的空間
             if (target) {
                 free(target->private_space);
                 free(target);
@@ -471,7 +520,6 @@ void OBU_object_print()
     if (config.log_OBU_list == 0) {
         return;
     }
-
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     snprintf(log_content + strlen(log_content),
@@ -515,6 +563,6 @@ void OBU_object_print()
         }
         pthread_mutex_unlock(&mutex_special_OBU_list[i]);
     }
-    log_file_write(log_content);
+    log_file_write("%s", log_content);
     return;
 }

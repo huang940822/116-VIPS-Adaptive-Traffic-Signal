@@ -1,6 +1,8 @@
 #ifndef EVSP_TYPEDEFINE_H
 #define EVSP_TYPEDEFINE_H
 
+#include <stdbool.h>
+#include <sys/types.h>
 #include "typedefine.h"
 
 #define EVSP_PHASE_MAX 8
@@ -67,7 +69,7 @@ typedef struct EVSP_plan_table {
     uint8_t plan_subPhase_count;
     uint8_t plan_subPhase_max;
 
-    uint8_t *plan_id; // 因為可能很多個 plan 都是用同一個 plan table
+    uint8_t *plan_id;  // 因為可能很多個 plan 都是用同一個 plan table
     EVSP_plan_subPhase_t *plan_subPhase;
 } EVSP_plan_table_t;
 
@@ -85,7 +87,7 @@ typedef struct EVSP_plan_list_t {
 } EVSP_plan_list_t;
 
 typedef struct EVSP_host_OBU_obj {
-    char OBU_name[OBU_NAME_MAX_LEN + 1];
+    char OBU_name[ID_MAX_LEN + 1];
     uint8_t passenger;
     uint8_t target_phase;
     uint16_t distance;
@@ -93,6 +95,13 @@ typedef struct EVSP_host_OBU_obj {
     timer_t host_OBU_list_timer;
     struct EVSP_touching_area *area_ptr;
     struct EVSP_host_OBU_obj *next;
+    float lon;
+    float lat;
+    float speed;
+    int direction;
+    uint8_t touched_amount; // 觸碰點觸碰次數
+    int is_activate; // 已觸發狀態 (0: 未觸發; 1: pre-activate (進入觸發領域，觸碰次數未超過閾值); 2: 已觸發)
+    vehicle_type_t vehicle_type;
 } EVSP_host_OBU_obj_t;
 
 #endif

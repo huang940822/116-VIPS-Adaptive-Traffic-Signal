@@ -262,11 +262,11 @@ void conn_free_client(client_t *client)
 {
     // timestamp
     time_t rawtime;
-    struct tm *info;
+    struct tm localTime;
     char buf[20];
     time(&rawtime);
-    info = localtime(&rawtime);
-    strftime(buf, 20, "%Y-%m-%d %H:%M:%S", info);
+    localtime_r(&rawtime, &localTime);
+    strftime(buf, 20, "%Y-%m-%d %H:%M:%S", &localTime);
 
 
     if (client) {

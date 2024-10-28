@@ -1,0 +1,4 @@
+#do nothing
+spm_host_obu_packet_timeout 20 
+#ssm廣播頻率
+SPM_packet_transfer_speed 1

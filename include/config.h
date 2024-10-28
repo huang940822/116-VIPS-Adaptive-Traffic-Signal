@@ -1,7 +1,10 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include "typedefine.h"
 
 #define CONFIG_FILE FILE_PATH "config/config.txt"
@@ -27,8 +30,11 @@ typedef struct config_object {
     float signal_adjust_upper_bound_percentage;
     float signal_adjust_lower_bound_percentage;
     uint8_t traffic_compensation_method;
+    uint8_t traffic_compensation_baseline;
     uint8_t traffic_compensation_cycle_number;
     float phase_weight[PHASE_COUNT_MAX_NUM];
+
+    uint8_t cms_number;
 
     bool log_middleware_timer_event;
     bool log_application_register_event;
@@ -72,6 +78,7 @@ typedef enum config_err {
     CONFIG_INVALID_TRAFFIC_COMPENSATION_METHOD = -22,
     CONFIG_INVALID_PHASE_WEIGHT = -23,
     CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER = -24,
+    CONFIG_INVALID_CMS_NUMBER = -25,
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 
@@ -94,11 +101,26 @@ typedef enum vms_config_err {
     VMS_CONFIG_INVALID_OPEN_FILE = -99,
 } vms_config_err_t;
 
+typedef enum traffic_signal_controller_manufacturer {
+    CHENG_LONG = 0,
+    SHAN_ZHU = 1,
+    SHAN_ZHU_M = 2,
+} traffic_signal_controller_manufacturer_t;
+
+typedef enum compensation_baseline {
+    NOT_SET_BASELINE = 0,
+    ZERO_HOUR_ZERO_MIN_BASELINE = 1,
+    DAILY_SEGMENT_BASELINE = 2,
+} compensation_baseline_t;
+
 void trim_space(char *str);
 char *trim_comments(char *buf);
 char *read_line(char *read_buf, int read_buf_len, FILE *fp);
 
 bool read_uint8_t_from_config_line(char *config_line, uint8_t *val);
+bool read_uint32_t_from_config_line(char *config_line, uint32_t *val);
 // val 的長度使用 MAX_CONFIG_VARIABLE_LEN
 bool read_string_from_config_line(char *config_line, char *val);
-#endif
+bool read_string_arr_from_config_line(char *config_line, void *val, const char delim[]);
+
+#endif /* CONFIG_H */

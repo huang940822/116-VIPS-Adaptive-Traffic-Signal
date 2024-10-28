@@ -1,0 +1,179 @@
+# any line started with '#' '\n' ' ' will be ignored
+# 高發二路
+
+#file name roadname_config.txt
+
+# SPaT packet tranfer speed
+# default 10 Hz
+SPaT_packet_transfer_speed 1
+
+# MAP packet tranfer speed
+# default 1 Hz
+MAP_packet_transfer_speed 1
+MAP_dontSend2TC 1
+
+# 從北端開始順時針 先離開路口再進入路口 從內車道到外車道
+# 不一定需要人行道
+
+# LaneId 一個路口中唯一個 id, 從 0 開始, 最大到 255
+
+# LaneDirection egress 是離開, ingress 是進入, both 是雙向
+
+# ApproachId 從位於北端的路 (ApproachId 1~8) 開始順時針遞增 從 1 開始
+# 成龍第一二路是北與南, 第三四路是東與西
+# 山住則按照順序第一二三四路就是東南西北
+# 但可能會因為皆先的順序
+# 因為是用在 signalGroupId 上的對應要確定現場路口有沒有對應正確不然 SPaT 會有問題
+
+
+# LaneIdx表示內外車道
+
+# SharedWith 用同一個欄位 flag 之間用空白隔開 像是 2 4 5 這樣表示
+# TCROS 描述
+# SharedWith： 車道共用，本資料元素係用來描述車道中有不只一種類
+# 型旅運模式具有相同的路權，這些旅運模式是沿整條路徑 使用車
+# 道，而不僅是穿越路徑中的某一小段。本資料元素最典型的功用是
+# 以 V2X MAP 訊息告知使用者，同一車道空間中可能有其他旅運模
+# 式的交通流量。(BIT STRING, SIZE 10)。
+# -非機動車輛(2)，例如馬車
+# -機動車輛(3)
+# -公車(4)
+# -計程車(5)
+# -行人(6)
+# -自行車(7)
+# -軌道車輛(8)
+
+# LaneType 與 LaneAttributes
+# LaneType 有 vehicle, crosswalk, bikeLane, sidewalk, trackedVehicle
+# LaneAttributes 依照 LaneType 對應 TCROS 定義的選擇 flag, flag 之間用空白隔開
+# 像是 vehicle 的同時是 高架車道與高乘載車道 就會是 1 2 表示
+
+# 車道類型，包含機動車輛、行人穿越道、自行車道等不同車道之設置方式，例如高架、專用、或公務使用等等。
+# - vehicle (BIT STRING, SIZE 8)
+#  • 基於 SPaT 特定時間啟用之車道(0)，例如調撥車道
+#  • 高架車道(1)
+#  • 高乘載車道(2)
+#  • 公車專用道(3)
+#  • 計程車專用道(4)
+#  • 僅限公務使用車道(5)，例如緊急車輛
+#  • 特殊車種許可通行車道(7)，例如電動車
+# - crosswalk (BIT STRING, SIZE 16)
+#  • 基於 SPaT 特定時間啟用之車道(0)
+#  • 允許自行車通行的行人穿越道(1)，如果未顯示則禁止。
+#  • 立體行人穿越道(2)
+#  • 預設行人時相(3)
+#  • 行人按鈕(5)
+#  • 聲響行人號誌(6)
+#  • BIT 9-15 為保留值，預設為 0。
+# - bikeLane (BIT STRING, SIZE 16)
+#  • 基於 SPaT 特定時間啟用之車道(0)
+#  • 行人共用(1)
+#  • 立體車道(2)
+#  • 預設時制(3)
+#  • 實體分隔車道(5)
+#  • BIT 7-15 為保留值，預設為 0。
+# - sidewalk (BIT STRING, SIZE 16)
+#  • 基於 SPaT 特定時間啟用之車道(0)
+#  • 與自行車共用人行道(1)
+#  • 人行道(2)
+#  • 自行車須牽行人行道(3)
+#  • BIT 4-15 為保留值，預設為 0。
+# - trackedVehicle (BIT STRING, SIZE 16)
+#  • 基於 SPaT 特定時間啟用之車道(0)
+#  • 通勤鐵路(1)
+#  • 輕軌(2)
+#  • 重運量鐵路(3)
+#  • 其他軌道類型(4)
+#  • BIT 5-15 為保留值，預設為 0。
+
+# LaneIndex 從內車道開始遞增, 從 1 開始
+# NodeCount 表示後面有幾個 node
+# NodeLon NodeLat 車道的路線點, 從停止線開始往外畫, 經度 緯度 用空白分割
+
+# MAP資訊
+LaneSet_table_start
+# LaneId, LaneDirection, ApproachId, LaneIndex, SharedWith, LaneType, LaneAttributes, NodeCount, NodeLon NodeLat, ...
+0,  egress,  1, 1, 3 4 5 7, vehicle,  0,   2, 120.29077 22.92458, 120.290339 22.925588 # 北端
+1,  both,    1, 2, 6,       sidewalk, 2 3, 2, 120.29077 22.92458, 120.290339 22.925588
+2,  ingress, 1, 1, 3 4 5 7, vehicle,  0,   2, 120.29076 22.92457, 120.29037 22.9254
+3,  both,    1, 2, 6,       sidewalk, 2 3, 2, 120.29076 22.92457, 120.29037 22.9254
+
+4,  egress,  2, 1, 3 5,     vehicle,  0,   2, 120.290994 22.924479, 120.290994 22.924479
+5,  egress,  2, 2, 3 4 5,   vehicle,  0,   2, 120.2909701 22.9245516, 120.2912517 22.9246616 # 東端
+6,  egress,  2, 3, 3 4 5 7, vehicle,  0,   2, 120.2910190 22.9244230, 120.2910190 22.9244230
+7,  both,    2, 4, 6,       sidewalk, 2 3, 2, 120.2910190 22.9244230, 120.2910190 22.9244230
+8,  ingress, 2, 1, 3 5,     vehicle,  0,   2, 120.29097 22.92451, 120.29186 22.92488
+9,  ingress, 2, 2, 3 4 5,   vehicle,  0,   2, 120.29096 22.92454, 120.29184 22.92491
+10, ingress, 2, 3, 3 4 5 7, vehicle,  0,   2, 120.29095 22.92456, 120.29183 22.92493
+11, both,    2, 4, 6,       sidewalk, 2 3, 2, 120.29095 22.92456, 120.29183 22.92493
+
+12, egress,  3, 1, 3 4 5 7, vehicle,  0,   2, 120.290976 22.924322, 120.291141 22.9239873 # 南端
+13, both,    3, 2, 6,       sidewalk, 2 3, 2, 120.290976 22.924322, 120.291141 22.9239873
+14, ingress, 3, 1, 3 4 5 7, vehicle,  0,   2, 120.29097 22.92431, 120.29138 22.92349
+15, both,    3, 2, 6,       sidewalk, 2 3, 2, 120.29097 22.92431, 120.29138 22.92349
+
+16, egress,  4, 1, 3 5,     vehicle,  0,   2, 120.290718 22.9244680, 120.2907180 22.924468 # 西端
+17, egress,  4, 2, 3 4 5,   vehicle,  0,   2, 120.2907290 22.9244450, 120.2907290 22.9244450
+18, egress,  4, 3, 3 4 5 7, vehicle,  0,   2, 120.2907420 22.9244180, 120.2907420 22.9244180
+19, both,    4, 4, 6,       sidewalk, 2 3, 2, 120.2907420 22.9244180, 120.2907420 22.9244180
+20, ingress, 4, 1, 3 5,     vehicle,  0,   2, 120.29076 22.92437, 120.28987 22.92401
+21, ingress, 4, 2, 3 4 5,   vehicle,  0,   2, 120.29077 22.92434, 120.28988 22.92398
+22, ingress, 4, 3, 3 4 5 7, vehicle,  0,   2, 120.29078 22.92432, 120.28989 22.92396
+23, both,    4, 4, 6,       sidewalk, 2 3, 2, 120.29078 22.92432, 120.28989 22.92396
+LaneSet_table_end
+
+# LaneID 對應 LaneSet_table 的 LaneID, 只會有 ingress 的 LaneID
+# 後面接著 左轉 (LeftConnectingLane), 直走 (StraightConnectingLane), 右轉 (RightConnectingLane) 的 LaneIDSet
+# 三個都會包含一個 LaneIDCount 後面接著 LaneID 陣列
+# 表示這條車道可以通往哪裡
+# 像是 LaneID 2 的 StraightConnectingLane 12 就代表 1 號車道可以直走通往第 12 號車道
+# 
+
+LaneSet_connectsTo_table_start
+# LaneID, LeftConnectingLane, ..., StraightConnectingLane, ..., RightConnectingLane, ...
+1,  0,             1, 15, 0 # 行人燈
+2,  3, 4, 5, 6,    1, 12, 3, 16, 17, 18
+3,  0,             1, 13, 0 # 行人燈
+
+7,  0,             1, 23, 0 # 行人燈
+8,  1, 12,         1, 16, 0
+9,  0,             1, 17, 0
+10, 0,             1, 18, 1, 0
+11, 0,             1, 19, 0 # 行人燈
+
+13, 0,             1, 3,  0 # 行人燈
+14, 3, 16, 17, 18, 1, 0,  3, 4, 5, 6
+15, 0,             1, 1,  0 # 行人燈
+
+19, 0,             1, 11, 0 # 行人燈
+20, 1, 0,          1, 4,  0
+21, 0,             1, 5,  0
+22, 0,             1, 6,  1, 12
+23, 0,             1, 7,  0 # 行人燈
+LaneSet_connectsTo_table_end
+
+
+# 統計路口實際上共有幾種綠燈 因為每一個綠燈為一個 SingalGroup
+# 因為可能時制上有直綠或右綠但實際上沒接
+# SignalGroupID 0 ~ 255
+# ApproachId 號控器上的第幾路 對應 LaneSet_table
+# SignalGreenType 
+# 0 圓頭綠  1 箭頭左  2 箭頭直  3 箭頭右  4 行人綠
+# SignalID 是在 3.0 內的 5F13 的 SignalCount 哪一個方向的燈的對應，正常來說 ApproachId 與 SignalID 是一樣的，
+#          但有時候因為現場接線問題所以可能會有對應的問題，像是把原本東端路的線同時接給了西端與東北端，
+#          原本是一對一的東端只會接給東端
+# MapGreenType 是在 3.0 內的 5F13 的 SignalStatus 哪一種燈號的對應，正常 SignalGreenType 與 MapGreenType 是一樣的，
+#          但有時候因為現場接線問題可能不同的燈號線接到不對的燈號上，像是把右轉箭頭率接到圓頭綠
+
+SignalGroupID_table_start
+# SignalGroupID, ApproachId, SignalGreenType, SignalID, MapGreenType
+1, 1, 0, 1, 0
+2, 2, 0, 2, 0
+3, 3, 0, 3, 0
+4, 4, 0, 4, 0
+# 行人燈
+5, 1, 4, 1, 4
+6, 2, 4, 2, 4
+7, 3, 4, 3, 4
+8, 4, 4, 4, 4
+SignalGroupID_table_end

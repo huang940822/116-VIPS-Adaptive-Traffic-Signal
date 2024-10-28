@@ -19,12 +19,10 @@
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
-uint8_t flag_pretime = 0;
 uint8_t flag_countdown_on = 0;
 uint8_t flag_countdown_off = 0;
 uint8_t flag_query_firm_ver = 0;
 uint8_t flag_switch2nextStep = 0;
-uint8_t flag_PhaseOrder = 0;
 
 #define signal_packet_init       \
     packet->DLE_1 = DLE_VAL;     \
@@ -65,6 +63,7 @@ uint8_t tsc_dynamic()
     return ret;
 }
 
+// 下 5F10 啟動自動控制
 uint8_t tsc_pretime()
 {
     traffic_signal_packet_t *packet;
@@ -134,7 +133,9 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
     }
     packet->INFO[4] = effect_time;
 
-    uint8_t ret = TC_packet_tx(packet, "signal packet tx: EXTEND");
+    char describe[40] = {0};
+    snprintf(describe, sizeof(describe), "signal packet tx: EXTEND %d", effect_time);
+    uint8_t ret = TC_packet_tx(packet, describe);
     if (packet != NULL) {
         free(packet);
     }
@@ -277,7 +278,7 @@ uint8_t tsc_5F45()
     return ret;
 }
 
-// 查詢號誌控制器之時向排列
+// 查詢號誌控制器之時向排列, response 5FC3
 uint8_t tsc_5F43()
 {
     traffic_signal_packet_t *packet;
@@ -299,7 +300,7 @@ uint8_t tsc_5F43()
     return ret;
 }
 
-// query date and time
+// query date and time, response 0FC2
 uint8_t tsc_0F42()
 {
     traffic_signal_packet_t *packet;
@@ -320,7 +321,7 @@ uint8_t tsc_0F42()
     return ret;
 }
 
-// query plan of all day
+// query plan of all day, response 5FC6
 uint8_t tsc_5F46(uint8_t WeekDay) 
 {
     traffic_signal_packet_t *packet;
@@ -409,7 +410,7 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
     return ret;
 }
 
-// query version of tsc
+// query version of tsc 0F43
 uint8_t tsc_query_firmware_version(void)
 {
     traffic_signal_packet_t *packet;

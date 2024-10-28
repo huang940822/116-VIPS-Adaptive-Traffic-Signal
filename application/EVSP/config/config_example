@@ -1,12 +1,22 @@
 # any line started with '#' '\n' ' ' will be ignored
-
+# RSU沒接收到OBU packet過時時間是20s packet_timeout
+# RSU接收到OBU packet，卻過時 120s list_timeout
 evsp_host_obu_packet_timeout 20
 evsp_host_obu_list_timeout 120
 min_green 5
 max_green 120
+
+# 位移有超過閥值 valid_record_distance 才會紀錄下來 or 第一筆資料
 valid_record_distance 5
+
+# 觸發冷卻時間 (同台EVSP 600秒內不會重複觸發同一個觸碰點)
+cooling_time 600
+# 多次觸碰閾值 (觸碰點偵測次數超過3次才被判定為觸發)
+touching_threshold 1
 # default / table
 # touching_area_config_type is defined for the touching area config format
 # default is original format
 # table is the format like touching_area_example
 touching_area_config_type table
+
+#以上config可以到照熒公車號誌平台查詢或上傳

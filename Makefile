@@ -1,11 +1,11 @@
 CC = gcc
-CFLAGS = -g
+CFLAGS = -g 
 # WARN_OPT = -Wall
 WARN_OPT =
 LIB_PATH := $(realpath j2735lib)
 LDFLAGS = -g -L$(LIB_PATH) 
 LIB_FILES := $(wildcard $(LIB_PATH)/*.so)
-LIBS =  -lus_v2xcast -pthread -lrt -lm -lzmq
+LIBS =  -lus_v2xcast -pthread -lrt -lm -lzmq -lcrypto
 
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects

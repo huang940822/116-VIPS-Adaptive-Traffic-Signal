@@ -17,6 +17,7 @@
 #include "TSP_typedefine.h"
 #include "application_registration.h"
 #include "byte_processing.h"
+#include "cms.h"
 #include "config.h"
 #include "error_status.h"
 #include "gps_information.h"
@@ -31,7 +32,9 @@
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
+extern uint32_t activate_amount;
 pthread_mutex_t file_writer = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_active_TSP = PTHREAD_MUTEX_INITIALIZER;
 
 app_obj_t TSP = {
     .name = "TSP",
@@ -281,7 +284,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         log_file_write(log_content);
     }
 
-    char host_OBU_name[OBU_NAME_MAX_LEN + 1];
+    char host_OBU_name[ID_MAX_LEN + 1];
     memset(host_OBU_name, 0, sizeof(host_OBU_name));
     uint8_t target_phase;
     uint16_t frequency;
@@ -359,6 +362,10 @@ int TSP_on_cloud_packet_rx(void *arg)
                  "\ninsert host OBU (%s)", host_OBU_name);
         /* add to host OBU list */
         TSP_host_OBU_obj_insert(host_OBU_name, target_phase);
+        pthread_mutex_lock(&mutex_active_TSP);
+        activate_amount++;
+        pthread_mutex_unlock(&mutex_active_TSP); 
+        log_snprintf(log_content,"active buses and EVSP in activate area: %d\n",activate_amount);
         TSP_host_OBU_obj_print();
         break;
     case 5:  // for host obu delete?
@@ -370,28 +377,10 @@ int TSP_on_cloud_packet_rx(void *arg)
                  "\ndelete host OBU (%s)", host_OBU_name);
         TSP_host_OBU_obj_delete(host_OBU_name);
         TSP_host_OBU_obj_print();
-        for (int i = 0; i < SUBPHASEID_NUM; i++) {
-            // printf("compensation_buffer[%d]:%d\r\n",i,compensation_buffer[i]);
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "compensation_buffer[%d]:%d\r\n", i,
-                     compensation_buffer[i]);
-        }
         log_file_write(log_content);
-        // 進行補償
-        switch (config.traffic_compensation_method) {
-        case 1:
-            traffic_compensation_method1(config.traffic_compensation_cycle_number);
-            break;
-        case 2:
-            traffic_compensation_method2(config.traffic_compensation_cycle_number, config.phase_weight);
-            break;
-        case 3:
-            traffic_compensation_method3(config.traffic_compensation_cycle_number);
-            break;
-        default:
-            break;
-        }
+
+        command_buf_delete_OBU(host_OBU_name);  // 刪除在 command buf 還沒下下去的指令
+        command_buf_resume_control(TSP.id);     // 進行 resume 後補償
         break;
     case 6:  // disable tsp's command to tc machine
     {
@@ -620,28 +609,43 @@ int TSP_on_cloud_packet_rx(void *arg)
         read_uint8_t(&Program_ID, &read_buf);
         read_char(Program_Name, &read_buf, PROGRAM_NAME_LEN);
         trim_space(Program_Name);
-        int res;
-        // 檢查檔案存不存在資料夾中
-        res = VMS_search_program(Program_Name);
-
-        switch (res) {
-        case -1: {
-            log_file_write_fatal_error("VMS_search_program: open directory failed");
-        } break;
-        case 0: {
-            if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
-                log_file_write("vms program update thread activate.");
-            } else {  // 正在上傳
-                log_file_write_fatal_error("vms program update is process.");
+        if (config.cms_number != 0) {
+            int ret = CMS_check_img(Program_Name);
+            if (ret < 0) {
+                log_file_write_fatal_error("CMS_check_img(): open directory failed %s", Program_Name);
+            } else {
+                log_file_write("CMS_check_img(): find %s/%s success.", CMS_pic_path, Program_Name);
+            }
+            ret = CMS_update_activate(Program_ID, Program_Name);
+            if (ret < 0) {
+                log_file_write_fatal_error("cms program update is process.");
+            } else {
+                log_file_write("cms program update thread activate.");
             }
             ack_status = 2;
-        } break;
-        case 1: {
-            log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
-            ack_status = res;
-        } break;
-        }
+        } else {
+            int res;
+            // 檢查檔案存不存在資料夾中
+            res = VMS_search_program(Program_Name);
 
+            switch (res) {
+            case -1: {
+                log_file_write_fatal_error("VMS_search_program: open directory failed");
+            } break;
+            case 0: {
+                if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
+                    log_file_write("vms program update thread activate.");
+                } else {  // 正在上傳
+                    log_file_write_fatal_error("vms program update is process.");
+                }
+                ack_status = 2;
+            } break;
+            case 1: {
+                log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
+                ack_status = res;
+            } break;
+            }
+        }
     } break;
     case 10:  // 雲端更改 VMS 播放，設計成只有封包內容都正常才ACK
     {

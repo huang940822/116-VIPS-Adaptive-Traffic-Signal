@@ -7,7 +7,6 @@
 
 #define SEM_SIGNAL_STATUS_TIMEOUT 999
 
-
 extern sem_t sem_signal_status;
 
 void packet_5FCC(traffic_signal_packet_t *packet);
@@ -37,9 +36,6 @@ uint8_t get_PhaseOrder();
 uint16_t get_remaining_time(uint8_t phase, uint8_t step, uint16_t second);
 uint8_t get_SignalStatus(uint8_t SubPhaseCount_index, uint8_t SignalCount_index);
 
-int16_t get_total_compensation_second();
-void get_compensation_buffer(int16_t *);
-
 void set_control_status(uint8_t control_status);
 uint16_t get_original_tc_health_status();
 
@@ -52,4 +48,4 @@ uint8_t get_prev_SubPhaseID();
 
 void sem_timedwait_millsecs(sem_t *sem, long msecs);
 
-#endif
+#endif  /* TRAFFIC_SIGNAL_STATUS_UPDATING_H */
