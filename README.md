@@ -7,6 +7,7 @@ sudo apt-get update
 sudo apt-get upgrade
 sudo apt install make
 sudo apt install gcc
+sudo apt install libssl-dev
 ```
 2. Access Serial Port
 ```bash=
@@ -57,7 +58,7 @@ make
     * *config* file for TSP application is placed in `RSU_Controller_master/application/TSP/config` directory   
     * *Supermatrix* file is placed in `RSU_Controller_master/application/TSP/config/RSU_supermatrix` directory
 
-## Execute at systemd
+## Execute at systemd (command also included in install.sh)
 * There are three service in RSU_Controller_master as folloe
     1. *middleware.service*
     2. *capacity_check_service*
