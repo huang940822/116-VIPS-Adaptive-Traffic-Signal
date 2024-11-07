@@ -91,7 +91,10 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
     }
     
     pthread_mutex_lock(&mutex_activate_amount);
-    activate_amount = activate_amount - 1;
+    if (activate_amount>0) {
+        activate_amount = activate_amount - 1;
+        log_file_write("active buses and EVSPs in list, %d\n",activate_amount);
+    }    
     if (activate_amount==0 && ped_countdown==0) {
         log_file_write("no cars in activate area, calls countdown enable\n");
     }       
