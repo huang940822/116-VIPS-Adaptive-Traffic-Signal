@@ -35,7 +35,7 @@ Finally can see the three system service.
 ```
 systemctl status capacity_check.service
 systemctl status network_check.service
-systemctl statys gnss_status_check.service
+systemctl status gnss_status_check.service
 systemctl status middleware.service
 ```
 
