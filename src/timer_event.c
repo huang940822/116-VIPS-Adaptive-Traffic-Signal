@@ -53,14 +53,29 @@ void timer_event_handler(__sigval_t value)
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
 
-        temp_ack_seq = tsc_5F48();  // 查詢目前時制計劃內容
-        // WAIT_ACK_LOOP
-        temp_ack_seq = tsc_5F4C();  // 查詢號控器目前時相及步階
-        // WAIT_ACK_LOOP
-        temp_ack_seq = tsc_5F45();  // 查詢時制計劃之設定內容
-        // WAIT_ACK_LOOP
-        temp_ack_seq = tsc_5F44();
-        // WAIT_ACK_LOOP
+        /**
+         * Quick fix for frequent TC info request
+         * TODO: 2024.11.12 Shao-Hua Wang
+         * Well planning for TC info request, maybe a new timer?
+         */
+        static int _5fcc_count = 0, _5fxx_count = 0;
+        // 5FCC 每 (0+2) * 0.5 秒查詢一次
+        if (_5fcc_count++ > 0) {
+            temp_ack_seq = tsc_5F4C();  // 查詢號控器目前時相及步階
+            // WAIT_ACK_LOOP
+            _5fcc_count = 0;
+        }
+        // 5FXX 每 (8+2) * 0.5 秒查詢一次
+        if (_5fxx_count++ > 8) {
+            temp_ack_seq = tsc_5F48();  // 查詢目前時制計劃內容
+            // WAIT_ACK_LOOP
+            temp_ack_seq = tsc_5F45();  // 查詢時制計劃之設定內容
+            // WAIT_ACK_LOOP
+            temp_ack_seq = tsc_5F44();
+            // WAIT_ACK_LOOP
+            _5fxx_count = 0;
+        }
+        
         command_buf_polling();
 
         if (flag_countdown_on == true) {
