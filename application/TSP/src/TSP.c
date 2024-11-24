@@ -362,10 +362,17 @@ int TSP_on_cloud_packet_rx(void *arg)
                  "\ninsert host OBU (%s)", host_OBU_name);
         /* add to host OBU list */
         TSP_host_OBU_obj_insert(host_OBU_name, target_phase);
-        pthread_mutex_lock(&mutex_active_TSP);
-        activate_amount++;
-        pthread_mutex_unlock(&mutex_active_TSP); 
-        log_snprintf(log_content,"active buses and EVSP in activate area: %d\n",activate_amount);
+        /**   
+         * record active buses if TSP service in activated (20241120新增)
+         * todo: 2024.11.20 Osborn Lee
+         * check if OBU if already inserted before increasing activate amount
+         */
+        if (TSP.dontSend2TC==0) {
+            pthread_mutex_lock(&mutex_active_TSP);
+            activate_amount++;
+            pthread_mutex_unlock(&mutex_active_TSP); 
+            log_snprintf(log_content,"active buses and EVSP in activate area: %d\n",activate_amount);
+        }        
         TSP_host_OBU_obj_print();
         break;
     case 5:  // for host obu delete?
