@@ -44,6 +44,7 @@ config_object_t config = {
     .log_OBU_packet_rx = 1,
     .log_OBU_packet_tx = 1,
     .log_OBU_list = 1,
+    .ped_countdown_send = 1,
 };
 
 // vms config
@@ -730,6 +731,24 @@ int config_init()
                 }
             } else {
                 return CONFIG_INVALID_LOG_OBU_LIST;
+            }
+        }
+        // ped_countdown_activate
+        if (strstr(buf, "PED_COUNTDOWN_SEND ")) {
+            if (read_string_from_config_line(buf, string_val)) {
+                if (strcmp(string_val, "yes") == 0) {
+                    config.ped_countdown_send = 1;
+                    log_file_write("config: .ped_countdown_send = %d", config.ped_countdown_send);
+                    continue;
+                } else if (strcmp(string_val, "no") == 0) {
+                    config.ped_countdown_send = 0;
+                    log_file_write("config: .ped_countdown_send = %d", config.ped_countdown_send);
+                    continue;
+                } else {
+                    return CONFIG_INVALID_PED_COUNTDOWN_SEND;
+                }
+            } else {
+                return CONFIG_INVALID_PED_COUNTDOWN_SEND;
             }
         }
     }

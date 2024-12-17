@@ -697,9 +697,13 @@ static void *CMS_handler()
             }
 
         } while (recv_flag < 2 && recv_flag <= 0);
+        
         if (recv_flag == -1) {
             clear_vms_error();
-        } else {
+        } 
+        else {
+            //20241206 Osborn 新增error logging for CMS接收逾時
+            log_file_write("recv_flag is %d, CMS receive suffered multiple timeouts\n", recv_flag);
             set_vms_error();
         }
         sleep(1);

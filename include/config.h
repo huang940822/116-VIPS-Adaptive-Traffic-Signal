@@ -47,6 +47,7 @@ typedef struct config_object {
     bool log_OBU_packet_rx;
     bool log_OBU_packet_tx;
     bool log_OBU_list;
+    bool ped_countdown_send;
 } config_object_t;
 
 extern config_object_t config;
@@ -79,6 +80,7 @@ typedef enum config_err {
     CONFIG_INVALID_PHASE_WEIGHT = -23,
     CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER = -24,
     CONFIG_INVALID_CMS_NUMBER = -25,
+    CONFIG_INVALID_PED_COUNTDOWN_SEND = -26,
     CONFIG_INVALID_OPEN_FILE = -99,
 } config_err_t;
 

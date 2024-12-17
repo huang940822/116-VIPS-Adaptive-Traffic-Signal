@@ -379,13 +379,13 @@ int TSP_on_cloud_packet_rx(void *arg)
         // read host OBU
         read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         trim_space(host_OBU_name);
+        
         snprintf(log_content + strlen(log_content),
                  LOG_CONTENT_LEN - strlen(log_content),
                  "\ndelete host OBU (%s)", host_OBU_name);
         TSP_host_OBU_obj_delete(host_OBU_name);
         TSP_host_OBU_obj_print();
         log_file_write(log_content);
-
         command_buf_delete_OBU(host_OBU_name);  // 刪除在 command buf 還沒下下去的指令
         command_buf_resume_control(TSP.id);     // 進行 resume 後補償
         break;
@@ -428,13 +428,18 @@ int TSP_on_cloud_packet_rx(void *arg)
         if (enableOrdisable == 2) {
             // todo: write a api to let app get the config in middleware but let
             // the variable all exposed to app?
-            // tsc_countdown_on(config.signal_controller_manufacturer);
+            // tsc_countdown_on(config.signal_controller_manufacturer);            
             flag_countdown_on = true;
             log_file_write("countdown is enable\r\n");
         } else if (enableOrdisable == 1) {  // disable
             // tsc_countdown_off(config.signal_controller_manufacturer);
-            flag_countdown_off = true;
-            log_file_write("countdown is disable\r\n");
+            if (config.ped_countdown_send!=0) {
+                flag_countdown_off = true;
+                log_file_write("countdown is disable\r\n");
+            }
+            else {
+                log_file_write("received flag but countdown off requested not to be sent\r\n");
+            }
         } else {
             printf("Illegal command of tsc_countdown\r\n");
         }

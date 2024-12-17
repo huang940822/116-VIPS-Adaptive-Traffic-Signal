@@ -89,7 +89,7 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
             }
         }
     }
-    
+
     pthread_mutex_lock(&mutex_activate_amount);
     if (activate_amount>0) {
         activate_amount = activate_amount - 1;
@@ -101,8 +101,9 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
     pthread_mutex_unlock(&mutex_activate_amount);
 
     pthread_mutex_unlock(&mutex_command_buf);
+
     if (has_clean) {
-        log_file_write("%-15s has been cleaned in command buffer.", host_OBU_name);
+        log_file_write("%-15s has been cleaned in command buffer.", host_OBU_name);        
     }
 }
 
@@ -204,12 +205,17 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
         temp_ack_seq = tsc_dynamic();
         WAIT_ACK_LOOP        
         if (ped_countdown==1 && activate_amount>0) {
-            temp_ack_seq =
-                tsc_countdown_off(config.signal_controller_manufacturer);
-            WAIT_ACK_LOOP
-            ped_countdown=0;
-            log_file_write("turn off pedestrian countdown\n");
-        }        
+            if (config.ped_countdown_send!=0) {
+                temp_ack_seq =
+                    tsc_countdown_off(config.signal_controller_manufacturer);
+                WAIT_ACK_LOOP
+                ped_countdown=0;
+                log_file_write("turn off pedestrian countdown\n");
+            }
+            else {
+                log_file_write("countdown off requested not to be sent\n");
+            }
+        }
         while (time < 0) {
             // 不能下0 否則step會立刻結束
             temp_ack_seq = tsc_extend(current_SubPhaseID, 1, 1);  // 每次就是pretime-4去扣
@@ -229,14 +235,20 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
 
         time = command_obj->effect_time;
         temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP        
+        WAIT_ACK_LOOP
         if (ped_countdown==1 && activate_amount>0) {
-            temp_ack_seq =
-                tsc_countdown_off(config.signal_controller_manufacturer);
-            WAIT_ACK_LOOP
-            ped_countdown=0;
-            log_file_write("turn off pedestrian countdown\n");
-        }        
+            if (config.ped_countdown_send!=0) {
+                temp_ack_seq =
+                    tsc_countdown_off(config.signal_controller_manufacturer);
+                WAIT_ACK_LOOP
+                ped_countdown=0;
+                log_file_write("turn off pedestrian countdown\n");
+            }
+            else {
+                ped_countdown=0;
+                log_file_write("countdown off requested not to be sent\n");
+            }
+        }       
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP
         break;
@@ -248,13 +260,19 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
 
         time = command_obj->effect_time;
         temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP        
+        WAIT_ACK_LOOP
         if (ped_countdown==1 && activate_amount>0) {
-            temp_ack_seq =
-                tsc_countdown_off(config.signal_controller_manufacturer);
-            WAIT_ACK_LOOP
-            ped_countdown=0;
-            log_file_write("turn off pedestrian countdown\n");
+            if (config.ped_countdown_send!=0) {
+                temp_ack_seq =
+                    tsc_countdown_off(config.signal_controller_manufacturer);
+                WAIT_ACK_LOOP
+                ped_countdown=0;
+                log_file_write("turn off pedestrian countdown\n");
+            }
+            else {
+                ped_countdown=0;
+                log_file_write("countdown off requested not to be sent\n");
+            }
         }
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP

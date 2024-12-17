@@ -78,19 +78,23 @@ void timer_event_handler(__sigval_t value)
         
         command_buf_polling();
 
+        
         if (flag_countdown_on == true) {
             temp_ack_seq =
                 tsc_countdown_on(config.signal_controller_manufacturer);
             WAIT_ACK_LOOP
-            flag_countdown_on = false;
+            flag_countdown_on = false;            
+            log_file_write("countdown is enable\n");
         }
-
+                
         if (flag_countdown_off == true) {
             temp_ack_seq =
                 tsc_countdown_off(config.signal_controller_manufacturer);
             WAIT_ACK_LOOP
             flag_countdown_off = false;
+            log_file_write("countdown is disable\n");
         }
+        
         if (flag_query_firm_ver == true) {
             temp_ack_seq = tsc_query_firmware_version();
             WAIT_ACK_LOOP
