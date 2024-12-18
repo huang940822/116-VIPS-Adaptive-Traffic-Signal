@@ -25,8 +25,9 @@ typedef struct Obstacle {
 
 typedef struct ObstacleList {
     Obstacle *tab;
-    int32_t dirct;
+    int32_t dirct; // camera_num
     int32_t count;
+    int32_t device_num;
 } ObstacleList;
 
 #endif

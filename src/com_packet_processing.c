@@ -552,6 +552,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     int32_t hour, min;
     float second;
 
+    read_uint32_t(&obstaclelist->device_num, &read_buf);
     read_uint32_t(&obstaclelist->dirct, &read_buf);
     read_uint32_t(&hour, &read_buf);
     read_uint32_t(&min, &read_buf);
