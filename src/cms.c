@@ -23,7 +23,6 @@
 #include "vector.h"
 
 #define BUFFER_SIZE 1024
-#define TIMEOUT_SEC 1
 
 const char CMS_header[] = {'m', '5', 'm', 'm', '4', 'm'};
 const unsigned char CMS_key[16] = {'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K', 'E', 'Y', 'K'};
@@ -525,20 +524,24 @@ int CMS_recv_timeout(char *buffer, int buffer_len, struct sockaddr *client_addr,
     FD_SET(cms_sockfd, &readfds);
 
     struct timeval timeout;
-    timeout.tv_sec = TIMEOUT_SEC;
+    timeout.tv_sec = CMS_receive_timeout;
+    printf(CMS_receive_timeout);
     timeout.tv_usec = 0;
 
     int activity = select(cms_sockfd + 1, &readfds, NULL, NULL, &timeout);
-
     if (activity == -1) {
         log_file_write_fatal_error("cms select");
         exit(EXIT_FAILURE);
     } else if (activity == 0) {
+        log_file_write("currently there are no CMS file descriptors available, returning\n");
         return ret;
     }
-
+    
     if (FD_ISSET(cms_sockfd, &readfds)) {
-        ret = recvfrom(cms_sockfd, buffer, buffer_len, MSG_WAITALL,
+        //ret = recvfrom(cms_sockfd, buffer, buffer_len, MSG_WAITALL,
+        //               (struct sockaddr *) client_addr, client_addr_len);
+        // MSG_WAITALL等到緩衝區填滿才回傳
+        ret = recvfrom(cms_sockfd, buffer, buffer_len, 0,
                        (struct sockaddr *) client_addr, client_addr_len);
     }
     return ret;
@@ -594,17 +597,21 @@ static void *CMS_handler()
             exit(EXIT_FAILURE);
         }
         int recv_flag = 0;
+        //int cms_amount = 0;
         memset(recvflags, 0, sizeof(recvflags));
         do {
+            //log_file_write("check client address as %d\n",client_addr.sin_addr.s_addr);
             buffer_len = CMS_recv_timeout(buffer, BUFFER_SIZE, (struct sockaddr *) &client_addr, &client_addr_len);
-            printf("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
-
+            //printf("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
+            log_file_write("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
             if (buffer_len < 0) {
-                recv_flag++;
+                recv_flag = -2;
             } else {
+                //cms_amount++;
                 recv_flag = -1;
+                // 20241224: 修改recvflags陣列編號，可重新正常讀CMS面板編號
                 if (buffer_len > 4 && buffer[0] == buffer_len && buffer[3] <= config.cms_number) {
-                    recvflags[buffer[3]] = 1;
+                    recvflags[buffer[3]-1] = 1;
                     CMS_update_client_addr(buffer[3], &client_addr);
                 }
                 int cmd = buffer[1];
@@ -619,7 +626,7 @@ static void *CMS_handler()
                         buffer[5]);
 
                 switch (cmd) {
-                case 1: {
+                case 1: { // upload picture
                     if (status == 1) {
                         log_file_write_fatal_error("cms error cmsID %d imgID %d No pic.", cmsID, imgID);
                         set_vms_error();
@@ -634,7 +641,7 @@ static void *CMS_handler()
                         }
                     }
                 } break;
-                case 2: {
+                case 2: { // 
                     if (status == 1) {
                         log_file_write_fatal_error("cms error cmsID %d imgID %d No pic.", cmsID, imgID);
                         set_vms_error();
@@ -695,8 +702,14 @@ static void *CMS_handler()
                 client_addr.sin_addr.s_addr == ipc_addr.sin_addr.s_addr) {
                 continue;
             }
+            /*
+            if (cms_amount==config.cms_number) {
+                recv_flag = -1;
+            }
+            */
+            log_file_write("recv_flag is %d\n",recv_flag);
 
-        } while (recv_flag < 2 && recv_flag <= 0);
+        } while (recv_flag == 0);
         
         if (recv_flag == -1) {
             clear_vms_error();
@@ -716,7 +729,7 @@ void CMS_handler_init()
     if (config.cms_number == 0) //沒有配置CMS直接return
         return;
 
-    cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    //cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     struct sockaddr_in addr;
     cms_sockfd = socket(AF_INET, SOCK_DGRAM, 0); //創建UDP socket
     if (cms_sockfd < 0) {
