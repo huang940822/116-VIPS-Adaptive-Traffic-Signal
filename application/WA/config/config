@@ -1,0 +1,8 @@
+
+INTERSECTION_COUNT 3
+
+intersection_table
+0, 22.995765 120.237002 # North
+1, 22.995647 120.237125 # East
+2, 22.995476 120.237035 # South
+intersection_table_end

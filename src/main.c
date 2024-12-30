@@ -222,14 +222,14 @@ int main()
     }
 
     /* create external-application-proxy main thread */
-    pthread_t external_app_proxy_thread;
-    // UNIX domain socket和 epoll 的綜合應用，適合用於需要高效管理多個客戶端連接和事件的應用場景
-    ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_main_handler, NULL);
-    if (ret != 0) {
-        log_file_write_fatal_error("error creating external_app_proxy_main_handler: %d", ret);
-        perror("main: pthread_create");
-        exit(errno);
-    }
+    // pthread_t external_app_proxy_thread;
+    // // UNIX domain socket和 epoll 的綜合應用，適合用於需要高效管理多個客戶端連接和事件的應用場景
+    // ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_main_handler, NULL);
+    // if (ret != 0) {
+    //     log_file_write_fatal_error("error creating external_app_proxy_main_handler: %d", ret);
+    //     perror("main: pthread_create");
+    //     exit(errno);
+    // }
     /* if you want to turn off the operation of external_app_proxy,
         please comment the code of thread-creating above ( external_app_proxy_thread ) */
 
