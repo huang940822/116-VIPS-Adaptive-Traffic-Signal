@@ -703,7 +703,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 //     }
 //     return 0;
 // }
-//確認是否接到OBU方heartbeat
+// 確認是否接到OBU方heartbeat
 int Is_Heartbeat(msg_obj_t *msg)
 {
     //接收OBU封包
