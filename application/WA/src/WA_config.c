@@ -53,6 +53,19 @@ int WA_config_init(){
         if (read_buf[0] == '#' || read_buf[0] == '\n' || read_buf[0] == ' '){
             continue;
         }
+        //WARNING_FREQ
+        if (strstr(read_buf, "WA_WARNING_FREQ ")) {
+            if (read_int_from_config_line(read_buf, &val)) {
+                if (val >= 0) {
+                    WA_config.warning_freq = val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_WARNING_FREQ;
+                }
+            } else {
+                return CONFIG_INVALID_WA_WARNING_FREQ;
+            }
+        }
         //INTERSECTION_COUNT
         if (strstr(read_buf, "INTERSECTION_COUNT")) {
             if (read_int_from_config_line(read_buf, &val)){
@@ -98,6 +111,7 @@ int WA_config_init(){
                 WA_config.traffic_light.tab[direction].Traffic_light_lon = lon;
                 
             }
+            log_file_write("Warning Frequecy: %d", WA_config.warning_freq);
             for (int i = 0; i < WA_config.traffic_light.intersection_count; i++){
                     log_file_write("direction:%hhd, lat:%lf, lon:%lf\n", i, 
                                                                         WA_config.traffic_light.tab[i].Traffic_light_lat, 

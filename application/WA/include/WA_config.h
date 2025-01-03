@@ -11,8 +11,9 @@ int WA_config_init();
 
 typedef enum WA_config_err {
     WA_CONFIG_ACCEPT = 0,
-    CONFIG_INVALID_WA_PACKET = -1,
-    CONFIF_INVALID_WA_OPEN_FILE = -2
+    CONFIG_INVALID_WA_WARNING_FREQ = -1,
+    CONFIG_INVALID_WA_PACKET = -2,
+    CONFIF_INVALID_WA_OPEN_FILE = -3
 } WA_config_err_t;
 typedef struct traffic_light_lat_lon {
     double Traffic_light_lat;
@@ -24,6 +25,7 @@ typedef struct traffic_light_set{
 } traffic_light_set_t;
 typedef struct WA_config_object {
     traffic_light_set_t traffic_light;
+    int warning_freq;
 } WA_config_object_t;
 
 extern WA_config_object_t WA_config;
