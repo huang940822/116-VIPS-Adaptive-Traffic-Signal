@@ -28,7 +28,7 @@
 
 CCI Leading_Vehicles[4]; // Leading Vehicles for four directions NSWE
 timer_t WA_Agent_timer_id;
-pthread_mutex_t mutex_state = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_LV = PTHREAD_MUTEX_INITIALIZER;
 
 void initializationLeadingVehicles(CCI vehicles[], int size){
     for (int i = 0; i < size; i++){
@@ -90,9 +90,9 @@ int WA_on_camera_packet_rx(void *arg){ /* [TODO] 改名稱 */
             }
         }
     }
-    pthread_mutex_lock(&mutex_state);
+    pthread_mutex_lock(&mutex_LV);
     Leading_Vehicles[direct] = leading_vehicle;
-    pthread_mutex_unlock(&mutex_state);
+    pthread_mutex_unlock(&mutex_LV);
 
     snprintf(log_content, LOG_CONTENT_LEN,
              "Direction %d updated: Speed=%.2f, Distance=%.2f",
@@ -115,6 +115,9 @@ int WA_on_registration(void *arg){
             LOG_CONTENT_LEN - strlen(log_content), \
             "\n WA_on_Registration ");
     log_file_write(log_content);
+
+    create_timer(&WA_Agent_timer_id, NULL, WA_Agent_timer_handler);
+    set_timer(WA_Agent_timer_id, WA_config.warning_freq, 0, 4, 0);
 }
 
 
