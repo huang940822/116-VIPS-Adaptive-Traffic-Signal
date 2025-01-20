@@ -53,7 +53,20 @@ int WA_config_init(){
         if (read_buf[0] == '#' || read_buf[0] == '\n' || read_buf[0] == ' '){
             continue;
         }
-        //WARNING_FREQ
+        // WARNING_RANGE
+        if (strstr(read_buf, "WA_WARNING_RANGE")) {
+            if (read_int_from_config_line(read_buf, &val)) {
+                if (val >= 0) {
+                    WA_config.warning_range = val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_WARNING_RANGE;
+                }
+            } else {
+                return CONFIG_INVALID_WA_WARNING_RANGE;
+            } 
+        }
+        // WARNING_FREQ
         if (strstr(read_buf, "WA_WARNING_FREQ ")) {
             if (read_int_from_config_line(read_buf, &val)) {
                 if (val >= 0) {
@@ -66,7 +79,7 @@ int WA_config_init(){
                 return CONFIG_INVALID_WA_WARNING_FREQ;
             }
         }
-        //INTERSECTION_COUNT
+        // INTERSECTION_COUNT
         if (strstr(read_buf, "INTERSECTION_COUNT")) {
             if (read_int_from_config_line(read_buf, &val)){
                 if (val >= 0){
@@ -80,7 +93,7 @@ int WA_config_init(){
             }
         }
 
-        //intersection table
+        // intersection table
         if (strstr(read_buf, "intersection_table")) {
             while (true) {
                 if (feof(fp))
