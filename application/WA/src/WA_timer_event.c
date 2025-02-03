@@ -28,6 +28,7 @@ void WA_Agent_timer_handler(__sigval_t value)
     };
 
     CCI fusion_Leading_Vehicles[4];
+    int warningLevels[4] = {0,0,0,0}; // 0: no show, 1: Lv1, 2: lv2, 3: lv3.
     /* initialize fusion leading vehicles */
     for(int i = 0; i < 4; i++){
         fusion_Leading_Vehicles[i].speed = -1.0;
@@ -52,7 +53,7 @@ void WA_Agent_timer_handler(__sigval_t value)
         }
     }
     if(vehicle_in_range && (TTI[0]>0 || TTI[2]>0) && (TTI[1]>0 || TTI[3]>0) ){
-        int TTC[4] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
+        int PET[4] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
         int validPairs[4] = {-1, -1, -1, -1};
         int validCount = 0;
         int belowThreePairs[4] = {-1, -1, -1, -1};
@@ -61,15 +62,56 @@ void WA_Agent_timer_handler(__sigval_t value)
             int dir1 = directionPairs[i][0];
             int dir2 = directionPairs[i][1];
             if(TTI[dir1]>0 && TTI[dir2]>0) {
-                TTC[i] = abs(TTI[dir1]-TTI[dir2]);
+                PET[i] = abs(TTI[dir1]-TTI[dir2]);
                 validPairs[validCount++] = i;
 
                 // check if less than or equal to 3
-                if(TTC[i]<=3){
+                if(PET[i]<=3){
                     belowThreePairs[belowThreeCount++] = i;
                 }
             }  
         }
+        
+        if (belowThreeCount==0) {
+            /* Send Lv1 warning Message for incoming directions */
+            for(int i = 0; i < validCount; i++){
+                int dir1 = directionPairs[validPairs[i]][0];
+                int dir2 = directionPairs[validPairs[i]][1];
+                warningLevels[dir1] = max_int(warningLevels[dir1], 1);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 1);
+            }
+        }
+        else if (belowThreeCount==1) {
+            /* lv2 warning message to first apporach, lv3 warning message to last approach */\
+            int dir1 = directionPairs[belowThreePairs[0]][0];
+            int dir2 = directionPairs[belowThreePairs[0]][1];
+            if(TTI[dir1] <= TTI[dir2]){ 
+                warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 2);
+            }
+            else {
+                warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+            }
+            for (int i = 0; i < validCount; i++){
+                int dir1 = directionPairs[validPairs[i]][0];
+                int dir2 = directionPairs[validPairs[i]][1];
+                warningLevels[dir1] = max_int(warningLevels[dir1], 1);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 1);
+            }
+        }
+        else {
+            /* Send Lv3 warning Message for incoming directions */
+            for(int i = 0; i < validCount ; i++){
+                int dir1 = directionPairs[validPairs[i]][0];
+                int dir2 = directionPairs[validPairs[i]][1];
+                warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+            }
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        log_file_write("Direction %d: Warning Level %d", i, warningLevels[i]);
     }
     log_file_write("warning_range: %d m", WA_config.warning_range);
     WA_clear_leading_vehicles();
