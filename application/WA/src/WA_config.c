@@ -18,6 +18,7 @@ static bool read_float_from_config_line(char *config_line, float *val)
     }
 }
 
+
 static bool read_int_from_config_line(char *config_line, int *val)
 {
     char prm_name[MAX_CONFIG_VARIABLE_LEN];
@@ -67,7 +68,7 @@ int WA_config_init(){
             } 
         }
         // WARNING_FREQ
-        if (strstr(read_buf, "WA_WARNING_FREQ ")) {
+        if (strstr(read_buf, "WA_WARNING_FREQ")) {
             if (read_int_from_config_line(read_buf, &val)) {
                 if (val >= 0) {
                     WA_config.warning_freq = val;
@@ -79,6 +80,34 @@ int WA_config_init(){
                 return CONFIG_INVALID_WA_WARNING_FREQ;
             }
         }
+        // INTERSECTION_CENTER_LAT
+        if (strstr(read_buf, "INTERSECTION_CENTER_LAT")) {
+            if (read_float_from_config_line(read_buf, &float_val)) {
+                if (val >= 0) {
+                    WA_config.intersection_center_lat = float_val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_INTERSECTION_CENTER_LAT;
+                }
+            } else {
+                return CONFIG_INVALID_WA_INTERSECTION_CENTER_LAT;
+            }
+        }
+        // INTERSECTION_CENTER_LON
+        if (strstr(read_buf, "INTERSECTION_CENTER_LON")) {
+            if (read_float_from_config_line(read_buf, &float_val)) {
+                if (val >= 0) {
+                    WA_config.intersection_center_lon = float_val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_INTERSECTION_CENTER_LON;
+                }
+            } else {
+                return CONFIG_INVALID_WA_INTERSECTION_CENTER_LON;
+            }
+        }
+        
+        
         // INTERSECTION_COUNT
         if (strstr(read_buf, "INTERSECTION_COUNT")) {
             if (read_int_from_config_line(read_buf, &val)){
@@ -92,7 +121,6 @@ int WA_config_init(){
                 return CONFIG_INVALID_WA_PACKET;
             }
         }
-
         // intersection table
         if (strstr(read_buf, "intersection_table")) {
             while (true) {

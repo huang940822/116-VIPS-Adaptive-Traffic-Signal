@@ -75,17 +75,19 @@ int WA_on_camera_packet_rx(void *arg){ /* [TODO] 改名稱 */
     log_file_write(log_content);
     ObstacleList *obstaclelist = (ObstacleList *) arg;
     int direct = obstaclelist->dirct;
-    double traffic_light_lat = WA_config.traffic_light.tab[direct].Traffic_light_lat;
-    double traffic_light_lon = WA_config.traffic_light.tab[direct].Traffic_light_lon;
+    double intersection_center_lat = WA_config.intersection_center_lat;
+    double intersection_center_lon = WA_config.intersection_center_lon;
+    log_file_write("intersection_center_lat: %lf", WA_config.intersection_center_lat);
+    log_file_write("intersection_center_lon: %lf", WA_config.intersection_center_lon);
     CCI leading_vehicle;
     if(obstaclelist->count != 0){
-        leading_vehicle.speed = obstaclelist->tab[0].speed;
-        leading_vehicle.distance = distance(obstaclelist->tab[0].lat, obstaclelist->tab[0].Long, traffic_light_lat, traffic_light_lon);
+        leading_vehicle.speed = (0.2778) * obstaclelist->tab[0].speed; // km/hr to m/s
+        leading_vehicle.distance = distance(obstaclelist->tab[0].lat, obstaclelist->tab[0].Long, intersection_center_lat, intersection_center_lon);
         log_file_write("lat:%lf ,lon:%lf", obstaclelist->tab[0].lat, obstaclelist->tab[0].Long);
         for(int i = 1; i < obstaclelist->count; i++) {
-            double current_vehicle_distance = distance(obstaclelist->tab[i].lat, obstaclelist->tab[i].Long, traffic_light_lat, traffic_light_lon);
+            double current_vehicle_distance = distance(obstaclelist->tab[i].lat, obstaclelist->tab[i].Long, intersection_center_lat, intersection_center_lon);
             if(current_vehicle_distance < leading_vehicle.distance){
-                leading_vehicle.speed = obstaclelist->tab[i].speed;
+                leading_vehicle.speed = (0.2778) * obstaclelist->tab[i].speed; // km/hr to m/s
                 leading_vehicle.distance = current_vehicle_distance;
             }
         }

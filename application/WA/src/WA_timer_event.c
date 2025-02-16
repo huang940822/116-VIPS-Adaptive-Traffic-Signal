@@ -35,7 +35,7 @@ void WA_Agent_timer_handler(__sigval_t value)
         fusion_Leading_Vehicles[i].distance = -1.0;
     }
     /* initialize time to intersection */
-    int TTI[4] = {0};
+    double TTI[4] = {0.0};
     bool vehicle_in_range = false;
     WA_get_leading_vehicles(fusion_Leading_Vehicles);
     /* Test all directions */
@@ -86,12 +86,12 @@ void WA_Agent_timer_handler(__sigval_t value)
             int dir1 = directionPairs[belowThreePairs[0]][0];
             int dir2 = directionPairs[belowThreePairs[0]][1];
             if(TTI[dir1] <= TTI[dir2]){ 
-                warningLevels[dir1] = max_int(warningLevels[dir1], 3);
-                warningLevels[dir2] = max_int(warningLevels[dir2], 2);
-            }
-            else {
                 warningLevels[dir1] = max_int(warningLevels[dir1], 2);
                 warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+            }
+            else {
+                warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 2);
             }
             for (int i = 0; i < validCount; i++){
                 int dir1 = directionPairs[validPairs[i]][0];
