@@ -17,6 +17,7 @@
 #include "com_packet_processing.h"
 #include "config.h"
 #include "log.h"
+#include "cms.h"
 
 void WA_Agent_timer_handler(__sigval_t value)
 {
@@ -53,7 +54,7 @@ void WA_Agent_timer_handler(__sigval_t value)
         }
     }
     if(vehicle_in_range && (TTI[0]>0 || TTI[2]>0) && (TTI[1]>0 || TTI[3]>0) ){
-        int PET[4] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
+        double PET[4] = {DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX};
         int validPairs[4] = {-1, -1, -1, -1};
         int validCount = 0;
         int belowThreePairs[4] = {-1, -1, -1, -1};
@@ -62,7 +63,7 @@ void WA_Agent_timer_handler(__sigval_t value)
             int dir1 = directionPairs[i][0];
             int dir2 = directionPairs[i][1];
             if(TTI[dir1]>0 && TTI[dir2]>0) {
-                PET[i] = abs(TTI[dir1]-TTI[dir2]);
+                PET[i] = fabs(TTI[dir1]-TTI[dir2]);
                 validPairs[validCount++] = i;
 
                 // check if less than or equal to 3
@@ -82,22 +83,72 @@ void WA_Agent_timer_handler(__sigval_t value)
             }
         }
         else if (belowThreeCount==1) {
-            /* lv2 warning message to first apporach, lv3 warning message to last approach */\
             int dir1 = directionPairs[belowThreePairs[0]][0];
             int dir2 = directionPairs[belowThreePairs[0]][1];
-            if(TTI[dir1] <= TTI[dir2]){ 
-                warningLevels[dir1] = max_int(warningLevels[dir1], 2);
-                warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+            double dist1 = fusion_Leading_Vehicles[dir1].distance;
+            double dist2 = fusion_Leading_Vehicles[dir2].distance;
+
+            if(WA_config.branch2main == 1){
+                /* if both car in WA_config.branch2mainrange */
+                if(dist1 <= WA_config.branch2mainRange && dist2 <= WA_config.branch2mainRange){
+                    if(WA_config.maindirection == 0){// N-S N:0, S:2 
+                        if (dir1 == 0 || dir1 == 2){
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+                        } else {
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 2);
+                        }
+                    }
+                    else {
+                        if (dir1 == 1 || dir1 == 3) {
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+                        } else {
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 2);
+                        }
+                    }
+                    for (int i = 0; i < validCount; i++){
+                        int vdir1 = directionPairs[validPairs[i]][0];
+                        int vdir2 = directionPairs[validPairs[i]][1];
+                        warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
+                        warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
+                    }
+                }
+                else{
+                    if(TTI[dir1] <= TTI[dir2]){ 
+                        warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                        warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+                    }
+                    else {
+                        warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                        warningLevels[dir2] = max_int(warningLevels[dir2], 2);
+                    }
+                    for (int i = 0; i < validCount; i++){
+                        int vdir1 = directionPairs[validPairs[i]][0];
+                        int vdir2 = directionPairs[validPairs[i]][1];
+                        warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
+                        warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
+                    }
+                }
             }
-            else {
-                warningLevels[dir1] = max_int(warningLevels[dir1], 3);
-                warningLevels[dir2] = max_int(warningLevels[dir2], 2);
-            }
-            for (int i = 0; i < validCount; i++){
-                int dir1 = directionPairs[validPairs[i]][0];
-                int dir2 = directionPairs[validPairs[i]][1];
-                warningLevels[dir1] = max_int(warningLevels[dir1], 1);
-                warningLevels[dir2] = max_int(warningLevels[dir2], 1);
+            /* Branch2Branch: lv2 warning message to first apporach, lv3 warning message to last approach */
+            else{
+                if(TTI[dir1] <= TTI[dir2]){ 
+                    warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                    warningLevels[dir2] = max_int(warningLevels[dir2], 3);
+                }
+                else {
+                    warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                    warningLevels[dir2] = max_int(warningLevels[dir2], 2);
+                }
+                for (int i = 0; i < validCount; i++){
+                    int vdir1 = directionPairs[validPairs[i]][0];
+                    int vdir2 = directionPairs[validPairs[i]][1];
+                    warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
+                    warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
+                }
             }
         }
         else {
@@ -109,6 +160,20 @@ void WA_Agent_timer_handler(__sigval_t value)
                 warningLevels[dir2] = max_int(warningLevels[dir2], 3);
             }
         }
+    }
+    uint8_t buf[CMS_NUM_MAX] = {0};
+    bool show_flag = false;
+    const uint8_t warning_map[] = {255, 215, 216, 217};
+    //215~224 警示訊息 Reserved，以 215 為 lv 1 警示訊息向下遞增
+    for(int i = 0; i < 4; i++){
+        show_flag = show_flag || (warningLevels[i] != 0);
+        buf[i] = warning_map[warningLevels[i]]; 
+    }
+    if(show_flag){
+        CMS_request_start(WA.id, WA.priority, buf);
+    }
+    else{
+        CMS_request_end(WA.id);
     }
     for (int i = 0; i < 4; i++) {
         log_file_write("Direction %d: Warning Level %d", i, warningLevels[i]);

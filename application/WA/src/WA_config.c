@@ -35,7 +35,7 @@ int WA_config_init(){
     fp = fopen(WA_CONFIG_FILE, "r");
     if (fp == NULL) {
         log_file_write_fatal_error("error opening %s", WA_CONFIG_FILE);
-        return CONFIF_INVALID_WA_OPEN_FILE;
+        return CONFIG_INVALID_WA_OPEN_FILE;
     } else {
         log_file_write("%s opened successfully", WA_CONFIG_FILE);
     }
@@ -80,10 +80,53 @@ int WA_config_init(){
                 return CONFIG_INVALID_WA_WARNING_FREQ;
             }
         }
+
+        // BRANCH_TO_MAIN
+        if (strstr(read_buf, "BRANCH_TO_MAIN")) {
+            if (read_int_from_config_line(read_buf, &val)) {
+                if (val >= 0) {
+                    WA_config.branch2main = val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_BRANCH2MAIN;
+                }
+            } else {
+                return CONFIG_INVALID_WA_BRANCH2MAIN;
+            }
+        }
+        // BRANCH_TO_MAIN_WARNING_RANGE
+        if (strstr(read_buf, "BRANCH_2_MAIN_WARNING_RANGE")) {
+            if (read_int_from_config_line(read_buf, &val)) {
+                if (val >= 0) {
+                    WA_config.branch2mainRange = val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_BRANCH2MAINWARNINGRANGE;
+                }
+            } else {
+                return CONFIG_INVALID_WA_BRANCH2MAINWARNINGRANGE;
+            }
+        }
+        // MAIN_DIRECTION
+        if (strstr(read_buf, "MAIN_DIRECTION")) {
+            if (read_int_from_config_line(read_buf, &val)) {
+                if (float_val >= 0) {
+                    WA_config.maindirection = val;
+                    continue;
+                } else {
+                    return CONFIG_INVALID_WA_MAINDIRECTION;
+                }
+            } else {
+                return CONFIG_INVALID_WA_BRANCH2MAINWARNINGRANGE;
+            }
+        }
+
+
+
         // INTERSECTION_CENTER_LAT
         if (strstr(read_buf, "INTERSECTION_CENTER_LAT")) {
             if (read_float_from_config_line(read_buf, &float_val)) {
-                if (val >= 0) {
+                if (float_val >= 0) {
                     WA_config.intersection_center_lat = float_val;
                     continue;
                 } else {
@@ -158,6 +201,7 @@ int WA_config_init(){
                                                                         WA_config.traffic_light.tab[i].Traffic_light_lat, 
                                                                         WA_config.traffic_light.tab[i].Traffic_light_lon);
             }
+            log_file_write("Branch2main: %d, Branch2mainRange: %d, maindirection: %d\n", WA_config.branch2main, WA_config.branch2mainRange, WA_config.maindirection);
         }
     }
     fclose(fp);

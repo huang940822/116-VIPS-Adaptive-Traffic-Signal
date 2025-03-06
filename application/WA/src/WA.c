@@ -23,6 +23,7 @@
 #include "timer_event.h"
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
+#include "cms.h"
 
 #define NO_VEHICLE -1.0 
 
