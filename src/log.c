@@ -136,17 +136,36 @@ void log_set_level(log_level_t level)
     current_log_level = level;
 }
 
+/**
+ * @brief 寫入日誌檔案
+ *
+ * 此函式用於將日誌訊息寫入日誌檔案中。它會根據當前的日誌等級和模組名稱，
+ * 將訊息格式化並寫入檔案中。
+ *
+ * @param[in] level 日誌等級
+ * @param[in] file 檔案名稱
+ * @param[in] line 行號
+ * @param[in] log_module_name 模組名稱
+ * @param[in] format 格式化字串
+ * @param[in] ... 其他參數
+ *
+ * @note 此函式會自動加鎖以確保多執行緒環境下的安全性。
+ *      如果寫入檔案失敗，會記錄錯誤訊息並終止程式。
+ *      此外，會將時間戳記和內容寫入檔案中。
+ * @note 格式為 [%(asctime)s][%(levelname)s][%(modulename)s][%(filename)s:%(lineno)d] - %(message)s
+ */
+void log_file_write(log_level_t level, const char *file, int line, const char *log_module_name, const char *format, ...)
 {
-    // timestamp
+    /* 產生 timestamp */
     time_t rawtime;
     struct tm localTime;
-    char buffer[20];
-    memset(buffer, 0, sizeof(buffer));
+    char time_format_str[20];
+    memset(time_format_str, 0, sizeof(time_format_str));
     time(&rawtime);
     localtime_r(&rawtime, &localTime); // 轉換成本地時間表示的分解時間
-    strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", &localTime);
+    strftime(time_format_str, 20, "%Y-%m-%d %H:%M:%S", &localTime);
 
-    // content
+    /* 產生 content 字串 */
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     va_list list;
@@ -154,15 +173,14 @@ void log_set_level(log_level_t level)
     vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
     va_end(list);
 
-    pthread_mutex_lock(&mutex_log_file_ptr);
-    if (fprintf(log_file_ptr, "\e[1;4;32m%s\n\e[m", buffer) < 0) {
-        set_disk_error();
-        perror("log_file_write: fprintf");
-        exit(errno);
-    } else {
-        clear_disk_error();
+    /* Early Return */
+    if (level < current_log_level) {
+        return;
     }
-    if (fprintf(log_file_ptr, "%s\n", log_content) < 0) {
+
+    pthread_mutex_lock(&mutex_log_file_ptr);
+    if (fprintf(log_file_ptr, "[%s][%s][%s][%s:%d] - %s\n",
+            time_format_str, log_level_strs[current_log_level], log_module_name, file, line, log_content) < 0) {
         set_disk_error();
         perror("log_file_write: fprintf");
         exit(errno);
@@ -174,6 +192,46 @@ void log_set_level(log_level_t level)
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
+}
+
+/**
+ * @brief 在日誌內容後附加格式化的字串。
+ *
+ * 此函式將格式化的字串附加到指定的日誌內容後面。
+ *
+ * @param[in,out] log_content 日誌內容
+ * @param[in] max_len 日誌內容的最大長度
+ * @param[in] fmt 格式化字串
+ * @param[in] ... 格式化字串的參數
+ * @return 成功附加字串後的日誌內容長度，若失敗則返回負數
+ */
+int log_appendf(char *log_content, size_t max_len, const char *fmt, ...)
+{
+    char tmp_log_content[LOG_CONTENT_LEN + 1];
+    memset(tmp_log_content, 0, sizeof(tmp_log_content));
+
+    va_list list;
+    va_start(list, fmt);
+    int ret = vsnprintf(tmp_log_content, LOG_CONTENT_LEN, fmt, list);
+    va_end(list);
+    /* Failed to format string */
+    if (ret < 0) {
+        return (-1);
+    }
+
+    size_t _len = strlen(log_content);
+    ret = snprintf(log_content + _len, max_len - _len, "%s%s", log_content, tmp_log_content);
+    /* Failed to concat string to log content string */
+    if (ret < 0) {
+        return (-1);
+    }
+
+    /* Check if the log content length exceeds the maximum length */
+    if (ret >= max_len) {
+        return (-1);
+    }
+
+    return ret;
 }
 
 /**

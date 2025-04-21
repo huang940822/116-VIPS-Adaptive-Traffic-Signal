@@ -21,6 +21,20 @@
         snprintf(log_content + _len, LOG_CONTENT_LEN - _len, __VA_ARGS__); \
     } while (0)
 
+
+#define LOG_MODULE_NAME     __log_module_name
+#define LOG_MARK            __FILE__,__LINE__,LOG_MODULE_NAME
+
+#define LOG_USE_MODULE(foo) \
+    static char * const __log_module_name = #foo;
+#define LOG_MSG_TRACE(fmt, ...)                 log_file_write(LOG_LEVEL_TRACE, LOG_MARK, fmt, ##__VA_ARGS__)
+#define LOG_MSG_DEBUG(fmt, ...)                 log_file_write(LOG_LEVEL_DEBUG, LOG_MARK, fmt, ##__VA_ARGS__)
+#define LOG_MSG_INFO(fmt, ...)                  log_file_write(LOG_LEVEL_INFO,  LOG_MARK, fmt, ##__VA_ARGS__)
+#define LOG_MSG_WARN(fmt, ...)                  log_file_write(LOG_LEVEL_WARN,  LOG_MARK, fmt, ##__VA_ARGS__)
+#define LOG_MSG_ERROR(fmt, ...)                 log_file_write(LOG_LEVEL_ERROR, LOG_MARK, fmt, ##__VA_ARGS__)
+#define LOG_MSG_FATAL(fmt, ...)                 log_file_write(LOG_LEVEL_FATAL, LOG_MARK, fmt, ##__VA_ARGS__)
+#define LOG_MSG_APPEND(log_content, fmt, ...)   log_appendf(log_content, LOG_CONTENT_LEN, fmt, ##__VA_ARGS__)
+
 typedef enum {
     LOG_LEVEL_TRACE = 0,    /**< 封包相關資訊 */
     LOG_LEVEL_DEBUG,        /**< 詳細運行資訊 */
@@ -35,6 +49,9 @@ extern const char *log_level_strs[];
 void log_file_init();
 void log_file_name_update();
 void log_set_level(log_level_t level);
+void log_file_write(log_level_t level, const char *file, int line, const char *log_module_name, const char *format, ...);
+int log_appendf(char *log_content, size_t max_len, const char *fmt, ...);
+
 // void log_file_write_fatal_error(char *content);
 void log_file_write_fatal_error(const char *format, ...);
 
