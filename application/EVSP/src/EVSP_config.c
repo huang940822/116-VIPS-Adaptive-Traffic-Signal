@@ -8,6 +8,8 @@
 #include "log.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(EVSP);
+
 // EVSP_config_object_t EVSP_config;
 
 EVSP_config_object_t EVSP_config = {
@@ -26,10 +28,10 @@ int EVSP_config_init()
     FILE *fp;
     fp = fopen(EVSP_CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", EVSP_CONFIG_FILE);
+        LOG_MSG_FATAL("error opening %s", EVSP_CONFIG_FILE);
         return CONFIG_INVALID_EVSP_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully", EVSP_CONFIG_FILE);
+        LOG_MSG_INFO("%s opened successfully", EVSP_CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -51,8 +53,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_packet_timeout = uint8_t_val;
-                    log_file_write("config: evsp_host_obu_packet_timeout = %d",
-                                   EVSP_config.evsp_host_obu_packet_timeout);
+                    LOG_MSG_INFO("config: evsp_host_obu_packet_timeout = %d",
+                            EVSP_config.evsp_host_obu_packet_timeout);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_PACKET_TIMEOUT;
@@ -67,8 +69,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_list_timeout = uint8_t_val;
-                    log_file_write("config: evsp_host_obu_list_timeout = %d",
-                                   EVSP_config.evsp_host_obu_list_timeout);
+                    LOG_MSG_INFO("config: evsp_host_obu_list_timeout = %d",
+                            EVSP_config.evsp_host_obu_list_timeout);
                     continue;
                 } else {
                     return CONFIG_INVALID_EVSP_HOST_OBU_LIST_TIMEOUT;
@@ -83,7 +85,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.min_green = uint8_t_val;
-                    log_file_write("config: min_green = %d", EVSP_config.min_green);
+                    LOG_MSG_INFO("config: min_green = %d", EVSP_config.min_green);
                     continue;
                 } else {
                     return CONFIG_INVALID_MIN_GREEN;
@@ -98,7 +100,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.max_green = uint8_t_val;
-                    log_file_write("config: max_green = %d", EVSP_config.max_green);
+                    LOG_MSG_INFO("config: max_green = %d", EVSP_config.max_green);
                     continue;
                 } else {
                     return CONFIG_INVALID_MAX_GREEN;
@@ -113,8 +115,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.valid_record_distance = uint8_t_val;
-                    log_file_write("config: valid_record_distance = %d",
-                                   EVSP_config.valid_record_distance);
+                    LOG_MSG_INFO("config: valid_record_distance = %d",
+                            EVSP_config.valid_record_distance);
                     continue;
                 } else {
                     return CONFIG_INVALID_VALID_RECORD_DISTANCE;
@@ -129,8 +131,8 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.touching_threshold = uint8_t_val;
-                    log_file_write("config: touching_threshold = %d",
-                                   EVSP_config.touching_threshold);
+                    LOG_MSG_INFO("config: touching_threshold = %d",
+                            EVSP_config.touching_threshold);
                     continue;
                 } else {
                     return CONFIG_INVALID_OTHER;
@@ -151,7 +153,7 @@ int EVSP_config_init()
                 } else {
                     return CONFIG_INVALID_OTHER;
                 }
-                log_file_write("config: touching_area_config_type = %s", val);
+                LOG_MSG_INFO("config: touching_area_config_type = %s", val);
                 continue;
             } else {
                 return CONFIG_INVALID_OTHER;
@@ -164,7 +166,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP.dontSend2TC = uint8_t_val;
-                    log_file_write("config: dontSend2TC = %d", EVSP.dontSend2TC);
+                    LOG_MSG_INFO("config: dontSend2TC = %d", EVSP.dontSend2TC);
                     continue;
                 } else {
                     return CONFIG_INVALID_OTHER;
@@ -180,7 +182,7 @@ int EVSP_config_init()
             if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
                 if (uint32_t_val >= 0) {
                     EVSP_config.cooling_time = uint32_t_val;
-                    log_file_write("config: cooling_time = %u", EVSP_config.cooling_time);
+                    LOG_MSG_INFO("config: cooling_time = %u", EVSP_config.cooling_time);
                     continue;
                 } else {
                     return CONFIG_INVALID_COOLING_TIME;

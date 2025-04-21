@@ -15,6 +15,8 @@
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
 
+LOG_USE_MODULE(EVSP);
+
 void EVSP_timeout_report(union sigval value)
 {
     // 回報 timeout event 需要的變數資訊
@@ -40,7 +42,7 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
         vms_request_end(EVSP.id);
     }
 
-    printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
+    LOG_MSG_TRACE("EVSP_host_OBU_packet_timeout_timer_handler");
     EVSP_host_OBU_obj_t *obu_obj = (EVSP_host_OBU_obj_t *) value.sival_ptr;
     int target_phase = obu_obj->target_phase;
 
@@ -53,7 +55,7 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
         command_buf_resume_control(EVSP.id);
     }
     
-    log_file_write("EVSP host OBU packet timeout: %s\n", obu_obj->OBU_name);
+    LOG_MSG_INFO("EVSP host OBU packet timeout: %s", obu_obj->OBU_name);
     EVSP_host_OBU_obj_print();
 }
 
@@ -69,7 +71,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
         vms_request_end(EVSP.id);
     }
 
-    printf("EVSP_host_OBU_list_timeout_timer_handler\n");
+    LOG_MSG_TRACE("EVSP_host_OBU_list_timeout_timer_handler");
     EVSP_host_OBU_obj_t *obu_obj = (EVSP_host_OBU_obj_t *) value.sival_ptr;
     int target_phase = obu_obj->target_phase;
 
@@ -82,6 +84,6 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
         command_buf_resume_control(EVSP.id);
     }
     
-    log_file_write("EVSP host OBU list timeout: %s\n", obu_obj->OBU_name);
+    LOG_MSG_INFO("EVSP host OBU list timeout: %s", obu_obj->OBU_name);
     EVSP_host_OBU_obj_print();
 }
