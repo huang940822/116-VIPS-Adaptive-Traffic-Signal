@@ -52,16 +52,20 @@ void log_set_level(log_level_t level);
 void log_file_write(log_level_t level, const char *file, int line, const char *log_module_name, const char *format, ...);
 int log_appendf(char *log_content, size_t max_len, const char *fmt, ...);
 
+/* FIXME: Remove unused function in ticket #36 */
 // void log_file_write_fatal_error(char *content);
 void log_file_write_fatal_error(const char *format, ...);
 
+/* FIXME: Remove unused function in ticket #36 */
 #define ENABLE_FATAL_WITH_ERR_CODE_LOG 1
 #define SWITCH_FATAL_WITH_ERR_CODE_LOG_TO_PRINT 1
 int log_file_write_with_errno(const char *format, ...);
 
-struct timespec get_timespec_diff(struct timespec bgn, struct timespec end);
-uint32_t get_us_diff(struct timespec bgn, struct timespec end);
-void record_current_timespec(struct timespec* now_p);
-void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg);
-void print_single_timespec_to_stdout(struct timespec trc, char* msg);
+/* FIXME: Remove unused function in ticket #36 */
+__attribute__((unused)) struct timespec get_timespec_diff(struct timespec bgn, struct timespec end);
+__attribute__((unused)) uint32_t get_us_diff(struct timespec bgn, struct timespec end);
+__attribute__((unused)) void record_current_timespec(struct timespec* now_p);
+__attribute__((unused)) void print_timespec_to_stderr(struct timespec bgn, struct timespec end, char* msg);
+__attribute__((unused)) void print_single_timespec_to_stdout(struct timespec trc, char* msg);
+
 #endif  /* LOG_H */
