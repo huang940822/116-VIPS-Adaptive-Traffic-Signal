@@ -34,7 +34,7 @@ extern const char *log_level_strs[];
 
 void log_file_init();
 void log_file_name_update();
-void log_file_write(const char *format, ...);
+void log_set_level(log_level_t level);
 // void log_file_write_fatal_error(char *content);
 void log_file_write_fatal_error(const char *format, ...);
 

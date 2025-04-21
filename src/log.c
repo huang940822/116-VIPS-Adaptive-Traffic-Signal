@@ -18,6 +18,7 @@ FILE *log_file_ptr;
 timer_t log_file_name_update_timer_id;
 uint8_t log_file_name_update_num = TIMER_EVENT_LOG_FILE_NAME_UPDATE;
 
+static log_level_t current_log_level = LOG_LEVEL_INFO;
 const char *log_level_strs[] = {
     [LOG_LEVEL_TRACE] = "TRACE",
     [LOG_LEVEL_DEBUG] = "DEBUG",
@@ -107,7 +108,18 @@ void log_file_name_update()
     return;
 }
 
-void log_file_write(const char *format, ...)
+/**
+ * @brief 設定日誌等級。
+ *
+ * 此函數用於設定當前的日誌等級。
+ *
+ * @param level 要設定的日誌等級
+ */
+void log_set_level(log_level_t level)
+{
+    current_log_level = level;
+}
+
 {
     // timestamp
     time_t rawtime;
