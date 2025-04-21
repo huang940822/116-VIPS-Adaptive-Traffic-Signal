@@ -23,6 +23,8 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(CORE);
+
 // extern pthread_mutex_t mutex_rs232_write;
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
@@ -39,17 +41,17 @@ void timer_event_handler(__sigval_t value)
     if (*(uint8_t *) value.sival_ptr ==
         TIMER_EVENT_TRAFFIC_SIGNAL_STATUS_REPORT) {
         if (config.log_middleware_timer_event) {
-            log_file_write("timer event: traffic signal status report");
+            LOG_MSG_INFO("timer event: traffic signal status report");
         }
         // report_plan();  //對obu 廣播 plan
     } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_TRAFFIC_SIGNAL_COMMAND_BUF_POLLING) {
         if (config.log_middleware_timer_event) {
-            log_file_write("timer event: traffic signal command buf polling");
+            LOG_MSG_INFO("timer event: traffic signal command buf polling");
         }
 
         pthread_mutex_lock(&mutex_uart_comple_protect);
-        // printf("get in uart mutex\r\n");
+        // LOG_MSG_TRACE("get in uart mutex");
         // pthread_mutex_lock(&mutex_rs232_write);
         uint8_t temp_ack_seq;
 
@@ -75,26 +77,26 @@ void timer_event_handler(__sigval_t value)
             // WAIT_ACK_LOOP
             _5fxx_count = 0;
         }
-        
+
         command_buf_polling();
 
-        
+
         if (flag_countdown_on == true) {
             temp_ack_seq =
                 tsc_countdown_on(config.signal_controller_manufacturer);
             WAIT_ACK_LOOP
-            flag_countdown_on = false;            
-            log_file_write("countdown is enable\n");
+            flag_countdown_on = false;
+            LOG_MSG_INFO("countdown is enable");
         }
-                
+
         if (flag_countdown_off == true) {
             temp_ack_seq =
                 tsc_countdown_off(config.signal_controller_manufacturer);
             WAIT_ACK_LOOP
             flag_countdown_off = false;
-            log_file_write("countdown is disable\n");
+            LOG_MSG_INFO("countdown is disable");
         }
-        
+
         if (flag_query_firm_ver == true) {
             temp_ack_seq = tsc_query_firmware_version();
             WAIT_ACK_LOOP
@@ -110,9 +112,7 @@ void timer_event_handler(__sigval_t value)
             temp_ack_seq = tsc_switch();
             WAIT_ACK_LOOP
             flag_switch2nextStep = false;
-            log_file_write(
-                "step sec higher than 255 happens and switch to next step "
-                "forcelly!!\r\n");
+            LOG_MSG_INFO("step sec higher than 255 happens and switch to next step forcelly!!");
         }
 
         if (guarenteed_cmd_set._0F42_count == 0) {
@@ -139,13 +139,13 @@ void timer_event_handler(__sigval_t value)
         }
 
         pthread_mutex_unlock(&mutex_uart_comple_protect);
-        // printf("leave uart write mutex\r\n");
+        // LOG_MSG_TRACE("leave uart write mutex");
 
         // pthread_mutex_unlock(&mutex_rs232_write);
     } else if (*(uint8_t *) value.sival_ptr ==
                TIMER_EVENT_LOG_FILE_NAME_UPDATE) {
         if (config.log_middleware_timer_event) {
-            log_file_write("timer event: log file name update");
+            LOG_MSG_INFO("timer event: log file name update");
         }
 
         log_file_name_update();
@@ -153,9 +153,8 @@ void timer_event_handler(__sigval_t value)
     // 在thread pool 中傳 bsm 的 timer
     // else if (*(uint8_t *) value.sival_ptr == TIMER_EVENT_DSRC_SEND) {
     // if (config.log_middleware_timer_event) {
-    //     snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
-    //     strlen(log_content), "%s", "timer event: OBU list garbage
-    //     collection"); log_file_write(log_content);
+    //     LOG_MSG_APPEND(log_content, "timer event: OBU list garbage collection");
+    //     LOG_MSG_INFO(log_content);
     // }
     // DSRC_send_timer_handler(DSRC_send_buffer);
     // }
@@ -193,12 +192,12 @@ int create_timer(timer_t *timer_id,
     evp.sigev_notify = SIGEV_THREAD;              // thread通知的方式，派駐新thread
     evp.sigev_notify_function = notify_function;  // thread函數地址
     if (timer_create(CLOCK_REALTIME, &evp, timer_id) == -1) {
-        log_file_write_fatal_error("create_timer: timer_create");
+        LOG_MSG_FATAL("create_timer: timer_create");
         perror("create_timer: timer_create");
         exit(errno);
     } else {
         if (signal_value != NULL && config.log_middleware_timer_event == 1) {
-            log_file_write("timer event: create timer with signal value(%d)", *(uint8_t *) signal_value);
+            LOG_MSG_INFO("timer event: create timer with signal value(%d)", *(uint8_t *) signal_value);
         }
         return 0;
     }
@@ -228,7 +227,7 @@ int set_timer(timer_t timer_id,
     its.it_value.tv_sec = initial_sec;
     its.it_value.tv_nsec = initial_nsec;
     if (timer_settime(timer_id, 0, &its, NULL) == -1) {
-        log_file_write_fatal_error("set_timer: timer_settime");
+        LOG_MSG_FATAL("set_timer: timer_settime");
         perror("set_timer: timer_settime");
         exit(errno);
     } else {
@@ -239,7 +238,7 @@ int set_timer(timer_t timer_id,
 int delete_timer(timer_t timer_id)
 {
     if (timer_delete(timer_id) == -1) {
-        log_file_write_fatal_error("delete_timer: timer_delete");
+        LOG_MSG_FATAL("delete_timer: timer_delete");
         perror("delete_timer: timer_delete");
         exit(errno);
     } else {
@@ -254,7 +253,7 @@ int set_timer_fd(int transfer_speed, char *error_msg)
     struct itimerspec timerValue = {0};
 
     if (fd == -1) {
-        log_file_write_fatal_error("%s timefd create error.", error_msg);
+        LOG_MSG_FATAL("%s timefd create error.", error_msg);
         return -1;
     }
 
@@ -264,7 +263,7 @@ int set_timer_fd(int transfer_speed, char *error_msg)
     timerValue.it_interval.tv_nsec = t % 1000000000;
 
     if (timerfd_settime(fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-        log_file_write_fatal_error("%s timerfd_settime, errno %d.", error_msg, errno);
+        LOG_MSG_FATAL("%s timerfd_settime, errno %d.", error_msg, errno);
         close(fd);
         return -1;
     }

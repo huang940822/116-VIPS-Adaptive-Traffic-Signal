@@ -20,6 +20,8 @@
 #include "typedefine.h"
 #include "vms.h"
 
+LOG_USE_MODULE(VMS);
+
 wifi_adapter_device_t wifi_adapter;
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t VMS_program_update_thread_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -65,7 +67,7 @@ bool vms_program_update_thread_activate(uint8_t Program_ID, char *Program_Name)
         pthread_t VMS_program_update_handler;
         int ret = pthread_create(&VMS_program_update_handler, NULL, VMS_program_update, args);
         if (ret != 0) {
-            log_file_write_fatal_error("error creating VMS_program_update_handler: %d", ret);
+            LOG_MSG_FATAL("error creating VMS_program_update_handler: %d", ret);
             perror("vms: pthread_create");
             exit(errno);
         }
@@ -96,13 +98,13 @@ void vms_request_end(uint8_t id)
 }
 
 int vms_sync_evsp_prog(ea_info_t *ea_info_p, uint8_t *evsp_prog_p){
-    
+
     if( evsp_prog_p ){
         return -1;
     }
     /* ea_info_p will only be checked on external_app side library */
 
-    /* TODO: since NOW external _app_proxy and vms_thread will both access evsp_prog[], 
+    /* TODO: since NOW external _app_proxy and vms_thread will both access evsp_prog[],
      * depend on the behavior you observed, there might need a mutex-lock here */
     for(int i =0; i < RTM_MAX; ++i ){
         evsp_prog[i] = evsp_prog_p[i];
@@ -130,8 +132,7 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
     output_file = fopen("./config/vms_config_after.txt", "w");
 
     if (input_file == NULL || output_file == NULL) {
-        printf("carousel_update: Error opening vms_config.txt\n");
-        log_file_write_fatal_error("carousel_update: Error opening vms_config.txt");
+        LOG_MSG_FATAL("carousel_update: Error opening vms_config.txt");
         if (input_file)
             fclose(input_file);
         if (output_file != NULL)
@@ -173,11 +174,9 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
     rename("./config/vms_config_after.txt", VMS_CONFIG_FILE);
 
     if (flag == 1) {
-        printf("carousel_update: OverWrite vms_config.txt successful\n");
-        log_file_write("carousel_update: OverWrite vms_config.txt successful");
+        LOG_MSG_INFO("carousel_update: OverWrite vms_config.txt successful");
     } else {
-        printf("carousel_update: OverWrite vms_config.txt failed\n");
-        log_file_write_fatal_error("carousel_update: OverWrite vms_config.txt failed");
+        LOG_MSG_FATAL("carousel_update: OverWrite vms_config.txt failed");
     }
 
     if (VMS_ID > 7) {
@@ -190,12 +189,10 @@ int carousel_update(uint8_t VMS_ID, uint8_t Program_Type, uint8_t Program_ID)  /
 
     if (Program_Type == 0) {  // Green
         vms_config.program_ids_green[VMS_ID] = Program_ID;
-        log_file_write("program_ids_green[%d] change to %d", VMS_ID, Program_ID);
-        printf("program_ids_green[%d] change to %d", VMS_ID, Program_ID);
+        LOG_MSG_INFO("program_ids_green[%d] change to %d", VMS_ID, Program_ID);
     } else if (Program_Type == 1) {  // Not Green
         vms_config.program_ids_not_green[VMS_ID] = Program_ID;
-        log_file_write("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
-        printf("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
+        LOG_MSG_INFO("program_ids_not_green[%d] change to %d", VMS_ID, Program_ID);
     }
 
     for (int i = 0, j = 0; i < RTM_MAX; i++) {
@@ -245,7 +242,7 @@ void VMS_report_program_name(uint8_t cmd, uint8_t program_id)
     fp = fopen(VMS_pic_database_path, "r+");
 
     if (fp == NULL) {
-        log_file_write_fatal_error("VMS_report_programs_name: open %s failed", VMS_pic_database_path);
+        LOG_MSG_FATAL("VMS_report_programs_name: open %s failed", VMS_pic_database_path);
         return;
     }
     int flag = 0;
@@ -291,19 +288,19 @@ int VMS_search_program(char *program_name)
 
     dir = opendir(VMS_pic_path);  // 打開當前目錄
     if (dir == NULL) {
-        printf("VMS_search_program: open directory failed\n");
+        LOG_MSG_TRACE("VMS_search_program: open directory failed");
         return -1;
     }
 
     while ((entry = readdir(dir)) != NULL) {             // 讀取目錄中的每個檔案
         if (strcmp(entry->d_name, program_name) == 0) {  // 比較檔案名稱
-            printf("%s 已經存在\n", program_name);
+            LOG_MSG_TRACE("%s 已經存在", program_name);
             closedir(dir);
             return 0;
         }
     }
 
-    printf("%s 不存在\n", program_name);
+    LOG_MSG_TRACE("%s 不存在", program_name);
     closedir(dir);
     return 1;
 }
@@ -320,7 +317,7 @@ int VMS_wifi_connect(char *VMS_name)
     //strcat(wifi_connect_cmd, SPACEBAR);
     //strcat(wifi_connect_cmd, VMS_WIFI_AP_PASSWORD);
 
-    // printf("%s\n", wifi_connect_cmd);
+    // LOG_MSG_TRACE("%s", wifi_connect_cmd);
 
     FILE *fp;
     char path[1024];
@@ -328,8 +325,7 @@ int VMS_wifi_connect(char *VMS_name)
     /* 執行連線的指令並將輸出保存到 fp 中 */
     fp = popen(wifi_connect_cmd, "r");
     if (fp == NULL) {
-        printf("VMS_wifi_connect: Failed to execute  Wi-Fi connect command\n");
-        log_file_write_fatal_error("VMS_wifi_connect: Failed to execute  Wi-Fi connect command");
+        LOG_MSG_FATAL("VMS_wifi_connect: Failed to execute  Wi-Fi connect command");
         pclose(fp);
         return -1;
     }
@@ -337,7 +333,7 @@ int VMS_wifi_connect(char *VMS_name)
     int connected_flag = 0;
     char *pch;
     while (fgets(path, sizeof(path), fp) != NULL) {
-        // printf("%s", path);
+        // LOG_MSG_TRACE("%s", path);
         pch = strstr(path, "Connection successfully");
         if (pch != NULL) {
             connected_flag = 1;
@@ -345,11 +341,9 @@ int VMS_wifi_connect(char *VMS_name)
     }
 
     if (connected_flag == 1) {
-        printf("VMS_wifi_connect: Successfully connected Wi-Fi: %s\n", VMS_name);
-        log_file_write("VMS_wifi_connect: Successfully connected %s", VMS_name);
+        LOG_MSG_INFO("VMS_wifi_connect: Successfully connected %s", VMS_name);
     } else {
-        printf("VMS_wifi_connect: Failed to connect Wi-Fi: %s\n", VMS_name);
-        log_file_write_fatal_error("VMS_wifi_connect: Failed to connect Wi-Fi: %s", VMS_name);
+        LOG_MSG_FATAL("VMS_wifi_connect: Failed to connect Wi-Fi: %s", VMS_name);
         pclose(fp);
         return -2;
     }
@@ -374,8 +368,7 @@ int VMS_wifi_disconnect()
     /* 執行斷線的指令並將輸出保存到 fp 中 */
     fp = popen(wifi_disconnect_cmd, "r");
     if (fp == NULL) {
-        printf("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command\n");
-        log_file_write_fatal_error("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command");
+        LOG_MSG_FATAL("VMS_wifi_disconnect: Failed to execute  Wi-Fi disconnect command");
         pclose(fp);
         return -1;
     }
@@ -384,7 +377,7 @@ int VMS_wifi_disconnect()
     char *pch1, *pch2;
     /* 從 fp 中讀資料並比對是不是本來就沒連線或是成功斷線，是的話將 disconnected_flag 設為 1 */
     while (fgets(path, sizeof(path), fp) != NULL) {
-        // printf("%s", path);
+        // LOG_MSG_TRACE("%s", path);
         pch1 = strstr(path, "disconnecting failed: This device is not active");
         pch2 = strstr(path, "successfully disconnected");
         if (pch1 != NULL || pch2 != NULL) {
@@ -393,11 +386,9 @@ int VMS_wifi_disconnect()
     }
 
     if (disconnected_flag == 1) {
-        printf("VMS_wifi_disconnect: Successfully disconnected\n");
-        log_file_write("VMS_wifi_disconnect: Successfully disconnected");
+        LOG_MSG_INFO("VMS_wifi_disconnect: Successfully disconnected");
     } else {
-        printf("VMS_wifi_disconnect: Failed to disconnect Wi-Fi\n");
-        log_file_write_fatal_error("VMS_wifi_disconnect: Failed to disconnect Wi-Fi");
+        LOG_MSG_FATAL("VMS_wifi_disconnect: Failed to disconnect Wi-Fi");
         pclose(fp);
         return -2;
     }
@@ -424,7 +415,7 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
     sprintf(uint8_t_to_char, "%d", program_id);
     strcat(write_buf, uint8_t_to_char);
     strcat(write_buf, DOUBLE_QUOTATION_MARKS);
-    printf("%s\n", write_buf);
+    LOG_MSG_TRACE("%s", write_buf);
 
     // 看輸出來決定return 什麼
     FILE *fp;
@@ -433,8 +424,7 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
     /* 執行上傳並將輸出保存到 fp 中 */
     fp = popen(write_buf, "r");
     if (fp == NULL) {
-        printf("VMS_program_update_packet_tx: Failed to execute  upload command\n");
-        log_file_write_fatal_error("VMS_program_update_packet_tx: Failed to execute  upload command");
+        LOG_MSG_FATAL("VMS_program_update_packet_tx: Failed to execute  upload command");
         pclose(fp);
         return -1;
     }
@@ -449,10 +439,9 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
     strcat(upload_successful_msg, uint8_t_to_char);
     strcat(upload_successful_msg, SPACEBAR);
     strcat(upload_successful_msg, "successful");
-    // printf("%s\n", upload_successful_msg);
+    // LOG_MSG_TRACE("%s", upload_successful_msg);
     while (fgets(path, sizeof(path), fp) != NULL) {
-        printf("%s", path);
-        log_file_write("VMS_program_update_packet_tx: Upload message: %s", path);
+        LOG_MSG_INFO("VMS_program_update_packet_tx: Upload message: %s", path);
         pch = strstr(path, upload_successful_msg);
         if (pch != NULL) {
             upload_flag = 1;
@@ -462,11 +451,9 @@ int VMS_program_update_packet_tx(uint8_t program_id, char *program_name)
     system(DELETE_UPLOAD_PROGRAMS_FILES);
 
     if (upload_flag == 1) {
-        printf("VMS_program_update_packet_tx: Upload Program %d successful\n", program_id);
-        log_file_write("VMS_program_update_packet_tx: Upload Program %d successful", program_id);
+        LOG_MSG_INFO("VMS_program_update_packet_tx: Upload Program %d successful", program_id);
     } else {
-        printf("VMS_program_update_packet_tx: Upload Program %d failed\n", program_id);
-        log_file_write_fatal_error("VMS_program_update_packet_tx: Upload Program %d failed", program_id);
+        LOG_MSG_FATAL("VMS_program_update_packet_tx: Upload Program %d failed", program_id);
         pclose(fp);
         return -2;
     }
@@ -495,8 +482,7 @@ void *VMS_program_update(void *data)
     output_file = fopen(VMS_pic_path "program_id_after.txt", "w");
 
     if (input_file == NULL || output_file == NULL) {
-        printf("VMS_program_update: Error opening program_id.txt\n");
-        log_file_write_fatal_error("VMS_program_update: Error opening %s", VMS_pic_database_path);
+        LOG_MSG_FATAL("VMS_program_update: Error opening %s", VMS_pic_database_path);
         pthread_mutex_unlock(&VMS_program_update_thread_mutex);
 
         if (input_file != NULL)
@@ -534,11 +520,9 @@ void *VMS_program_update(void *data)
     rename(VMS_pic_path "program_id_after.txt", VMS_pic_database_path);
 
     if (flag == 1) {
-        printf("VMS_program_update: OverWrite program_id.txt successful\n");
-        log_file_write("VMS_program_update: OverWrite program_id.txt successful");
+        LOG_MSG_INFO("VMS_program_update: OverWrite program_id.txt successful");
     } else {
-        printf("VMS_program_update: OverWrite program_id.txt failed\n");
-        log_file_write_fatal_error("VMS_program_update: OverWrite program_id.txt failed");
+        LOG_MSG_FATAL("VMS_program_update: OverWrite program_id.txt failed");
     }
 
     // 每個 VMS 有設定上傳失敗重新上傳的閾值(包含連不到 Wi-Fi)
@@ -616,8 +600,7 @@ void *VMS_program_update(void *data)
             if (upload_error_cnt[i] >= VMS_RESEND_THRESHOLD) {
                 // 認定 VMS 異常，回報給雲端
                 set_vms_error();
-                printf("VMS_program_update: VMS ID: %s error\n", VMS_name[i]);
-                log_file_write_fatal_error("VMS_program_update: VMS ID: %s error", VMS_name[i]);
+                LOG_MSG_FATAL("VMS_program_update: VMS ID: %s error", VMS_name[i]);
             }
         }
     }
@@ -677,19 +660,19 @@ void control_loop()
     // select
     /*while (1) {
         res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
-        printf("Hello %d\n", res);
+        LOG_MSG_TRACE("Hello %d", res);
 
         if(res <= 0){
             break;
         }
-        printf("vms_packet_rx: %s\n", vms_packet_rx);
+        LOG_MSG_TRACE("vms_packet_rx: %s", vms_packet_rx);
     }*/
 
     get_traffic_signal_status(&signal_status);
 
     phase_rtm_connect(); //在控制循環中可以快速查詢並根據這些狀態進行相應的控制和數據包構建
-    // printf("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d\n", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
-    
+    // LOG_MSG_TRACE("PhaseOrder %02x SubPhaseID %d StepID %d StepSec %d", signal_status.PhaseOrder, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
+
     // 清空接收緩衝區，構建packet
     memset(vms_packet_rx, 0, sizeof(vms_packet_tx));
 
@@ -738,15 +721,14 @@ void control_loop()
         }
     } break;
     default: {
-        log_file_write("Useless vms app_id: %d", app_id);
+        LOG_MSG_INFO("Useless vms app_id: %d", app_id);
     } break;
     }
 
     strcat(vms_packet_tx, VMS_PACKET_END);
     res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
     if (res > 0) {
-        log_file_write("vms_packet_tx: %s", vms_packet_tx);
-        // printf("vms_packet_tx: %s", vms_packet_tx);
+        LOG_MSG_INFO("vms_packet_tx: %s", vms_packet_tx);
     }
 
     // 發送數據包後，等待並接收 VMS 回應後處理
@@ -755,10 +737,9 @@ void control_loop()
     // res == -1 case(EAGAIN)
     if (res < 0) {
         // 處理timeout
-        printf("RS232: EAGAIN\n");
+        LOG_MSG_TRACE("RS232: EAGAIN");
     } else if (res > 0) {
-        log_file_write("vms_packet_rx: %s", vms_packet_rx);
-        // printf("%s\n", vms_packet_rx);
+        LOG_MSG_INFO("vms_packet_rx: %s", vms_packet_rx);
     }
 
     readCnt++;
@@ -769,11 +750,10 @@ void control_loop()
         }
     }
 
-    // printf("vms_respose_cnt:");
+    // LOG_MSG_TRACE("vms_respose_cnt:");
     // for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
-    //     printf("%d ", vms_respose_cnt[i]);
+    //     LOG_MSG_TRACE("%d ", vms_respose_cnt[i]);
     // }
-    // printf("\n");
     // 每傳送十次檢查一次有沒有VMS已經超過十秒沒有回應，有的話判定 VMS 異常
     // 因為有一塊板子被廠商拿走了，所以這段程式碼會一直觸發異常
     if (readCnt == VMS_ERROR_THRESHOLD) {
@@ -781,12 +761,12 @@ void control_loop()
         for (int i = 0; i < RTM_MAX && i < signal_status.SignalCount; i++) {
             if (vms_respose_cnt[i] == 0) {
                 errorFlag = 1;
-                log_file_write_fatal_error("VMS_id : %d no respose", i + 1);
+                LOG_MSG_FATAL("VMS_id : %d no respose", i + 1);
             }
         }
         if (errorFlag == 1) {
             set_vms_error();
-            log_file_write_fatal_error("VMS : respose error");
+            LOG_MSG_FATAL("VMS : respose error");
         } else {
             clear_vms_error();
         }
@@ -804,29 +784,27 @@ void WiFi_adapter_search ()
     /* 執行上傳並將輸出保存到 fp 中 */
     fp = popen("nmcli dev status | grep wifi", "r");
     if (fp == NULL) {
-        printf("WiFi_adapter_search: Failed to execute command\n");
-        log_file_write_fatal_error("WiFi_adapter_search: Failed to execute command");
+        LOG_MSG_FATAL("WiFi_adapter_search: Failed to execute command");
         pclose(fp);
         return;
     }
     char *pch;
     while (fgets(path, sizeof(path), fp) != NULL) {
-        printf("%s", path);
-        log_file_write("WiFi_adapter_search: search message: %s", path);
+        LOG_MSG_INFO("WiFi_adapter_search: search message: %s", path);
         pch = strstr(path, "wifi");
         if (pch != NULL) {
             strncpy(wifi_adapter.device_name, path, pch - path - 2);
-            printf("%s %ld\n", wifi_adapter.device_name, strlen(wifi_adapter.device_name));
+            LOG_MSG_TRACE("%s %ld", wifi_adapter.device_name, strlen(wifi_adapter.device_name));
         }
     }
 }
 
 void vms_handler_init()
-{   
-    
+{
+
     WiFi_adapter_search();//搜索wifi
 
-    //program_ids_green 和 program_ids_not_green 初始化為255。根据 vms_config.activate_directions進行過濾並設定ID 
+    //program_ids_green 和 program_ids_not_green 初始化為255。根据 vms_config.activate_directions進行過濾並設定ID
     memset(program_ids_green, 255, sizeof(program_ids_green));
     memset(program_ids_not_green, 255, sizeof(program_ids_not_green));
     for (int i = 0, j = 0; i < RTM_MAX; i++) {
@@ -837,17 +815,18 @@ void vms_handler_init()
         }
     }
 
-    printf("Green: ");
+    char program_ids_str[LOG_CONTENT_LEN + 1];
+    memset(program_ids_str, 0, sizeof(program_ids_str));
+    LOG_MSG_APPEND(program_ids_str, "Green: ");
     for (int i = 0, j = 0; i < RTM_MAX; i++) {
-        printf("%d ", program_ids_green[i]);
+        LOG_MSG_APPEND(program_ids_str, "%d ", program_ids_green[i]);
     }
-    printf("\n");
 
-    printf("Not Green: ");
+    LOG_MSG_APPEND(program_ids_str, "Not Green: ");
     for (int i = 0, j = 0; i < RTM_MAX; i++) {
-        printf("%d ", program_ids_not_green[i]);
+        LOG_MSG_APPEND(program_ids_str, "%d ", program_ids_not_green[i]);
     }
-    printf("\n");
+    LOG_MSG_TRACE(program_ids_str);
 
     srand(time(NULL));
     sequence_number = (rand() % CAROUSEL_NUM) + 1;
@@ -858,12 +837,12 @@ void vms_handler_init()
 
     port_fd = open(VMS_SERIAL_PORT, O_RDWR | O_NOCTTY);
     if (port_fd == -1) {
-        log_file_write_fatal_error("error opening %s", VMS_SERIAL_PORT);
+        LOG_MSG_FATAL("error opening %s", VMS_SERIAL_PORT);
     } else {
-        log_file_write("%s opened successfully", VMS_SERIAL_PORT);
+        LOG_MSG_INFO("%s opened successfully", VMS_SERIAL_PORT);
     }
 
-    
+
     vms_set_serial_attribs();//設置trunk attribute，port為non-blocking。
 
     res = net_non_block("set vms port non block.", port_fd);
@@ -878,17 +857,15 @@ void vms_handler_init()
     strcat(vms_packet_tx, ",255,255,255,255\n");
     res = write(port_fd, vms_packet_tx, strlen(vms_packet_tx));
     if (res > 0) {
-        log_file_write("vms_packet_tx: %s", vms_packet_tx);
-        // printf("vms_packet_tx: %s", vms_packet_tx);
+        LOG_MSG_INFO("vms_packet_tx: %s", vms_packet_tx);
     }
     sleep(1);
     res = read(port_fd, vms_packet_rx, VMS_PACKET_RX_LEN_MAX);
     if (res < 0) {
         // 處理異常
-        printf("RS232: EAGAIN\n");
+        LOG_MSG_TRACE("RS232: EAGAIN");
     } else if (res > 0) {
-        log_file_write("vms_packet_rx: %s", vms_packet_rx);
-        // printf("%s\n", vms_packet_rx);
+        LOG_MSG_INFO("vms_packet_rx: %s", vms_packet_rx);
     }
 }
 
@@ -928,10 +905,9 @@ void vms_set_serial_attribs()
 
     /* Set the attributes to the termios structure */
     if ((tcsetattr(port_fd, TCSANOW, &serial_port_settings)) != 0) {
-        log_file_write_fatal_error("error setting attributes of %s",
-                                   VMS_SERIAL_PORT);
+        LOG_MSG_FATAL("error setting attributes of %s", VMS_SERIAL_PORT);
     } else {
-        log_file_write("%s set attributes successfully", VMS_SERIAL_PORT);
+        LOG_MSG_INFO("%s set attributes successfully", VMS_SERIAL_PORT);
     }
     sleep(2); /* required to make flush work, for some reason */
     tcflush(port_fd,

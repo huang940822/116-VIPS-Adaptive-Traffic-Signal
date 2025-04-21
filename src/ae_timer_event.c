@@ -1,5 +1,7 @@
 #include "ae_timer_event.h"
 
+LOG_USE_MODULE(CORE);
+
 struct msg_obj *err_msg;
 
 /*This is just a test function that display current time*/
@@ -14,7 +16,7 @@ int time_print_cur_time(ae_event_loop *event_loop,
     time_t mytime = time(NULL);
     char *time_str = ctime(&mytime);
     time_str[strlen(time_str) - 1] = '\0';
-    // printf("Current Time : %s\n", time_str);
+    // LOG_MSG_TRACE("Current Time : %s", time_str);
     /*The four functions asctime(), ctime(), gmtime() and localtime_r() return a
      * pointer to static data and hence are not thread-safe.*/
     /*ctime() returns a pointer to a static buffer, and must not be free()*/
@@ -26,7 +28,7 @@ int on_cloud_disconnected(ae_event_loop *event_loop,
                           long long id,
                           void *clientData)
 {
-    printf("on_cloud_disconnected\n");
+    LOG_MSG_TRACE("on_cloud_disconnected");
     if (clientData != NULL) {
         int *cloud_expired_id = (int *) clientData;
         *cloud_expired_id = id;

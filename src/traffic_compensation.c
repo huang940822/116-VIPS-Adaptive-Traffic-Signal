@@ -15,6 +15,8 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(TRAFFIC_SIGNAL);
+
 #define ArgTrafficStatus traffic_signal_status_t *signal_status
 #define ArgLogContent char log_content[LOG_CONTENT_LEN + 1]
 #define ArgLogAndStatus ArgTrafficStatus, ArgLogContent
@@ -42,8 +44,7 @@ void compensation_buffer_clear()
     pthread_mutex_lock(&mutex_compensation);
     memset(compensation_buffer, 0, sizeof(compensation_buffer));
     pthread_mutex_unlock(&mutex_compensation);
-    printf("\r\ncompensation_buffer is cleared\r\n");
-    log_file_write("compensation_buffer is cleared\r\n");
+    LOG_MSG_INFO("compensation_buffer is cleared");
 }
 
 uint8_t is_in_compensation()
@@ -64,18 +65,16 @@ uint8_t is_in_compensation()
         if (signal_status.plan[current_phase - 1].PreTimeCompensated > 0) {
             if (signal_status.plan[current_phase - 1].PreGreen !=
                 signal_status.plan[current_phase - 1].PreTimeCompensated) {
-                log_snprintf(log_content,
-                             "signal_status.plan[%d].PreTimeCompensated:%d\r\n"
-                             "signal_status.plan[%d].PreGreen:%d\r\n"
-                             "do compensation\r\n",
+                LOG_MSG_APPEND(log_content,
+                             "signal_status.plan[%d].PreTimeCompensated:%d\n"
+                             "signal_status.plan[%d].PreGreen:%d\n"
+                             "do compensation",
                              current_phase - 1, signal_status.plan[current_phase - 1].PreTimeCompensated,
                              current_phase - 1, signal_status.plan[current_phase - 1].PreGreen);
-                printf("do compensation\r\n");
-                log_file_write(log_content);
+                LOG_MSG_INFO(log_content);
                 return true;  // 正在補償
             } else {
-                printf("No compensation\r\n");
-                log_file_write("No compensation\r\n");
+                LOG_MSG_INFO("No compensation");
                 return false;
             }
         } else
@@ -122,7 +121,7 @@ static inline int16_t get_alignment_compensation_time(ArgTrafficStatus, int alig
     // 加上現在剩餘的秒數
     secInDay += signal_status->StepSec;
     compTime = secInDay % cycleTime;
-    log_file_write("Get alignment compensation time secInDay: %d align: %d %d compTime: %d cycletime: %d\n",
+    LOG_MSG_INFO("Get alignment compensation time secInDay: %d align: %d %d compTime: %d cycletime: %d",
                    secInDay, alignHour, alignMin, compTime, cycleTime);
     // 小於 cycleTime 的 1/2 就用負補償 大於就用正補償
     return compTime < (cycleTime / 2) ? -compTime : cycleTime - compTime;
@@ -212,10 +211,7 @@ static inline void insert_compensation_command(ArgLogAndStatus, int Comp_cyclenu
 
         ret = command_buf_insert_effect_time(&command);
     NotInsertCommand:
-        printf("cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\r\n",
-               command.cycle, subphase_ptr + 1, signal_status->plan[subphase_ptr].PreGreen + subphase_compensation_time[subphase_ptr],
-               subphase_compensation_time[subphase_ptr], ret);
-        log_snprintf(log_content, "\ncycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)",
+        LOG_MSG_APPEND(log_content, "cycle: %d, phase: %d, effect time: %d ,compensation_time: %d (%d)\n",
                      command.cycle, subphase_ptr + 1, signal_status->plan[subphase_ptr].PreGreen + subphase_compensation_time[subphase_ptr],
                      subphase_compensation_time[subphase_ptr], ret);
         subphase_ptr++;
@@ -300,10 +296,10 @@ static inline int get_cycle_compensation_time(ArgLogAndStatus, int16_t cycle_com
     }
     cycle_compensations[0] = tmp_comp;
 
-    log_snprintf(log_content, "start compensation method %d \r\nTotal compensation second:%d\r\n compensation cycle is %d\r\n",
+    LOG_MSG_APPEND(log_content, "start compensation method %d \nTotal compensation second:%d\n compensation cycle is %d\n",
                  methodId, total_compensation_time, Comp_cyclenum);
     for (int i = 0; i < Comp_cyclenum; i++) {
-        log_snprintf(log_content, "compensation cycle %d is %d\n", i, cycle_compensations[i]);
+        LOG_MSG_APPEND(log_content, "compensation cycle %d is %d\n", i, cycle_compensations[i]);
     }
     // 如果補償時間為 0 不做事
     return total_compensation_time;
@@ -344,7 +340,7 @@ static inline void traffic_compensation_method1(ArgLogContent, uint8_t Comp_cycl
     for (int i = 0; i < SUBPHASEID_NUM; i++) {
         if (comp_buf[i] != 0)
             phase_weight[i] = 100.0 / adjustNum;
-        printf("phase_weight %d %f\n", i, phase_weight[i]);
+        LOG_MSG_TRACE("phase_weight %d %f", i, phase_weight[i]);
     }
 
     implement_compensation_by_weight(&signal_status, log_content, cycle_compensations, Comp_cyclenum, phase_weight);
@@ -388,15 +384,13 @@ static inline void traffic_compensation_method3(ArgLogContent, uint8_t Comp_cycl
         }
     }
 
-    log_snprintf(log_content, "arterial_phase:%d \r\n branch_phase:%d\r\n", arterial_phase + 1, branch_phase + 1);
+    LOG_MSG_APPEND(log_content, "arterial_phase:%d \n branch_phase:%d\n", arterial_phase + 1, branch_phase + 1);
 
     if (total_compensation_time < 0) {  // 進行負補償
-        printf("minus compensation\r\n");
-        log_snprintf(log_content, "minus compensation\r\n");
+        LOG_MSG_APPEND(log_content, "minus compensation\n");
         phase_weight[branch_phase] = 100;
     } else if (total_compensation_time > 0) {  // 進行正補償
-        printf("positive compensation\r\n");
-        log_snprintf(log_content, "positive compensation\r\n");
+        LOG_MSG_APPEND(log_content, "positive compensation\n");
         phase_weight[arterial_phase] = 100;
     }
 
@@ -409,12 +403,12 @@ void start_compensation()
 
     pthread_mutex_lock(&mutex_compensation);
     for (int i = 0; i < SUBPHASEID_NUM; i++)
-        log_snprintf(log_content, "compensation_buffer[%d]:%d\r\n", i, compensation_buffer[i]);
+        LOG_MSG_APPEND(log_content, "compensation_buffer[%d]:%d\n", i, compensation_buffer[i]);
     pthread_mutex_unlock(&mutex_compensation);
 
     switch (config.traffic_compensation_method) {
     case 0:
-        log_snprintf(log_content, "start compensation 0\r\n Do nothing. TC automatic compensation.\r\n");
+        LOG_MSG_APPEND(log_content, "start compensation 0\n Do nothing. TC automatic compensation.\n");
         goto NotReportEnd;
         break;
     case 1:
@@ -433,5 +427,5 @@ void start_compensation()
 NotReportEnd:
     // 補償結束清空 compensation buffer
     compensation_buffer_clear();
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
 }

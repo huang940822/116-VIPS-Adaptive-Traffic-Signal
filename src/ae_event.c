@@ -1,5 +1,8 @@
 #include "ae_event.h"
 #include "msg_queue.h"
+
+LOG_USE_MODULE(CORE);
+
 /*
     Since epoll and its related system call can only be used in the Linux
    operating system, I especially use extern to separate declarations and
@@ -140,7 +143,7 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
     int j;
     /* Nothing to do? return ASAP */
     if (!(flags & AE_COMM_EVENTS) && !(flags & AE_TIME_EVENTS)) {
-        printf("Nothing to do! return ASAP\n");
+        LOG_MSG_TRACE("Nothing to do! return ASAP");
         return 0;
     }
     /*

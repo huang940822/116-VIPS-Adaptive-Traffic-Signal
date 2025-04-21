@@ -8,6 +8,8 @@
 #include "server.h"
 #include "threadpool.h"
 
+LOG_USE_MODULE(CORE);
+
 uint8_t cloud_com_id = 0;
 uint8_t OBU_com_id = 0;
 uint8_t Heartbeat_com_id = 0;
@@ -18,17 +20,14 @@ pthread_mutex_t lock;
 // which will continuously dequeue message objects form the message queue
 void *dispatcher_handler()
 {
-    printf("Enter dispatcher handler\n");
+    LOG_MSG_TRACE("Enter dispatcher handler");
     msg_queue_init();
     // pthread_mutex_init(&lock, NULL);
     int ret = 0;
 
     struct msg_obj *msg;
     // assert((pool = threadpool_create(THREAD, THREADQUEUE, 0)) != NULL);
-    // fprintf(stderr,
-    //         "Pool started with %d threads and "
-    //         "queue size of %d\n",
-    //         THREAD, THREADQUEUE);
+    // LOG_MSG_INFO("Pool started with %d threads and queue size of %d", THREAD, THREADQUEUE);
     clock_t start_time, finish_time;
     int count = 0;
     double total_time = 0;
@@ -36,15 +35,14 @@ void *dispatcher_handler()
         msg = msg_queue_dequeue();
         //從queue中取出一個msg並判斷來自cloud, dsrc或是smart_avi
         if (msg->device_id == FROM_CLOUD) {
-            // printf("cloud_rx_event\n");
+            // LOG_MSG_TRACE("cloud_rx_event");
 
             cloud_com_id = msg->handle_id;
-            log_file_write("cloud_com_id in dispatcher is %d", cloud_com_id);
+            LOG_MSG_INFO("cloud_com_id in dispatcher is %d", cloud_com_id);
             // 處理從雲端接收到的封包，解析封包中的通用欄位，驗證這些欄位是否有效，然後根據封包中的服務 ID 調用相應的回調函式進行應用層負載的處理
             ret = cloud_packet_rx_event_handler(msg); // com_packet_processing.c
             if (ret < 0) {
-                log_file_write_fatal_error("invalid packet from cloud: %d\n",
-                                           ret);
+                LOG_MSG_FATAL("invalid packet from cloud: %d", ret);
             }
         }
         if (msg->device_id == FROM_DSRC) {
@@ -62,10 +60,9 @@ void *dispatcher_handler()
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
                 total_time += cost_time;
                 if (count == 100)
-                    printf("total time = %f\n", total_time); 
+                    LOG_MSG_TRACE("total time = %f", total_time);
                 if (ret < 0) {
-                    log_file_write_fatal_error("invalid packet from OBU: %d\n",
-                                               ret);
+                    LOG_MSG_FATAL("invalid packet from OBU: %d", ret);
                 }
             }
         }
@@ -77,5 +74,5 @@ void *dispatcher_handler()
         free(msg);
     }
     assert(threadpool_destroy(pool, 0) == 0);
-    log_file_write_fatal_error("dispatcher thread exit");
+    LOG_MSG_FATAL("dispatcher thread exit");
 }

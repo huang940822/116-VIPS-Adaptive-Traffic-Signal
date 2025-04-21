@@ -17,6 +17,8 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(CORE);
+
 timer_t OBU_list_garbage_collection_timer_id;
 
 OBU_object_t normal_OBU_list[HASH_TABLE_SIZE];
@@ -181,7 +183,7 @@ int special_OBU_list_update_status(const char *name, vehicle_type_t type, OBU_ob
 ******************************************************************************/
 OBU_object_t *normal_OBU_record_insert(OBU_record_common_field_t *record)  // 這裡用hash table
 {
-    printf("normal obu insert\n");
+    LOG_MSG_TRACE("normal obu insert");
     if (record->vehicle_type != VEHICLE_NORMAL)
         return NULL;
     int hash_code = djb2_hash(
@@ -422,7 +424,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
         record->direction &= 0b111;
     } break;
     default:
-        printf("other msg %d\n", msgf->messageId);
+        LOG_MSG_TRACE("other msg %d", msgf->messageId);
         return -1;
         break;
     }
@@ -446,7 +448,7 @@ void OBU_object_garbage_collection_init() //清掉太久的obu object
 void OBU_object_garbage_collection_timer(__sigval_t value)
 {
     if (config.log_middleware_timer_event) {
-        log_file_write("timer event: OBU list garbage collection");
+        LOG_MSG_INFO("timer event: OBU list garbage collection");
     }
 
     OBU_object_garbage_collection();
@@ -457,7 +459,7 @@ void OBU_object_garbage_collection_timer(__sigval_t value)
 // 檢查並移除已經過期的 OBU 對象。
 void OBU_object_garbage_collection()
 {
-    printf("OBU garbage collect\n");
+    LOG_MSG_TRACE("OBU garbage collect");
     time_t current_time;
     time(&current_time);
     OBU_object_t *current = NULL;
@@ -522,20 +524,16 @@ void OBU_object_print()
     }
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "OBU list: ");
+    LOG_MSG_APPEND(log_content, "OBU list: ");
 
     // normal OBU list
     for (int i = 0; i < HASH_TABLE_SIZE; i++) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\nnormal_OBU_list[%d]: ", i);
+        LOG_MSG_APPEND(log_content, "\nnormal_OBU_list[%d]: ", i);
 
         pthread_mutex_lock(&mutex_normal_OBU_list[i]);
         OBU_object_t *current = normal_OBU_list[i].next;
         while (current != &normal_OBU_list[i]) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s(%ld)-> ",
+            LOG_MSG_APPEND(log_content, "%s(%ld)-> ",
                      current->OBU_name,
                      current->record_ring
                          .record[current->record_ring.last_record_pointer]
@@ -546,15 +544,12 @@ void OBU_object_print()
     }
     // special OBU list
     for (int i = 0; i < VEHICLE_TYPE_NUMBER; i++) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\nspecial_OBU_list[%d]: ", i);
+        LOG_MSG_APPEND(log_content, "\nspecial_OBU_list[%d]: ", i);
 
         pthread_mutex_lock(&mutex_special_OBU_list[i]);
         OBU_object_t *current = special_OBU_list[i].next;
         while (current != &special_OBU_list[i]) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s(%ld)-> ",
+            LOG_MSG_APPEND(log_content, "%s(%ld)-> ",
                      current->OBU_name,
                      current->record_ring
                          .record[current->record_ring.last_record_pointer]
@@ -563,6 +558,6 @@ void OBU_object_print()
         }
         pthread_mutex_unlock(&mutex_special_OBU_list[i]);
     }
-    log_file_write("%s", log_content);
+    LOG_MSG_INFO("%s", log_content);
     return;
 }

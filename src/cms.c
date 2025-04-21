@@ -22,6 +22,8 @@
 #include "typedefine.h"
 #include "vector.h"
 
+LOG_USE_MODULE(CMS);
+
 #define BUFFER_SIZE 1024
 
 const char CMS_header[] = {'m', '5', 'm', 'm', '4', 'm'};
@@ -118,15 +120,15 @@ int CMS_update_database(int imgID, char *imgName)
     int n;
     FILE *database = fopen(CMS_pic_database_path, "r");
     if (database == NULL) {
-        log_file_write_fatal_error("Error opening input file %s", CMS_pic_database_path);
+        LOG_MSG_FATAL("Error opening input file %s", CMS_pic_database_path);
         perror("Error opening input file");
         database = fopen(CMS_pic_database_path, "w");
         if (database == NULL) {
             perror("Error opening/creating input file");
-            log_file_write_fatal_error("Error opening/creating input file %s", CMS_pic_database_path);
+            LOG_MSG_FATAL("Error opening/creating input file %s", CMS_pic_database_path);
             return -1;
         }
-        log_file_write("creating input file %s", CMS_pic_database_path);
+        LOG_MSG_INFO("creating input file %s", CMS_pic_database_path);
         fclose(database);
         goto WRITEDATABASE;
     }
@@ -145,7 +147,7 @@ int CMS_update_database(int imgID, char *imgName)
                 filename[int_val] = strdup(vector_at(str_arr, 1));
                 if (filename[int_val] == NULL) {
                     set_memory_error();
-                    log_file_write_fatal_error("cms filename : malloc");
+                    LOG_MSG_FATAL("cms filename : malloc");
                     perror("cms filename : malloc");
                     exit(errno);
                 }
@@ -161,7 +163,7 @@ WRITEDATABASE:
     filename[imgID] = strdup(imgName);
     if (filename[imgID] == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("cms filename : malloc");
+        LOG_MSG_FATAL("cms filename : malloc");
         perror("cms filename : malloc");
         exit(errno);
     }
@@ -169,7 +171,7 @@ WRITEDATABASE:
     int ret = -1;
     database = fopen(CMS_pic_database_path, "w");
     if (database == NULL) {
-        log_file_write_fatal_error("Error output input file %s", CMS_pic_database_path);
+        LOG_MSG_FATAL("Error output input file %s", CMS_pic_database_path);
         perror("Error opening output file");
         for (int i = 0; i < 256; i++)
             if (filename[i])
@@ -238,7 +240,7 @@ int CMS_update_img(int imgID, char *imgName)
     // 檢查資料架是否存在
     struct stat stat_buffer;
     if (stat(CMS_pic_path, &stat_buffer) != 0 || !S_ISDIR(stat_buffer.st_mode)) {
-        log_file_write_fatal_error(CMS_pic_path "does not exist.");
+        LOG_MSG_FATAL(CMS_pic_path "does not exist.");
         return -1;
     }
 
@@ -247,14 +249,14 @@ int CMS_update_img(int imgID, char *imgName)
     strcat(path, imgName);
     FILE *input_file = fopen(path, "rb");
     if (input_file == NULL) {
-        log_file_write_fatal_error("Error opening input file %s", path);
+        LOG_MSG_FATAL("Error opening input file %s", path);
         perror("Error opening input file");
         return -1;
     }
 
     FILE *encrypted_file = fopen("./" CMS_encrypt_img, "w");
     if (encrypted_file == NULL) {
-        log_file_write_fatal_error("Error opening encrypted file ./" CMS_encrypt_img);
+        LOG_MSG_FATAL("Error opening encrypted file ./" CMS_encrypt_img);
         perror("Error opening encrypted file");
         fclose(input_file);
         return -1;
@@ -265,7 +267,7 @@ int CMS_update_img(int imgID, char *imgName)
     fclose(input_file);
     fclose(encrypted_file);
 
-    printf("imgName %s\n", imgName);
+    LOG_MSG_TRACE("imgName %s", imgName);
 
     // SCP 上傳圖片
     char scp_command[1024];
@@ -276,18 +278,18 @@ int CMS_update_img(int imgID, char *imgName)
     for (int i = 0; i < config.cms_number; i++) {
         inet_ntop(AF_INET, &(cms_addrs[i].addr.sin_addr), ip, INET_ADDRSTRLEN);
         snprintf(scp_command, sizeof(scp_command), "timeout 5 scp ./" CMS_encrypt_img " " CMS_scp_user "%s:" CMS_scp_path "%s", ip, filename);
-        log_file_write("scp command: %s", scp_command);
+        LOG_MSG_INFO("scp command: %s", scp_command);
 
         int result = system(scp_command);
         if (result == 0) {
-            log_file_write("CMS SCP file transferred successfully. cms id %d ip %s", i + 1, ip);
+            LOG_MSG_INFO("CMS SCP file transferred successfully. cms id %d ip %s", i + 1, ip);
             fail = 0;
         } else {
-            log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s, system() return value: %d", i + 1, scp_command, result);
+            LOG_MSG_FATAL("CMS error SCP failed. cms id %d, scp command: %s, system() return value: %d", i + 1, scp_command, result);
             fail++;  // 上船十次失敗回報
             i--;
             if (fail > CMS_update_fail_time) {
-                log_file_write_fatal_error("CMS error SCP failed. cms id %d, scp command: %s, timeout", i + 1, scp_command);
+                LOG_MSG_FATAL("CMS error SCP failed. cms id %d, scp command: %s, timeout", i + 1, scp_command);
                 remove("./" CMS_encrypt_img);
                 set_vms_error();
                 return -1;
@@ -348,7 +350,7 @@ void *CMS_program_update(void *data)
         cloud_packet_tx(write_buf.index, TSP_ID, write_buf.content);
         free(write_buf.content);
         clear_vms_error();
-        log_file_write("CMS update img. id %d, name %s", args->program_id, args->program_name);
+        LOG_MSG_INFO("CMS update img. id %d, name %s", args->program_id, args->program_name);
     } else {
         set_vms_error();
     }
@@ -370,7 +372,7 @@ int CMS_update_activate(int Program_ID, char Program_Name[100])
         int ret = pthread_create(&CMS_program_update_handler, NULL, CMS_program_update, args);
         if (ret != 0) {
             pthread_mutex_unlock(&cms_display_buffer.update_mutex);
-            log_file_write_fatal_error("error creating CMS_program_update_handler: %d", ret);
+            LOG_MSG_FATAL("error creating CMS_program_update_handler: %d", ret);
             perror("cms: pthread_create");
             exit(errno);
         }
@@ -390,7 +392,7 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
 
     FILE *database = fopen(CMS_pic_database_path, "r");
     if (database == NULL) {
-        log_file_write_fatal_error("CMS error opening database file %s", CMS_pic_database_path);
+        LOG_MSG_FATAL("CMS error opening database file %s", CMS_pic_database_path);
         perror("Error opening database file");
         return -1;
     }
@@ -418,7 +420,7 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     }
     fclose(database);
     if (flag == 0) {
-        log_file_write_fatal_error("cms hash can't find imgID %d", imgID);
+        LOG_MSG_FATAL("cms hash can't find imgID %d", imgID);
         return -1;
     }
 
@@ -427,14 +429,14 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
     strcat(path, buffer);
     FILE *input_file = fopen(path, "rb");
     if (input_file == NULL) {
-        log_file_write_fatal_error("cms error opening input file %s", path);
+        LOG_MSG_FATAL("cms error opening input file %s", path);
         perror("Error opening input file");
         return -1;
     }
 
     FILE *encrypted_file = fopen("./" CMS_encrypt_img, "w");
     if (encrypted_file == NULL) {
-        log_file_write_fatal_error("cms error opening encrypted file %s", CMS_encrypt_img);
+        LOG_MSG_FATAL("cms error opening encrypted file %s", CMS_encrypt_img);
         perror("Error opening encrypted file");
         fclose(input_file);
         return -1;
@@ -446,7 +448,7 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
 
     input_file = fopen("./" CMS_encrypt_img, "r");
     if (input_file == NULL) {
-        log_file_write_fatal_error("cmse error opening input file %s", "./" CMS_encrypt_img);
+        LOG_MSG_FATAL("cmse error opening input file %s", "./" CMS_encrypt_img);
         perror("Error opening input file");
         return -1;
     }
@@ -456,7 +458,7 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
         Malloc(hash_ptr, 16, "cms hash code");
         if (CMS_img_hash(input_file, hash_ptr) < 0) {
             free(hash_ptr);
-            log_file_write_fatal_error("cms error cmsID %d imgID %d img_hash read error.", cmsID, imgID);
+            LOG_MSG_FATAL("cms error cmsID %d imgID %d img_hash read error.", cmsID, imgID);
             set_vms_error();
         } else {
             *hash_code = hash_ptr;
@@ -472,19 +474,19 @@ int CMS_compare_hash(int cmsID, int imgID, uint8_t *imghash, uint8_t **hash_code
         fseek(input_file, 0, SEEK_SET);
         if (CMS_img_hash(input_file, hash_ptr) < 0) {
             free(hash_ptr);
-            log_file_write_fatal_error("cms error cmsID %d imgID %d img_hash read error.", cmsID, imgID);
+            LOG_MSG_FATAL("cms error cmsID %d imgID %d img_hash read error.", cmsID, imgID);
             set_vms_error();
         } else {
             if (memcmp(*hash_code, imghash + 6, 16) != 0) {
-                log_file_write_fatal_error("cms error cmsID %d imgID %d hash not match.", cmsID, imgID);
+                LOG_MSG_FATAL("cms error cmsID %d imgID %d hash not match.", cmsID, imgID);
                 for (int i = 0; i < 16; i++) {
-                    printf("%02x ", hash_ptr[i]);
+                    LOG_MSG_TRACE("%02x ", hash_ptr[i]);
                 }
-                printf("\n");
+                LOG_MSG_TRACE("\n");
                 for (int i = 0; i < 16; i++) {
-                    printf("%d ", imghash[i]);
+                    LOG_MSG_TRACE("%d ", imghash[i]);
                 }
-                printf("\n");
+                LOG_MSG_TRACE("\n");
                 set_vms_error();
                 *hash_code = NULL;
                 free(hash_ptr);
@@ -511,8 +513,7 @@ int CMS_update_client_addr(int CMSid, struct sockaddr_in *client_addr)
         port = ntohs(client_addr->sin_port);
         memcpy(&cms_addrs[CMSid - 1].addr, client_addr, sizeof(struct sockaddr_in));
 
-        log_file_write("CMS ip update CMSID %d IP: %s, Port: %d", CMSid, ip, port);
-        printf("IP: %s, Port: %d\n", ip, port);
+        LOG_MSG_INFO("CMS ip update CMSID %d IP: %s, Port: %d", CMSid, ip, port);
     }
 }
 
@@ -525,18 +526,18 @@ int CMS_recv_timeout(char *buffer, int buffer_len, struct sockaddr *client_addr,
 
     struct timeval timeout;
     timeout.tv_sec = CMS_receive_timeout;
-    printf(CMS_receive_timeout);
+    LOG_MSG_TRACE("CMS_receive_timeout = %d", CMS_receive_timeout);
     timeout.tv_usec = 0;
 
     int activity = select(cms_sockfd + 1, &readfds, NULL, NULL, &timeout);
     if (activity == -1) {
-        log_file_write_fatal_error("cms select");
+        LOG_MSG_FATAL("cms select");
         exit(EXIT_FAILURE);
     } else if (activity == 0) {
-        log_file_write("currently there are no CMS file descriptors available, returning\n");
+        LOG_MSG_INFO("currently there are no CMS file descriptors available, returning");
         return ret;
     }
-    
+
     if (FD_ISSET(cms_sockfd, &readfds)) {
         //ret = recvfrom(cms_sockfd, buffer, buffer_len, MSG_WAITALL,
         //               (struct sockaddr *) client_addr, client_addr_len);
@@ -549,7 +550,7 @@ int CMS_recv_timeout(char *buffer, int buffer_len, struct sockaddr *client_addr,
 
 static void *CMS_handler()
 {
-    log_file_write("CMS init success.");
+    LOG_MSG_INFO("CMS init success.");
     struct sockaddr_in addr, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
 
@@ -584,15 +585,14 @@ static void *CMS_handler()
             cms_display_buffer.app_priority = 0;
             cms_display_buffer.request_time = 0;
             memset(cms_display_buffer.buffer, 0, CMS_NUM_MAX);
-            printf("cms display timeout.\n");
-            log_file_write("cms display timeout.");
+            LOG_MSG_INFO("cms display timeout.");
         }
         pthread_mutex_unlock(&cms_display_buffer.buffer_mutex);
 
         buffer[0] = buffer_len;
         if (sendto(cms_sockfd, buffer, buffer_len, 0, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
             perror("sendto failed");
-            log_file_write_fatal_error("sendto() cms failed.");
+            LOG_MSG_FATAL("sendto() cms failed.");
             close(cms_sockfd);
             exit(EXIT_FAILURE);
         }
@@ -600,10 +600,9 @@ static void *CMS_handler()
         //int cms_amount = 0;
         memset(recvflags, 0, sizeof(recvflags));
         do {
-            //log_file_write("check client address as %d\n",client_addr.sin_addr.s_addr);
+            //LOG_MSG_INFO("check client address as %d",client_addr.sin_addr.s_addr);
             buffer_len = CMS_recv_timeout(buffer, BUFFER_SIZE, (struct sockaddr *) &client_addr, &client_addr_len);
-            //printf("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
-            log_file_write("buffer_len %d %d %d\n", buffer_len, buffer[0], buffer[3]);
+            LOG_MSG_INFO("buffer_len %d %d %d", buffer_len, buffer[0], buffer[3]);
             if (buffer_len < 0) {
                 recv_flag = -2;
             } else {
@@ -619,7 +618,7 @@ static void *CMS_handler()
                 int status = buffer[4];
                 int imgID = buffer[5];
 
-                log_file_write("CMS_handler: cmd = %d, cmsID = %d, status = %d, imgID = %d\n", 
+                LOG_MSG_INFO("CMS_handler: cmd = %d, cmsID = %d, status = %d, imgID = %d",
                         buffer[1],
                         buffer[3],
                         buffer[4],
@@ -628,42 +627,42 @@ static void *CMS_handler()
                 switch (cmd) {
                 case 1: { // upload picture
                     if (status == 1) {
-                        log_file_write_fatal_error("cms error cmsID %d imgID %d No pic.", cmsID, imgID);
+                        LOG_MSG_FATAL("cms error cmsID %d imgID %d No pic.", cmsID, imgID);
                         set_vms_error();
                     } else if (status == 2) {
-                        log_file_write_fatal_error("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
+                        LOG_MSG_FATAL("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
                         set_vms_error();
                     } else if (imgID != 0) {
                         if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
-                            printf("--8858------not match\n");
+                            LOG_MSG_TRACE("--8858------not match");
                         } else {
-                            printf("------match\n");
+                            LOG_MSG_TRACE("------match");
                         }
                     }
                 } break;
-                case 2: { // 
+                case 2: { //
                     if (status == 1) {
-                        log_file_write_fatal_error("cms error cmsID %d imgID %d No pic.", cmsID, imgID);
+                        LOG_MSG_FATAL("cms error cmsID %d imgID %d No pic.", cmsID, imgID);
                         set_vms_error();
                     } else if (status == 2) {
-                        log_file_write_fatal_error("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
+                        LOG_MSG_FATAL("cms error cmsID %d imgID %d pic name error.", cmsID, imgID);
                         set_vms_error();
                     } else if (imgID != 0) {
-                        
+
                         // [Shao-Hua 2024.08.18]
                         // TODO:"Hash 比較"的功能會導致 segmentation fault，先註解掉。
                         // if (CMS_compare_hash(cmsID, imgID, buffer + 6, &img_hash[imgID]) < 0) {
-                        //     printf("------not match\n");
+                        //     LOG_MSG_TRACE("------not match");
                         // } else {
-                        //     printf("------match\n");
+                        //     LOG_MSG_TRACE("------match");
                         // }
 
                         /**
                          * service 0(MMP) cmd 6：RSU2Cloud 回報 CMS 點燈
-                         * 蒐集所有 CMS 點燈的 IMG ID，再一次回報，為避免有一面 CMS 
+                         * 蒐集所有 CMS 點燈的 IMG ID，再一次回報，為避免有一面 CMS
                          * 故障導致無限等待，因此同一面 CMS 已經回報點燈兩次時，就送出雲端封包。
                          * 可能問題：所有 CMS 皆故障，則永遠不會回報。(但此時應該從硬體故障封包知道)
-                         */ 
+                         */
                         if (cms_lighting_check[cmsID - 1]) {
                             msg_buf_t write_buf;
                             write_buf.index = 0;
@@ -671,7 +670,7 @@ static void *CMS_handler()
 
                             write_uint8_t(6, &write_buf);
                             for (int i = 1; i < 17; i++) { // CMS 從 1 開始編號
-                                write_uint8_t(i, &write_buf); 
+                                write_uint8_t(i, &write_buf);
                                 write_uint8_t(cms_lighting_id[i - 1], &write_buf);
                             }
 
@@ -684,7 +683,7 @@ static void *CMS_handler()
 
                         cms_lighting_check[cmsID - 1] = true;
                         cms_lighting_id[cmsID - 1] = (uint8_t)imgID;
-                        log_file_write("CMS %d lighting img: %d.", cmsID, imgID);
+                        LOG_MSG_INFO("CMS %d lighting img: %d.", cmsID, imgID);
                     }
                 } break;
                 }
@@ -707,16 +706,16 @@ static void *CMS_handler()
                 recv_flag = -1;
             }
             */
-            log_file_write("recv_flag is %d\n",recv_flag);
+            LOG_MSG_INFO("recv_flag is %d",recv_flag);
 
         } while (recv_flag == 0);
-        
+
         if (recv_flag == -1) {
             clear_vms_error();
-        } 
+        }
         else {
             //20241206 Osborn 新增error logging for CMS接收逾時
-            log_file_write("recv_flag is %d, CMS receive suffered multiple timeouts\n", recv_flag);
+            LOG_MSG_INFO("recv_flag is %d, CMS receive suffered multiple timeouts", recv_flag);
             set_vms_error();
         }
         sleep(1);
@@ -738,7 +737,7 @@ void CMS_handler_init()
     }
 
     //使用 getifaddrs 函式獲取當前系統的網絡socket地址。如果失敗，則輸出錯誤訊息並退出。
-    struct ifaddrs *ifaddr, *ifa; 
+    struct ifaddrs *ifaddr, *ifa;
     if (getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs");
         exit(EXIT_FAILURE);
@@ -757,14 +756,14 @@ void CMS_handler_init()
     freeifaddrs(ifaddr);
 
     if (strlen(broadcast_ip) == 0) {
-        log_file_write_fatal_error(CMS_INTERFACE_NAME " interface not found or doesn't have an IP address\n");
+        LOG_MSG_FATAL(CMS_INTERFACE_NAME " interface not found or doesn't have an IP address\n");
         exit(EXIT_FAILURE);
     }
 
     // 設定允許廣播
     int broadcast_enable = 1;
     if (setsockopt(cms_sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) == -1) {
-        log_file_write_fatal_error("cms setsockopt");
+        LOG_MSG_FATAL("cms setsockopt");
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
@@ -782,7 +781,7 @@ void CMS_handler_init()
     addr.sin_port = htons(CMS_PORT);
 
     if (bind(cms_sockfd, (struct sockaddr *) &ipc_addr, sizeof(ipc_addr)) < 0) {
-        log_file_write_fatal_error("cms bind failed");
+        LOG_MSG_FATAL("cms bind failed");
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
@@ -792,7 +791,7 @@ void CMS_handler_init()
     timeout.tv_sec = TIMEOUT_SEC;
     timeout.tv_usec = 0;
     if (setsockopt(cms_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        log_file_write_fatal_error("cms setsockopt failed");
+        LOG_MSG_FATAL("cms setsockopt failed");
         close(cms_sockfd);
         exit(EXIT_FAILURE);
     }
@@ -800,7 +799,7 @@ void CMS_handler_init()
     pthread_t cms_thread;
     int ret = pthread_create(&cms_thread, NULL, CMS_handler, NULL);
     if (ret != 0) {
-        log_file_write_fatal_error("CMS_handler error creating cms_thread: %d", ret);
+        LOG_MSG_FATAL("CMS_handler error creating cms_thread: %d", ret);
         perror("main: pthread_create");
         exit(errno);
     }
