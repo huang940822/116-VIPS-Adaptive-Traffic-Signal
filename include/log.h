@@ -2,7 +2,7 @@
 #define LOG_H
 
 #include "typedefine.h"
-#include <time.h> 
+#include <time.h>
 
 #define LOG_DIR FILE_PATH "log/"
 

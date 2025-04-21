@@ -10,6 +10,8 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(CORE);
+
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 
 char log_file_name[LOG_FILE_NAME_LEN];
@@ -55,14 +57,14 @@ void log_file_init()
     log_file_ptr = fopen(file_path, "a+");
 
     if (log_file_ptr == NULL) {
-        log_file_write_fatal_error("error opening %s", file_path);
+        LOG_MSG_FATAL("error opening %s", file_path);
     } else {
-        log_file_write("%s opened successfully", file_path);
+        LOG_MSG_INFO("%s opened successfully", file_path);
     }
 
     /* log file name update timer event */
     create_timer(&log_file_name_update_timer_id, &log_file_name_update_num,
-                 timer_event_handler);
+            timer_event_handler);
     set_timer(log_file_name_update_timer_id, 15, 0, 1, 0);
 }
 
@@ -97,9 +99,9 @@ void log_file_name_update()
         new_log_file_ptr = fopen(file_path, "a+");
 
         if (new_log_file_ptr == NULL) {
-            log_file_write_fatal_error("error opening %s", file_path);
+            LOG_MSG_FATAL("error opening %s", file_path);
         } else {
-            log_file_write("%s opened successfully", file_path);
+            LOG_MSG_INFO("%s opened successfully", file_path);
 
             pthread_mutex_lock(&mutex_log_file_ptr);
             tmp_log_file_ptr = log_file_ptr;
@@ -113,9 +115,9 @@ void log_file_name_update()
             strcat(file_path, ".log");
 
             if (fclose(tmp_log_file_ptr) == 0) {
-                log_file_write("%s closed successfully", file_path);
+                LOG_MSG_INFO("%s closed successfully", file_path);
             } else {
-                log_file_write_fatal_error("error closing %s", file_path);
+                LOG_MSG_FATAL("error closing %s", file_path);
             }
 
             strncpy(log_file_name, buffer, LOG_FILE_NAME_LEN);
@@ -264,20 +266,20 @@ void log_file_write_fatal_error(const char *format, ...)
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "%s\n", buffer) < 0) {
         set_disk_error();
-        perror("log_file_write_fatal_error: fprintf");
+        perror("LOG_MSG_FATAL: fprintf");
         exit(errno);
     } else {
         clear_disk_error();
     }
     if (fprintf(log_file_ptr, "fatal error: \n%s\n", log_content) < 0) {
         set_disk_error();
-        perror("log_file_write_fatal_error: fprintf");
+        perror("LOG_MSG_FATAL: fprintf");
         exit(errno);
     } else {
         clear_disk_error();
     }
     if (fflush(log_file_ptr) != 0) {
-        perror("log_file_write_fatal_error: fflush");
+        perror("LOG_MSG_FATAL: fflush");
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
