@@ -18,6 +18,14 @@ FILE *log_file_ptr;
 timer_t log_file_name_update_timer_id;
 uint8_t log_file_name_update_num = TIMER_EVENT_LOG_FILE_NAME_UPDATE;
 
+const char *log_level_strs[] = {
+    [LOG_LEVEL_TRACE] = "TRACE",
+    [LOG_LEVEL_DEBUG] = "DEBUG",
+    [LOG_LEVEL_INFO] = "INFO",
+    [LOG_LEVEL_WARN] = "WARN",
+    [LOG_LEVEL_ERROR] = "ERROR",
+    [LOG_LEVEL_FATAL] = "FATAL",
+};
 void log_file_init()
 {
     // timestamp

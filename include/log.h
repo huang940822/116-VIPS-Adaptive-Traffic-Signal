@@ -21,6 +21,17 @@
         snprintf(log_content + _len, LOG_CONTENT_LEN - _len, __VA_ARGS__); \
     } while (0)
 
+typedef enum {
+    LOG_LEVEL_TRACE = 0,    /**< 封包相關資訊 */
+    LOG_LEVEL_DEBUG,        /**< 詳細運行資訊 */
+    LOG_LEVEL_INFO,         /**< 一般運行資訊 */
+    LOG_LEVEL_WARN,         /**< 異常資訊但不影響運作 */
+    LOG_LEVEL_ERROR,        /**< 異常資訊且影響運作但不會導致程式中止 */
+    LOG_LEVEL_FATAL,        /**< 異常導致程式中止 */
+} log_level_t;
+
+extern const char *log_level_strs[];
+
 void log_file_init();
 void log_file_name_update();
 void log_file_write(const char *format, ...);
