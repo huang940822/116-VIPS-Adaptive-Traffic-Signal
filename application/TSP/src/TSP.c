@@ -29,6 +29,8 @@
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
 
+LOG_USE_MODULE(TSP);
+
 // extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
@@ -56,17 +58,15 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "TSP supermatrix lookup:");
+    LOG_MSG_APPEND(log_content, "TSP supermatrix lookup:");
 
     traffic_signal_status_t signal_status;
     get_traffic_signal_status(&signal_status);
 
     // for some error situation happens in CHENG_LONG
     if (signal_status.SubPhaseID == 0) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseID is 0");
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\nSubPhaseID is 0");
+        LOG_MSG_INFO(log_content);
         return;
     }
 
@@ -75,10 +75,8 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
     TSP_RSU_matrix_t *matrix = TSP_RSU_matrix_search(plan_id);
 
     if (matrix == NULL) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\nRSU matrix not found");
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\nRSU matrix not found");
+        LOG_MSG_INFO(log_content);
         return;
     }
 
@@ -104,18 +102,10 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
     uint8_t target_phase_index =
         (host_OBU->target_phase - 1) / TSP_TARGET_PHASE_INTERVAL;
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\ndistance:     %u (%d)",
-             host_OBU->distance, distance_index);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\nsubphase:     %u (%d)",
-             current_phase, signal_phase_index);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\nremaining:    %u (%d)",
-             remaining_time, time_index);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\ntarget phase: %u (%d)",
-             host_OBU->target_phase, target_phase_index);
+    LOG_MSG_APPEND(log_content, "\ndistance:     %u (%d)", host_OBU->distance, distance_index);
+    LOG_MSG_APPEND(log_content, "\nsubphase:     %u (%d)", current_phase, signal_phase_index);
+    LOG_MSG_APPEND(log_content, "\nremaining:    %u (%d)", remaining_time, time_index);
+    LOG_MSG_APPEND(log_content, "\ntarget phase: %u (%d)", host_OBU->target_phase, target_phase_index);
 
     /* control status - intersection control */
     int ret = 0;
@@ -137,9 +127,7 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
             // if(TSP.dontSend2TC==0){
             ret = command_buf_insert_adjustment(&command);
             // }
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "\ncycle: %d, phase: %d, adjustment: %d (%d)", i, j + 1,
+            LOG_MSG_APPEND(log_content, "\ncycle: %d, phase: %d, adjustment: %d (%d)", i, j + 1,
                      matrix
                          ->entry[distance_index][signal_phase_index][time_index]
                                 [target_phase_index]
@@ -147,7 +135,7 @@ void TSP_supermatrix_lookup(TSP_host_OBU_obj_t *host_OBU)
                      ret);
         }
     }
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     return;
 }
 
@@ -157,7 +145,7 @@ int TSP_on_OBU_packet_rx(void *arg)
     if (app_section->OBU_object->vehicle_type != VEHICLE_BUS)
         return 0;
 
-    // printf("TSP_on_OBU_packet_rx function\n");
+    // LOG_MSG_TRACE("TSP_on_OBU_packet_rx function");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
@@ -166,7 +154,7 @@ int TSP_on_OBU_packet_rx(void *arg)
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_on_OBU_packet_rx: malloc");
+        LOG_MSG_FATAL("TSP_on_OBU_packet_rx: malloc");
         perror("TSP_on_OBU_packet_rx: malloc");
         exit(errno);
     } else {
@@ -177,16 +165,12 @@ int TSP_on_OBU_packet_rx(void *arg)
 
     /* print packet */
     if (config.log_OBU_packet_rx) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "TSP OBU packet rx: SPECIFIC FIELD\n");
+        LOG_MSG_APPEND(log_content, "TSP OBU packet rx: SPECIFIC FIELD\n");
         for (int i = 0; i < app_section->payload_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     read_buf.content[i]);
+            LOG_MSG_APPEND(log_content, "%x ",
+                    read_buf.content[i]);
         }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n");
+        LOG_MSG_APPEND(log_content, "\n");
     }
 
     uint8_t last_record_index =
@@ -198,32 +182,27 @@ int TSP_on_OBU_packet_rx(void *arg)
         app_section->OBU_object->record_ring.record[last_record_index]
             .position_lon);
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "TSP OBU packet rx: OBU POSITION");
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\nlat, lon: %f, %f\nOBU distance: %hd",
-             app_section->OBU_object->record_ring.record[last_record_index]
-                 .position_lat,
-             app_section->OBU_object->record_ring.record[last_record_index]
-                 .position_lon,
-             OBU_distance);
-    log_file_write(log_content);
-    printf("OBU_name from obu is %s\r\n", app_section->OBU_object->OBU_name);
+    LOG_MSG_APPEND(log_content, "TSP OBU packet rx: OBU POSITION\n");
+    LOG_MSG_APPEND(log_content, "lat, lon: %f, %f\n",
+            app_section->OBU_object->record_ring.record[last_record_index].position_lat,
+            app_section->OBU_object->record_ring.record[last_record_index].position_lon);
+    LOG_MSG_APPEND(log_content, "OBU distance: %hd\n", OBU_distance);
+
+    LOG_MSG_INFO(log_content);
+    LOG_MSG_TRACE("OBU_name from obu is %s", app_section->OBU_object->OBU_name);
     TSP_host_OBU_obj_t *host_OBU =
         TSP_host_OBU_obj_search(app_section->OBU_object->OBU_name);
-    printf("obu distance is %d\r\n", OBU_distance);
+    LOG_MSG_TRACE("obu distance is %d", OBU_distance);
     if (host_OBU != NULL) {
-        printf("host obu id is %s and host obu targetphase is %d\r\n",
-               host_OBU->OBU_name, host_OBU->target_phase);
+        LOG_MSG_TRACE("host obu id is %s and host obu targetphase is %d",
+                host_OBU->OBU_name, host_OBU->target_phase);
     }
 
 
     // if (host_OBU != NULL && OBU_distance < TSP_REMAINING_DISTANCE_MAX) {
     if (host_OBU != NULL &&
         OBU_distance < TSP_config.tsp_remaining_distance_max) {
-        printf("tsp supermatrix lookup\r\n");
+        LOG_MSG_TRACE("tsp supermatrix lookup");
         host_OBU->distance = OBU_distance;
         TSP_supermatrix_lookup(host_OBU);
         // TSP_OBU_boardcast(host_OBU);
@@ -240,7 +219,7 @@ int TSP_on_OBU_packet_rx(void *arg)
 
 int TSP_on_cloud_packet_rx(void *arg)
 {
-    printf("\nTSP_on_cloud_packet_rx function\n");
+    LOG_MSG_TRACE("TSP_on_cloud_packet_rx function");
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
     // typedef struct C2R_app_section {
@@ -255,7 +234,7 @@ int TSP_on_cloud_packet_rx(void *arg)
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_on_cloud_packet_rx: malloc");
+        LOG_MSG_FATAL("TSP_on_cloud_packet_rx: malloc");
         perror("TSP_on_cloud_packet_rx: malloc");
         exit(errno);
     } else {
@@ -271,17 +250,13 @@ int TSP_on_cloud_packet_rx(void *arg)
 
     /* print packet */
     if (config.log_cloud_packet_rx) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "TSP cloud packet rx: SPECIFIC FIELD\n");
+        LOG_MSG_APPEND(log_content, "TSP cloud packet rx: SPECIFIC FIELD\n");
         for (int i = 0; i < app_section->payload_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     read_buf.content[i]);
+            LOG_MSG_APPEND(log_content, "%x ",
+                    read_buf.content[i]);
         }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n");
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\n");
+        LOG_MSG_INFO(log_content);
     }
 
     char host_OBU_name[ID_MAX_LEN + 1];
@@ -289,9 +264,7 @@ int TSP_on_cloud_packet_rx(void *arg)
     uint8_t target_phase;
     uint16_t frequency;
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "TSP cloud packet rx: CMD(%d)", cmd);
+    LOG_MSG_APPEND(log_content, "TSP cloud packet rx: CMD(%d)", cmd);
 
     switch (cmd) {
     case 0:
@@ -299,9 +272,8 @@ int TSP_on_cloud_packet_rx(void *arg)
         break;
     case 1:  // change the frequency(time interval) of report plan by set_timer
         read_uint16_t(&frequency, &read_buf);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nfrequency: %d",
-                 frequency);
+        LOG_MSG_APPEND(log_content, "\nfrequency: %d",
+                frequency);
         set_timer(TSP_report_plan_timer_id, frequency / 10, 0, 1, 0);
         break;
     case 2:  // 把動態回報的timer關掉
@@ -309,9 +281,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         break;
     case 3:
         /* group control */
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "TSP group control\r\n");
+        LOG_MSG_APPEND(log_content, "TSP group control\n");
         // read host OBU
         read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         trim_space(host_OBU_name);
@@ -342,10 +312,8 @@ int TSP_on_cloud_packet_rx(void *arg)
                 ret = command_buf_insert_adjustment(&command);
 
 
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ncycle: %d, phase: %d, adjustment: %d (%d)", cycle,
-                         phase, adjustment, ret);
+                LOG_MSG_APPEND(log_content, "\ncycle: %d, phase: %d, adjustment: %d (%d)", cycle,
+                        phase, adjustment, ret);
             }
         }
         break;
@@ -357,12 +325,10 @@ int TSP_on_cloud_packet_rx(void *arg)
         // read target phase
         read_uint8_t(&target_phase, &read_buf);
 
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\ninsert host OBU (%s)", host_OBU_name);
+        LOG_MSG_APPEND(log_content, "\ninsert host OBU (%s)", host_OBU_name);
         /* add to host OBU list */
         TSP_host_OBU_obj_insert(host_OBU_name, target_phase);
-        /**   
+        /**
          * record active buses if TSP service in activated (20241120新增)
          * todo: 2024.11.20 Osborn Lee
          * check if OBU if already inserted before increasing activate amount
@@ -370,22 +336,20 @@ int TSP_on_cloud_packet_rx(void *arg)
         if (TSP.dontSend2TC==0) {
             pthread_mutex_lock(&mutex_active_TSP);
             activate_amount++;
-            pthread_mutex_unlock(&mutex_active_TSP); 
-            log_snprintf(log_content,"active buses and EVSP in activate area: %d\n",activate_amount);
-        }        
+            pthread_mutex_unlock(&mutex_active_TSP);
+            LOG_MSG_APPEND(log_content,"active buses and EVSP in activate area: %d\n",activate_amount);
+        }
         TSP_host_OBU_obj_print();
         break;
     case 5:  // for host obu delete?
         // read host OBU
         read_char(host_OBU_name, &read_buf, OBU_NAME_MAX_LEN);
         trim_space(host_OBU_name);
-        
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\ndelete host OBU (%s)", host_OBU_name);
+
+        LOG_MSG_APPEND(log_content, "\ndelete host OBU (%s)", host_OBU_name);
         TSP_host_OBU_obj_delete(host_OBU_name);
         TSP_host_OBU_obj_print();
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
         command_buf_delete_OBU(host_OBU_name);  // 刪除在 command buf 還沒下下去的指令
         command_buf_resume_control(TSP.id);     // 進行 resume 後補償
         break;
@@ -397,24 +361,16 @@ int TSP_on_cloud_packet_rx(void *arg)
         if (enableOrdisable == 1 &&
             TSP.dontSend2TC == 0) {  // enable/clear command buffer
             TSP.dontSend2TC = 1;
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\ntsp disable");
-            printf("tsp disable\r\n");
+            LOG_MSG_APPEND(log_content, "\ntsp disable");
         } else if (enableOrdisable == 2 &&
                    TSP.dontSend2TC ==
                        1) {  // disable command buffer/then stop the command in
                              // command buffer sent to tc machine
             TSP.dontSend2TC = 0;
             command_buf_clear();
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "\ntsp enable and clear command buffer");
-            printf("tsp enable\r\n");
+            LOG_MSG_APPEND(log_content, "\ntsp enable and clear command buffer");
         } else {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "\ninvalid cloud packet disable/enable tsp packet to tc "
-                     "machine");
+            LOG_MSG_APPEND(log_content, "\ninvalid cloud packet disable/enable tsp packet to tc machine");
         }
     } break;
     case 7:  // disalbe/enable tsc_countdown
@@ -428,20 +384,20 @@ int TSP_on_cloud_packet_rx(void *arg)
         if (enableOrdisable == 2) {
             // todo: write a api to let app get the config in middleware but let
             // the variable all exposed to app?
-            // tsc_countdown_on(config.signal_controller_manufacturer);            
+            // tsc_countdown_on(config.signal_controller_manufacturer);
             flag_countdown_on = true;
-            log_file_write("countdown is enable\r\n");
+            LOG_MSG_INFO("countdown is enable");
         } else if (enableOrdisable == 1) {  // disable
             // tsc_countdown_off(config.signal_controller_manufacturer);
             if (config.ped_countdown_send!=0) {
                 flag_countdown_off = true;
-                log_file_write("countdown is disable\r\n");
+                LOG_MSG_INFO("countdown is disable");
             }
             else {
-                log_file_write("received flag but countdown off requested not to be sent\r\n");
+                LOG_MSG_INFO("received flag but countdown off requested not to be sent");
             }
         } else {
-            printf("Illegal command of tsc_countdown\r\n");
+            LOG_MSG_TRACE("Illegal command of tsc_countdown");
         }
     } break;
     // TODO: remove case 8-12, the MMP will take control.
@@ -469,13 +425,11 @@ int TSP_on_cloud_packet_rx(void *arg)
                 for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                     {
                         config.phase_weight[i] = phase_weight[i];
-                        snprintf(log_content + strlen(log_content),
-                                 LOG_CONTENT_LEN - strlen(log_content),
-                                 "\nChange phase weight in config");
+                        LOG_MSG_APPEND(log_content, "\nChange phase weight in config");
                     }
                 }
             } else {
-                printf("warning : total phase weight is not 100\n");
+                LOG_MSG_TRACE("warning : total phase weight is not 100");
                 set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
             }
         }
@@ -489,9 +443,7 @@ int TSP_on_cloud_packet_rx(void *arg)
                 FILE *outfile;
                 outfile = fopen("config/config.txt", "w");
                 if (outfile == NULL) {
-                    snprintf(log_content + strlen(log_content),
-                             LOG_CONTENT_LEN - strlen(log_content),
-                             "\nWarning: error opening ./config/config.txt ");
+                    LOG_MSG_APPEND(log_content, "\nWarning: error opening ./config/config.txt ");
                 } else {
                     fprintf(outfile, "RSU_NAME \"%s\"\n", config.RSU_name);
                     fprintf(outfile, "RSU_id %d\n", config.RSU_id);
@@ -594,20 +546,16 @@ int TSP_on_cloud_packet_rx(void *arg)
                 fclose(outfile);
                 pthread_mutex_unlock(&file_writer);
             } else {
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content),
-                         "\ninvalid cloud packet strategy tsp packet to tc "
-                         "machine of invalid cyclenum: %d",
-                         cyclenumber);
+                LOG_MSG_APPEND(log_content, "\ninvalid cloud packet strategy tsp packet to tc "
+                        "machine of invalid cyclenum: %d",
+                        cyclenumber);
             }
         } else {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content),
-                     "\ninvalid cloud packet strategy tsp packet to tc "
-                     "machine of invalid strategy: %d",
-                     strategy);
+            LOG_MSG_APPEND(log_content, "\ninvalid cloud packet strategy tsp packet to tc "
+                    "machine of invalid strategy: %d",
+                    strategy);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     } break;
     case 9:  // 雲端更新 VMS 圖片(要考慮到錯誤回報)
     {
@@ -624,15 +572,15 @@ int TSP_on_cloud_packet_rx(void *arg)
         if (config.cms_number != 0) {
             int ret = CMS_check_img(Program_Name);
             if (ret < 0) {
-                log_file_write_fatal_error("CMS_check_img(): open directory failed %s", Program_Name);
+                LOG_MSG_FATAL("CMS_check_img(): open directory failed %s", Program_Name);
             } else {
-                log_file_write("CMS_check_img(): find %s/%s success.", CMS_pic_path, Program_Name);
+                LOG_MSG_INFO("CMS_check_img(): find %s/%s success.", CMS_pic_path, Program_Name);
             }
             ret = CMS_update_activate(Program_ID, Program_Name);
             if (ret < 0) {
-                log_file_write_fatal_error("cms program update is process.");
+                LOG_MSG_FATAL("cms program update is process.");
             } else {
-                log_file_write("cms program update thread activate.");
+                LOG_MSG_INFO("cms program update thread activate.");
             }
             ack_status = 2;
         } else {
@@ -642,18 +590,18 @@ int TSP_on_cloud_packet_rx(void *arg)
 
             switch (res) {
             case -1: {
-                log_file_write_fatal_error("VMS_search_program: open directory failed");
+                LOG_MSG_FATAL("VMS_search_program: open directory failed");
             } break;
             case 0: {
                 if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
-                    log_file_write("vms program update thread activate.");
+                    LOG_MSG_INFO("vms program update thread activate.");
                 } else {  // 正在上傳
-                    log_file_write_fatal_error("vms program update is process.");
+                    LOG_MSG_FATAL("vms program update is process.");
                 }
                 ack_status = 2;
             } break;
             case 1: {
-                log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
+                LOG_MSG_FATAL("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
                 ack_status = res;
             } break;
             }
@@ -667,8 +615,7 @@ int TSP_on_cloud_packet_rx(void *arg)
         read_uint8_t(&VMS_ID, &read_buf);
         read_uint8_t(&Program_Type, &read_buf);
         read_uint8_t(&Program_ID, &read_buf);
-        // printf("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
-        log_file_write("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
+        LOG_MSG_INFO("VMS_ID: %d, Program_Type: %d, Program_ID: %d", VMS_ID, Program_Type, Program_ID);
         int res = carousel_update(VMS_ID, Program_Type, Program_ID);
 
         switch (res) {
@@ -678,22 +625,22 @@ int TSP_on_cloud_packet_rx(void *arg)
         } break;
         case -1:  // VMS ID 有誤
         {
-            log_file_write_fatal_error("Error VMS ID");
+            LOG_MSG_FATAL("Error VMS ID");
         } break;
         case -2:  // Program Type 有誤
         {
-            log_file_write_fatal_error("Error Program Type");
+            LOG_MSG_FATAL("Error Program Type");
         } break;
         case -3:  // Program ID 有誤
         {
-            log_file_write_fatal_error("Error Program ID");
+            LOG_MSG_FATAL("Error Program ID");
         } break;
         case -4:  // 無法開啟 vms_config.txt
         {
-            log_file_write_fatal_error("Error opening vms_config.txt");
+            LOG_MSG_FATAL("Error opening vms_config.txt");
         } break;
         default: {
-            log_file_write("Useless return value");
+            LOG_MSG_INFO("Useless return value");
         } break;
         }
 
@@ -713,26 +660,24 @@ int TSP_on_cloud_packet_rx(void *arg)
         char token_packet[TOKEN_LEN];
         char token[TOKEN_LEN + 1] = RESTART_TOKEN;
         read_char(token_packet, &read_buf, TOKEN_LEN);
-        printf("the token recv is %s\r\n", token_packet);
+        LOG_MSG_TRACE("the token recv is %s", token_packet);
 
         if (strncmp(token_packet, token, TOKEN_LEN) == 0) {
             TSP_send_ack(cmd, ack_status);  // 因為之後就會被 kill 了所以要在這裡傳 ack
 
-            log_file_write("daemon get into kill self\r\n");
-            printf("daemon get into kill self\r\n");
+            LOG_MSG_INFO("daemon get into kill self");
             usleep(5000);  // 等待 log 一小段時間
             kill(getpid(), SIGINT);
         }
 
     } break;
     default:
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nuseless tsp cmd");
+        LOG_MSG_APPEND(log_content, "\nuseless tsp cmd");
         break;
     }
 
     TSP_send_ack(cmd, ack_status);
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
 
     if (read_buf.content != NULL) {
         free(read_buf.content);
@@ -742,7 +687,7 @@ int TSP_on_cloud_packet_rx(void *arg)
 
 int TSP_on_traffic_signal_command_tx(void *arg)
 {
-    // printf("TSP_on_traffic_signal_command_tx\n");
+    // LOG_MSG_TRACE("TSP_on_traffic_signal_command_tx");
     traffic_signal_command_arg_t *command =
         (traffic_signal_command_arg_t *) arg;
     // 1-2-T-2
@@ -756,10 +701,10 @@ int TSP_on_registration(void *arg)
     /* read tsp confile file*/
     int ret = TSP_config_init();
     if (ret != 0) {
-        log_file_write_fatal_error("error tsp reading config file: %d", ret);
+        LOG_MSG_FATAL("error tsp reading config file: %d", ret);
     }
 
-    // printf("TSP_on_registration function\n");
+    // LOG_MSG_TRACE("TSP_on_registration function");
 
     /* report plan timer event */
     create_timer(&TSP_report_plan_timer_id, NULL,
@@ -769,10 +714,10 @@ int TSP_on_registration(void *arg)
     DIR *dp;
     struct dirent *dirp;
     if ((dp = opendir(RSU_SUPERMATRIX_DIR)) == NULL) {
-        log_file_write_fatal_error("error opening %s", RSU_SUPERMATRIX_DIR);
+        LOG_MSG_FATAL("error opening %s", RSU_SUPERMATRIX_DIR);
         return -1;
     } else {
-        log_file_write("%s opened successfully", RSU_SUPERMATRIX_DIR);
+        LOG_MSG_INFO("%s opened successfully", RSU_SUPERMATRIX_DIR);
     }
 
     char rsu_name[RSU_NAME_MAX_LEN];
@@ -793,9 +738,9 @@ int TSP_on_registration(void *arg)
 
     /* OBU_supermatrix */
     if ((dp = opendir(OBU_SUPERMATRIX_DIR)) == NULL) {
-        log_file_write_fatal_error("error opening %s", OBU_SUPERMATRIX_DIR);
+        LOG_MSG_FATAL("error opening %s", OBU_SUPERMATRIX_DIR);
     } else {
-        log_file_write("%s opened successfully", OBU_SUPERMATRIX_DIR);
+        LOG_MSG_INFO("%s opened successfully", OBU_SUPERMATRIX_DIR);
     }
 
     /* list all file */

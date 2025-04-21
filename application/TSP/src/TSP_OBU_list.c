@@ -14,6 +14,8 @@
 #include "traffic_signal_command_buffer.h"
 #include "traffic_signal_status_updating.h"
 
+LOG_USE_MODULE(TSP);
+
 TSP_host_OBU_obj_t TSP_host_OBU_list;
 pthread_mutex_t TSP_host_OBU_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -23,7 +25,7 @@ TSP_host_OBU_obj_t *TSP_host_OBU_obj_new(char *OBU_name, uint8_t target_phase)
         (TSP_host_OBU_obj_t *) malloc(sizeof(TSP_host_OBU_obj_t));
     if (host_OBU == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_host_OBU_obj_new: malloc");
+        LOG_MSG_FATAL("TSP_host_OBU_obj_new: malloc");
         perror("TSP_host_OBU_obj_new: malloc");
         exit(errno);
     } else {
@@ -132,29 +134,26 @@ void TSP_host_OBU_obj_print()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "TSP host OBU list:");
+    LOG_MSG_APPEND(log_content, "TSP host OBU list:");
 
     pthread_mutex_lock(&TSP_host_OBU_list_mutex);
     TSP_host_OBU_obj_t *current = TSP_host_OBU_list.next;
     /* empty list */
     if (current == NULL) {
         pthread_mutex_unlock(&TSP_host_OBU_list_mutex);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nempty list");
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\nempty list");
+        LOG_MSG_INFO(log_content);
         return;
     }
 
     /* traverse host OBU list */
     while (current != NULL) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n%s (%d)",
+        LOG_MSG_APPEND(log_content, "\n%s (%d)",
                  current->OBU_name, current->target_phase);
         /* last node */
         if (current->next == NULL) {
             pthread_mutex_unlock(&TSP_host_OBU_list_mutex);
-            log_file_write(log_content);
+            LOG_MSG_INFO(log_content);
             return;
         }
         current = current->next;
@@ -192,20 +191,16 @@ void TSP_host_OBU_obj_first_insert(char *OBU_name, uint8_t target_phase)
         command.phase = current_phase;
         command.adjustment = 1;
         ret = command_buf_insert_adjustment(&command);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
-                 command.phase, command.adjustment, ret);
+        LOG_MSG_APPEND(log_content, "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
+                command.phase, command.adjustment, ret);
     }
     if (target_phase == current_phase && current_step != 1) {
         command.cycle = 1;
         command.phase = target_phase;
         command.adjustment = 1;
         ret = command_buf_insert_adjustment(&command);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
-                 command.phase, command.adjustment, ret);
+        LOG_MSG_APPEND(log_content, "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
+                command.phase, command.adjustment, ret);
     }
 
     /* target_phase > current_phase */
@@ -214,10 +209,8 @@ void TSP_host_OBU_obj_first_insert(char *OBU_name, uint8_t target_phase)
         command.phase = target_phase;
         command.adjustment = 1;
         ret = command_buf_insert_adjustment(&command);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
-                 command.phase, command.adjustment, ret);
+        LOG_MSG_APPEND(log_content, "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
+                command.phase, command.adjustment, ret);
     }
 
     /* target_phase < current_phase */
@@ -226,9 +219,7 @@ void TSP_host_OBU_obj_first_insert(char *OBU_name, uint8_t target_phase)
         command.phase = target_phase;
         command.adjustment = 1;
         ret = command_buf_insert_adjustment(&command);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
-                 command.phase, command.adjustment, ret);
+        LOG_MSG_APPEND(log_content, "\ncycle: %d, phase: %d, adjustment: %d (%d)", command.cycle,
+                command.phase, command.adjustment, ret);
     }
 }
