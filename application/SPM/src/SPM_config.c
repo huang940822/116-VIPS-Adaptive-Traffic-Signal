@@ -7,6 +7,7 @@
 #include "typedefine.h"
 #include "config.h"
 
+LOG_USE_MODULE(SPM);
 
 SPM_config_object_t SPM_config = {
     .spm_host_obu_packet_timeout = 20,// do nothing
@@ -19,10 +20,10 @@ int SPM_config_init()
     FILE *fp;
     fp = fopen(SPM_CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", SPM_CONFIG_FILE);
+        LOG_MSG_FATAL("error opening %s", SPM_CONFIG_FILE);
         return CONFIG_INVALID_SPM_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully", SPM_CONFIG_FILE);
+        LOG_MSG_INFO("%s opened successfully", SPM_CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -41,7 +42,7 @@ int SPM_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     SPM_config.spm_host_obu_packet_timeout = uint8_t_val;
-                    log_file_write("config: spm_host_obu_packet_timeout = %d",
+                    LOG_MSG_INFO("config: spm_host_obu_packet_timeout = %d",
                              SPM_config.spm_host_obu_packet_timeout);
                     continue;
                 } else {
@@ -56,7 +57,7 @@ int SPM_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     SPM_config.SPM_packet_transfer_speed = uint8_t_val;
-                    log_file_write("config: SPM_packet_transfer_speed = %d",
+                    LOG_MSG_INFO("config: SPM_packet_transfer_speed = %d",
                              SPM_config.SPM_packet_transfer_speed);
                     continue;
                 } else {
@@ -71,7 +72,7 @@ int SPM_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     SPM_config.SPM_dontSend2TC = uint8_t_val;
-                    log_file_write("config: SPM_dontSend2TC = %d",
+                    LOG_MSG_INFO("config: SPM_dontSend2TC = %d",
                              SPM_config.SPM_dontSend2TC);
                     continue;
                 } else {
