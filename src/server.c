@@ -17,7 +17,7 @@ comm_server_t RSU_server;
 pthread_t com_layer_thread;
 extern pthread_mutex_t mutex_client_write;
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)

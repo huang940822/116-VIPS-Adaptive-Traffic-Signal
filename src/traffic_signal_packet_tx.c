@@ -16,7 +16,7 @@
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
 
-LOG_USE_MODULE(TRAFFIC_SIGNAL);
+LOG_USE_MODULE(MIDDLEWARE);
 
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;

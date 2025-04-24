@@ -17,7 +17,7 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(TRAFFIC_SIGNAL);
+LOG_USE_MODULE(MIDDLEWARE);
 
 int serial_port_fd;  // serial port
 

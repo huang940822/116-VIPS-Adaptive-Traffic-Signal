@@ -14,7 +14,7 @@
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_server.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 static int current_errno;
 

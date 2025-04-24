@@ -8,7 +8,7 @@
 #include "server.h"
 #include "threadpool.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 uint8_t cloud_com_id = 0;
 uint8_t OBU_com_id = 0;

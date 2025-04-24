@@ -20,7 +20,7 @@
 #include "typedefine.h"
 #include "vms.h"
 
-LOG_USE_MODULE(VMS);
+LOG_USE_MODULE(MIDDLEWARE);
 
 wifi_adapter_device_t wifi_adapter;
 pthread_mutex_t VMS_request_priority_mutex = PTHREAD_MUTEX_INITIALIZER;

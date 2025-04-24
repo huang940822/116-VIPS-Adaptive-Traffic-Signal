@@ -28,7 +28,7 @@
 #include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 
-LOG_USE_MODULE(EXTERNAL_APP_PROXY);
+LOG_USE_MODULE(MIDDLEWARE);
 
 /* WARN: make sure the path MY_UNIX_SOCKET_PATH correctly locate the file for bind()
  * client application (i.e., external app) will use EAL (external application library)

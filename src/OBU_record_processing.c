@@ -17,7 +17,7 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 timer_t OBU_list_garbage_collection_timer_id;
 
@@ -238,7 +238,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
     if (record->vehicle_type == VEHICLE_NORMAL)
         return NULL;
     uint8_t type = record->vehicle_type;
-    
+
     pthread_mutex_lock(&mutex_special_OBU_list[type]);
     OBU_object_t *object =
         OBU_object_search(&special_OBU_list[type], record->OBU_name);
@@ -252,7 +252,7 @@ OBU_object_t *special_OBU_record_insert(OBU_record_common_field_t *record)
 
         special_OBU_list[type].next->prev = object;
         special_OBU_list[type].next = object;
-    } else { 
+    } else {
         /* OBU object exist */
         /* insert OBU record */
         if (OBU_record_ring_full(object->record_ring.first_record_pointer,
@@ -338,7 +338,7 @@ int V2R_msgf2OBU_record(MessageFrame *msgf, OBU_record_common_field_t *record)
             strcpy(record->OBU_name, "pol_");
             strncat(record->OBU_name, bsm->coreData.id.buf, 4);
             record->vehicle_type = VEHICLE_POLICE_CAR;
-            break;  
+            break;
         default:
             break;
         }
@@ -475,7 +475,7 @@ void OBU_object_garbage_collection()
             *檢查當前 OBU 對象的最後一次記錄時間是否超過了
             *允許的過期時間 OBU_OBJECT_EXPIRE_TIME。
             *如果 OBU 對象已過期，則將 target 設置為 current，並將其從list中移除
-            */    
+            */
             if ((current_time -
                  current->record_ring
                      .record[current->record_ring.last_record_pointer]

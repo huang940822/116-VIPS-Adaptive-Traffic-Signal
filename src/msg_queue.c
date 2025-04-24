@@ -4,7 +4,7 @@
 #include "buffer.h"
 #include "log.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 typedef struct msg_queue msg_queue_t;
 typedef struct msg_obj msg_obj_t;

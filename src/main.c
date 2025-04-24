@@ -36,7 +36,7 @@
 #include "typedefine.h"
 #include "vms.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;

@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 pthread_mutex_t mutex_client_write = PTHREAD_MUTEX_INITIALIZER;
 

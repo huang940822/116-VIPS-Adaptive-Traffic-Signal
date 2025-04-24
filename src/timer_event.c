@@ -23,7 +23,7 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 // extern pthread_mutex_t mutex_rs232_write;
 extern uint8_t flag_pretime;

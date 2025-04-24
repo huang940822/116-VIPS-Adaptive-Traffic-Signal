@@ -10,23 +10,23 @@
 #include "log.h"
 #include "timer_event.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 uint8_t app_num;
 app_obj_t app_list;
 event_callback_t callback_list[EVENT_TYPE_NUMBER];
 
 /* since now dispatcher and ea_app_proxy,
- * both might read/write app_list, we add a mutex_lock */ 
+ * both might read/write app_list, we add a mutex_lock */
 pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
 
-/* since now dispatcher, ea_app_proxy, command_buf_send(), 
+/* since now dispatcher, ea_app_proxy, command_buf_send(),
  * all might read/write callback_list, we add a mutex_lock */
 // 目前 mutex_callback_list 有問題需要修正要想辦法把這個 lock 拿掉 不然同時間拿了太多 lock 會太複雜
 pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
 /* this function assume the caller have grabbed the mutex_callback_list  */
-static inline __attribute__((always_inline)) 
+static inline __attribute__((always_inline))
 app_obj_t* get_app_obj_by_app_name(char* name_p)
 {
     // check app name
@@ -39,7 +39,7 @@ app_obj_t* get_app_obj_by_app_name(char* name_p)
     }
 
     app_obj_t *current = app_list.next;
-    if (current == NULL) { 
+    if (current == NULL) {
         return NULL;   /* empty list */
     }
     else{
@@ -65,9 +65,9 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
 {
     event_callback_t *event_callback =
         (event_callback_t *) malloc(sizeof(event_callback_t));
-        
+
     app_obj_t* app_obj_p;
-    
+
     if (event_callback == NULL) {
         set_memory_error();
         LOG_MSG_FATAL("event_callback_new: malloc");
@@ -110,11 +110,11 @@ void event_callback_msg_id_insert(event_type_t event_type,
                                   DSRCmsgID msg_id,
                                   int (*callback)(void *))
 {
-    /* since now dispatcher, ea_app_proxy, command_buf_send() 
+    /* since now dispatcher, ea_app_proxy, command_buf_send()
      * all might read/write callback_list we add a mutex_lock */
-    
-    pthread_mutex_lock(&mutex_callback_list); 
-    
+
+    pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *previous = &callback_list[event_type];
     event_callback_t *current = previous->next;
     event_callback_t *event_callback = NULL;
@@ -149,9 +149,9 @@ void event_callback_insert(event_callback_t *head,
                            app_obj_t *app,
                            int (*callback)(void *))
 {
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
      * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list); 
+    pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *previous = head;
     event_callback_t *current = head->next;
@@ -193,9 +193,9 @@ unlock_ret:
 int app_obj_insert(app_obj_t *app)
 {
     /* since now dispatcher and ea_app_proxy,
-     * both might read/write app_list, we add a mutex_lock */ 
+     * both might read/write app_list, we add a mutex_lock */
     int ret;
-    pthread_mutex_lock(&mutex_app_list); 
+    pthread_mutex_lock(&mutex_app_list);
 
     app_obj_t *current = app_list.next;
     uint8_t num = 0;
@@ -233,9 +233,9 @@ int app_obj_insert(app_obj_t *app)
     current->next = app;
     num++;
     ret = num;
-    
+
 unlock_ret:
-    pthread_mutex_unlock(&mutex_app_list); 
+    pthread_mutex_unlock(&mutex_app_list);
     return ret;
 }
 
@@ -248,7 +248,7 @@ unlock_ret:
 **               <0: registration failed
 ******************************************************************************/
 int app_register(app_obj_t *app)
-{   
+{
     // check app name
     if (strlen(app->name) == 0) {
         return APP_REGISTER_INVALID_APP_NAME;
@@ -320,9 +320,9 @@ void event_callback_print()
             "callback_list[EVENT_TYPE_NAME]:",
             "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
 
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
      * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list); 
+    pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current;
     for (int i = 0; i < EVENT_TYPE_NUMBER; i++) {
@@ -371,7 +371,7 @@ void event_callback_print()
         while (current->next != NULL) {
             LOG_MSG_APPEND(log_content, "%s", current->next->name);
             LOG_MSG_APPEND(log_content, "(%d)", current->next->priority);
-            
+
             current = current->next;
             if (current->next != NULL) {
                 LOG_MSG_APPEND(log_content, "-> ");
@@ -384,10 +384,10 @@ void event_callback_print()
 }
 
 void app_list_print()
-{   
+{
     /* since now dispatcher and ea_app_proxy,
-     * both might read/write app_list, we add a mutex_lock */ 
-    pthread_mutex_lock(&mutex_app_list); 
+     * both might read/write app_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_app_list);
 
     app_obj_t *current = app_list.next;
 
@@ -400,6 +400,6 @@ void app_list_print()
         current = current->next;
     }
 unlock_ret:
-    pthread_mutex_unlock(&mutex_app_list); 
+    pthread_mutex_unlock(&mutex_app_list);
     return;
 }

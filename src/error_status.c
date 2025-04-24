@@ -9,7 +9,7 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 /* error_status 說明:
 Bit 0: DSRC

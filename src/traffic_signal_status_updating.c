@@ -18,7 +18,7 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(TRAFFIC_SIGNAL);
+LOG_USE_MODULE(MIDDLEWARE);
 
 traffic_signal_status_t signal_status;
 traffic_signal_status_t current_signal_status;

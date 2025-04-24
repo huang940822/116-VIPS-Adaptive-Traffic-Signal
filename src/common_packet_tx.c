@@ -12,7 +12,7 @@
 #include "traffic_compensation.h"
 #include "traffic_signal_status_updating.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 //常用訊息傳送 (ACK訊息、補償策略)
 void common_send_ack(uint8_t cmd, uint8_t status) //訊息接收正常，回傳ACK

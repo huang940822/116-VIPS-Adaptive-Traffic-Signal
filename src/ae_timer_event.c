@@ -1,6 +1,6 @@
 #include "ae_timer_event.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 struct msg_obj *err_msg;
 

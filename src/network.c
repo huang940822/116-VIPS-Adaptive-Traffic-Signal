@@ -2,7 +2,7 @@
 
 #include <sys/epoll.h>
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 static void net_set_error(char *err, const char *fmt, ...)
 {
@@ -143,7 +143,7 @@ int net_UDP_server(char *err, int port, char *bindaddr)
             continue;
         }
         goto end;
-    }   
+    }
     if (p == NULL) {
         net_set_error(err, "unable to bind socket, errno: %d", errno);
         goto error;
@@ -260,7 +260,7 @@ int net_UDP_accept(char *err,
     int recv_bytes = recvfrom(listen_fd, recv_buf, MAX_BUF_LEN, 0,
                               (struct sockaddr *) &client_addr, &client_len);
     char cipp[30] = {0}, sipp[30] = {0};
-    inet_ntop(AF_INET, &client_addr.sin_addr, cipp, sizeof(struct sockaddr_in)); 
+    inet_ntop(AF_INET, &client_addr.sin_addr, cipp, sizeof(struct sockaddr_in));
     LOG_MSG_TRACE("client addr = %s, port = %d", cipp, ntohs(client_addr.sin_port));
 
     if (recv_bytes > 0) {

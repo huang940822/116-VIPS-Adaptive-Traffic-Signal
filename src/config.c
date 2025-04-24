@@ -8,7 +8,7 @@
 #include "typedefine.h"
 #include "vector.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
 
 config_object_t config = {
     .RSU_name = "S428901   ",
