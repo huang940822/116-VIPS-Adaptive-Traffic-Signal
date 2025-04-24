@@ -10,7 +10,9 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(CORE);
+LOG_USE_MODULE(MIDDLEWARE);
+
+#define CORE_MODULE_NAME    "MIDDLEWARE"
 
 pthread_mutex_t mutex_log_file_ptr = PTHREAD_MUTEX_INITIALIZER;
 
@@ -139,6 +141,73 @@ void log_set_level(log_level_t level)
 }
 
 /**
+ * @brief 寫入日誌訊息至檔案和標準輸出
+ *
+ * 此函式將日誌訊息寫入檔案和標準輸出。在 DEBUG_MOD 模式下，會將日誌訊息同時輸出至標準輸出。
+ * 若寫入檔案或刷新緩衝區時發生錯誤，將設置磁碟錯誤標誌並終止程式執行。
+ *
+ * @param[in] time_str_ptr 時間字串指標
+ * @param[in] level 日誌等級
+ * @param[in] file 檔案名稱
+ * @param[in] line 行號
+ * @param[in] log_module_name 日誌模組名稱
+ * @param[in] log_content_ptr 日誌內容指標
+ */
+static void _log_appliction(char *time_str_ptr, log_level_t level, const char *file, int line, const char *log_module_name, char *log_content_ptr) {
+#ifdef DEBUG_MOD
+    fprintf(stdout, "[%s][%s][%s][%s:%d] - %s\n",
+            time_str_ptr, log_level_strs[current_log_level], log_module_name, file, line, log_content_ptr);
+#endif
+    pthread_mutex_lock(&mutex_log_file_ptr);
+    if (fprintf(log_file_ptr, "[%s][%s][%s][%s:%d] - %s\n",
+            time_str_ptr, log_level_strs[current_log_level], log_module_name, file, line, log_content_ptr) < 0) {
+        set_disk_error();
+        perror("log_file_write: fprintf");
+        exit(errno);
+    } else {
+        clear_disk_error();
+    }
+    if (fflush(log_file_ptr) != 0) {
+        perror("log_file_write: fflush");
+        exit(errno);
+    }
+    pthread_mutex_unlock(&mutex_log_file_ptr);
+}
+
+/**
+ * @brief 用於記錄日誌的核心函數。
+ *
+ * 此函數將日誌訊息寫入檔案中，並在 DEBUG_MOD 模式下將其輸出到標準輸出。
+ * 如果寫入檔案或刷新緩衝區時發生錯誤，將設置磁碟錯誤標誌並終止程式執行。
+ *
+ * @param[in] time_str_ptr 指向時間字串的指標
+ * @param[in] level 日誌級別
+ * @param[in] file 檔案名
+ * @param[in] line 行號
+ * @param[in] log_content_ptr 指向日誌內容的指標
+ */
+static void _log_core(char *time_str_ptr, log_level_t level, const char *log_module_name, char *log_content_ptr) {
+#ifdef DEBUG_MOD
+    fprintf(stdout, "[%s][%s][%s] - %s\n",
+            time_str_ptr, log_level_strs[current_log_level], log_module_name, log_content_ptr);
+#endif
+    pthread_mutex_lock(&mutex_log_file_ptr);
+    if (fprintf(log_file_ptr, "[%s][%s][%s] - %s\n",
+            time_str_ptr, log_level_strs[current_log_level], log_module_name, log_content_ptr) < 0) {
+        set_disk_error();
+        perror("log_file_write: fprintf");
+        exit(errno);
+    } else {
+        clear_disk_error();
+    }
+    if (fflush(log_file_ptr) != 0) {
+        perror("log_file_write: fflush");
+        exit(errno);
+    }
+    pthread_mutex_unlock(&mutex_log_file_ptr);
+}
+
+/**
  * @brief 寫入日誌檔案
  *
  * 此函式用於將日誌訊息寫入日誌檔案中。它會根據當前的日誌等級和模組名稱，
@@ -158,6 +227,11 @@ void log_set_level(log_level_t level)
  */
 void log_file_write(log_level_t level, const char *file, int line, const char *log_module_name, const char *format, ...)
 {
+    /* Early Return */
+    if (level < current_log_level) {
+        return;
+    }
+
     /* 產生 timestamp */
     time_t rawtime;
     struct tm localTime;
@@ -175,25 +249,12 @@ void log_file_write(log_level_t level, const char *file, int line, const char *l
     vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
     va_end(list);
 
-    /* Early Return */
-    if (level < current_log_level) {
-        return;
+    if (strncmp(log_module_name, CORE_MODULE_NAME, sizeof(CORE_MODULE_NAME)) != 0) {
+        _log_appliction(time_format_str, level, file, line, log_module_name, log_content);
     }
-
-    pthread_mutex_lock(&mutex_log_file_ptr);
-    if (fprintf(log_file_ptr, "[%s][%s][%s][%s:%d] - %s\n",
-            time_format_str, log_level_strs[current_log_level], log_module_name, file, line, log_content) < 0) {
-        set_disk_error();
-        perror("log_file_write: fprintf");
-        exit(errno);
-    } else {
-        clear_disk_error();
+    else {
+        _log_core(time_format_str, level, log_module_name, log_content);
     }
-    if (fflush(log_file_ptr) != 0) {
-        perror("log_file_write: fflush");
-        exit(errno);
-    }
-    pthread_mutex_unlock(&mutex_log_file_ptr);
 }
 
 /**
@@ -222,7 +283,7 @@ int log_appendf(char *log_content, size_t max_len, const char *fmt, ...)
     }
 
     size_t _len = strlen(log_content);
-    ret = snprintf(log_content + _len, max_len - _len, "%s%s", log_content, tmp_log_content);
+    ret = snprintf(log_content + _len, max_len - _len, "%s", tmp_log_content);
     /* Failed to concat string to log content string */
     if (ret < 0) {
         return (-1);
