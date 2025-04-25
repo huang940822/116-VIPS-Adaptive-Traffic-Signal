@@ -7,7 +7,7 @@
 #include "log.h"
 #include "server.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_COM);
 
 int com_send(int com_id, unsigned char *buf, size_t send_len)
 {

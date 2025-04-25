@@ -17,7 +17,7 @@
 #include "external_app_proxy_socket.h"
 #include "log.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_EXTENAL_APP_PROXY);
 
 /* DANGER: this file: external_app_proxy_socket.c
  * will exist both is server-side and client-side

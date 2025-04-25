@@ -15,7 +15,7 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_COMPENSATION);
 
 #define ArgTrafficStatus traffic_signal_status_t *signal_status
 #define ArgLogContent char log_content[LOG_CONTENT_LEN + 1]

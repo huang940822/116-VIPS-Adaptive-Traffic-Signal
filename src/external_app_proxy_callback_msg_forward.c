@@ -23,7 +23,7 @@
 #include "external_app_proxy_server.h"
 #include "external_app_proxy_callback_msg_forward.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_EXTENAL_APP_PROXY);
 
 app_obj_t* proxy_handling_app_p;
 //for test

@@ -22,7 +22,7 @@
 #include "external_app_proxy_socket.h"
 #include "external_app_proxy_typedefine.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_EXTENAL_APP_PROXY);
 
 static inline __attribute__((always_inline)) int simple_send_ack_to_app(int fd, int ack_ret_val)
 {

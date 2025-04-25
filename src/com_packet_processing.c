@@ -26,7 +26,7 @@
 #include "error_code_enum.h"
 #include "j2735_codec.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_COM);
 
 int cb_counter;
 

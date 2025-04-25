@@ -26,7 +26,7 @@
 #define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_TC);
 
 tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM] = {0};
 pthread_mutex_t mutex_command_buf = PTHREAD_MUTEX_INITIALIZER;

@@ -22,7 +22,7 @@
 #include "typedefine.h"
 #include "vector.h"
 
-LOG_USE_MODULE(MIDDLEWARE);
+LOG_USE_MODULE(MIDDLEWARE_CMS);
 
 #define BUFFER_SIZE 1024
 
