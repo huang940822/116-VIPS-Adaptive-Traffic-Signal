@@ -232,6 +232,6 @@ SPM_repeater_end:
         j2735_msg_dealloc(SignalStatusMessage_Id, ssm);
     }
     vector_free(ssm_ptrv);
-    LOG_MSG_TRACE("SPM_repeater_thread end");
+    LOG_MSG_INFO("SPM_repeater_thread end");
     pthread_detach(pthread_self());
 }

@@ -25,7 +25,7 @@ void EVSP_timeout_report(union sigval value)
             ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name,
             OBU_NAME_MAX_LEN);
     timeout_obu_obj.vehicle_type = ((EVSP_host_OBU_obj_t *) value.sival_ptr)->vehicle_type;
-    
+
     // 回報 EVSP timeout event
     EVSP_report_activate_area(&timeout_obu_obj, TIMEOUT, 0);
 }
@@ -49,13 +49,13 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
     command_buf_delete_OBU(obu_obj->OBU_name);
     EVSP_cooling_list_insert(obu_obj->OBU_name, obu_obj->area_ptr);
     EVSP_host_OBU_obj_delete(obu_obj->OBU_name);
-    
+
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
         command_buf_resume_control(EVSP.id);
     }
-    
-    LOG_MSG_INFO("EVSP host OBU packet timeout: %s", obu_obj->OBU_name);
+
+    LOG_MSG_WARN("EVSP host OBU packet timeout: %s", obu_obj->OBU_name);
     EVSP_host_OBU_obj_print();
 }
 
@@ -83,7 +83,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
         command_buf_resume_control(EVSP.id);
     }
-    
-    LOG_MSG_INFO("EVSP host OBU list timeout: %s", obu_obj->OBU_name);
+
+    LOG_MSG_WARN("EVSP host OBU list timeout: %s", obu_obj->OBU_name);
     EVSP_host_OBU_obj_print();
 }

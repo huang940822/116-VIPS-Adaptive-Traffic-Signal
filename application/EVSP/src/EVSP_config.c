@@ -53,7 +53,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_packet_timeout = uint8_t_val;
-                    LOG_MSG_INFO("config: evsp_host_obu_packet_timeout = %d",
+                    LOG_MSG_WARN("config: evsp_host_obu_packet_timeout = %d",
                             EVSP_config.evsp_host_obu_packet_timeout);
                     continue;
                 } else {
@@ -69,7 +69,7 @@ int EVSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     EVSP_config.evsp_host_obu_list_timeout = uint8_t_val;
-                    LOG_MSG_INFO("config: evsp_host_obu_list_timeout = %d",
+                    LOG_MSG_WARN("config: evsp_host_obu_list_timeout = %d",
                             EVSP_config.evsp_host_obu_list_timeout);
                     continue;
                 } else {

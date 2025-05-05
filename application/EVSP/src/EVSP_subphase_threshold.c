@@ -244,7 +244,7 @@ void *EVSP_OBU_activation_timer()
         EVSP_plan_table_t *plan = EVSP_plan_table_search(signal_status.PlanID);
         int ret = -1;
         if (plan == NULL) {
-            LOG_MSG_APPEND(log_content, "EVSP_OBU_activation_timer touching area plan not found");
+            LOG_MSG_WARN(log_content, "EVSP_OBU_activation_timer touching area plan not found");
             LOG_MSG_INFO(log_content);
             break;
         }
@@ -406,7 +406,7 @@ int EVSP_OBU_activation_timer_start(EVSP_host_OBU_obj_t *host_OBU)
     if (activate_OBU.activate_thread == 0) {
         int ret = pthread_create(&activate_OBU.activate_thread, NULL, EVSP_OBU_activation_timer, NULL);
         if (ret != 0) {
-            LOG_MSG_APPEND(log_content, "Failed to create thread\n");
+            LOG_MSG_ERROR(log_content, "Failed to create thread");
             LOG_MSG_INFO(log_content);
             pthread_mutex_unlock(&activate_OBU.activate_mutex);
             return -1;

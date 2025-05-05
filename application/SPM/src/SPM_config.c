@@ -42,8 +42,8 @@ int SPM_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     SPM_config.spm_host_obu_packet_timeout = uint8_t_val;
-                    LOG_MSG_INFO("config: spm_host_obu_packet_timeout = %d",
-                             SPM_config.spm_host_obu_packet_timeout);
+                    LOG_MSG_WARN("config: spm_host_obu_packet_timeout = %d",
+                            SPM_config.spm_host_obu_packet_timeout);
                     continue;
                 } else {
                     goto SPM_config_init_error;

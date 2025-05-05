@@ -87,7 +87,7 @@ int MMP_on_cloud_packet_rx(void *arg)
                         }
                     }
                 } else {
-                    LOG_MSG_TRACE("warning : total phase weight is not 100");
+                    LOG_MSG_WARN("warning : total phase weight is not 100");
                     set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
                 }
             }
@@ -101,7 +101,7 @@ int MMP_on_cloud_packet_rx(void *arg)
                     FILE *outfile;
                     outfile = fopen("config/config.txt", "w");
                     if (outfile == NULL) {
-                        LOG_MSG_APPEND(log_content, "\nWarning: error opening ./config/config.txt ");
+                        LOG_MSG_WARN(log_content, " Warning: error opening ./config/config.txt ");
                     } else {
                         fprintf(outfile, "RSU_NAME \"%s\"\n", config.RSU_name);
                         fprintf(outfile, "RSU_id %d\n", config.RSU_id);
@@ -204,13 +204,11 @@ int MMP_on_cloud_packet_rx(void *arg)
                     fclose(outfile);
                     pthread_mutex_unlock(&mmp_file_writer);
                 } else {
-                    LOG_MSG_APPEND(log_content, "\ninvalid cloud packet strategy MMP packet to tc "
-                            "machine of invalid cyclenum: %d",
+                    LOG_MSG_WARN(log_content, "invalid cloud packet strategy MMP packet to tc machine of invalid cyclenum: %d",
                             cyclenumber);
                 }
             } else {
-                LOG_MSG_APPEND(log_content, "\ninvalid cloud packet strategy MMP packet to tc "
-                        "machine of invalid strategy: %d",
+                LOG_MSG_WARN(log_content, "invalid cloud packet strategy MMP packet to tc machine of invalid strategy: %d",
                         strategy);
             }
             LOG_MSG_INFO(log_content);

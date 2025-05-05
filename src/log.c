@@ -143,7 +143,7 @@ void log_set_level(log_level_t level)
 /**
  * @brief 寫入日誌訊息至檔案和標準輸出
  *
- * 此函式將日誌訊息寫入檔案和標準輸出。在 DEBUG_MOD 模式下，會將日誌訊息同時輸出至標準輸出。
+ * 此函式將日誌訊息寫入檔案和標準輸出。
  * 若寫入檔案或刷新緩衝區時發生錯誤，將設置磁碟錯誤標誌並終止程式執行。
  *
  * @param[in] time_str_ptr 時間字串指標
@@ -154,21 +154,17 @@ void log_set_level(log_level_t level)
  * @param[in] log_content_ptr 日誌內容指標
  */
 static void _log_appliction(char *time_str_ptr, log_level_t level, const char *file, int line, const char *log_module_name, char *log_content_ptr) {
-#ifdef DEBUG_MOD
-    fprintf(stdout, "[%s][%s][%s][%s:%d] - %s\n",
-            time_str_ptr, log_level_strs[current_log_level], log_module_name, file, line, log_content_ptr);
-#endif
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "[%s][%s][%s][%s:%d] - %s\n",
             time_str_ptr, log_level_strs[current_log_level], log_module_name, file, line, log_content_ptr) < 0) {
         set_disk_error();
-        perror("log_file_write: fprintf");
+        perror("_log_appliction: fprintf");
         exit(errno);
     } else {
         clear_disk_error();
     }
     if (fflush(log_file_ptr) != 0) {
-        perror("log_file_write: fflush");
+        perror("_log_appliction: fflush");
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
@@ -177,7 +173,7 @@ static void _log_appliction(char *time_str_ptr, log_level_t level, const char *f
 /**
  * @brief 用於記錄日誌的核心函數。
  *
- * 此函數將日誌訊息寫入檔案中，並在 DEBUG_MOD 模式下將其輸出到標準輸出。
+ * 此函數將日誌訊息寫入檔案中。
  * 如果寫入檔案或刷新緩衝區時發生錯誤，將設置磁碟錯誤標誌並終止程式執行。
  *
  * @param[in] time_str_ptr 指向時間字串的指標
@@ -187,21 +183,17 @@ static void _log_appliction(char *time_str_ptr, log_level_t level, const char *f
  * @param[in] log_content_ptr 指向日誌內容的指標
  */
 static void _log_core(char *time_str_ptr, log_level_t level, const char *log_module_name, char *log_content_ptr) {
-#ifdef DEBUG_MOD
-    fprintf(stdout, "[%s][%s][%s] - %s\n",
-            time_str_ptr, log_level_strs[current_log_level], log_module_name, log_content_ptr);
-#endif
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "[%s][%s][%s] - %s\n",
             time_str_ptr, log_level_strs[current_log_level], log_module_name, log_content_ptr) < 0) {
         set_disk_error();
-        perror("log_file_write: fprintf");
+        perror("_log_core: fprintf");
         exit(errno);
     } else {
         clear_disk_error();
     }
     if (fflush(log_file_ptr) != 0) {
-        perror("log_file_write: fflush");
+        perror("_log_core: fflush");
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
@@ -327,20 +319,20 @@ void log_file_write_fatal_error(const char *format, ...)
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "%s\n", buffer) < 0) {
         set_disk_error();
-        perror("LOG_MSG_FATAL: fprintf");
+        perror("log_file_write_fatal_error: fprintf");
         exit(errno);
     } else {
         clear_disk_error();
     }
     if (fprintf(log_file_ptr, "fatal error: \n%s\n", log_content) < 0) {
         set_disk_error();
-        perror("LOG_MSG_FATAL: fprintf");
+        perror("log_file_write_fatal_error: fprintf");
         exit(errno);
     } else {
         clear_disk_error();
     }
     if (fflush(log_file_ptr) != 0) {
-        perror("LOG_MSG_FATAL: fflush");
+        perror("log_file_write_fatal_error: fflush");
         exit(errno);
     }
     pthread_mutex_unlock(&mutex_log_file_ptr);
