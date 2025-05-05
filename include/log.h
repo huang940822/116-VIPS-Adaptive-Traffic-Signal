@@ -54,12 +54,12 @@ int log_appendf(char *log_content, size_t max_len, const char *fmt, ...);
 
 /* FIXME: Remove unused function in ticket #36 */
 // void log_file_write_fatal_error(char *content);
-void log_file_write_fatal_error(const char *format, ...);
+__attribute__((unused)) void log_file_write_fatal_error(const char *format, ...);
 
 /* FIXME: Remove unused function in ticket #36 */
 #define ENABLE_FATAL_WITH_ERR_CODE_LOG 1
 #define SWITCH_FATAL_WITH_ERR_CODE_LOG_TO_PRINT 1
-int log_file_write_with_errno(const char *format, ...);
+__attribute__((unused)) int log_file_write_with_errno(const char *format, ...);
 
 /* FIXME: Remove unused function in ticket #36 */
 __attribute__((unused)) struct timespec get_timespec_diff(struct timespec bgn, struct timespec end);
