@@ -241,7 +241,7 @@ void log_file_write(log_level_t level, const char *file, int line, const char *l
     vsnprintf(log_content, LOG_CONTENT_LEN, format, list);
     va_end(list);
 
-    if (strncmp(log_module_name, CORE_MODULE_NAME, sizeof(CORE_MODULE_NAME)) != 0) {
+    if (strncmp(log_module_name, CORE_MODULE_NAME, sizeof(CORE_MODULE_NAME) - 1) != 0) {
         _log_appliction(time_format_str, level, file, line, log_module_name, log_content);
     }
     else {
