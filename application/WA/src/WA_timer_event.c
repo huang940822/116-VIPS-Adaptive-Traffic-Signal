@@ -30,6 +30,7 @@ void WA_Agent_timer_handler(__sigval_t value)
 
     CCI fusion_Leading_Vehicles[4];
     int warningLevels[4] = {0,0,0,0}; // 0: no show, 1: Lv1, 2: lv2, 3: lv3.
+    double PET[4] = {DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX};
     /* initialize fusion leading vehicles */
     for(int i = 0; i < 4; i++){
         fusion_Leading_Vehicles[i].speed = -1.0;
@@ -54,7 +55,7 @@ void WA_Agent_timer_handler(__sigval_t value)
         }
     }
     if(vehicle_in_range && (TTI[0]>0 || TTI[2]>0) && (TTI[1]>0 || TTI[3]>0) ){
-        double PET[4] = {DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX};
+        //double PET[4] = {DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX};
         int validPairs[4] = {-1, -1, -1, -1};
         int validCount = 0;
         int belowThreePairs[4] = {-1, -1, -1, -1};
@@ -170,10 +171,16 @@ void WA_Agent_timer_handler(__sigval_t value)
         buf[i] = warning_map[warningLevels[i]]; 
     }
     if(show_flag){
+        CMS_request_end(WA.id);
         CMS_request_start(WA.id, WA.priority, buf);
     }
     else{
         CMS_request_end(WA.id);
+    }
+    for (int i = 0; i < 4; i++){
+        if(PET[i]!=DBL_MAX){
+            log_file_write("Direction Pair %d to %d: PET %lf", directionPairs[i][0], directionPairs[i][1], PET[i]);
+        }
     }
     for (int i = 0; i < 4; i++) {
         log_file_write("Direction %d: Warning Level %d", i, warningLevels[i]);

@@ -26,3 +26,11 @@ void WA_clear_leading_vehicles(){
     }
     pthread_mutex_unlock(&mutex_LV);
 }
+bool is_valid_gps(double lat, double lon) {
+    return (lat >= -90.0 && lat <= 90.0 &&
+            lon >= -180.0 && lon <= 180.0 &&
+            !(lat == -1.0 && lon == -1.0));
+}
+bool is_valid_speed(double speed) {
+    return speed >= 0.0;
+}

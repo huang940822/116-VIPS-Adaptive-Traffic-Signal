@@ -69,9 +69,9 @@ int WA_config_init(){
         }
         // WARNING_FREQ
         if (strstr(read_buf, "WA_WARNING_FREQ")) {
-            if (read_int_from_config_line(read_buf, &val)) {
-                if (val >= 0) {
-                    WA_config.warning_freq = val;
+            if (read_float_from_config_line(read_buf, &float_val)) {
+                if (float_val >= 0) {
+                    WA_config.warning_freq = float_val;
                     continue;
                 } else {
                     return CONFIG_INVALID_WA_WARNING_FREQ;
@@ -110,7 +110,7 @@ int WA_config_init(){
         // MAIN_DIRECTION
         if (strstr(read_buf, "MAIN_DIRECTION")) {
             if (read_int_from_config_line(read_buf, &val)) {
-                if (float_val >= 0) {
+                if (val >= 0) {
                     WA_config.maindirection = val;
                     continue;
                 } else {
@@ -195,7 +195,7 @@ int WA_config_init(){
                 WA_config.traffic_light.tab[direction].Traffic_light_lon = lon;
                 
             }
-            log_file_write("Warning Frequecy: %d", WA_config.warning_freq);
+            log_file_write("Warning Frequecy: %f", WA_config.warning_freq);
             for (int i = 0; i < WA_config.traffic_light.intersection_count; i++){
                     log_file_write("direction:%hhd, lat:%lf, lon:%lf\n", i, 
                                                                         WA_config.traffic_light.tab[i].Traffic_light_lat, 

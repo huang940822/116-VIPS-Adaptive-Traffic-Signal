@@ -4,7 +4,7 @@
 #include "vms.h"
 
 #define CMS_PORT 20204
-#define CMS_INTERFACE_NAME "enp2s0" //檢查CMS連到哪一個網卡
+#define CMS_INTERFACE_NAME "enp4s0" //檢查CMS連到哪一個網卡
 #define CMS_pic_path "CMS_img/"
 #define CMS_pic_database_path CMS_pic_path "program_id.txt"
 #define CMS_encrypt_img "tmp_encrypt_img"

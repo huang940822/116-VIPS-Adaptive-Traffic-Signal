@@ -32,7 +32,7 @@ typedef struct traffic_light_set{
 typedef struct WA_config_object {
     traffic_light_set_t traffic_light;
     int warning_range;
-    int warning_freq;
+    double warning_freq;
     int branch2main;
     int branch2mainRange;
     int maindirection;

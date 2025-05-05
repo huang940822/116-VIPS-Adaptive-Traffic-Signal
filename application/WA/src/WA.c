@@ -12,6 +12,7 @@
 #include "WA.h"
 #include "WA_config.h"
 #include "WA_timer_event.h"
+#include "WA_util.h"
 #include "ObstacleList.h"
 #include "buffer.h"
 #include "byte_processing.h"
@@ -69,30 +70,53 @@ app_obj_t WA = {
 int WA_on_camera_packet_rx(void *arg){ /* [TODO] 改名稱 */
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    // Add a log message indicating the function was called
-    snprintf(log_content + strlen(log_content), 
-             LOG_CONTENT_LEN - strlen(log_content), 
+
+    snprintf(log_content + strlen(log_content),
+             LOG_CONTENT_LEN - strlen(log_content),
              "\n WA_on_camera_packet_rx called.");
     log_file_write(log_content);
+
     ObstacleList *obstaclelist = (ObstacleList *) arg;
     int direct = obstaclelist->dirct;
     double intersection_center_lat = WA_config.intersection_center_lat;
     double intersection_center_lon = WA_config.intersection_center_lon;
-    log_file_write("intersection_center_lat: %lf", WA_config.intersection_center_lat);
-    log_file_write("intersection_center_lon: %lf", WA_config.intersection_center_lon);
+
+    log_file_write("intersection_center_lat: %lf", intersection_center_lat);
+    log_file_write("intersection_center_lon: %lf", intersection_center_lon);
+
     CCI leading_vehicle;
-    if(obstaclelist->count != 0){
-        leading_vehicle.speed = (0.2778) * obstaclelist->tab[0].speed; // km/hr to m/s
-        leading_vehicle.distance = distance(obstaclelist->tab[0].lat, obstaclelist->tab[0].Long, intersection_center_lat, intersection_center_lon);
-        log_file_write("lat:%lf ,lon:%lf", obstaclelist->tab[0].lat, obstaclelist->tab[0].Long);
-        for(int i = 1; i < obstaclelist->count; i++) {
-            double current_vehicle_distance = distance(obstaclelist->tab[i].lat, obstaclelist->tab[i].Long, intersection_center_lat, intersection_center_lon);
-            if(current_vehicle_distance < leading_vehicle.distance){
-                leading_vehicle.speed = (0.2778) * obstaclelist->tab[i].speed; // km/hr to m/s
-                leading_vehicle.distance = current_vehicle_distance;
-            }
+    leading_vehicle.speed = NO_VEHICLE;
+    leading_vehicle.distance = NO_VEHICLE;
+
+    for (int i = 0; i < obstaclelist->count; i++) {
+        double lat = obstaclelist->tab[i].lat;
+        double lon = obstaclelist->tab[i].Long;
+        double speed = obstaclelist->tab[i].speed;
+
+        if (!is_valid_gps(lat, lon)) {
+            snprintf(log_content, LOG_CONTENT_LEN,
+                     "[WARN] Invalid GPS at index %d: lat=%.6f, lon=%.6f", i, lat, lon);
+            log_file_write(log_content);
+            continue;
+        }
+
+        if (!is_valid_speed(speed)) {
+            snprintf(log_content, LOG_CONTENT_LEN,
+                     "[WARN] Invalid speed at index %d: speed=%.2f", i, speed);
+            log_file_write(log_content);
+            continue;
+        }
+
+        double current_distance = distance(lat, lon, intersection_center_lat, intersection_center_lon);
+        log_file_write("Valid vehicle %d: lat=%.6f, lon=%.6f, speed=%.2f, distance=%.2f",
+                       i, lat, lon, speed, current_distance);
+
+        if (leading_vehicle.distance == NO_VEHICLE || current_distance < leading_vehicle.distance) {
+            leading_vehicle.speed = speed * 0.2778; // km/hr to m/s
+            leading_vehicle.distance = current_distance;
         }
     }
+
     pthread_mutex_lock(&mutex_LV);
     Leading_Vehicles[direct] = leading_vehicle;
     pthread_mutex_unlock(&mutex_LV);
@@ -118,9 +142,13 @@ int WA_on_registration(void *arg){
             LOG_CONTENT_LEN - strlen(log_content), \
             "\n WA_on_Registration ");
     log_file_write(log_content);
-
+    log_file_write("frequency: %f", WA_config.warning_freq);
+    double freq = WA_config.warning_freq;
+    int freq_sec = (int) freq;
+    long freq_nsec = (long)((freq - freq_sec) * 1e9);
+    log_file_write("freq_sec = %d, freq_nsec = %ld", freq_sec, freq_nsec);
     create_timer(&WA_Agent_timer_id, NULL, WA_Agent_timer_handler);
-    set_timer(WA_Agent_timer_id, WA_config.warning_freq, 0, 4, 0);
+    set_timer(WA_Agent_timer_id, freq_sec, freq_nsec, 4, 0);
 }
 
 
