@@ -61,13 +61,13 @@ app_obj_t WA = {
     .on_cloud_packet_rx = NULL,
     .on_cloud_packet_tx = NULL,
     .on_camera_packet_rx = &WA_on_camera_packet_rx,
-    //[TODO] .on_radar_packet_rx = &WA_on_detected_object_packet_rx,
     .on_traffic_signal_command_tx = NULL,
     .on_registration = &WA_on_registration,
     .next = NULL,
 };
 
-int WA_on_camera_packet_rx(void *arg){ /* [TODO] 改名稱 */
+/* retrieve the speed and calculate the distance between leading vehicles and intersection */
+int WA_on_camera_packet_rx(void *arg){ 
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
@@ -80,9 +80,6 @@ int WA_on_camera_packet_rx(void *arg){ /* [TODO] 改名稱 */
     int direct = obstaclelist->dirct;
     double intersection_center_lat = WA_config.intersection_center_lat;
     double intersection_center_lon = WA_config.intersection_center_lon;
-
-    log_file_write("intersection_center_lat: %lf", intersection_center_lat);
-    log_file_write("intersection_center_lon: %lf", intersection_center_lon);
 
     CCI leading_vehicle;
     leading_vehicle.speed = NO_VEHICLE;
@@ -146,7 +143,6 @@ int WA_on_registration(void *arg){
     double freq = WA_config.warning_freq;
     int freq_sec = (int) freq;
     long freq_nsec = (long)((freq - freq_sec) * 1e9);
-    log_file_write("freq_sec = %d, freq_nsec = %ld", freq_sec, freq_nsec);
     create_timer(&WA_Agent_timer_id, NULL, WA_Agent_timer_handler);
     set_timer(WA_Agent_timer_id, freq_sec, freq_nsec, 4, 0);
 }
