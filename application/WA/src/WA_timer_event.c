@@ -159,6 +159,12 @@ void WA_Agent_timer_handler(__sigval_t value)
             for(int i = 0; i < validCount ; i++){
                 int dir1 = directionPairs[validPairs[i]][0];
                 int dir2 = directionPairs[validPairs[i]][1];
+                warningLevels[dir1] = 1;
+                warningLevels[dir2] = 1;
+            }
+            for(int i = 0; i < belowThreeCount; i++){
+                int dir1 = directionPairs[belowThreePairs[i]][0];
+                int dir2 = directionPairs[belowThreePairs[i]][1];
                 warningLevels[dir1] = 3;
                 warningLevels[dir2] = 3;
             }
