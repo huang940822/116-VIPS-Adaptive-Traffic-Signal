@@ -78,7 +78,7 @@ uint8_t tsc_pretime()
     packet->LEN[1] = PRETIME_LEN1_VAL;
     packet->INFO[0] = 0x5F;
     packet->INFO[1] = 0x10;
-    packet->INFO[2] = 0x05;
+    packet->INFO[2] = 0x20;
     // packet->INFO[2] = 0x01; //照介庸建議
     packet->INFO[3] = 0x00;
 

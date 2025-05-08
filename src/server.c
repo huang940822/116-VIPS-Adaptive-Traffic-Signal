@@ -106,6 +106,17 @@ int init_server(comm_server_t *server)
         LOG_MSG_FATAL("Open port %d error: %s", SMART_AVI_PORT, server->err_info);
         return SERVER_ERR_INIT;
     }
+    server->listen_Pedestrian_fd =
+        net_UDP_server(server->err_info, PEDESTRIAN_PORT, server->bind_addr);
+    if (server->listen_Pedestrian_fd != NET_ERR) {
+        if (net_non_block(server->err_info, server->listen_Pedestrian_fd) ==
+            NET_ERR)
+            return SERVER_ERR_INIT;
+    } else {
+        fprintf(stderr, "Open port %d error: %s\n", PEDESTRIAN_PORT,
+                server->err_info);
+        return SERVER_ERR_INIT;
+    }
     /* add listen_TCP_fd to epoll instance，setting to callback function to
      * accept TCP Handler */
     if (ae_create_comm_event(server->el, server->listen_TCP_fd, AE_READABLE,
@@ -141,6 +152,21 @@ int init_server(comm_server_t *server)
         LOG_MSG_FATAL("Fail to add listener event on %d", server->listen_UDP_fd);
         return SERVER_ERR_INIT;
     }
+    /* add listen_Pedestrian_fd to epoll instance，setting to callback function
+     * to  accept Pedestrian Handler */
+    if (ae_create_comm_event(server->el, server->listen_Pedestrian_fd,
+                             AE_READABLE, conn_accept_Pedestrian_handler,
+                             server) != AE_ERR) {
+        char conn_info[64];
+        net_format_sock(server->listen_Pedestrian_fd, conn_info,
+                        sizeof(conn_info));
+        printf("UDP:listen on: %s\n", conn_info);
+    } else {
+        fprintf(stderr, "Fail to add listener event on %d\n",
+                server->listen_UDP_fd);
+        return SERVER_ERR_INIT;
+    }
+
     /*Time event creation*/
     /* Create the timer callback, this is our way to process many background
      * operations incrementally, like clients timeout, logging and so forth. */
@@ -413,6 +439,43 @@ void conn_accept_Smart_AVI_handler(struct ae_event_loop *event_loop,
         }
     }
 }
+void conn_accept_Pedestrian_handler(struct ae_event_loop *event_loop,
+                                   int fd,
+                                   void *clientData,
+                                   int mask)
+{
+    int cfd, cport;
+    char ip_addr[128] = {0};
+    comm_server_t *serv = (comm_server_t *) event_loop->server;
+    char buf[MAX_BUF_LEN] = {0};
+    int Is_Heartbeat = 0;
+    struct sockaddr_in heartbeat_addr;
+    cfd = net_UDP_accept(serv->err_info, serv->port, buf, fd, MAX_BUF_LEN,
+                         &Is_Heartbeat, &heartbeat_addr);
+
+    if (cfd >= 0) {
+        client_t *client = conn_alloc_client(UDP_HANDLE);
+        if (!client) {
+            printf("alloc client error...close socket\n");
+            close(fd);
+            return;
+        }
+        client->el = event_loop;
+        client->fd = cfd;
+        client->com_id = ++serv->dispatch_com_id;
+        int retval =
+            comm_dict_add(serv->broker->client_dict, client, client->com_id);
+        // comm_packet_enqueue(client, FROM_SMART_AVI);
+        if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
+                                 conn_read_from_Pedestrian_UDP,
+                                 client) == AE_ERR) {
+            fprintf(stderr,
+                    "create socket readable event error, close fd: %d\n", cfd);
+            comm_dict_delete(serv->broker->client_dict, client->com_id);
+            conn_free_client(client);
+        }
+    }
+}
 void conn_read_from_client_TCP(struct ae_event_loop *event_loop,
                                int fd,
                                void *clientData,
@@ -494,6 +557,28 @@ void conn_read_from_SMART_AVI_UDP(struct ae_event_loop *event_loop,
     ssize_t readn = client->handle->recv_fn(client);
     if (readn > 0) {
         comm_packet_enqueue(client, FROM_SMART_AVI);
+    } else if (readn == -1) {
+    }
+}
+void conn_read_from_Pedestrian_UDP(struct ae_event_loop *event_loop,
+                                  int fd,
+                                  void *clientData,
+                                  int mask)
+{
+#if CPS_DEBUG > 0
+    double timestamp;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    timestamp = (double) (tv.tv_sec % 60) + tv.tv_usec / 1e6f;
+    if (cnt < CPS_DEBUG)
+        tsmp[cnt] = timestamp;
+
+#endif
+    client_t *client = (client_t *) clientData;
+    comm_server_t *serv = (comm_server_t *) event_loop->server;
+    ssize_t readn = client->handle->recv_fn(client);
+    if (readn > 0) {
+        comm_packet_enqueue(client, FROM_PEDESTRIAN);
     } else if (readn == -1) {
     }
 }

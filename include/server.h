@@ -22,6 +22,7 @@
 #define FROM_CLOUD 1
 #define FROM_DSRC 2
 #define FROM_SMART_AVI 3
+#define FROM_PEDESTRIAN 4
 
 
 # if CPS_DEBUG > 0
@@ -43,6 +44,8 @@ struct Server {
     int32_t listen_TCP_fd;
     int32_t listen_UDP_fd;
     int32_t listen_SMART_AVI_fd;
+    /* new type id: pedestrian */
+    int32_t listen_Pedestrian_fd;
     int32_t cloud_expired_id;
     int32_t timer_logged_id;
     int32_t dispatch_com_id;
@@ -90,6 +93,10 @@ void conn_accept_Smart_AVI_handler(ae_event_loop *event_loop,
                                    int fd,
                                    void *clientData,
                                    int mask);
+void conn_accept_Pedestrian_handler(ae_event_loop *event_loop,
+                                    int fd,
+                                    void *clientData,
+                                    int mask);
 
 void conn_read_from_client_UDP(ae_event_loop *event_loop,
                                int fd,
@@ -101,6 +108,11 @@ void conn_read_from_SMART_AVI_UDP(ae_event_loop *event_loop,
                                   void *clientData,
                                   int mask);
 
+void conn_read_from_Pedestrian_UDP(ae_event_loop *event_loop,
+                                    int fd,
+                                    void *clientData,
+                                    int mask);
+                                    
 void conn_write_to_client_UDP(ae_event_loop *event_loop,
                               int fd,
                               void *clientData,

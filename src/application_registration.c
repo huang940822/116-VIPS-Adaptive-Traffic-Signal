@@ -297,6 +297,10 @@ int app_register(app_obj_t *app)
             event_callback_insert(&callback_list[EVENT_CAMERA_PACKET_RX], app,
                                   app->on_camera_packet_rx);
         }
+        if (app->on_pedestrian_packet_rx) {
+            event_callback_insert(&callback_list[EVENT_PEDESTRIAN_PACKET_RX], app,
+                                  app->on_pedestrian_packet_rx);
+        }
         if (app->on_traffic_signal_command_tx) {
             event_callback_insert(
                 &callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX], app,
@@ -355,6 +359,11 @@ void event_callback_print()
         case EVENT_CAMERA_PACKET_RX:
             LOG_MSG_APPEND(log_content, "\n%-50s",
                     "callback_list[EVENT_CAMERA_PACKET_RX]:");
+            break;
+        case EVENT_PEDESTRIAN_PACKET_RX:
+            snprintf(log_content + strlen(log_content),
+                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
+                     "callback_list[EVENT_PEDESTRIAN_PACKET_RX]:");
             break;
         case EVENT_TRAFFIC_SIGNAL_COMMAND_TX:
             LOG_MSG_APPEND(log_content, "\n%-50s",

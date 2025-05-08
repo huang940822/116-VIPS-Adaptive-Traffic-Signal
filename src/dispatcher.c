@@ -14,6 +14,7 @@ uint8_t cloud_com_id = 0;
 uint8_t OBU_com_id = 0;
 uint8_t Heartbeat_com_id = 0;
 uint8_t AVI_com_id = 0;
+uint8_t Pedestrian_id = 0;
 threadpool_t *pool;
 pthread_mutex_t lock;
 // int f_flag = 0;
@@ -70,6 +71,10 @@ void *dispatcher_handler()
             AVI_com_id = msg->handle_id;
             //從接收到的 Smart AVI 封包中提取障礙物list和時間戳訊息，然後調用相應的回調函式進行處理
             Smart_AVI_packet_rx_event_handler(msg);
+        }
+        if (msg->device_id == FROM_PEDESTRIAN) {
+            Pedestrian_id = msg->handle_id;
+            Pedestrian_packet_rx_event_handler(msg);
         }
         free(msg);
     }

@@ -51,6 +51,7 @@ typedef enum application_id {
     TIB_ID = 6,
     SPM_ID = 7,
     WA_ID = 8,
+    PEDESTRIAN_ID = 9,
     APPLICATION_ID_NUMBER
 } application_id_t;
 
@@ -73,6 +74,7 @@ typedef enum event_type {
     EVENT_TRAFFIC_SIGNAL_COMMAND_TX = 6,
     EVENT_CAMERA_PACKET_RX = 7,
     EVENT_REGISTRATION = 8,
+    EVENT_PEDESTRIAN_PACKET_RX = 9,
     EVENT_MIDDLEWARE_RESTART, /* enum will auto increase */
     EVENT_TYPE_NUMBER
 } event_type_t;
@@ -130,6 +132,7 @@ typedef struct application_object {
     int (*on_camera_packet_rx)(void *);
     int (*on_traffic_signal_command_tx)(void *);
     int (*on_registration)(void *);
+    int (*on_pedestrian_packet_rx)(void *);
     int (*on_middleware_restart)(void *);
     ea_info_t *ea_info_p;  // if this is not NULL, indicate this is an external app
     struct application_object *next;

@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include "util.h"
 #define SMART_AVI_PORT 12345
+#define PEDESTRIAN_PORT 13579
 #define Heartbeat_PORT 10001
 
 int net_set_reuse_addr(char *err, int fd);

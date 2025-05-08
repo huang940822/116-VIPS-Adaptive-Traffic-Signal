@@ -22,6 +22,8 @@ void OBU_packet_tx(uint16_t len,
 int cloud_packet_rx_event_handler(msg_obj_t *msg);
 int OBU_packet_rx_event_handler(msg_obj_t *msg);
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg);
+/* create Pedestrian_packet_rx_event_handler */
+double Pedestrian_packet_rx_event_handler(msg_obj_t *msg);
 int DSRC_send_timer_handler(buffer_ring_t *buffer);
 void OBU_j2735_tx(DSRCmsgID magId, void *data);
 int Is_Heartbeat(msg_obj_t *msg);

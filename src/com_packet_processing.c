@@ -6,6 +6,7 @@
 
 #include "OBU_record_processing.h"
 #include "ObstacleList.h"
+#include "Pedestrian.h"
 #include "application_registration.h"
 #include "byte_processing.h"
 #include "com_io.h"
@@ -525,7 +526,64 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     return PACKET_PROCESSING_ACCEPT;
 }
 
-// 接收 smart AVI 回傳的封包
+// receive pedestrian packet
+double Pedestrian_packet_rx_event_handler(msg_obj_t *msg)
+{
+/*
+看實際上傳進來的封包長怎樣再進行解封包
+*/
+    
+    msg_buf_t read_buf;
+    read_buf.index = 0;
+    read_buf.content = (unsigned char *)malloc(msg->msg_len);
+    if (read_buf.content == NULL) {
+        perror("Pedestrian_packet_rx_event_handler: malloc");
+        exit(errno);
+    } else {
+        memcpy(read_buf.content, msg->msg, msg->msg_len);
+    }
+
+    // Create the StringObject and store the "HELLOWORLD" bytes
+    PedestrianList *pedestrianlist = (PedestrianList *)malloc(sizeof(PedestrianList));
+    read_uint8_t(&pedestrianlist->camera_no,&read_buf);
+    read_uint8_t(&pedestrianlist->count,&read_buf);
+    pedestrianlist->tab = 
+        (Pedestrian* ) calloc(sizeof(Pedestrian), pedestrianlist->count);
+
+    if (pedestrianlist->tab == NULL) {
+        perror("Pedestrian_packet_rx_event_handler: malloc");
+        exit(errno);
+    }
+    for (int i = 0; i < pedestrianlist->count; i++) {
+        read_uint8_t(&pedestrianlist->tab[i].PERSON_ID,&read_buf);
+        read_uint16_t(&pedestrianlist->tab[i].cx,&read_buf);
+        read_uint16_t(&pedestrianlist->tab[i].cy,&read_buf);
+        read_uint8_t(&pedestrianlist->tab[i].direction,&read_buf);
+    }
+    // Add to callback_list[EVENT_PEDESTRIAN_PACKET_RX]
+    event_callback_t *current = &callback_list[EVENT_PEDESTRIAN_PACKET_RX];
+    while (current->next != NULL) {
+        if (current->next->event_callback_id.choice == event_callback_id_app_id) {
+            current->next->callback((void *)pedestrianlist);
+        }
+        current = current->next;
+    }
+
+    // Cleanup
+    if (read_buf.content != NULL) {
+        free(read_buf.content);
+    }
+    if (pedestrianlist->tab != NULL) {
+        free(pedestrianlist->tab);
+    }
+    if (pedestrianlist != NULL){
+        free(pedestrianlist);
+    }
+
+    return 0;
+
+}
+//接收 smart AVI 回傳的封包
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 {
     msg_buf_t read_buf;
