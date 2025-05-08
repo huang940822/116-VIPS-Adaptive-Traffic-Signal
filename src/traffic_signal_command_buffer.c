@@ -26,6 +26,8 @@
 #define TIME_DEFENSE 5
 #define gettid() syscall(__NR_gettid)
 
+LOG_USE_MODULE(MIDDLEWARE_TC);
+
 tsc_command_object_t command_buf[CYCLE_NUM][SUBPHASEID_NUM] = {0};
 pthread_mutex_t mutex_command_buf = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_activate_amount = PTHREAD_MUTEX_INITIALIZER;
@@ -71,7 +73,7 @@ void command_buf_clear()
     pthread_mutex_lock(&mutex_command_buf);
     memset(command_buf, 0, sizeof(command_buf));
     pthread_mutex_unlock(&mutex_command_buf);
-    log_file_write("command buff is cleared\r\n");
+    LOG_MSG_INFO("command buff is cleared");
 }
 // 刪除在 command buf 還沒下下去的指令，並減少路口已觸發EVSP數
 void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
@@ -79,7 +81,7 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
     int has_clean = false;
     int writelock = 0;
     int readlock = 0;
-    
+
     pthread_mutex_lock(&mutex_command_buf);
     for (int i = 0; i < CYCLE_NUM; i++) {
         for (int j = 0; j < SUBPHASEID_NUM; j++) {
@@ -93,17 +95,17 @@ void command_buf_delete_OBU(char host_OBU_name[ID_MAX_LEN + 1])
     pthread_mutex_lock(&mutex_activate_amount);
     if (activate_amount>0) {
         activate_amount = activate_amount - 1;
-        log_file_write("active buses and EVSPs in list, %d\n",activate_amount);
-    }    
+        LOG_MSG_INFO("active buses and EVSPs in list, %d",activate_amount);
+    }
     if (activate_amount==0 && ped_countdown==0) {
-        log_file_write("no cars in activate area, calls countdown enable\n");
-    }       
+        LOG_MSG_INFO("no cars in activate area, calls countdown enable");
+    }
     pthread_mutex_unlock(&mutex_activate_amount);
 
     pthread_mutex_unlock(&mutex_command_buf);
 
     if (has_clean) {
-        log_file_write("%-15s has been cleaned in command buffer.", host_OBU_name);        
+        LOG_MSG_INFO("%-15s has been cleaned in command buffer.", host_OBU_name);
     }
 }
 
@@ -130,7 +132,7 @@ static inline void stop_at_segament_change(traffic_signal_status_t *signal_statu
             tsc_pretime();
             command_buf_clear();
             compensation_buffer_clear();
-            log_snprintf(log_content, "Enforce to pretime control_strategy\r\n");
+            LOG_MSG_APPEND(log_content, "Enforce to pretime control_strategy\n");
             break;
         }
     }
@@ -149,71 +151,68 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     int difference = 0;
     int time = 0;
     int temp_ack_seq;
-    
+
     uint8_t conpensation_flag = false;
     conpensation_flag = is_in_compensation();
     uint16_t current_sec_residual = signal_status.StepSec;
 
     if (command_obj->app_id == TSP.id) {  // 這裡就算要核對app_id也應該要從app_list裡面去撈 而不是這樣直接assign!!
         if (TSP.dontSend2TC == 1) {
-            printf("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
-            log_file_write("TSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+            LOG_MSG_INFO("TSP cmd isn't sent to TC machine for dontSend2TC enabled");
             return;
         }
         if (conpensation_flag) {
-            printf("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
-            log_file_write("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled\r\n");
+            LOG_MSG_INFO("TSP cmd isn't sent to TC machine ,for conpensation_flag enabled");
             return;
         }
-        
+
     } else if (command_obj->app_id == EVSP.id) {
         if (EVSP.dontSend2TC == 1) {
-            log_file_write("EVSP cmd isn't sent to TC machine for dontSend2TC enabled\r\n");
+            LOG_MSG_INFO("EVSP cmd isn't sent to TC machine for dontSend2TC enabled");
             return;
         }
     } else {
-        log_file_write("not TSP either EVSP is sent to TC machine\r\n");
+        LOG_MSG_INFO("not TSP either EVSP is sent to TC machine");
     }
 
     if (config.log_command_buffer) {
-        log_file_write("command_buf_send: \neffect time: %d", command_obj->effect_time);
+        LOG_MSG_INFO("command_buf_send: \neffect time: %d", command_obj->effect_time);
     }
-    
+
     switch (config.signal_controller_manufacturer) {
     case CHENG_LONG:
         // command_obj->adjusted_time代表這個step現在的時間
         difference = command_obj->effect_time - command_obj->adjusted_time;
-        // printf("cmd obj's effect time is %d and adjusted time is %d\r\n", command_obj->effect_time, command_obj->adjusted_time);
+        // LOG_MSG_TRACE("cmd obj's effect time is %d and adjusted time is %d", command_obj->effect_time, command_obj->adjusted_time);
         // below to prevent cheng_long 655xx error
         int16_t original_difference = 0;
         original_difference = difference;
 
         if (((int) current_sec_residual + difference) < TIME_DEFENSE && current_sec_residual >= TIME_DEFENSE) {
             difference = TIME_DEFENSE - current_sec_residual;  // 能夠忍受的砍的值
-            printf("difference has been changed from %d to %d(cheng_long)\r\n", original_difference, difference);
-            log_file_write("\ndifference has been changed from %d to %d(cheng_long)", original_difference, difference);
+            LOG_MSG_INFO("difference has been changed from %d to %d(cheng_long)", original_difference, difference);
         }
 
         // 晟隆需要跟此步階下原本定時制下計劃的秒數（PreTimeCompensated）比較
         time = pretime + difference;  // difference才是真正會延長的時間
-        // printf("diff: %d, time: %d, pretime: %d\n", difference, time,
+        // LOG_MSG_TRACE("diff: %d, time: %d, pretime: %d", difference, time,
         // pretime);
         if (time > 255) {
             time = 255;
         }
 
         temp_ack_seq = tsc_dynamic();
-        WAIT_ACK_LOOP        
+        WAIT_ACK_LOOP
         if (ped_countdown==1 && activate_amount>0) {
             if (config.ped_countdown_send!=0) {
                 temp_ack_seq =
                     tsc_countdown_off(config.signal_controller_manufacturer);
                 WAIT_ACK_LOOP
                 ped_countdown=0;
-                log_file_write("turn off pedestrian countdown\n");
+                LOG_MSG_INFO("turn off pedestrian countdown");
             }
             else {
-                log_file_write("countdown off requested not to be sent\n");
+                LOG_MSG_INFO("countdown off requested not to be sent");
             }
         }
         while (time < 0) {
@@ -231,7 +230,7 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
 
     case SHAN_ZHU:
         difference = command_obj->effect_time - command_obj->adjusted_time;
-        log_file_write("\ndifference is :%d\r\n", difference);
+        LOG_MSG_INFO("difference is :%d", difference);
 
         time = command_obj->effect_time;
         temp_ack_seq = tsc_dynamic();
@@ -242,21 +241,20 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
                     tsc_countdown_off(config.signal_controller_manufacturer);
                 WAIT_ACK_LOOP
                 ped_countdown=0;
-                log_file_write("turn off pedestrian countdown\n");
+                LOG_MSG_INFO("turn off pedestrian countdown");
             }
             else {
                 ped_countdown=0;
-                log_file_write("countdown off requested not to be sent\n");
+                LOG_MSG_INFO("countdown off requested not to be sent");
             }
-        }       
+        }
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
         WAIT_ACK_LOOP
         break;
 
     case SHAN_ZHU_M:
         difference = command_obj->effect_time - command_obj->adjusted_time;
-        printf("difference:%d\r\n", difference);
-        log_file_write("\ndifference is :%d\r\n", difference);
+        LOG_MSG_INFO("difference is :%d", difference);
 
         time = command_obj->effect_time;
         temp_ack_seq = tsc_dynamic();
@@ -267,11 +265,11 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
                     tsc_countdown_off(config.signal_controller_manufacturer);
                 WAIT_ACK_LOOP
                 ped_countdown=0;
-                log_file_write("turn off pedestrian countdown\n");
+                LOG_MSG_INFO("turn off pedestrian countdown");
             }
             else {
                 ped_countdown=0;
-                log_file_write("countdown off requested not to be sent\n");
+                LOG_MSG_INFO("countdown off requested not to be sent");
             }
         }
         temp_ack_seq = tsc_extend(current_SubPhaseID, 1, time);
@@ -286,13 +284,13 @@ void command_buf_send(tsc_command_object_t *command_obj, uint8_t current_SubPhas
     WAIT_ACK_LOOP
     if (strncmp(command_obj->host_OBU_name, COMPENSATION_NAME, sizeof(COMPENSATION_NAME)) != 0) {
         set_compensation_buffer(current_SubPhaseID);
-    }    
+    }
     if (ped_countdown==0 && activate_amount==0) {
         temp_ack_seq =
             tsc_countdown_on(config.signal_controller_manufacturer);
         WAIT_ACK_LOOP
         ped_countdown=1;
-        log_file_write("turn on pedestrian countdown\n");
+        LOG_MSG_INFO("turn on pedestrian countdown");
     }
 
     /* traffic signal command tx event */
@@ -351,7 +349,7 @@ void command_buf_polling()
     uint16_t current_StepSec = signal_status.StepSec;
 
     if (config.log_command_buffer) {
-        log_snprintf(log_content,
+        LOG_MSG_APPEND(log_content,
                      "prior signal status: SubPhaseID(%d) StepID(%d) StepSec(%d)"
                      "\ncurrent signal status: SubPhaseID(%d) StepID(%d) StepSec(%d)\n",
                      prior_SubPhaseID, prior_StepID, prior_StepSec,  // here all are global variables
@@ -407,7 +405,7 @@ void command_buf_polling()
         current_StepID == 1 && current_StepSec > 1 && prior_SubPhaseID == current_SubPhaseID) {
         // 將目前phase的 command buffer object 送到TC箱
         command_buf_send(&command_buf[cycle_index][current_SubPhaseID - 1], current_SubPhaseID);
-        log_snprintf(log_content, "command_buf_send(command_buf[%d][%d])\r\n", cycle_index, current_SubPhaseID);
+        LOG_MSG_APPEND(log_content, "command_buf_send(command_buf[%d][%d])\n", cycle_index, current_SubPhaseID);
         set_control_status(command_buf[cycle_index][current_SubPhaseID - 1].app_id);  // 判斷是evsp還是tsp
         command_buf[cycle_index][current_SubPhaseID - 1].send_flag = true;            // 已送出TC箱
         // 更新步階一要倒數的時間
@@ -419,13 +417,13 @@ void command_buf_polling()
     prior_StepID = current_StepID;
     prior_StepSec = current_StepSec;
     pthread_mutex_unlock(&mutex_command_buf);
-    
 
-    log_snprintf(log_content, "tsp and evsp status now:\r\n1.dont send to TSP:%d\n\r2.dont send to EVSP:%d\r\n",
+
+    LOG_MSG_APPEND(log_content, "tsp and evsp status now:\n1.dont send to TSP:%d\n2.dont send to EVSP:%d",
                  TSP.dontSend2TC, EVSP.dontSend2TC);
 POLLING_END:
     command_buf_print();
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
 }
 
 // 被command_buf_insert_adjustment和evsp呼叫
@@ -609,7 +607,7 @@ int command_buf_insert_adjustment(tsc_command_t *command)
     }
 
     if (config.log_command_buffer) {
-        log_file_write("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d",
+        LOG_MSG_INFO("command_buf_insert_adjustment: \nOBU ID: %s\nadjustment:  %d\neffect time: %d",
                        command->host_OBU_name, command->adjustment, command->effect_time);
     }
     return command_buf_insert_effect_time(command);
@@ -634,7 +632,7 @@ int command_buf_resume_control(uint8_t appid)
     command.phase = command.target_phase;
     command.effect_time = signal_status.plan[command.target_phase - 1].PreGreen;
 
-    log_file_write("app id %d insert resume.", appid);
+    LOG_MSG_INFO("app id %d insert resume.", appid);
     return command_buf_insert_effect_time(&command);
 }
 
@@ -650,11 +648,11 @@ void command_buf_print()
     memset(log_content, 0, sizeof(log_content));
 
     pthread_mutex_lock(&mutex_command_buf);
-    log_snprintf(log_content, "command buffer: current cycle index (%d) current SubPhaseID (%d)",
+    LOG_MSG_APPEND(log_content, "command buffer: current cycle index (%d) current SubPhaseID (%d)",
                  cycle_index, signal_status.SubPhaseID);
     for (int i = 0; i < CYCLE_NUM; i++) {
         for (int j = 0; j < signal_status.SubPhaseCount; j++) {
-            log_snprintf(log_content,
+            LOG_MSG_APPEND(log_content,
                          "\ncmd[%d][%d]: AT:%3d, PT:%3d, HoID:%-15s, TP:%1d, AppID:%2d, AppPri:%2d, ET:%3d, SF:%1d",
                          i, j + 1, command_buf[i][j].adjusted_time,
                          signal_status.plan[j].PreGreen, command_buf[i][j].host_OBU_name,
@@ -664,5 +662,5 @@ void command_buf_print()
         }
     }
     pthread_mutex_unlock(&mutex_command_buf);
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
 }

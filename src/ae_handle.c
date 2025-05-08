@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+LOG_USE_MODULE(MIDDLEWARE);
 
 pthread_mutex_t mutex_client_write = PTHREAD_MUTEX_INITIALIZER;
 
@@ -69,7 +69,7 @@ size_t udp_send(client_t *client)
 
     size_t written = send(client->fd, buff->buff, buff->size, 0);
     if (written != buff->size)
-        printf("send error\n");
+        LOG_MSG_TRACE("send error");
 
     free_buffer(buff);
     return written;
@@ -86,7 +86,7 @@ size_t udp_recv(client_t *client)
         recv(client->fd, client->read_buffer->buff, udp_handle.max_msg_len, 0);
     client->read_buffer->size = readn;
     if (readn == -1) {
-        printf("UDP: EAGAIN\n");
+        LOG_MSG_TRACE("UDP: EAGAIN");
     }
     return readn;
 }
@@ -139,8 +139,8 @@ size_t tcp_send(client_t *client)
     pthread_mutex_unlock(&mutex_client_write);
 
     if (written != buff->size) {
-        printf("ERR:written %ld v.s expected written %ld\n", written,
-               buff->size);
+        LOG_MSG_TRACE("ERR:written %ld v.s expected written %ld", written,
+                buff->size);
     }
 
     //把已經送出去的長度減掉嗎？
@@ -154,10 +154,10 @@ void test_ae_check_packet(unsigned char *packet, uint32_t packet_len)
     uint32_t packet_sum = 0;
     for (int i = sizeof(uint32_t); i < packet_len; i++) {
         if ((packet[i] - '0') != 1)
-            printf("i=%d err %u %c\n", i, packet[i] - '0', packet[i]);
+            LOG_MSG_TRACE("i=%d err %u %c", i, packet[i] - '0', packet[i]);
         packet_sum += (packet[i] - '0');
     }
-    printf("packet sum = %u\n", packet_sum);
+    LOG_MSG_TRACE("packet sum = %u", packet_sum);
     assert(packet_len == packet_sum + sizeof(uint32_t));
 }
 void tcp_handle_recv_init(client_t *client)
@@ -197,8 +197,8 @@ size_t tcp_recv(client_t *client)
             return HANDLE_ERR;
         client->handle->_ae_handle->_tcp_handle.expected_msg_len = packet_len;
         client->handle->_ae_handle->_tcp_handle.cur_msg_len = readn;
-        printf("packet length = %u\n", packet_len);
-        // printf("In %s :recv:%ld\n", __func__, readn);
+        LOG_MSG_TRACE("packet length = %u", packet_len);
+        // LOG_MSG_TRACE("In %s :recv:%ld", __func__, readn);
     } else {
         size_t remain =
             client->handle->_ae_handle->_tcp_handle.expected_msg_len -
@@ -211,10 +211,10 @@ size_t tcp_recv(client_t *client)
         if (readn == -1 || readn == 0)
             return HANDLE_ERR;
         client->handle->_ae_handle->_tcp_handle.cur_msg_len += readn;
-        printf("Remaining recv %ld\n", readn);
+        LOG_MSG_TRACE("Remaining recv %ld", readn);
     }
     if (tcp_recv_is_done(client)) {
-        printf("done\n");
+        LOG_MSG_TRACE("done");
         client->handle->_ae_handle->_tcp_handle.is_pending = false;
         assert(client->handle->_ae_handle->_tcp_handle.expected_msg_len ==
                client->handle->_ae_handle->_tcp_handle.cur_msg_len);

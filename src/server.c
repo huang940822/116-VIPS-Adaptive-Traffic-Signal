@@ -17,6 +17,8 @@ comm_server_t RSU_server;
 pthread_t com_layer_thread;
 extern pthread_mutex_t mutex_client_write;
 
+LOG_USE_MODULE(MIDDLEWARE);
+
 /* Functions managing dictionary of callbacks for pub/sub. */
 static uint64_t callback_hash(const void *key)
 {
@@ -72,7 +74,7 @@ int init_server(comm_server_t *server)
     server->dispatch_com_id = 0;
     server->el = ae_create_event_loop(server->setsize);
     if (!server->el) {
-        fprintf(stderr, "Create event-loop error\n");
+        LOG_MSG_FATAL("Create event-loop error");
         return SERVER_ERR_INIT;
     }
     server->el->server = (comm_server_t *) server;
@@ -82,8 +84,7 @@ int init_server(comm_server_t *server)
         if (net_non_block(server->err_info, server->listen_TCP_fd) == NET_ERR)
             return SERVER_ERR_INIT;
     } else {
-        fprintf(stderr, "Open port %d error: %s\n", server->port,
-                server->err_info);
+        LOG_MSG_FATAL("Open port %d error: %s", server->port, server->err_info);
         return SERVER_ERR_INIT;
     }
     server->listen_UDP_fd =
@@ -92,8 +93,7 @@ int init_server(comm_server_t *server)
         if (net_non_block(server->err_info, server->listen_UDP_fd) == NET_ERR)
             return SERVER_ERR_INIT;
     } else {
-        fprintf(stderr, "Open port %d error: %s\n", server->port,
-                server->err_info);
+        LOG_MSG_FATAL("Open port %d error: %s", server->port, server->err_info);
         return SERVER_ERR_INIT;
     }
     server->listen_SMART_AVI_fd =
@@ -103,8 +103,7 @@ int init_server(comm_server_t *server)
             NET_ERR)
             return SERVER_ERR_INIT;
     } else {
-        fprintf(stderr, "Open port %d error: %s\n", SMART_AVI_PORT,
-                server->err_info);
+        LOG_MSG_FATAL("Open port %d error: %s", SMART_AVI_PORT, server->err_info);
         return SERVER_ERR_INIT;
     }
     /* add listen_TCP_fd to epoll instance，setting to callback function to
@@ -113,10 +112,9 @@ int init_server(comm_server_t *server)
                              conn_accept_TCP_handler, server) != AE_ERR) {
         char conn_info[64];
         net_format_sock(server->listen_TCP_fd, conn_info, sizeof(conn_info));
-        printf("TCP:listen on: %s\n", conn_info);
+        LOG_MSG_TRACE("TCP:listen on: %s", conn_info);
     } else {
-        fprintf(stderr, "Fail to add listener event on %d\n",
-                server->listen_TCP_fd);
+        LOG_MSG_FATAL("Fail to add listener event on %d", server->listen_TCP_fd);
         return SERVER_ERR_INIT;
     }
     /* add listen_UDP_fd to epoll instance，setting to callback function to
@@ -125,10 +123,9 @@ int init_server(comm_server_t *server)
                              conn_accept_UDP_handler, server) != AE_ERR) {
         char conn_info[64];
         net_format_sock(server->listen_UDP_fd, conn_info, sizeof(conn_info));
-        printf("UDP:listen on: %s\n", conn_info);
+        LOG_MSG_TRACE("UDP:listen on: %s", conn_info);
     } else {
-        fprintf(stderr, "Fail to add listener event on %d\n",
-                server->listen_UDP_fd);
+        LOG_MSG_FATAL("Fail to add listener event on %d", server->listen_UDP_fd);
         return SERVER_ERR_INIT;
     }
     /* add listen_SMART_AVI_fd to epoll instance，setting to callback function
@@ -139,10 +136,9 @@ int init_server(comm_server_t *server)
         char conn_info[64];
         net_format_sock(server->listen_SMART_AVI_fd, conn_info,
                         sizeof(conn_info));
-        printf("UDP:listen on: %s\n", conn_info);
+        LOG_MSG_TRACE("UDP:listen on: %s", conn_info);
     } else {
-        fprintf(stderr, "Fail to add listener event on %d\n",
-                server->listen_UDP_fd);
+        LOG_MSG_FATAL("Fail to add listener event on %d", server->listen_UDP_fd);
         return SERVER_ERR_INIT;
     }
     /*Time event creation*/
@@ -150,12 +146,12 @@ int init_server(comm_server_t *server)
      * operations incrementally, like clients timeout, logging and so forth. */
     if (ae_create_time_event(server->el, 500000, on_cloud_disconnected,
                              &server->cloud_expired_id, NULL) == AE_ERR) {
-        fprintf(stderr, "Fail to create timing event \n");
+        LOG_MSG_FATAL("Fail to create timing event");
         return SERVER_ERR_INIT;
     }
     if (ae_create_time_event(server->el, 3000, time_print_cur_time,
                              &server->timer_logged_id, NULL) == AE_ERR) {
-        fprintf(stderr, "Fail to create timing event \n");
+        LOG_MSG_FATAL("Fail to create timing event");
         return SERVER_ERR_INIT;
     }
     /*Init broker*/
@@ -297,25 +293,23 @@ void conn_accept_TCP_handler(struct ae_event_loop *event_loop,
     if (cfd == -1)
         return;
 
-    printf("Connected from %s:%d\n", ip_addr, cport);
-    log_file_write("Connected from %s:%d\n", ip_addr, cport);
+    LOG_MSG_INFO("Connected from %s:%d", ip_addr, cport);
 
     if (net_non_block(NULL, cfd) < 0) {
-        fprintf(stderr, "fail to set client fd to be nonblock: %d\n", fd);
+        LOG_MSG_ERROR("fail to set client fd to be nonblock: %d", fd);
         close(fd);
         return;
     }
     /*delete cloud expired event*/
     if (ae_delete_time_event(serv->el, serv->cloud_expired_id) == AE_ERR) {
-        fprintf(stderr, "delete expired timer event error %d\n",
-                serv->cloud_expired_id);
+        LOG_MSG_ERROR("delete expired timer event error %d", serv->cloud_expired_id);
     } else {
         /*todo:should using logging to record*/
-        printf("cloud reconnect!\n");
+        LOG_MSG_TRACE("cloud reconnect!");
     }
     client_t *client = conn_alloc_client(TCP_HANDLE);
     if (!client) {
-        printf("alloc client error...close socket\n");
+        LOG_MSG_TRACE("alloc client error...close socket");
         close(fd);
         return;
     }
@@ -326,8 +320,7 @@ void conn_accept_TCP_handler(struct ae_event_loop *event_loop,
         comm_dict_add(serv->broker->client_dict, client, client->com_id);
     if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
                              conn_read_from_client_TCP, client) == AE_ERR) {
-        fprintf(stderr, "create socket readable event error, close fd: %d\n", fd);
-        log_file_write_fatal_error("TCP create socket readable event error, close fd: %d\n", fd);
+        LOG_MSG_FATAL("TCP create socket readable event error, close fd: %d", fd);
 
         comm_dict_delete(serv->broker->client_dict, client->com_id);
         conn_free_client(client);
@@ -351,7 +344,7 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop,
     if (cfd >= 0) {
         client_t *client = conn_alloc_client(UDP_HANDLE);
         if (!client) {
-            printf("alloc client error...close socket\n");
+            LOG_MSG_TRACE("alloc client error...close socket");
             close(fd);
             return;
         }
@@ -365,9 +358,7 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop,
             if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
                                      conn_read_from_client_UDP,
                                      client) == AE_ERR) {
-                fprintf(stderr,
-                        "create socket readable event error, close fd: %d\n",
-                        cfd);
+                LOG_MSG_ERROR("create socket readable event error, close fd: %d", cfd);
                 comm_dict_delete(serv->broker->client_dict, client->com_id);
                 conn_free_client(client);
             }
@@ -379,9 +370,7 @@ void conn_accept_UDP_handler(struct ae_event_loop *event_loop,
             if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
                                      conn_read_from_client_UDP,
                                      client) == AE_ERR) {
-                fprintf(stderr,
-                        "create socket readable event error, close fd: %d\n",
-                        cfd);
+                LOG_MSG_ERROR("create socket readable event error, close fd: %d", cfd);
                 comm_dict_delete(serv->broker->client_dict, client->com_id);
                 conn_free_client(client);
             }
@@ -405,7 +394,7 @@ void conn_accept_Smart_AVI_handler(struct ae_event_loop *event_loop,
     if (cfd >= 0) {
         client_t *client = conn_alloc_client(UDP_HANDLE);
         if (!client) {
-            printf("alloc client error...close socket\n");
+            LOG_MSG_TRACE("alloc client error...close socket");
             close(fd);
             return;
         }
@@ -418,8 +407,7 @@ void conn_accept_Smart_AVI_handler(struct ae_event_loop *event_loop,
         if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
                                  conn_read_from_SMART_AVI_UDP,
                                  client) == AE_ERR) {
-            fprintf(stderr,
-                    "create socket readable event error, close fd: %d\n", cfd);
+            LOG_MSG_ERROR("create socket readable event error, close fd: %d", cfd);
             comm_dict_delete(serv->broker->client_dict, client->com_id);
             conn_free_client(client);
         }
@@ -436,12 +424,12 @@ void conn_read_from_client_TCP(struct ae_event_loop *event_loop,
     if (readn > 0) {
         comm_packet_enqueue(client, FROM_CLOUD);
     } else if (readn == 0 || readn == -1) {
-        printf("client disconnect, close it.\n");
+        LOG_MSG_TRACE("client disconnect, close it.");
         comm_dict_delete(serv->broker->client_dict, client->com_id);
         conn_free_client(client);
         if (ae_create_time_event(serv->el, 5000, on_cloud_disconnected,
                                  &serv->cloud_expired_id, NULL) == AE_ERR) {
-            fprintf(stderr, "Fail to create timing event \n");
+            LOG_MSG_ERROR("Fail to create timing event");
         }
     }
 }
@@ -565,7 +553,7 @@ int comm_create_OBU_client(struct ae_event_loop *event_loop,
         client_addr.sin_family = PF_INET;
         if (connect(cfd, (struct sockaddr *) &client_addr,
                     sizeof(struct sockaddr)) == -1) {
-            printf("connect %s\n", strerror(errno));
+            LOG_MSG_TRACE("connect %s", strerror(errno));
             // net_set_error(err, "connect: %s", strerror(errno));
             goto err;
         }
@@ -576,7 +564,7 @@ int comm_create_OBU_client(struct ae_event_loop *event_loop,
     if (cfd >= 0) {
         client_t *client = conn_alloc_client(UDP_HANDLE);
         if (!client) {
-            printf("alloc client error...close socket\n");
+            LOG_MSG_TRACE("alloc client error...close socket");
             return -1;
         }
         client->el = event_loop;
@@ -587,8 +575,7 @@ int comm_create_OBU_client(struct ae_event_loop *event_loop,
         comm_packet_enqueue(client, FROM_DSRC);
         if (ae_create_comm_event(event_loop, cfd, AE_READABLE,
                                  conn_read_from_client_UDP, client) == AE_ERR) {
-            fprintf(stderr,
-                    "create socket readable event error, close fd: %d\n", cfd);
+            LOG_MSG_ERROR("create socket readable event error, close fd: %d", cfd);
             comm_dict_delete(serv->broker->client_dict, client->com_id);
             conn_free_client(client);
         }

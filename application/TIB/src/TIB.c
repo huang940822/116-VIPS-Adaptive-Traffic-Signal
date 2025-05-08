@@ -24,6 +24,8 @@
 #include "j2735_codec.h"
 #include "j2735_map.h"
 
+LOG_USE_MODULE(TIB);
+
 timer_t MAP_packet_tx_timer_id;
 
 app_obj_t TIB = {
@@ -55,7 +57,7 @@ int TIB_on_CLOUD_packet_rx(void *arg)
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TIB_on_cloud_packet_rx: malloc");
+        LOG_MSG_FATAL("TIB_on_cloud_packet_rx: malloc");
         perror("TIB_on_cloud_packet_rx: malloc");
         exit(errno);
     } else {
@@ -73,21 +75,14 @@ int TIB_on_CLOUD_packet_rx(void *arg)
 
     /* print packet */
     if (config.log_cloud_packet_rx) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "MAP cloud packet rx: SPECIFIC FIELD\n");
+        LOG_MSG_APPEND(log_content, "MAP cloud packet rx: SPECIFIC FIELD\n");
         for (int i = 0; i < app_section->payload_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     read_buf.content[i]);
+            LOG_MSG_APPEND(log_content, "%x ", read_buf.content[i]);
         }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n");
+        LOG_MSG_APPEND(log_content, "\n");
     }
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "MAP cloud packet rx: CMD(%d)", cmd);
+    LOG_MSG_APPEND(log_content, "MAP cloud packet rx: CMD(%d)", cmd);
 
     switch (cmd) {
     case 0: {  // disable/enalbe:1/2
@@ -98,16 +93,14 @@ int TIB_on_CLOUD_packet_rx(void *arg)
         if (enableOrdisable == 1 &&
             TIB.dontSend2TC == 0) {  // enable/clear command buffer
             TIB.dontSend2TC = 1;
-            log_file_write("MAP disable\r\n");
-            printf("MAP disable\r\n");
+            LOG_MSG_INFO("MAP disable");
         } else if (enableOrdisable == 2 &&
                    TIB.dontSend2TC == 1) {
             TIB.dontSend2TC = 0;
-            log_file_write("MAP enable and command buffer clear\r\n");
-            printf("MAP enable\r\n");
+            LOG_MSG_INFO("MAP enable and command buffer clear");
         } else {
-            log_file_write(
-                "invalid cloud pcket disable/enable packet to tc machine\r\n");
+            LOG_MSG_INFO(
+                "invalid cloud pcket disable/enable packet to tc machine");
         }
 
     } break;
@@ -115,7 +108,7 @@ int TIB_on_CLOUD_packet_rx(void *arg)
         break;
     }
 
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     if (read_buf.content != NULL) {
         free(read_buf.content);
     }
@@ -142,8 +135,7 @@ int TIB_on_registration(void *arg)
     /* read map confile file*/
     int ret = TIB_config_init();
     if (ret != 0) {
-        printf("error TIB reading config file: %d\n", ret);
-        log_file_write_fatal_error("error TIB reading config file: %d", ret);
+        LOG_MSG_FATAL("error TIB reading config file: %d", ret);
         return 0;
     }
     /* SPaT / MAP msg init */

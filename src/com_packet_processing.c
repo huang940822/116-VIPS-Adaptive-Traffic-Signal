@@ -26,6 +26,8 @@
 #include "error_code_enum.h"
 #include "j2735_codec.h"
 
+LOG_USE_MODULE(MIDDLEWARE_COM);
+
 int cb_counter;
 
 #define CPS_ID 3
@@ -41,7 +43,7 @@ int DSRC_send_timer_handler(buffer_ring_t *buffer)
     if (pkg != NULL && OBU_com_id != 0) {
         int ret = com_send(OBU_com_id, pkg->buff, pkg->size);
         if (ret == COM_IO_ERR) {
-            log_file_write_fatal_error("OBU_j2735_tx: com_send");
+            LOG_MSG_FATAL("OBU_j2735_tx: com_send");
         }
     }
 }
@@ -65,17 +67,16 @@ void OBU_j2735_tx(DSRCmsgID magId, void *data)
     buf_len = j2735_msg_encode(&buf, &msgf, &err);
 
     if (buf_len <= 0) {
-        printf("failed to encode msg\n");
-        printf("  [error msg] %s\n", err.msg);
-        log_file_write("failed to encode msg\r\n  [error msg] %s");
+        LOG_MSG_INFO("failed to encode msg");
+        LOG_MSG_INFO("  [error msg] %s", err.msg);
     } else {
-        
+
         int ret = com_send(OBU_com_id, buf, buf_len);
         if (ret == COM_IO_ERR) {
-            log_file_write_fatal_error("OBU_j2735_tx: com_send");
+            LOG_MSG_FATAL("OBU_j2735_tx: com_send");
         }
     }
-    
+
     j2735_buf_free(buf);
     return;
 }
@@ -90,7 +91,7 @@ void OBU_packet_tx(uint16_t len,
     write_buf.content = (unsigned char *) malloc(R2V_COMMON_FIELD_LEN + len);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("OBU_packet_tx: malloc");
+        LOG_MSG_FATAL("OBU_packet_tx: malloc");
         perror("OBU_packet_tx: malloc");
         exit(errno);
     } else {
@@ -127,22 +128,17 @@ void OBU_packet_tx(uint16_t len,
 
     if (config.log_OBU_packet_tx) {
         memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "OBU packet tx: service(%d) length(%d)\n", service_id,
-                 write_buf.index);
+        LOG_MSG_APPEND(log_content, "OBU packet tx: service(%d) length(%d)\n", service_id, write_buf.index);
         for (int i = 0; i < write_buf.index; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     write_buf.content[i]);
+            LOG_MSG_APPEND(log_content, "%x ", write_buf.content[i]);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     }
     //送出OBU packet
     int ret = com_send(OBU_com_id, write_buf.content, write_buf.index);
     if (ret == COM_IO_ERR) {
         //傳送過程出錯
-        log_file_write_fatal_error("OBU_packet_tx: com_send");
+        LOG_MSG_FATAL("OBU_packet_tx: com_send");
     }
 
     if (write_buf.content != NULL) {
@@ -163,7 +159,7 @@ void cloud_packet_tx(uint16_t len,
     write_buf.content = (unsigned char *) malloc(R2C_COMMON_FIELD_LEN + len);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("cloud_packet_tx: malloc");
+        LOG_MSG_FATAL("cloud_packet_tx: malloc");
         perror("cloud_packet_tx: malloc");
         exit(errno);
     } else {
@@ -200,23 +196,18 @@ void cloud_packet_tx(uint16_t len,
 
     if (config.log_cloud_packet_tx) {
         memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "cloud packet tx: service(%d) length(%d)\n", service_id,
-                 write_buf.index);
+        LOG_MSG_APPEND(log_content, "cloud packet tx: service(%d) length(%d)\n", service_id, write_buf.index);
         for (int i = 0; i < write_buf.index; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     write_buf.content[i]);
+            LOG_MSG_APPEND(log_content, "%x ", write_buf.content[i]);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     }
-    log_file_write("in cloud packet tx cloud_com_id is %d\n", cloud_com_id);
-    
+    LOG_MSG_INFO("in cloud packet tx cloud_com_id is %d", cloud_com_id);
+
     //send packet to TCP or UDP (todo: add http REST API version for transmit (Osborn 20240829) )
     int ret = com_send(cloud_com_id, write_buf.content, write_buf.index);
     if (ret == COM_IO_ERR) {
-        log_file_write_fatal_error("cloud_packet_tx: com_send");
+        LOG_MSG_FATAL("cloud_packet_tx: com_send");
     }
 
     //usleep(50000);  //直接註解com layer會錯  //學陽測試時發現可以註解掉
@@ -229,7 +220,7 @@ void cloud_packet_tx(uint16_t len,
 //RSU從雲端收到封包
 int cloud_packet_rx_event_handler(msg_obj_t *msg)
 {
-    char log_content[LOG_CONTENT_LEN + 1];    
+    char log_content[LOG_CONTENT_LEN + 1];
     msg_buf_t read_buf;
     C2R_common_field_t common_field;
 
@@ -237,7 +228,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     read_buf.content = (unsigned char *) malloc(C2R_COMMON_FIELD_LEN);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("cloud_packet_rx_event_handler: malloc");
+        LOG_MSG_FATAL("cloud_packet_rx_event_handler: malloc");
         perror("cloud_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
@@ -247,17 +238,13 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     read_buf.index = C2R_COMMON_FIELD_LEN;
 
     if (config.log_cloud_packet_rx) {
-        printf("common filed.service_id:%d\r\n", common_field.service_id);
+        LOG_MSG_TRACE("common filed.service_id:%d", common_field.service_id);
         memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "cloud packet rx: COMMON FIELD\n");
+        LOG_MSG_APPEND(log_content, "cloud packet rx: COMMON FIELD\n");
         for (int i = 0; i < read_buf.index; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     read_buf.content[i]);
+            LOG_MSG_APPEND(log_content, "%x ", read_buf.content[i]);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     }
 
     read_buf.index = 0;
@@ -307,7 +294,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     app_section.payload = (char *) malloc(app_section.payload_len);
     if (app_section.payload == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("cloud_packet_rx_event_handler: malloc");
+        LOG_MSG_FATAL("cloud_packet_rx_event_handler: malloc");
         perror("cloud_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
@@ -317,14 +304,14 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
         //app_section.com_id = msg->handle_id;
     }
 
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
     * all might read/write callback_list, we add a mutex_lock */
     // pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current = &callback_list[EVENT_CLOUD_PACKET_RX];
     while (current->next != NULL) {
-        if (current->next->event_callback_id.choice == event_callback_id_app_id && 
-            common_field.service_id == current->next->event_callback_id.u.app_id) 
+        if (current->next->event_callback_id.choice == event_callback_id_app_id &&
+            common_field.service_id == current->next->event_callback_id.u.app_id)
         {
             proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) &app_section);  // what com_id for?
@@ -343,7 +330,7 @@ int cloud_packet_rx_event_handler(msg_obj_t *msg)
     return PACKET_PROCESSING_ACCEPT;
 }
 
-static inline __attribute__((always_inline)) 
+static inline __attribute__((always_inline))
 void get_payload(V2R_app_section_t *app_section, MessageFrame *msgf)
 {
     switch (msgf->messageId)
@@ -361,12 +348,12 @@ void get_payload(V2R_app_section_t *app_section, MessageFrame *msgf)
     }
 }
 
-static inline __attribute__((always_inline)) 
+static inline __attribute__((always_inline))
 void fill_V2R_self_defined_section(V2R_self_defined_section_t *self_section_p,
                                    OBU_object_t *OBU_object_p,
                                    V2R_app_section_t *app_section_p)
 {
-    strncpy(self_section_p->obu_name, 
+    strncpy(self_section_p->obu_name,
             OBU_object_p->OBU_name, OBU_NAME_MAX_LEN);
     self_section_p->vehical_type = OBU_object_p->vehicle_type;
 
@@ -408,27 +395,24 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     //     if (5 == current_c->next->app_id) {
     //         if(threadpool_add(pool, current_c->next->callback, NULL, 0) !=
     //         0){
-    //             printf("threadpool adding error!\n");//ERROR
+    //             LOG_MSG_TRACE("threadpool adding error!");//ERROR
     //         }
     //         // current_c->next->callback(NULL);
     //     }
     //     current_c = current_c->next;
     // }
-    // printf("handler complete\n");
+    // LOG_MSG_TRACE("handler complete");
 
     char log_content[LOG_CONTENT_LEN + 1];
     if (config.log_OBU_packet_rx) {
         memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "OBU packet rx: COMMON FIELD\n");
+        LOG_MSG_APPEND(log_content, "OBU packet rx: COMMON FIELD\n");
         for (int i = 0; i < msg->msg_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ", msg->msg[i]);
+            LOG_MSG_APPEND(log_content, "%x ", msg->msg[i]);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     }
-    
+
     MessageFrame *msgf = NULL;
     int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
     if (ret < 0) {
@@ -441,7 +425,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     // convert msgf to OBU record
     if (V2R_msgf2OBU_record(msgf, &record) == -1) {
-        printf("V2R_msgf2OBU_record fail\n");
+        LOG_MSG_TRACE("V2R_msgf2OBU_record fail");
         J2735_FREE_MSG_FRAME(msgf);
         return -1;
     }
@@ -461,7 +445,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         break;
     }
 
-    OBU_object_print(); 
+    OBU_object_print();
 
     V2R_app_section_t app_section;
     memset(&app_section, 0, sizeof(V2R_app_section_t));
@@ -471,7 +455,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     app_section.OBU_object = (OBU_object_t *) malloc(sizeof(OBU_object_t));
     if (app_section.OBU_object == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("OBU_packet_rx_event_handler: malloc");
+        LOG_MSG_FATAL("OBU_packet_rx_event_handler: malloc");
         perror("OBU_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
@@ -480,8 +464,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     }
 
     get_payload(&app_section, msgf);
-    
-    void* callback_parameter_pointer = 0;    
+
+    void* callback_parameter_pointer = 0;
     #if FORWARD_SAME_FORMAT_OBU_MSG_TO_EA
         /* 有保留能傳送 struct: V2R_app_section_t 給外部 APP 的 code */
         wrapper_arg_for_obu_packet_t wrapper_arg_for_obu;
@@ -489,11 +473,11 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         wrapper_arg_for_obu.app_section_p = &app_section;
         callback_parameter_pointer = &wrapper_arg_for_obu;
     #else
-        /* * 依據老師的 idea，在未來，struct: V2R_app_section_t 
+        /* * 依據老師的 idea，在未來，struct: V2R_app_section_t
         * 可能不會直接傳出去給外部 app
         * 因此多了定義了這個 struct: V2R_self_defined_section_t
         * 用來傳給外部 APP
-        * In addition, to handle j2735 decoding issue, 
+        * In addition, to handle j2735 decoding issue,
         * we will send msg->msg and msg->msg_len to external-library,
         * the library will decode the msg and complete the V2R_self_defined_section_t
         * at the external client side.
@@ -505,16 +489,16 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         callback_parameter_pointer = &V2R_self_defined_section;
     #endif
 
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
     * all might read/write callback_list, we add a mutex_lock */
     event_callback_t *current = &callback_list[EVENT_OBU_PACKET_RX];
     // pthread_mutex_lock(&mutex_callback_list);
     while (current->next != NULL) {
         proxy_handling_app_p = current->next->app_obj_p;
 
-        if (current->next->event_callback_id.choice == event_callback_id_msg_id 
-            && msgf->messageId == current->next->event_callback_id.u.msg_id) 
-        {   
+        if (current->next->event_callback_id.choice == event_callback_id_msg_id
+            && msgf->messageId == current->next->event_callback_id.u.msg_id)
+        {
             if(proxy_handling_app_p->ea_info_p){
                 current->next->callback( callback_parameter_pointer );
             }
@@ -525,8 +509,8 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         current = current->next;
     }
     // pthread_mutex_unlock(&mutex_callback_list);
-    
-    // free resource 
+
+    // free resource
     if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
     if (msgf != NULL)
@@ -542,7 +526,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(25600);
     if (read_buf.content == NULL) {
-        // log_file_write_fatal_error("OBU_packet_rx_event_handler: malloc");
+        // LOG_MSG_FATAL("OBU_packet_rx_event_handler: malloc");
         perror("Smart_AVI_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
@@ -587,17 +571,17 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         read_buf.index += 16;
     }
 
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
     * all might read/write callback_list, we add a mutex_lock */
     // pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     while (current->next != NULL) {
-        if (current->next->event_callback_id.choice == event_callback_id_app_id && 
+        if (current->next->event_callback_id.choice == event_callback_id_app_id &&
             CPS_ID == current->next->event_callback_id.u.app_id) {
             // if(threadpool_add(pool, current->next->callback, obstaclelist, 0)
             // != 0){
-            //     printf("threadpool adding error!\n");//ERROR
+            //     LOG_MSG_TRACE("threadpool adding error!");//ERROR
             // }
             proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) obstaclelist);
@@ -622,7 +606,7 @@ int Is_Heartbeat(msg_obj_t *msg)
     read_buf.content = (unsigned char *) malloc(V2R_COMMON_FIELD_LEN);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("OBU_packet_rx_event_handler: malloc");
+        LOG_MSG_FATAL("OBU_packet_rx_event_handler: malloc");
         perror("OBU_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
@@ -639,16 +623,16 @@ int Is_Heartbeat(msg_obj_t *msg)
     read_uint8_t(&antenna_status, &read_buf);
     switch (antenna_status) {
     case 0:
-        printf("No status. Cannot get status from GNSS hardware.\n");
+        LOG_MSG_TRACE("No status. Cannot get status from GNSS hardware.");
         break;
     case 1:
-        printf("The GNSS antenna is connected well.\n");
+        LOG_MSG_TRACE("The GNSS antenna is connected well.");
         break;
     case 2:
-        printf("The connection status of GNSS antenna is open.\n");
+        LOG_MSG_TRACE("The connection status of GNSS antenna is open.");
         break;
     case 3:
-        printf("The connection status of GNSS antenna is short.\n");
+        LOG_MSG_TRACE("The connection status of GNSS antenna is short.");
         break;
     default:
         break;
@@ -656,9 +640,7 @@ int Is_Heartbeat(msg_obj_t *msg)
     //接收DSRC格式heartbeat封包
     if (common_field.service_id == 0 &&
         common_field.packet_len == 512) {  // dsrc heart beat packet
-        printf("dsrc alive and postpone the timer handle execution\r\n");
-        log_file_write(
-            "dsrc alive and postpone the timer handle execution\r\n");
+        LOG_MSG_INFO("dsrc alive and postpone the timer handle execution");
         set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
         clear_dsrc_error();
         if (read_buf.content != NULL) {

@@ -15,6 +15,8 @@
 #include "traffic_signal_status_updating.h"
 #include "vms.h"
 
+LOG_USE_MODULE(EVSP);
+
 void EVSP_timeout_report(union sigval value)
 {
     // 回報 timeout event 需要的變數資訊
@@ -23,7 +25,7 @@ void EVSP_timeout_report(union sigval value)
             ((EVSP_host_OBU_obj_t *) value.sival_ptr)->OBU_name,
             OBU_NAME_MAX_LEN);
     timeout_obu_obj.vehicle_type = ((EVSP_host_OBU_obj_t *) value.sival_ptr)->vehicle_type;
-    
+
     // 回報 EVSP timeout event
     EVSP_report_activate_area(&timeout_obu_obj, TIMEOUT, 0);
 }
@@ -40,20 +42,20 @@ void EVSP_host_OBU_packet_timeout_timer_handler(union sigval value)
         vms_request_end(EVSP.id);
     }
 
-    printf("EVSP_host_OBU_packet_timeout_timer_handler\n");
+    LOG_MSG_TRACE("EVSP_host_OBU_packet_timeout_timer_handler");
     EVSP_host_OBU_obj_t *obu_obj = (EVSP_host_OBU_obj_t *) value.sival_ptr;
     int target_phase = obu_obj->target_phase;
 
     command_buf_delete_OBU(obu_obj->OBU_name);
     EVSP_cooling_list_insert(obu_obj->OBU_name, obu_obj->area_ptr);
     EVSP_host_OBU_obj_delete(obu_obj->OBU_name);
-    
+
     // no other host OBU with same target phase in host_OBU_list
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
         command_buf_resume_control(EVSP.id);
     }
-    
-    log_file_write("EVSP host OBU packet timeout: %s\n", obu_obj->OBU_name);
+
+    LOG_MSG_WARN("EVSP host OBU packet timeout: %s", obu_obj->OBU_name);
     EVSP_host_OBU_obj_print();
 }
 
@@ -69,7 +71,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
         vms_request_end(EVSP.id);
     }
 
-    printf("EVSP_host_OBU_list_timeout_timer_handler\n");
+    LOG_MSG_TRACE("EVSP_host_OBU_list_timeout_timer_handler");
     EVSP_host_OBU_obj_t *obu_obj = (EVSP_host_OBU_obj_t *) value.sival_ptr;
     int target_phase = obu_obj->target_phase;
 
@@ -81,7 +83,7 @@ void EVSP_host_OBU_list_timeout_timer_handler(union sigval value)
     if (EVSP_host_OBU_obj_resume(target_phase) == true) {
         command_buf_resume_control(EVSP.id);
     }
-    
-    log_file_write("EVSP host OBU list timeout: %s\n", obu_obj->OBU_name);
+
+    LOG_MSG_WARN("EVSP host OBU list timeout: %s", obu_obj->OBU_name);
     EVSP_host_OBU_obj_print();
 }

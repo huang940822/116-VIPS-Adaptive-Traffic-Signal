@@ -1,5 +1,8 @@
 #include "ae_event.h"
 #include "msg_queue.h"
+
+LOG_USE_MODULE(MIDDLEWARE);
+
 /*
     Since epoll and its related system call can only be used in the Linux
    operating system, I especially use extern to separate declarations and
@@ -140,7 +143,7 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
     int j;
     /* Nothing to do? return ASAP */
     if (!(flags & AE_COMM_EVENTS) && !(flags & AE_TIME_EVENTS)) {
-        printf("Nothing to do! return ASAP\n");
+        LOG_MSG_TRACE("Nothing to do! return ASAP");
         return 0;
     }
     /*
@@ -197,7 +200,7 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
             }
         }
 
-        numevents = ae_epoll_poll(event_loop, tvp); 
+        numevents = ae_epoll_poll(event_loop, tvp);
         //遍歷所有events並依序處理可寫和可讀的
         for (j = 0; j < numevents; j++) {
             ae_comm_event *ce = &event_loop->events[event_loop->fired[j].fd];
@@ -229,7 +232,7 @@ int ae_process_events(ae_event_loop *event_loop, int flags)
 void ae_main(ae_event_loop *event_loop)
 {
     event_loop->stop = 0;
-    while (!event_loop->stop) {    
+    while (!event_loop->stop) {
         // 根據設定的flag來處理通訊事件和定時事件，並返回處理的事件數量。通過 epoll 機制和自定義的定時事件管理，實現了高效的事件循環
         ae_process_events(event_loop, AE_ALL_EVENTS);
     }

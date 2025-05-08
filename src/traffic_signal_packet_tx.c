@@ -16,6 +16,8 @@
 #include "traffic_signal_packet_tx.h"
 #include "traffic_signal_status_updating.h"
 
+LOG_USE_MODULE(MIDDLEWARE_TC);
+
 uint8_t seq_num = 0;
 pthread_mutex_t mutex_seq_num = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_rs232_write = PTHREAD_MUTEX_INITIALIZER;
@@ -126,7 +128,7 @@ uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time)
     packet->INFO[1] = 0x1C;
     packet->INFO[2] = subphase;
     packet->INFO[3] = step;
-    // printf("eff: %d\n", effect_time);
+    // LOG_MSG_TRACE("eff: %d", effect_time);
     // for escape character bug
     if (effect_time == 170) {
         effect_time = 171;
@@ -322,7 +324,7 @@ uint8_t tsc_0F42()
 }
 
 // query plan of all day, response 5FC6
-uint8_t tsc_5F46(uint8_t WeekDay) 
+uint8_t tsc_5F46(uint8_t WeekDay)
 {
     traffic_signal_packet_t *packet;
     Malloc(packet, MAX_PACKET_LEN, "tsc_5F46");
@@ -367,7 +369,7 @@ uint8_t tsc_countdown_on(uint8_t machine_type)
     } else if (machine_type == 1) {
         packet->INFO[6] = 0xFF;  // 山竚
     } else {
-        printf("unknown tc machine\r\n");
+        LOG_MSG_TRACE("unknown tc machine");
     }
 
     uint8_t ret = TC_packet_tx(packet, "signal packet tx: COUNTDOWN ON");
@@ -400,7 +402,7 @@ uint8_t tsc_countdown_off(uint8_t machine_type)
     } else if (machine_type == 1) {
         packet->INFO[6] = 0xFE;  // 山竚
     } else {
-        printf("unknown tc machine\r\n");
+        LOG_MSG_TRACE("unknown tc machine");
     }
 
     uint8_t ret = TC_packet_tx(packet, "signal packet tx: COUNTDOWN OFF");
@@ -433,7 +435,7 @@ uint8_t tsc_query_firmware_version(void)
     // }else if(machine_type==1){
     // packet->INFO[6] = 0xFE; //山竚
     // }else{
-    // printf("unknown tc machine\r\n");
+    // LOG_MSG_TRACE("unknown tc machine");
     // }
 
     uint8_t ret = TC_packet_tx(packet, "signal packet tx: tsc version query");
@@ -469,13 +471,11 @@ uint8_t TC_packet_tx(traffic_signal_packet_t *packet, char *describe)
 
     if (config.log_signal_packet_tx) {
         char log_content[LOG_CONTENT_LEN + 1] = {0};
-        snprintf(log_content, sizeof(log_content), "%s\n", describe);
+        LOG_MSG_APPEND(log_content, "%s\n", describe);
         for (int i = 0; i < packet_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
-                     output_byte[i]);
+            LOG_MSG_APPEND(log_content, "%x ", output_byte[i]);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     }
 
     pthread_mutex_lock(&mutex_rs232_write);
@@ -483,7 +483,7 @@ uint8_t TC_packet_tx(traffic_signal_packet_t *packet, char *describe)
     pthread_mutex_unlock(&mutex_rs232_write);
 
     if (ret == -1 || ret != packet_len) {
-        log_file_write_fatal_error("%s: write", describe);
+        LOG_MSG_FATAL("%s: write", describe);
     }
     return packet->SEQ;
 }

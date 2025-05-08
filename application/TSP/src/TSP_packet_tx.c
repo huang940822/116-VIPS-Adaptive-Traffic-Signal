@@ -14,10 +14,11 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
+LOG_USE_MODULE(TSP);
+
 void TSP_send_ack(uint8_t cmd, uint8_t status)
 {
-    printf("tsp send ack, CMD is %d %d\r\n", cmd, status);
-    log_file_write("tsp send ack, CMD is %d %d\r\n", cmd, status);
+    LOG_MSG_INFO("tsp send ack, CMD is %d %d", cmd, status);
     msg_buf_t write_buf;
     write_buf.index = 0;
     Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "TSP_send_ack: malloc");
@@ -33,13 +34,13 @@ void TSP_send_ack(uint8_t cmd, uint8_t status)
 
 void TSP_report_plan()
 {
-    printf("report tsp plan\r\n");
+    LOG_MSG_TRACE("report tsp plan");
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_report_plan: malloc");
+        LOG_MSG_FATAL("TSP_report_plan: malloc");
         perror("TSP_report_plan: malloc");
         exit(errno);
     } else {
@@ -107,7 +108,7 @@ void TSP_report_command(uint8_t control_status,
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_report_command: malloc");
+        LOG_MSG_FATAL("TSP_report_command: malloc");
         perror("TSP_report_command: malloc");
         exit(errno);
     } else {
@@ -134,8 +135,7 @@ void TSP_OBU_boardcast(TSP_host_OBU_obj_t *host_OBU)
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "TSP info boardcast:");
+    LOG_MSG_APPEND(log_content, "TSP info boardcast:");
 
     // search plan
     uint8_t plan_id = get_plan_id();
@@ -166,25 +166,17 @@ void TSP_OBU_boardcast(TSP_host_OBU_obj_t *host_OBU)
     uint8_t target_phase_index =
         (host_OBU->target_phase - 1) / TSP_TARGET_PHASE_INTERVAL;
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\ndistance:     %u (%d)",
-             host_OBU->distance, distance_index);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\nsubphase:     %u (%d)",
-             current_phase, signal_phase_index);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\nremaining:    %u (%d)",
-             remaining_time, time_index);
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\ntarget phase: %u (%d)",
-             host_OBU->target_phase, target_phase_index);
+    LOG_MSG_APPEND(log_content, "\ndistance:     %u (%d)", host_OBU->distance, distance_index);
+    LOG_MSG_APPEND(log_content, "\nsubphase:     %u (%d)", current_phase, signal_phase_index);
+    LOG_MSG_APPEND(log_content, "\nremaining:    %u (%d)", remaining_time, time_index);
+    LOG_MSG_APPEND(log_content, "\ntarget phase: %u (%d)", host_OBU->target_phase, target_phase_index);
 
     msg_buf_t write_buf;
     write_buf.index = 0;
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TSP_OBU_boardcast: malloc");
+        LOG_MSG_FATAL("TSP_OBU_boardcast: malloc");
         perror("TSP_OBU_boardcast: malloc");
         exit(errno);
     } else {
@@ -211,6 +203,6 @@ void TSP_OBU_boardcast(TSP_host_OBU_obj_t *host_OBU)
     if (write_buf.content != NULL) {
         free(write_buf.content);
     }
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     return;
 }

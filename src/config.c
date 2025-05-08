@@ -8,6 +8,8 @@
 #include "typedefine.h"
 #include "vector.h"
 
+LOG_USE_MODULE(MIDDLEWARE);
+
 config_object_t config = {
     .RSU_name = "S428901   ",
     .RSU_id = 4289,
@@ -226,10 +228,10 @@ int config_init()
     FILE *fp;
     fp = fopen(CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", CONFIG_FILE);
+        LOG_MSG_FATAL("error opening %s", CONFIG_FILE);
         return CONFIG_INVALID_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully %s", CONFIG_FILE);
+        LOG_MSG_INFO("%s opened successfully %s", CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -254,12 +256,12 @@ int config_init()
                     char extracted[5];
 
                     strncpy(config.RSU_name, string_val, 10);
-                    log_file_write("config: RSU_name = %s", config.RSU_name);
+                    LOG_MSG_INFO("config: RSU_name = %s", config.RSU_name);
 
                     strncpy(extracted, config.RSU_name + 1, 4);
                     extracted[4] = '\0';
                     config.RSU_id = atoi(extracted);
-                    log_file_write("config: RSU_id = %d", config.RSU_id);
+                    LOG_MSG_INFO("config: RSU_id = %d", config.RSU_id);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_NAME;
@@ -273,7 +275,7 @@ int config_init()
             if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
                 if (0 <= uint32_t_val && uint32_t_val <= 65535) {
                     config.RSU_id = uint32_t_val;
-                    log_file_write("config: RSU_id = %d", config.RSU_id);
+                    LOG_MSG_INFO("config: RSU_id = %d", config.RSU_id);
                 } else {
                     return CONFIG_INVALID_RSU_NAME;
                 }
@@ -286,7 +288,7 @@ int config_init()
             if (read_uint32_t_from_config_line(buf, &uint32_t_val)) {
                 if (0 <= uint32_t_val && uint32_t_val <= 65535) {
                     config.RSU_region = uint32_t_val;
-                    log_file_write("config: RSU_region = %d", config.RSU_region);
+                    LOG_MSG_INFO("config: RSU_region = %d", config.RSU_region);
                 } else {
                     return CONFIG_INVALID_RSU_NAME;
                 }
@@ -299,7 +301,7 @@ int config_init()
             if (read_double_from_config_line(buf, &double_val)) {
                 if (-90 <= double_val && double_val <= 90) {
                     config.RSU_lat = double_val;
-                    log_file_write("config: RSU_lat = %f", config.RSU_lat);
+                    LOG_MSG_INFO("config: RSU_lat = %f", config.RSU_lat);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_LAT;
@@ -313,7 +315,7 @@ int config_init()
             if (read_double_from_config_line(buf, &double_val)) {
                 if (-180 < double_val && double_val <= 180) {
                     config.RSU_lon = double_val;
-                    log_file_write("config: RSU_lon = %f", config.RSU_lon);
+                    LOG_MSG_INFO("config: RSU_lon = %f", config.RSU_lon);
                     continue;
                 } else {
                     return CONFIG_INVALID_RSU_LON;
@@ -327,17 +329,17 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "cheng_long") == 0) {
                     config.signal_controller_manufacturer = CHENG_LONG;
-                    log_file_write("config: signal_controller_manufacturer = %d",
+                    LOG_MSG_INFO("config: signal_controller_manufacturer = %d",
                                    config.signal_controller_manufacturer);
                     continue;
                 } else if (strcmp(string_val, "shan_zhu") == 0) {
                     config.signal_controller_manufacturer = SHAN_ZHU;
-                    log_file_write("config: signal_controller_manufacturer = %d",
+                    LOG_MSG_INFO("config: signal_controller_manufacturer = %d",
                                    config.signal_controller_manufacturer);
                     continue;
                 } else if (strcmp(string_val, "shan_zhu_m") == 0) {
                     config.signal_controller_manufacturer = SHAN_ZHU_M;
-                    log_file_write("config: signal_controller_manufacturer = %d",
+                    LOG_MSG_INFO("config: signal_controller_manufacturer = %d",
                                    config.signal_controller_manufacturer);
 
                 } else {
@@ -352,12 +354,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.signal_status_report_active = 1;
-                    log_file_write("config: signal_status_report_active = %d",
+                    LOG_MSG_INFO("config: signal_status_report_active = %d",
                                    config.signal_status_report_active);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.signal_status_report_active = 0;
-                    log_file_write("config: signal_status_report_active = %d",
+                    LOG_MSG_INFO("config: signal_status_report_active = %d",
                                    config.signal_status_report_active);
                     continue;
                 } else {
@@ -372,12 +374,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.signal_adjust_upper_bound_active = 1;
-                    log_file_write("config: signal_adjust_upper_bound_active = %d",
+                    LOG_MSG_INFO("config: signal_adjust_upper_bound_active = %d",
                                    config.signal_adjust_upper_bound_active);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.signal_adjust_upper_bound_active = 0;
-                    log_file_write("config: signal_adjust_upper_bound_active = %d",
+                    LOG_MSG_INFO("config: signal_adjust_upper_bound_active = %d",
                                    config.signal_adjust_upper_bound_active);
                     continue;
                 } else {
@@ -392,12 +394,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.signal_adjust_lower_bound_active = 1;
-                    log_file_write("config: signal_adjust_lower_bound_active = %d",
+                    LOG_MSG_INFO("config: signal_adjust_lower_bound_active = %d",
                                    config.signal_adjust_lower_bound_active);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.signal_adjust_lower_bound_active = 0;
-                    log_file_write("config: signal_adjust_lower_bound_active = %d",
+                    LOG_MSG_INFO("config: signal_adjust_lower_bound_active = %d",
                                    config.signal_adjust_lower_bound_active);
                     continue;
                 } else {
@@ -412,7 +414,7 @@ int config_init()
             if (read_float_from_config_line(buf, &float_val)) {
                 if (float_val >= 0) {
                     config.signal_adjust_upper_bound_percentage = float_val;
-                    log_file_write("config: signal_adjust_upper_bound_percentage = %f",
+                    LOG_MSG_INFO("config: signal_adjust_upper_bound_percentage = %f",
                                    config.signal_adjust_upper_bound_percentage);
                     continue;
                 } else {
@@ -427,7 +429,7 @@ int config_init()
             if (read_float_from_config_line(buf, &float_val)) {
                 if (float_val >= 0) {
                     config.signal_adjust_lower_bound_percentage = float_val;
-                    log_file_write("config: signal_adjust_lower_bound_percentage = %f",
+                    LOG_MSG_INFO("config: signal_adjust_lower_bound_percentage = %f",
                                    config.signal_adjust_lower_bound_percentage);
                     continue;
                 } else {
@@ -442,7 +444,7 @@ int config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     config.traffic_compensation_method = uint8_t_val;
-                    log_file_write("config: traffic_compensation_method = %d",
+                    LOG_MSG_INFO("config: traffic_compensation_method = %d",
                                    config.traffic_compensation_method);
                     continue;
                 } else {
@@ -457,11 +459,11 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "ZERO_HOUR_ZERO_MIN_BASELINE") == 0) {
                     config.traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE;
-                    log_file_write("config: traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE");
+                    LOG_MSG_INFO("config: traffic_compensation_baseline = ZERO_HOUR_ZERO_MIN_BASELINE");
                     continue;
                 } else if (strcmp(string_val, "DAILY_SEGMENT_BASELINE") == 0) {
                     config.traffic_compensation_baseline = DAILY_SEGMENT_BASELINE;
-                    log_file_write("config: traffic_compensation_baseline = DAILY_SEGMENT_BASELINE");
+                    LOG_MSG_INFO("config: traffic_compensation_baseline = DAILY_SEGMENT_BASELINE");
                     continue;
                 } else {
                     return CONFIG_INVALID_SIGNAL_CONTROLLER_MANUFACTURER;
@@ -475,7 +477,7 @@ int config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     config.traffic_compensation_cycle_number = uint8_t_val;
-                    log_file_write("config: traffic_compensation_cycle_number = %d", config.traffic_compensation_cycle_number);
+                    LOG_MSG_INFO("config: traffic_compensation_cycle_number = %d", config.traffic_compensation_cycle_number);
                     continue;
                 } else {
                     return CONFIG_INVALID_TRAFFIC_COMPENSATION_CYCLE_NUMBER;
@@ -505,7 +507,7 @@ int config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     config.cms_number = uint8_t_val;
-                    log_file_write("config: CMS_NUMBER = %d", config.cms_number);
+                    LOG_MSG_INFO("config: CMS_NUMBER = %d", config.cms_number);
                     continue;
                 } else {
                     return CONFIG_INVALID_CMS_NUMBER;
@@ -520,12 +522,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_middleware_timer_event = 1;
-                    log_file_write("config: log_middleware_timer_event = %d",
+                    LOG_MSG_INFO("config: log_middleware_timer_event = %d",
                                    config.log_middleware_timer_event);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_middleware_timer_event = 0;
-                    log_file_write("config: log_middleware_timer_event = %d",
+                    LOG_MSG_INFO("config: log_middleware_timer_event = %d",
                                    config.log_middleware_timer_event);
                     continue;
                 } else {
@@ -540,12 +542,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_application_register_event = 1;
-                    log_file_write("config: log_application_register_event = %d",
+                    LOG_MSG_INFO("config: log_application_register_event = %d",
                                    config.log_application_register_event);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_application_register_event = 0;
-                    log_file_write("config: log_application_register_event = %d",
+                    LOG_MSG_INFO("config: log_application_register_event = %d",
                                    config.log_application_register_event);
                     continue;
                 } else {
@@ -560,12 +562,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_command_buffer = 1;
-                    log_file_write("config: log_command_buffer = %d",
+                    LOG_MSG_INFO("config: log_command_buffer = %d",
                                    config.log_command_buffer);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_command_buffer = 0;
-                    log_file_write("config: log_command_buffer = %d",
+                    LOG_MSG_INFO("config: log_command_buffer = %d",
                                    config.log_command_buffer);
                     continue;
                 } else {
@@ -580,12 +582,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_signal_packet_rx = 1;
-                    log_file_write("config: log_signal_packet_rx = %d",
+                    LOG_MSG_INFO("config: log_signal_packet_rx = %d",
                                    config.log_signal_packet_rx);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_signal_packet_rx = 0;
-                    log_file_write("config: log_signal_packet_rx = %d",
+                    LOG_MSG_INFO("config: log_signal_packet_rx = %d",
                                    config.log_signal_packet_rx);
                     continue;
                 } else {
@@ -600,12 +602,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_signal_packet_tx = 1;
-                    log_file_write("config: log_signal_packet_tx = %d",
+                    LOG_MSG_INFO("config: log_signal_packet_tx = %d",
                                    config.log_signal_packet_tx);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_signal_packet_tx = 0;
-                    log_file_write("config: log_signal_packet_tx = %d",
+                    LOG_MSG_INFO("config: log_signal_packet_tx = %d",
                                    config.log_signal_packet_tx);
                     continue;
                 } else {
@@ -620,12 +622,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_signal_packet_info = 1;
-                    log_file_write("config: log_signal_packet_info = %d",
+                    LOG_MSG_INFO("config: log_signal_packet_info = %d",
                                    config.log_signal_packet_info);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_signal_packet_info = 0;
-                    log_file_write("config: log_signal_packet_info = %d",
+                    LOG_MSG_INFO("config: log_signal_packet_info = %d",
                                    config.log_signal_packet_info);
                     continue;
                 } else {
@@ -640,12 +642,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_cloud_packet_rx = 1;
-                    log_file_write("config: log_cloud_packet_rx = %d",
+                    LOG_MSG_INFO("config: log_cloud_packet_rx = %d",
                                    config.log_cloud_packet_rx);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_cloud_packet_rx = 0;
-                    log_file_write("config: log_cloud_packet_rx = %d",
+                    LOG_MSG_INFO("config: log_cloud_packet_rx = %d",
                                    config.log_cloud_packet_rx);
                     continue;
                 } else {
@@ -660,12 +662,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_cloud_packet_tx = 1;
-                    log_file_write("config: log_cloud_packet_tx = %d",
+                    LOG_MSG_INFO("config: log_cloud_packet_tx = %d",
                                    config.log_cloud_packet_tx);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_cloud_packet_tx = 0;
-                    log_file_write("config: log_cloud_packet_tx = %d",
+                    LOG_MSG_INFO("config: log_cloud_packet_tx = %d",
                                    config.log_cloud_packet_tx);
                     continue;
                 } else {
@@ -680,12 +682,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_OBU_packet_rx = 1;
-                    log_file_write("config: log_OBU_packet_rx = %d",
+                    LOG_MSG_INFO("config: log_OBU_packet_rx = %d",
                                    config.log_OBU_packet_rx);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_OBU_packet_rx = 0;
-                    log_file_write("config: log_OBU_packet_rx = %d",
+                    LOG_MSG_INFO("config: log_OBU_packet_rx = %d",
                                    config.log_OBU_packet_rx);
                     continue;
                 } else {
@@ -700,12 +702,12 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_OBU_packet_tx = 1;
-                    log_file_write("config: log_OBU_packet_tx = %d",
+                    LOG_MSG_INFO("config: log_OBU_packet_tx = %d",
                                    config.log_OBU_packet_tx);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_OBU_packet_tx = 0;
-                    log_file_write("config: log_OBU_packet_tx = %d",
+                    LOG_MSG_INFO("config: log_OBU_packet_tx = %d",
                                    config.log_OBU_packet_tx);
                     continue;
                 } else {
@@ -720,11 +722,11 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.log_OBU_list = 1;
-                    log_file_write("config: .log_OBU_list = %d", config.log_OBU_list);
+                    LOG_MSG_INFO("config: .log_OBU_list = %d", config.log_OBU_list);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.log_OBU_list = 0;
-                    log_file_write("config: .log_OBU_list = %d", config.log_OBU_list);
+                    LOG_MSG_INFO("config: .log_OBU_list = %d", config.log_OBU_list);
                     continue;
                 } else {
                     return CONFIG_INVALID_LOG_OBU_LIST;
@@ -738,11 +740,11 @@ int config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     config.ped_countdown_send = 1;
-                    log_file_write("config: .ped_countdown_send = %d", config.ped_countdown_send);
+                    LOG_MSG_INFO("config: .ped_countdown_send = %d", config.ped_countdown_send);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     config.ped_countdown_send = 0;
-                    log_file_write("config: .ped_countdown_send = %d", config.ped_countdown_send);
+                    LOG_MSG_INFO("config: .ped_countdown_send = %d", config.ped_countdown_send);
                     continue;
                 } else {
                     return CONFIG_INVALID_PED_COUNTDOWN_SEND;
@@ -762,10 +764,10 @@ int vms_config_init()
     FILE *fp;
     fp = fopen(VMS_CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", VMS_CONFIG_FILE);
+        LOG_MSG_FATAL("error opening %s", VMS_CONFIG_FILE);
         return CONFIG_INVALID_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully %s", VMS_CONFIG_FILE);
+        LOG_MSG_INFO("%s opened successfully %s", VMS_CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -783,12 +785,12 @@ int vms_config_init()
             if (read_string_from_config_line(buf, string_val)) {
                 if (strcmp(string_val, "yes") == 0) {
                     vms_config.vms_active = 1;
-                    log_file_write("vms_config: vms_active = %d",
+                    LOG_MSG_INFO("vms_config: vms_active = %d",
                                    vms_config.vms_active);
                     continue;
                 } else if (strcmp(string_val, "no") == 0) {
                     vms_config.vms_active = 0;
-                    log_file_write("vms_config: vms_active = %d",
+                    LOG_MSG_INFO("vms_config: vms_active = %d",
                                    vms_config.vms_active);
                     continue;
                 } else {
@@ -803,7 +805,7 @@ int vms_config_init()
             if (read_uint8_t_array_from_config_line(buf, uint8_t_val_array)) {
                 for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                     vms_config.activate_directions[i] = uint8_t_val_array[i];
-                    log_file_write("vms_config: activate_directions[%d] = %d",
+                    LOG_MSG_INFO("vms_config: activate_directions[%d] = %d",
                                    i, vms_config.activate_directions[i]);
                 }
                 continue;
@@ -817,7 +819,7 @@ int vms_config_init()
                 for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                     if (uint8_t_val_array[i] >= 0) {
                         vms_config.program_ids_green[i] = uint8_t_val_array[i];
-                        log_file_write("vms_config: program_ids_green[%d] = %d",
+                        LOG_MSG_INFO("vms_config: program_ids_green[%d] = %d",
                                        i, vms_config.program_ids_green[i]);
                     } else {
                         return VMS_CONFIG_INVALID_PROGRAM_IDS_GREEN;
@@ -834,7 +836,7 @@ int vms_config_init()
                 for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                     if (uint8_t_val_array[i] >= 0) {
                         vms_config.program_ids_not_green[i] = uint8_t_val_array[i];
-                        log_file_write("vms_config: program_ids_not_green[%d] = %d",
+                        LOG_MSG_INFO("vms_config: program_ids_not_green[%d] = %d",
                                        i, vms_config.program_ids_not_green[i]);
                     } else {
                         return VMS_CONFIG_INVALID_PROGRAM_IDS_NOT_GREEN;

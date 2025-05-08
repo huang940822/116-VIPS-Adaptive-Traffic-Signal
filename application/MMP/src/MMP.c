@@ -1,5 +1,7 @@
 #include "MMP.h"
 
+LOG_USE_MODULE(MMP);
+
 pthread_mutex_t mmp_file_writer = PTHREAD_MUTEX_INITIALIZER;
 
 app_obj_t MMP = {
@@ -29,7 +31,7 @@ int MMP_on_cloud_packet_rx(void *arg)
     read_buf.content = (unsigned char *) malloc(app_section->payload_len);
     if (read_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("MMP_on_cloud_packet_rx: malloc");
+        LOG_MSG_FATAL("MMP_on_cloud_packet_rx: malloc");
         perror("MMP_on_cloud_packet_rx: malloc");
         exit(errno);
     } else {
@@ -45,21 +47,17 @@ int MMP_on_cloud_packet_rx(void *arg)
 
     /* print packet into log */
     if (config.log_cloud_packet_rx) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "MMP cloud packet rx: SPECIFIC FIELD\n");
+        LOG_MSG_APPEND(log_content, "MMP cloud packet rx: SPECIFIC FIELD\n");
         for (int i = 0; i < app_section->payload_len; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%x ",
+            LOG_MSG_APPEND(log_content, "%x ",
                      read_buf.content[i]);
         }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n");
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\n");
+        LOG_MSG_INFO(log_content);
     }
 
     switch (cmd) {
-        case 1: 
+        case 1:
         {
             // 雲端變更控制策略
             uint8_t strategy = 0;
@@ -85,13 +83,11 @@ int MMP_on_cloud_packet_rx(void *arg)
                     for (int i = 0; i < PHASE_COUNT_MAX_NUM; i++) {
                         {
                             config.phase_weight[i] = phase_weight[i];
-                            snprintf(log_content + strlen(log_content),
-                                    LOG_CONTENT_LEN - strlen(log_content),
-                                    "\nChange phase weight in config");
+                            LOG_MSG_APPEND(log_content, "\nChange phase weight in config");
                         }
                     }
                 } else {
-                    printf("warning : total phase weight is not 100\n");
+                    LOG_MSG_WARN("warning : total phase weight is not 100");
                     set_CLOUD_PACKET_CHANGE_STRATEGY_2_PHASE_WEIGHT_ERR();
                 }
             }
@@ -105,9 +101,7 @@ int MMP_on_cloud_packet_rx(void *arg)
                     FILE *outfile;
                     outfile = fopen("config/config.txt", "w");
                     if (outfile == NULL) {
-                        snprintf(log_content + strlen(log_content),
-                                LOG_CONTENT_LEN - strlen(log_content),
-                                "\nWarning: error opening ./config/config.txt ");
+                        LOG_MSG_WARN(log_content, " Warning: error opening ./config/config.txt ");
                     } else {
                         fprintf(outfile, "RSU_NAME \"%s\"\n", config.RSU_name);
                         fprintf(outfile, "RSU_id %d\n", config.RSU_id);
@@ -210,20 +204,14 @@ int MMP_on_cloud_packet_rx(void *arg)
                     fclose(outfile);
                     pthread_mutex_unlock(&mmp_file_writer);
                 } else {
-                    snprintf(log_content + strlen(log_content),
-                            LOG_CONTENT_LEN - strlen(log_content),
-                            "\ninvalid cloud packet strategy MMP packet to tc "
-                            "machine of invalid cyclenum: %d",
+                    LOG_MSG_WARN(log_content, "invalid cloud packet strategy MMP packet to tc machine of invalid cyclenum: %d",
                             cyclenumber);
                 }
             } else {
-                snprintf(log_content + strlen(log_content),
-                        LOG_CONTENT_LEN - strlen(log_content),
-                        "\ninvalid cloud packet strategy MMP packet to tc "
-                        "machine of invalid strategy: %d",
+                LOG_MSG_WARN(log_content, "invalid cloud packet strategy MMP packet to tc machine of invalid strategy: %d",
                         strategy);
             }
-            log_file_write(log_content);
+            LOG_MSG_INFO(log_content);
         } break;
         case 2:  // 雲端更新 VMS 圖片(要考慮到錯誤回報)
         {
@@ -243,18 +231,18 @@ int MMP_on_cloud_packet_rx(void *arg)
 
             switch (res) {
             case -1: {
-                log_file_write_fatal_error("VMS_search_program: open directory failed");
+                LOG_MSG_FATAL("VMS_search_program: open directory failed");
             } break;
             case 0: {
                 if (vms_program_update_thread_activate(Program_ID, Program_Name)) {
-                    log_file_write("vms program update thread activate.");
+                    LOG_MSG_INFO("vms program update thread activate.");
                 } else {  // 正在上傳
-                    log_file_write_fatal_error("vms program update is process.");
+                    LOG_MSG_FATAL("vms program update is process.");
                 }
                 ack_status = 2;
             } break;
             case 1: {
-                log_file_write_fatal_error("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
+                LOG_MSG_FATAL("VMS_search_program: program doesnt exist, program name = %s", Program_Name);
                 ack_status = res;
             } break;
             }
@@ -268,8 +256,7 @@ int MMP_on_cloud_packet_rx(void *arg)
             read_uint8_t(&VMS_ID, &read_buf);
             read_uint8_t(&Program_Type, &read_buf);
             read_uint8_t(&Program_ID, &read_buf);
-            // printf("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
-            log_file_write("VMS_ID: %d, Program_Type: %d, Program_ID: %d\n", VMS_ID, Program_Type, Program_ID);
+            LOG_MSG_INFO("VMS_ID: %d, Program_Type: %d, Program_ID: %d", VMS_ID, Program_Type, Program_ID);
             int res = carousel_update(VMS_ID, Program_Type, Program_ID);
 
             switch (res) {
@@ -279,22 +266,22 @@ int MMP_on_cloud_packet_rx(void *arg)
             } break;
             case -1:  // VMS ID 有誤
             {
-                log_file_write_fatal_error("Error VMS ID");
+                LOG_MSG_FATAL("Error VMS ID");
             } break;
             case -2:  // Program Type 有誤
             {
-                log_file_write_fatal_error("Error Program Type");
+                LOG_MSG_FATAL("Error Program Type");
             } break;
             case -3:  // Program ID 有誤
             {
-                log_file_write_fatal_error("Error Program ID");
+                LOG_MSG_FATAL("Error Program ID");
             } break;
             case -4:  // 無法開啟 vms_config.txt
             {
-                log_file_write_fatal_error("Error opening vms_config.txt");
+                LOG_MSG_FATAL("Error opening vms_config.txt");
             } break;
             default: {
-                log_file_write("Useless return value");
+                LOG_MSG_INFO("Useless return value");
             } break;
             }
 

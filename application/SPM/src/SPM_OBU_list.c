@@ -9,6 +9,8 @@
 #include "log.h"
 #include "string.h"
 
+LOG_USE_MODULE(SPM);
+
 LIST_HEAD(SPM_OBU_list_head);
 pthread_mutex_t SPM_OBU_obj_mutex = PTHREAD_MUTEX_INITIALIZER;
 

@@ -10,21 +10,23 @@
 #include "log.h"
 #include "timer_event.h"
 
+LOG_USE_MODULE(MIDDLEWARE);
+
 uint8_t app_num;
 app_obj_t app_list;
 event_callback_t callback_list[EVENT_TYPE_NUMBER];
 
 /* since now dispatcher and ea_app_proxy,
- * both might read/write app_list, we add a mutex_lock */ 
+ * both might read/write app_list, we add a mutex_lock */
 pthread_mutex_t mutex_app_list = PTHREAD_MUTEX_INITIALIZER;
 
-/* since now dispatcher, ea_app_proxy, command_buf_send(), 
+/* since now dispatcher, ea_app_proxy, command_buf_send(),
  * all might read/write callback_list, we add a mutex_lock */
 // 目前 mutex_callback_list 有問題需要修正要想辦法把這個 lock 拿掉 不然同時間拿了太多 lock 會太複雜
 pthread_mutex_t mutex_callback_list = PTHREAD_MUTEX_INITIALIZER;
 
 /* this function assume the caller have grabbed the mutex_callback_list  */
-static inline __attribute__((always_inline)) 
+static inline __attribute__((always_inline))
 app_obj_t* get_app_obj_by_app_name(char* name_p)
 {
     // check app name
@@ -37,7 +39,7 @@ app_obj_t* get_app_obj_by_app_name(char* name_p)
     }
 
     app_obj_t *current = app_list.next;
-    if (current == NULL) { 
+    if (current == NULL) {
         return NULL;   /* empty list */
     }
     else{
@@ -63,19 +65,19 @@ event_callback_t *event_callback_new(char *name, int priority, event_callback_id
 {
     event_callback_t *event_callback =
         (event_callback_t *) malloc(sizeof(event_callback_t));
-        
+
     app_obj_t* app_obj_p;
-    
+
     if (event_callback == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("event_callback_new: malloc");
+        LOG_MSG_FATAL("event_callback_new: malloc");
         perror("event_callback_new: malloc");
         exit(errno);
     }
 
     app_obj_p = get_app_obj_by_app_name(name);
     if(!app_obj_p){
-        log_file_write_fatal_error("event_callback_new: get_app_obj_by_app_name() find no matching app");
+        LOG_MSG_FATAL("event_callback_new: get_app_obj_by_app_name() find no matching app");
         perror("event_callback_new: get_app_obj_by_app_name() find no matching app");
         exit(errno);
     }
@@ -108,11 +110,11 @@ void event_callback_msg_id_insert(event_type_t event_type,
                                   DSRCmsgID msg_id,
                                   int (*callback)(void *))
 {
-    /* since now dispatcher, ea_app_proxy, command_buf_send() 
+    /* since now dispatcher, ea_app_proxy, command_buf_send()
      * all might read/write callback_list we add a mutex_lock */
-    
-    pthread_mutex_lock(&mutex_callback_list); 
-    
+
+    pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *previous = &callback_list[event_type];
     event_callback_t *current = previous->next;
     event_callback_t *event_callback = NULL;
@@ -124,7 +126,7 @@ void event_callback_msg_id_insert(event_type_t event_type,
             event_callback = event_callback_new(name, priority, event_callback_id_msg_id, msg_id, callback);
             event_callback->next = current;
             previous->next = event_callback;
-            // printf("insert callback\n");
+            // LOG_MSG_TRACE("insert callback");
             goto unlock_ret;
         }
         previous = current;
@@ -147,9 +149,9 @@ void event_callback_insert(event_callback_t *head,
                            app_obj_t *app,
                            int (*callback)(void *))
 {
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
      * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list); 
+    pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *previous = head;
     event_callback_t *current = head->next;
@@ -160,7 +162,7 @@ void event_callback_insert(event_callback_t *head,
         /* callback with same app id already exist */
         if (current->event_callback_id.choice == event_callback_id_app_id &&
             current->event_callback_id.u.app_id == app->id) {
-            // printf("callback with same app_id exist\n");
+            // LOG_MSG_TRACE("callback with same app_id exist");
             goto unlock_ret;
         }
         /* priority higher than next node, insert callback here */
@@ -168,7 +170,7 @@ void event_callback_insert(event_callback_t *head,
             event_callback = event_callback_new(app->name, app->priority, event_callback_id_app_id, app->id, callback);
             event_callback->next = current;
             previous->next = event_callback;
-            // printf("insert callback\n");
+            // LOG_MSG_TRACE("insert callback");
             goto unlock_ret;
         }
         previous = current;
@@ -191,9 +193,9 @@ unlock_ret:
 int app_obj_insert(app_obj_t *app)
 {
     /* since now dispatcher and ea_app_proxy,
-     * both might read/write app_list, we add a mutex_lock */ 
+     * both might read/write app_list, we add a mutex_lock */
     int ret;
-    pthread_mutex_lock(&mutex_app_list); 
+    pthread_mutex_lock(&mutex_app_list);
 
     app_obj_t *current = app_list.next;
     uint8_t num = 0;
@@ -231,9 +233,9 @@ int app_obj_insert(app_obj_t *app)
     current->next = app;
     num++;
     ret = num;
-    
+
 unlock_ret:
-    pthread_mutex_unlock(&mutex_app_list); 
+    pthread_mutex_unlock(&mutex_app_list);
     return ret;
 }
 
@@ -246,7 +248,7 @@ unlock_ret:
 **               <0: registration failed
 ******************************************************************************/
 int app_register(app_obj_t *app)
-{   
+{
     // check app name
     if (strlen(app->name) == 0) {
         return APP_REGISTER_INVALID_APP_NAME;
@@ -263,7 +265,7 @@ int app_register(app_obj_t *app)
     // insert app in app list
     int ret = app_obj_insert(app);
     if (ret < 0) {
-        printf("error inserting app in list: %d\n", ret);
+        LOG_MSG_TRACE("error inserting app in list: %d", ret);
         return ret;
     } else {
         app_num = ret + 1;
@@ -314,94 +316,78 @@ void event_callback_print()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "%-50s%s",
-             "callback_list[EVENT_TYPE_NAME]:",
-             "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
+    LOG_MSG_APPEND(log_content, "%-50s%s",
+            "callback_list[EVENT_TYPE_NAME]:",
+            "APP_NAME1(APP_PRI1)-> APP_NAME2(APP_PRI2)-> ...");
 
-    /* since now dispatcher, ea_app_proxy, command_buf_send(), 
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
      * all might read/write callback_list, we add a mutex_lock */
-    pthread_mutex_lock(&mutex_callback_list); 
+    pthread_mutex_lock(&mutex_callback_list);
 
     event_callback_t *current;
     for (int i = 0; i < EVENT_TYPE_NUMBER; i++) {
         current = &callback_list[i];
         switch (i) {
         case EVENT_OBU_PACKET_RX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_OBU_PACKET_RX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_OBU_PACKET_RX]:");
             break;
         case EVENT_OBU_PACKET_TX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_OBU_PACKET_TX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_OBU_PACKET_TX]:");
             break;
         case EVENT_RSU_PACKET_RX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_RSU_PACKET_RX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_RSU_PACKET_RX]:");
             break;
         case EVENT_RSU_PACKET_TX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_RSU_PACKET_TX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_RSU_PACKET_TX]:");
             break;
         case EVENT_CLOUD_PACKET_RX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_CLOUD_PACKET_RX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_CLOUD_PACKET_RX]:");
             break;
         case EVENT_CLOUD_PACKET_TX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_CLOUD_PACKET_TX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_CLOUD_PACKET_TX]:");
             break;
         case EVENT_CAMERA_PACKET_RX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_CAMERA_PACKET_RX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_CAMERA_PACKET_RX]:");
             break;
         case EVENT_TRAFFIC_SIGNAL_COMMAND_TX:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_TRAFFIC_SIGNAL_COMMAND_TX]:");
             break;
         case EVENT_REGISTRATION:
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n%-50s",
-                     "callback_list[EVENT_REGISTRATION]:");
+            LOG_MSG_APPEND(log_content, "\n%-50s",
+                    "callback_list[EVENT_REGISTRATION]:");
             break;
         default:
             break;
         }
-        // snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN -
-        // strlen(log_content), "%-50s", log_content);
+        // LOG_MSG_APPEND(log_content, "%-50s", log_content);
         while (current->next != NULL) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "%s",
-                     current->next->name);
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "(%d)",
-                     current->next->priority);
-            
+            LOG_MSG_APPEND(log_content, "%s", current->next->name);
+            LOG_MSG_APPEND(log_content, "(%d)", current->next->priority);
+
             current = current->next;
             if (current->next != NULL) {
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content), "%s", "-> ");
+                LOG_MSG_APPEND(log_content, "-> ");
             }
         }
     }
 
     pthread_mutex_unlock(&mutex_callback_list);
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
 }
 
 void app_list_print()
-{   
+{
     /* since now dispatcher and ea_app_proxy,
-     * both might read/write app_list, we add a mutex_lock */ 
-    pthread_mutex_lock(&mutex_app_list); 
+     * both might read/write app_list, we add a mutex_lock */
+    pthread_mutex_lock(&mutex_app_list);
 
     app_obj_t *current = app_list.next;
 
@@ -410,10 +396,10 @@ void app_list_print()
     }
 
     while (current != NULL) {
-        printf("%s\n", current->name);
+        LOG_MSG_TRACE("%s", current->name);
         current = current->next;
     }
 unlock_ret:
-    pthread_mutex_unlock(&mutex_app_list); 
+    pthread_mutex_unlock(&mutex_app_list);
     return;
 }
