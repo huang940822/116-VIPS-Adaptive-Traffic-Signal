@@ -8,6 +8,8 @@
 #include "WA_util.h"
 #include "util.h"
 
+LOG_USE_MODULE(WA);
+
 extern CCI Leading_Vehicles[4];
 extern pthread_mutex_t mutex_LV;
 

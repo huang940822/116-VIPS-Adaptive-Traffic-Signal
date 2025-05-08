@@ -19,6 +19,8 @@
 #include "log.h"
 #include "cms.h"
 
+LOG_USE_MODULE(WA);
+
 void WA_Agent_timer_handler(__sigval_t value)
 {
     const int directionPairs[4][2] = {
@@ -42,7 +44,7 @@ void WA_Agent_timer_handler(__sigval_t value)
     WA_get_leading_vehicles(fusion_Leading_Vehicles);
     /* Test all directions */
     for (int i = 0; i < 4; i++){
-        log_file_write("Direction: %d, fusion_Leading_Vehicles.Speed: %lf, fusion_Leading_Vehicles.Distance: %lf",
+        LOG_MSG_TRACE("Direction: %d, fusion_Leading_Vehicles.Speed: %lf, fusion_Leading_Vehicles.Distance: %lf",
                          i, fusion_Leading_Vehicles[i].speed, fusion_Leading_Vehicles[i].distance);
     }
     /* actual code */
@@ -187,13 +189,13 @@ void WA_Agent_timer_handler(__sigval_t value)
     }
     for (int i = 0; i < 4; i++){
         if(PET[i]!=DBL_MAX){
-            log_file_write("Direction Pair %d to %d: PET %lf", directionPairs[i][0], directionPairs[i][1], PET[i]);
+            LOG_MSG_TRACE("Direction Pair %d to %d: PET %lf", directionPairs[i][0], directionPairs[i][1], PET[i]);
         }
     }
     for (int i = 0; i < 4; i++) {
-        log_file_write("Direction %d: Warning Level %d", i, warningLevels[i]);
+        LOG_MSG_TRACE("Direction %d: Warning Level %d", i, warningLevels[i]);
     }
-    log_file_write("warning_range: %d m", WA_config.warning_range);
+    LOG_MSG_TRACE("warning_range: %d m", WA_config.warning_range);
     WA_clear_leading_vehicles();
 }
 

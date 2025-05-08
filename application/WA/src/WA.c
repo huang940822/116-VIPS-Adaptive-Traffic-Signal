@@ -20,13 +20,15 @@
 #include "config.h"
 #include "dispatcher.h"
 #include "log.h"
-#include "post_processing.h"
+#include "util.h"
 #include "timer_event.h"
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 #include "cms.h"
 
 #define NO_VEHICLE -1.0 
+
+LOG_USE_MODULE(WA);
 
 CCI Leading_Vehicles[4]; // Leading Vehicles for four directions NSWE
 timer_t WA_Agent_timer_id;
@@ -41,14 +43,13 @@ void initializationLeadingVehicles(CCI vehicles[], int size){
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
-    snprintf(log_content, LOG_CONTENT_LEN, "\nInitializing Leading Vehicles:");
+    LOG_MSG_APPEND(log_content, "Initializing Leading Vehicles:");
     for (int i = 0; i < size; i++){
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
+        LOG_MSG_APPEND(log_content,
                  "\n Direction %d: Speed=%.2f, Distance=%.2f",
                  i, vehicles[i].speed, vehicles[i].distance);
     }
-    log_file_write(log_content);
+    LOG_MSG_TRACE(log_content);
 }
 app_obj_t WA = {
     .name = "WA",
@@ -71,10 +72,7 @@ int WA_on_camera_packet_rx(void *arg){
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\n WA_on_camera_packet_rx called.");
-    log_file_write(log_content);
+    LOG_MSG_TRACE("WA_on_camera_packet_rx called.");
 
     ObstacleList *obstaclelist = (ObstacleList *) arg;
     int direct = obstaclelist->dirct;
@@ -91,21 +89,17 @@ int WA_on_camera_packet_rx(void *arg){
         double speed = obstaclelist->tab[i].speed;
 
         if (!is_valid_gps(lat, lon)) {
-            snprintf(log_content, LOG_CONTENT_LEN,
-                     "[WARN] Invalid GPS at index %d: lat=%.6f, lon=%.6f", i, lat, lon);
-            log_file_write(log_content);
+            LOG_MSG_WARN("Invalid GPS at index %d: lat=%.6f, lon=%.6f", i, lat, lon);
             continue;
         }
 
         if (!is_valid_speed(speed)) {
-            snprintf(log_content, LOG_CONTENT_LEN,
-                     "[WARN] Invalid speed at index %d: speed=%.2f", i, speed);
-            log_file_write(log_content);
+            LOG_MSG_WARN("Invalid speed at index %d: speed=%.2f", i, speed);
             continue;
         }
 
         double current_distance = distance(lat, lon, intersection_center_lat, intersection_center_lon);
-        log_file_write("Valid vehicle %d: lat=%.6f, lon=%.6f, speed=%.2f, distance=%.2f",
+        LOG_MSG_INFO("Incoming vehicle %d: lat=%.6f, lon=%.6f, speed=%.2f, distance=%.2f",
                        i, lat, lon, speed, current_distance);
 
         if (leading_vehicle.distance == NO_VEHICLE || current_distance < leading_vehicle.distance) {
@@ -118,11 +112,8 @@ int WA_on_camera_packet_rx(void *arg){
     Leading_Vehicles[direct] = leading_vehicle;
     pthread_mutex_unlock(&mutex_LV);
 
-    snprintf(log_content, LOG_CONTENT_LEN,
-             "Direction %d updated: Speed=%.2f, Distance=%.2f",
+    LOG_MSG_INFO("Direction %d updated: Speed=%.2f, Distance=%.2f",
              direct, leading_vehicle.speed, leading_vehicle.distance);
-    log_file_write(log_content);
-
 }
 
 int WA_on_registration(void *arg){
@@ -131,15 +122,9 @@ int WA_on_registration(void *arg){
 
     ret = WA_config_init();
     if(ret != 0){
-        log_file_write_fatal_error("error WA reading config file: %d", ret);
+        LOG_MSG_ERROR("error WA reading config file: %d", ret);
     }
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),   \
-            LOG_CONTENT_LEN - strlen(log_content), \
-            "\n WA_on_Registration ");
-    log_file_write(log_content);
-    log_file_write("frequency: %f", WA_config.warning_freq);
+    LOG_MSG_INFO("Regist WA app with frequency: %f", WA_config.warning_freq);
     double freq = WA_config.warning_freq;
     int freq_sec = (int) freq;
     long freq_nsec = (long)((freq - freq_sec) * 1e9);

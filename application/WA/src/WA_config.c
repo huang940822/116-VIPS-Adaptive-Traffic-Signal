@@ -6,6 +6,8 @@
 #include "config.h"
 #include "log.h"
 
+LOG_USE_MODULE(WA);
+
 WA_config_object_t WA_config ={};
 static bool read_float_from_config_line(char *config_line, float *val)
 {
@@ -34,10 +36,10 @@ int WA_config_init(){
     FILE *fp;
     fp = fopen(WA_CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", WA_CONFIG_FILE);
+        LOG_MSG_ERROR("error opening %s", WA_CONFIG_FILE);
         return CONFIG_INVALID_WA_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully", WA_CONFIG_FILE);
+        LOG_MSG_INFO("%s opened successfully", WA_CONFIG_FILE);
     }
     
     char read_buf[CONFIG_LINE_BUFFER_SIZE];
@@ -195,19 +197,19 @@ int WA_config_init(){
                 WA_config.traffic_light.tab[direction].Traffic_light_lon = lon;
                 
             }
-            log_file_write("Warning Frequecy: %f", WA_config.warning_freq);
+            LOG_MSG_TRACE("Warning Frequecy: %f", WA_config.warning_freq);
             for (int i = 0; i < WA_config.traffic_light.intersection_count; i++){
-                    log_file_write("direction:%hhd, lat:%lf, lon:%lf\n", i, 
+                    LOG_MSG_TRACE("direction:%hhd, lat:%lf, lon:%lf\n", i, 
                                                                         WA_config.traffic_light.tab[i].Traffic_light_lat, 
                                                                         WA_config.traffic_light.tab[i].Traffic_light_lon);
             }
-            log_file_write("Branch2main: %d, Branch2mainRange: %d, maindirection: %d\n", WA_config.branch2main, WA_config.branch2mainRange, WA_config.maindirection);
+            LOG_MSG_TRACE("Branch2main: %d, Branch2mainRange: %d, maindirection: %d\n", WA_config.branch2main, WA_config.branch2mainRange, WA_config.maindirection);
         }
     }
     fclose(fp);
     return WA_CONFIG_ACCEPT;
 WA_intersection_table_error:
-    log_file_write_fatal_error("WA intersection table config read fail.\n");
-    printf("WA intersection table config read fail.\n");
+    LOG_MSG_ERROR("WA intersection table config read fail.\n");
+    LOG_MSG_TRACE("WA intersection table config read fail.\n");
     return -1;
 }
