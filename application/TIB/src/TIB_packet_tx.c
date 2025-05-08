@@ -18,6 +18,8 @@
 #include "timer_event.h"
 #include "traffic_signal_status_updating.h"
 
+LOG_USE_MODULE(TIB);
+
 void *MAP_packet_tx_loop()
 {
     uint64_t exp;
@@ -33,7 +35,7 @@ void *MAP_packet_tx_loop()
     while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
         if (s != sizeof(uint64_t))
-            log_file_write_fatal_error("MAP_packet_tx_loop timer read error");
+            LOG_MSG_FATAL("MAP_packet_tx_loop timer read error");
 
         int planID = get_plan_id();
         // 切換 plan 的時候才會算一次
@@ -42,11 +44,11 @@ void *MAP_packet_tx_loop()
                 continue;
             if (map_msg_update(map) < 0)
                 continue;
-            // printf("=========================\n");
+            // LOG_MSG_TRACE("=========================");
             // map_print(map);
             pior_planID = planID;
         }
-        // printf("=========================\n");
+        // LOG_MSG_TRACE("=========================");
         // map_print(map);
         OBU_j2735_tx(MapData_Id, map);
     }
@@ -69,7 +71,7 @@ void *SPaT_packet_tx_loop()
     while (1) {
         int s = read(fd, &exp, sizeof(uint64_t));
         if (s != sizeof(uint64_t))
-            log_file_write_fatal_error("SPaT_packet_tx_loop timer read error");
+            LOG_MSG_FATAL("SPaT_packet_tx_loop timer read error");
         int stepID = get_current_step();
         int second = get_current_second();
         // 在 stepID 換的時候更新
@@ -79,7 +81,7 @@ void *SPaT_packet_tx_loop()
             pior_stepID = stepID;
             pior_second = second;
         }
-        // printf("=========================\n");
+        // LOG_MSG_TRACE("=========================");
         // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);
     }
@@ -93,7 +95,7 @@ void TIB_send_ack()
     write_buf.content = (unsigned char *) malloc(R2C_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("TIB_send_ack: malloc");
+        LOG_MSG_FATAL("TIB_send_ack: malloc");
         perror("TIB_send_ack: malloc");
         exit(errno);
     } else {

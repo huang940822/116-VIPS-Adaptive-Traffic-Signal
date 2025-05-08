@@ -13,6 +13,8 @@
 #include "log.h"
 #include "traffic_signal_status_updating.h"
 
+LOG_USE_MODULE(EVSP);
+
 void EVSP_send_ack() //緊急交通工具方傳送ACK訊息
 {
     msg_buf_t write_buf;
@@ -42,7 +44,7 @@ void EVSP_report_host_obu(OBU_object_t *OBU_object, uint8_t on_duty_flag)
     write_buf.content = (unsigned char *) malloc(42);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("OBU_packet_tx: malloc");
+        LOG_MSG_FATAL("OBU_packet_tx: malloc");
         perror("OBU_packet_tx: malloc");
         exit(errno);
     } else {
@@ -117,7 +119,7 @@ void EVSP_report_activate_area(OBU_object_t *OBU_object, area_type_t type, int a
     // write direction
     write_uint8_t(OBU_object->record_ring.record[last_record_index].direction, &write_buf);
 
-    log_file_write("report cloud area obu name %s type %d area id %d", OBU_object->OBU_name, type, areaId);
+    LOG_MSG_INFO("report cloud area obu name %s type %d area id %d", OBU_object->OBU_name, type, areaId);
     
     cloud_packet_tx(write_buf.index, EVSP.id, write_buf.content);
 

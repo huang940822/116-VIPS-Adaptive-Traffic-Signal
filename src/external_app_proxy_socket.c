@@ -11,19 +11,21 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/epoll.h> 
+#include <sys/epoll.h>
 
 #include "external_app_proxy_typedefine.h"
 #include "external_app_proxy_socket.h"
 #include "log.h"
 
+LOG_USE_MODULE(MIDDLEWARE_EXTENAL_APP_PROXY);
+
 /* DANGER: this file: external_app_proxy_socket.c
  * will exist both is server-side and client-side
- * Except for the #include above, the two files should be "THE SAME" !! 
+ * Except for the #include above, the two files should be "THE SAME" !!
  * */
 /* Most of the functions or variables in this file are used for client */
 
-/* WARN: make sure the path MY_UNIX_SOCKET_PATH correctly locate the file for connect() 
+/* WARN: make sure the path MY_UNIX_SOCKET_PATH correctly locate the file for connect()
  * i.e. the file should be the same file that is used by server (middlware EAP) */
 //#define MY_UNIX_SOCKET_PATH    "/tmp/comm_unix_sk.socket"
 #define MY_UNIX_SOCKET_PATH "../RSU_Controller_master/config/my_unix_socket_file_for_eap"
@@ -31,12 +33,12 @@
 
 /* References:
  * connect(): https://man7.org/linux/man-pages/man2/connect.2.html
- * recv(): https://man7.org/linux/man-pages/man2/recv.2.html 
- * send(): https://man7.org/linux/man-pages/man2/send.2.html 
+ * recv(): https://man7.org/linux/man-pages/man2/recv.2.html
+ * send(): https://man7.org/linux/man-pages/man2/send.2.html
  */
 
 /* since application might implement multi-thread program, ,
- * we add a mutex_lock to serialize their usage of the same channel */ 
+ * we add a mutex_lock to serialize their usage of the same channel */
 pthread_mutex_t mutex_notify_fd = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex_interact_fd = PTHREAD_MUTEX_INITIALIZER;
 
@@ -44,29 +46,29 @@ pthread_mutex_t mutex_interact_fd = PTHREAD_MUTEX_INITIALIZER;
 /* APP use notify_fd to get msg which is sent from middleware
    APP use interact_fd to send request/heartbeat to middleware and get ack */
 static int notify_fd;
-static int interact_fd; 
+static int interact_fd;
 static int current_errno;
 static uint32_t registered_appID;
 
-static inline __attribute__((always_inline)) 
+static inline __attribute__((always_inline))
 int32_t modify_socket_fd_block_setting(int socket_fd, bool set_to_block)
-{    
+{
     int flags;
     if ((flags = fcntl(socket_fd, F_GETFL)) == -1) {
-        log_file_write_with_errno(
-            "modify_socket_fd_block_setting(%s): fcntl(F_GETFL) ret -1\n", 
+        LOG_MSG_ERROR(
+            "modify_socket_fd_block_setting(%s): fcntl(F_GETFL) ret -1\n",
             set_to_block?"set":"unset" );
         return -1;
     }
 
     if( set_to_block )
-        flags &= ~O_NONBLOCK;   
+        flags &= ~O_NONBLOCK;
     else
         flags |= O_NONBLOCK;    /*set non-block flag*/
-    
+
     if (fcntl(socket_fd, F_SETFL, flags) == -1) {
-        log_file_write_with_errno(
-            "modify_socket_fd_block_setting(%s): fcntl(F_SETFL) ret -1\n", 
+        LOG_MSG_ERROR(
+            "modify_socket_fd_block_setting(%s): fcntl(F_SETFL) ret -1\n",
             set_to_block?"set":"unset" );
         return -1;
     }
@@ -92,7 +94,7 @@ int32_t add_notify_fd_to_epoll(int* ep_fd)
     ev.data.fd = notify_fd;
 
     if(epoll_ctl( *ep_fd, EPOLL_CTL_ADD, notify_fd, &ev)){
-        log_file_write_with_errno("add_notify_fd_to_epoll: epoll_ctl");
+        LOG_MSG_ERROR("add_notify_fd_to_epoll: epoll_ctl");
         return -EAL_ERR_EPOLL_SYSCALL;
     }
     return EAL_ERR_OK;
@@ -135,7 +137,7 @@ int32_t interact_fd_disconnect_from_proxy()
     ret = close(interact_fd);
     current_errno = errno;
     if(ret == -1){
-        log_file_write_with_errno("%s: close() ret -1\n", __func__);
+        LOG_MSG_ERROR("%s: close() ret -1\n", __func__);
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     interact_fd = 0;
@@ -143,13 +145,13 @@ int32_t interact_fd_disconnect_from_proxy()
 }
 
 int32_t interact_fd_connect_to_proxy()
-{   
-    int ret; 
+{
+    int ret;
     if( (interact_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
-        log_file_write_with_errno("interact_fd_connect_to_proxy: socket() ret -1\n");
+        LOG_MSG_ERROR("interact_fd_connect_to_proxy: socket() ret -1\n");
         return -EAL_ERR_SOCKET_SYSCALL;
     }
-    
+
     if( (ret = modify_socket_fd_block_setting(interact_fd, false)) == -1 ){
         return -EAL_ERR_SOCKET_SYSCALL;
     }
@@ -159,22 +161,22 @@ int32_t interact_fd_connect_to_proxy()
     memset (&sk_addr, 0, sizeof (struct sockaddr_un));
     sk_addr.sun_family = AF_UNIX;
     strncpy (sk_addr.sun_path, MY_UNIX_SOCKET_PATH, sizeof(sk_addr.sun_path) - 1);
-    
+
     /* start the whole connection process */
     if( connect(interact_fd, (const struct sockaddr *)(&sk_addr), sizeof(struct sockaddr_un)) == -1){
         if (errno != EINPROGRESS) {
-            log_file_write_with_errno("interact_fd_connect_to_proxy: connect() ret -1\n");
+            LOG_MSG_ERROR("interact_fd_connect_to_proxy: connect() ret -1");
             ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
-        log_file_write("interact_fd_connect_to_proxy: connect() 1st-try ret EINPROGRESS\n"
-                       "switch to epoll-timeout connection\n");
-        
+        LOG_MSG_INFO("interact_fd_connect_to_proxy: connect() 1st-try ret EINPROGRESS\n"
+                       "switch to epoll-timeout connection");
+
         int epfd, nfd;
         struct epoll_event ev, ev_ret[10];
         epfd = epoll_create(1);
         if (epfd < 0) {
-            log_file_write_with_errno("interact_fd_connect_to_proxy: epoll_create(1) ret -1\n");
+            LOG_MSG_ERROR("interact_fd_connect_to_proxy: epoll_create(1) ret -1");
             ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
@@ -182,16 +184,16 @@ int32_t interact_fd_connect_to_proxy()
         ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
         ev.data.fd = interact_fd;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, interact_fd, &ev) != 0) {
-            log_file_write_with_errno("interact_fd_connect_to_proxy: epoll_ctl(EPOLL_CTL_ADD) ret -1\n");
+            LOG_MSG_ERROR("interact_fd_connect_to_proxy: epoll_ctl(EPOLL_CTL_ADD) ret -1");
             ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
         nfd = epoll_wait(epfd, ev_ret, 10, EAP_CONNECT_TIMEOUT_MS);
         epoll_ctl(epfd, EPOLL_CTL_DEL, interact_fd, NULL);
         close(epfd);
-        
+
         if (nfd < 0 || !(ev.events & EPOLLOUT)) {
-            log_file_write("interact_fd_connect_to_proxy: connect timeout after %u ms\n", EAP_CONNECT_TIMEOUT_MS );
+            LOG_MSG_INFO("interact_fd_connect_to_proxy: connect timeout after %u ms", EAP_CONNECT_TIMEOUT_MS );
             ret = -EAL_ERR_SOCKET_CONNECT_TIMEOUT;
             goto err_handle;
         }
@@ -199,15 +201,15 @@ int32_t interact_fd_connect_to_proxy()
         int result;
         socklen_t result_len = sizeof(result);
         if (getsockopt(interact_fd, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0) {
-            log_file_write_with_errno("interact_fd_connect_to_proxy: getsockopt ret < 0\n");
+            LOG_MSG_ERROR("interact_fd_connect_to_proxy: getsockopt ret < 0\n");
             ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
         if (result != 0) {
-            log_file_write("interact_fd_connect_to_proxy connect to server fail\n");
+            LOG_MSG_INFO("interact_fd_connect_to_proxy connect to server fail");
             ret = -EAL_ERR_SOCKET_CONNECT_FAIL;
             goto err_handle;
-        }    
+        }
     }
 
     /* back to blocking mode */
@@ -216,7 +218,7 @@ int32_t interact_fd_connect_to_proxy()
         goto err_handle;
     }
 
-    log_file_write("interact_fd_connect_to_proxy: connect success\n");
+    LOG_MSG_INFO("interact_fd_connect_to_proxy: connect success");
     return EAL_ERR_OK;
 
 err_handle:
@@ -230,16 +232,16 @@ int32_t interact_fd_recv_from_proxy(void* packet_p, size_t packet_size)
     errno = 0;
     ret = recv(interact_fd, packet_p, packet_size, 0);
     current_errno = errno;
-    log_file_write("%s: recv() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: recv() ret = %d", __func__, ret);
     if(ret == 0){   /* meaning that remote proxy might close the fd */
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: recv() ret = %d", __func__, ret);
         #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret  < 0 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: recv() ret = %d", __func__, ret);
         #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
@@ -252,10 +254,10 @@ int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size)
     errno = 0;
     ret = send(interact_fd, packet_p, packet_size, MSG_NOSIGNAL);
     current_errno = errno;
-    log_file_write("%s: send() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: send() ret = %d", __func__, ret);
     if( ret == -1 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: send() ret %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: send() ret %d", __func__, ret);
         #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
@@ -267,7 +269,7 @@ int32_t interact_fd_send_to_proxy(void* packet_p, size_t packet_size)
 
 int32_t is_notify_fd_set()
 {
-    return notify_fd != 0; 
+    return notify_fd != 0;
 }
 
 int32_t notify_fd_disconnect_from_proxy()
@@ -277,7 +279,7 @@ int32_t notify_fd_disconnect_from_proxy()
     ret = close(notify_fd);
     current_errno = errno;
     if(ret == -1){
-        log_file_write_with_errno("%s: close() ret -1\n", __func__);
+        LOG_MSG_ERROR("%s: close() ret -1\n", __func__);
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     notify_fd = 0;
@@ -285,13 +287,13 @@ int32_t notify_fd_disconnect_from_proxy()
 }
 
 int32_t notify_fd_connect_to_proxy()
-{    
-    int ret; 
+{
+    int ret;
     if( (notify_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
-        log_file_write_with_errno("notify_fd_connect_to_proxy: socket() ret -1\n");
+        LOG_MSG_ERROR("notify_fd_connect_to_proxy: socket() ret -1\n");
         return -EAL_ERR_SOCKET_SYSCALL;
     }
-    
+
     if( (ret = modify_socket_fd_block_setting(notify_fd, false)) == -1 ){
         return -EAL_ERR_SOCKET_SYSCALL;
     }
@@ -301,22 +303,22 @@ int32_t notify_fd_connect_to_proxy()
     memset (&sk_addr, 0, sizeof (struct sockaddr_un));
     sk_addr.sun_family = AF_UNIX;
     strncpy (sk_addr.sun_path, MY_UNIX_SOCKET_PATH, sizeof(sk_addr.sun_path) - 1);
-    
+
     /* start the whole connection process */
     if( connect(notify_fd, (const struct sockaddr *)(&sk_addr), sizeof(struct sockaddr_un)) == -1){
         if (errno != EINPROGRESS) {
-            log_file_write_with_errno("notify_fd_connect_to_proxy: connect() ret -1\n");
+            LOG_MSG_ERROR("notify_fd_connect_to_proxy: connect() ret -1\n");
             ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
-        log_file_write("notify_fd_connect_to_proxy: connect() 1st-try ret EINPROGRESS\n"
-                       "switch to epoll-timeout connection\n");
-        
+        LOG_MSG_INFO("notify_fd_connect_to_proxy: connect() 1st-try ret EINPROGRESS\n"
+                       "switch to epoll-timeout connection");
+
         int epfd, nfd;
         struct epoll_event ev, ev_ret[10];
         epfd = epoll_create(1);
         if (epfd < 0) {
-            log_file_write_with_errno("notify_fd_connect_to_proxy: epoll_create(1) ret -1\n");
+            LOG_MSG_ERROR("notify_fd_connect_to_proxy: epoll_create(1) ret -1\n");
             ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
@@ -324,16 +326,16 @@ int32_t notify_fd_connect_to_proxy()
         ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
         ev.data.fd = notify_fd;
         if (epoll_ctl(epfd, EPOLL_CTL_ADD, notify_fd, &ev) != 0) {
-            log_file_write_with_errno("notify_fd_connect_to_proxy: epoll_ctl(EPOLL_CTL_ADD) ret -1\n");
+            LOG_MSG_ERROR("notify_fd_connect_to_proxy: epoll_ctl(EPOLL_CTL_ADD) ret -1");
             ret = -EAL_ERR_EPOLL_SYSCALL;
             goto err_handle;
         }
         nfd = epoll_wait(epfd, ev_ret, 10, EAP_CONNECT_TIMEOUT_MS);
         epoll_ctl(epfd, EPOLL_CTL_DEL, notify_fd, NULL);
         close(epfd);
-        
+
         if (nfd < 0 || !(ev.events & EPOLLOUT)) {
-            log_file_write("notify_fd_connect_to_proxy: connect timeout after %u ms\n", EAP_CONNECT_TIMEOUT_MS );
+            LOG_MSG_INFO("notify_fd_connect_to_proxy: connect timeout after %u ms", EAP_CONNECT_TIMEOUT_MS );
             ret = -EAL_ERR_SOCKET_CONNECT_TIMEOUT;
             goto err_handle;
         }
@@ -341,15 +343,15 @@ int32_t notify_fd_connect_to_proxy()
         int result;
         socklen_t result_len = sizeof(result);
         if (getsockopt(notify_fd, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0) {
-            log_file_write_with_errno("notify_fd_connect_to_proxy: getsockopt ret < 0\n");
+            LOG_MSG_ERROR("notify_fd_connect_to_proxy: getsockopt ret < 0\n");
             ret = -EAL_ERR_SOCKET_SYSCALL;
             goto err_handle;
         }
         if (result != 0) {
-            log_file_write("notify_fd_connect_to_proxy connect to server fail\n");
+            LOG_MSG_INFO("notify_fd_connect_to_proxy connect to server fail");
             ret = -EAL_ERR_SOCKET_CONNECT_FAIL;
             goto err_handle;
-        }    
+        }
     }
 
     /* back to blocking mode */
@@ -358,7 +360,7 @@ int32_t notify_fd_connect_to_proxy()
         goto err_handle;
     }
 
-    log_file_write("notify_fd_connect_to_proxy: connect success\n");
+    LOG_MSG_INFO("notify_fd_connect_to_proxy: connect success");
     return EAL_ERR_OK;
 
 err_handle:
@@ -367,21 +369,21 @@ err_handle:
 }
 
 int32_t notify_fd_recv_from_proxy(void* packet_p, size_t packet_size)
-{    
+{
     int ret;
     errno = 0;
     ret = recv(notify_fd, packet_p, packet_size, 0);
     current_errno = errno;
-    log_file_write("%s: recv() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: recv() ret = %d", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: recv() ret = %d\n", __func__, ret);
         #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret  < 0 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: recv() ret = %d\n", __func__, ret);
         #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
@@ -394,10 +396,10 @@ int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size)
     errno = 0;
     ret = send(notify_fd, packet_p, packet_size, MSG_NOSIGNAL);
     current_errno = errno;
-    log_file_write("%s: send() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: send() ret = %d", __func__, ret);
     if( ret == -1 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: send() ret %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: send() ret %d", __func__, ret);
         #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
@@ -408,7 +410,7 @@ int32_t notify_fd_send_to_proxy(void* packet_p, size_t packet_size)
 }
 
 /* WARN:recommend middleware-api implementation use functions below  */
-/* WARN:function below did NOT take the lock inside, 
+/* WARN:function below did NOT take the lock inside,
    please take the lock by yourself using lock_interact_channel() and lock_notify_channel */
 
 int32_t simple_send_heartbeat_to_proxy()
@@ -417,25 +419,25 @@ int32_t simple_send_heartbeat_to_proxy()
     packet_header_to_proxy_t hearbeat;
     hearbeat.packet_type = EA_PACKET_TYPE_REPORT;
     hearbeat.appID = registered_appID;
-    
+
     errno = 0;
     ret = send(interact_fd, &hearbeat, sizeof(hearbeat), MSG_NOSIGNAL);
     current_errno = errno;
-    log_file_write("%s: send() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: send() ret = %d", __func__, ret);
     if( ret == -1 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: send() ret = %d\n", __func__, ret);
         #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
-        } 
+        }
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
 }
 
-int32_t simple_send_request_header_to_proxy(int api_id) 
-{   
+int32_t simple_send_request_header_to_proxy(int api_id)
+{
     int ret;
     packet_header_to_proxy_t header;
     header.packet_type = EA_PACKET_TYPE_REQ;
@@ -445,15 +447,15 @@ int32_t simple_send_request_header_to_proxy(int api_id)
     errno = 0;
     ret = send(interact_fd, &header, sizeof(header), MSG_NOSIGNAL);
     current_errno = errno;
-    log_file_write("%s: api->%s, send() ret = %d\n", __func__, get_str_api_id(api_id), ret);
+    LOG_MSG_INFO("%s: api->%s, send() ret = %d", __func__, get_str_api_id(api_id), ret);
     if( ret == -1 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: api->%s, send() ret = %d\n", 
+        LOG_MSG_ERROR("%s: api->%s, send() ret = %d",
                                         __func__, get_str_api_id(api_id), ret);
         #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
-        } 
+        }
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
@@ -467,22 +469,22 @@ int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int
     ret = recv(interact_fd, ack_p, sizeof(packet_header_from_proxy_t), 0);
     current_errno = errno;
 
-    log_file_write("%s: api->%s, recv() ret = %d\n", __func__, get_str_api_id(api_id), ret);
+    LOG_MSG_INFO("%s: api->%s, recv() ret = %d", __func__, get_str_api_id(api_id), ret);
     if( ret == 0 ){   /* meaning that remote client might close the fd */
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret 0 (probably disconnected)\n");
+        LOG_MSG_ERROR("interact_fd_recv_from_proxy: recv() ret 0 (probably disconnected)\n");
         #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret < 0 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("interact_fd_recv_from_proxy: recv() ret <0\n");
+        LOG_MSG_ERROR("interact_fd_recv_from_proxy: recv() ret <0\n");
         #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     else if( ack_p->packet_type != EA_PACKET_TYPE_ACK ){
         #if ENABLE_LOGGING_EALIB_DETECTED_ERR
-        log_file_write("%s: ack packet not EA_PACKET_TYPE_ACK, it's %d\n", __func__, ack_p->packet_type);
+        LOG_MSG_INFO("%s: ack packet not EA_PACKET_TYPE_ACK, it's %d", __func__, ack_p->packet_type);
         #endif
         ret = -EAL_ERR_PACKET_TYPE_NOT_MATCH;
     }
@@ -493,21 +495,21 @@ int32_t simple_recv_ack_header_from_proxy(packet_header_from_proxy_t *ack_p, int
 }
 
 /* this function should behaves like interact_fd_send_to_proxy() */
-int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size) 
-{   
+int32_t simple_send_packet_to_proxy(void* packet_p, size_t packet_size)
+{
     int ret = 0;
     errno = 0;
     ret = send(interact_fd, packet_p, packet_size, MSG_NOSIGNAL);
     current_errno = errno;
 
-    log_file_write("%s: send() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: send() ret = %d", __func__, ret);
     if( ret == -1 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: send() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: send() ret = %d", __func__, ret);
         #endif
         if( errno == -EPIPE){
             return -EAL_ERR_SOCKET_DISCONNECT;
-        } 
+        }
         return -EAL_ERR_SOCKET_SYSCALL;
     }
     return EAL_ERR_OK;
@@ -521,16 +523,16 @@ int32_t simple_recv_packet_from_proxy(void* packet_p, size_t packet_size)
     ret = recv(interact_fd, packet_p, packet_size, 0);
     current_errno = errno;
 
-    log_file_write("%s: recv() ret = %d\n", __func__, ret);
+    LOG_MSG_INFO("%s: recv() ret = %d", __func__, ret);
     if( ret == 0 ){   /* meaning that remote proxy might close the fd */
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: recv() ret = %d", __func__, ret);
         #endif
         return -EAL_ERR_SOCKET_DISCONNECT;
     }
     else if( ret < 0 ){
         #if ENABLE_LOGGING_EALIB_INNER_SOCKET_ERR
-        log_file_write_with_errno("%s: recv() ret = %d\n", __func__, ret);
+        LOG_MSG_ERROR("%s: recv() ret = %d", __func__, ret);
         #endif
         return -EAL_ERR_SOCKET_SYSCALL;
     }
@@ -569,7 +571,7 @@ char* api_id_str_arr[] = {
     [API_ID_OF(command_buf_resume_control)] = "command_buf_resume_control",
     [API_ID_OF(command_buf_search)] = "command_buf_search",
 
-    /* vms.h */    
+    /* vms.h */
     [API_ID_OF(vms_request_start)] = "vms_request_start",
     [API_ID_OF(vms_request_end)] = "vms_request_end",
     [API_ID_OF(vms_sync_evsp_prog)] = "vms_sync_evsp_prog",
@@ -645,11 +647,11 @@ char* ack_ret_val_str_arr[] = {
 
 char* get_str_by_err_code(int err_code)
 {
-    if( err_code == EAL_ERR_OK)  
+    if( err_code == EAL_ERR_OK)
         return "EAL_ERR_OK";
 
     int reverse_code = -1*err_code;
-    if ( reverse_code <= EAL_ERR_RESERVE || reverse_code >= BOT_OF_EA_ERR_DEF)  
+    if ( reverse_code <= EAL_ERR_RESERVE || reverse_code >= BOT_OF_EA_ERR_DEF)
         return "Not EAL defined error";
     else
         return ack_ret_val_str_arr[ reverse_code -EAL_ERR_RESERVE ];

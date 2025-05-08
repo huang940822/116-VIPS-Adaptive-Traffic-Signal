@@ -32,7 +32,7 @@
         obj = malloc(size);                                   \
         if (obj == NULL) {                                    \
             set_memory_error();                               \
-            log_file_write_fatal_error(error_log ": malloc"); \
+            LOG_MSG_FATAL(error_log ": malloc"); \
             perror(error_log ": malloc");                     \
             exit(errno);                                      \
         } else {                                              \
@@ -47,7 +47,7 @@
         obj = realloc(obj, newSize);                                  \
         if (obj == NULL) {                                            \
             set_memory_error();                                       \
-            log_file_write_fatal_error(error_log ": realloc");        \
+            LOG_MSG_FATAL(error_log ": realloc");        \
             perror(error_log ": realloc");                            \
             exit(errno);                                              \
         } else {                                                      \

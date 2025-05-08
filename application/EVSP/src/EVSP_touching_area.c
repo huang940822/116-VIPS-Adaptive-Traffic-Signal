@@ -12,6 +12,8 @@
 #include "log.h"
 #include "vms.h"
 
+LOG_USE_MODULE(EVSP);
+
 EVSP_plan_list_t EVSP_plan_list = {0};
 
 bool static inline read_node(char *buf, EVSP_Node_t *node)
@@ -56,10 +58,10 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
     FILE *fp;
     fp = fopen(file_path, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", file_path);
+        LOG_MSG_FATAL("error opening %s", file_path);
         return -1;
     } else {
-        log_file_write("%s opened successfully", file_path);
+        LOG_MSG_INFO("%s opened successfully", file_path);
     }
 
     EVSP_plan_list_Vector_Increase(EVSP_plan_list, ., plan_table);
@@ -82,7 +84,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
         ret = fscanf(fp, "%d", &activate_num);
         /* Check return value of fscanf */
         if (ret != 1) {
-            log_file_write_fatal_error("EVSP_default_config_read: fscanf");
+            LOG_MSG_FATAL("EVSP_default_config_read: fscanf");
             goto  EVSP_default_config_rea_error;
         }
 
@@ -100,7 +102,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
             ret = fscanf(fp, "%f,%f,%f,%f %hhd", &lon_high, &lon_low, &lat_high, &lat_low, &direction);
             /* Check return value of fscanf */
             if (ret != 5) {
-                log_file_write_fatal_error("EVSP_default_config_read: fscanf");
+                LOG_MSG_FATAL("EVSP_default_config_read: fscanf");
                 goto  EVSP_default_config_rea_error;
             }
             // 是否有一樣的觸碰點
@@ -140,7 +142,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
             int terminate_num;
             ret = fscanf(fp, "%d", &terminate_num);
             if (ret != 1) {
-                log_file_write_fatal_error("EVSP_default_config_read: fscanf");
+                LOG_MSG_FATAL("EVSP_default_config_read: fscanf");
                 goto  EVSP_default_config_rea_error;
             }
 
@@ -151,7 +153,7 @@ int EVSP_default_config_read(char *file_name, uint8_t plan_id)
                 ret = fscanf(fp, "%f,%f,%f,%f", &lon_high, &lon_low, &lat_high, &lat_low);
                 /* Check return value of fscanf */
                 if (ret != 4) {
-                    log_file_write_fatal_error("EVSP_default_config_read: fscanf");
+                    LOG_MSG_FATAL("EVSP_default_config_read: fscanf");
                     goto  EVSP_default_config_rea_error;
                 }
                 // 是否有一樣的離開點
@@ -195,10 +197,10 @@ int EVSP_default_config()
     DIR *dp;
     struct dirent *dirp;
     if ((dp = opendir(TOUCHING_AREA_DIR)) == NULL) {
-        log_file_write_fatal_error("error opening %s", TOUCHING_AREA_DIR);
+        LOG_MSG_FATAL("error opening %s", TOUCHING_AREA_DIR);
         return -1;
     } else {
-        log_file_write("%s opened successfully", TOUCHING_AREA_DIR);
+        LOG_MSG_INFO("%s opened successfully", TOUCHING_AREA_DIR);
     }
 
     char rsu_name[RSU_NAME_MAX_LEN];
@@ -222,8 +224,7 @@ int EVSP_default_config()
     return 1;
 EVSP_default_config_error:
     EVSP_plan_list_clean();
-    log_file_write_fatal_error("EVSP touching area default config read fail.\n");
-    printf("EVSP touching area default config read fail.\n");
+    LOG_MSG_FATAL("EVSP touching area default config read fail.");
     return -1;
 }
 // 領取表格式的EVSP touching area
@@ -238,7 +239,7 @@ int EVSP_table_config()
     strncpy(rsu_name, config.RSU_name, RSU_NAME_MAX_LEN);
     trim_space(rsu_name);
     if (rsu_name == NULL) {
-        log_file_write_fatal_error("error name %s", config.RSU_name);
+        LOG_MSG_FATAL("error name %s", config.RSU_name);
     }
     // touching area的設定檔放在./application/EVSP/config
     memset(file_path, 0, sizeof(file_path));
@@ -249,10 +250,10 @@ int EVSP_table_config()
     FILE *fp;
     fp = fopen(file_path, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", file_path);
+        LOG_MSG_FATAL("error opening %s", file_path);
         return -1;
     } else {
-        log_file_write("%s opened successfully", file_path);
+        LOG_MSG_INFO("%s opened successfully", file_path);
     }
 
     int plan_table_max = 0;
@@ -526,8 +527,7 @@ int EVSP_table_config()
     return 1;
 EVSP_plan_list_read_error:
     EVSP_plan_list_clean();
-    log_file_write_fatal_error("EVSP touching area plan list config read fail.\n");
-    printf("EVSP touching area plan list config read fail.\n");
+    LOG_MSG_FATAL("EVSP touching area plan list config read fail.");
     return -1;
 }
 
@@ -606,63 +606,49 @@ void EVSP_plan_list_print()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "EVSP touching area plan list:");
+    LOG_MSG_APPEND(log_content, "EVSP touching area plan list:\n"
+            "terminate_area_count %d", EVSP_plan_list.terminate_area_count);
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\nterminate_area_count %d",
-             EVSP_plan_list.terminate_area_count);
     for (int i = 0; i < EVSP_plan_list.terminate_area_count; i++) {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n %d",
-                 EVSP_plan_list.terminate_area[i].terminate_area_id);
+        LOG_MSG_APPEND(log_content, "\n %d", EVSP_plan_list.terminate_area[i].terminate_area_id);
         for (int j = 0; j < EVSP_plan_list.terminate_area[i].node_count; j++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), " %lf %lf,",
-                     EVSP_plan_list.terminate_area[i].node[j].lon, EVSP_plan_list.terminate_area[i].node[j].lat);
+            LOG_MSG_APPEND(log_content, " %lf %lf,",
+                    EVSP_plan_list.terminate_area[i].node[j].lon, EVSP_plan_list.terminate_area[i].node[j].lat);
         }
     }
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\ntouching_area_count %d",
-             EVSP_plan_list.touching_area_count);
+    LOG_MSG_APPEND(log_content, "\ntouching_area_count %d", EVSP_plan_list.touching_area_count);
     for (int i = 0; i < EVSP_plan_list.touching_area_count; i++) {
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n %d %d %d", EVSP_plan_list.touching_area[i].touching_area_id,
-                 EVSP_plan_list.touching_area[i].direciton_start, EVSP_plan_list.touching_area[i].direciton_end);
+        LOG_MSG_APPEND(log_content, "\n %d %d %d",
+                EVSP_plan_list.touching_area[i].touching_area_id,
+                EVSP_plan_list.touching_area[i].direciton_start,
+                EVSP_plan_list.touching_area[i].direciton_end);
         for (int j = 0; j < EVSP_plan_list.touching_area[i].node_count; j++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), " %lf %lf,",
-                     EVSP_plan_list.touching_area[i].node[j].lon, EVSP_plan_list.touching_area[i].node[j].lat);
+            LOG_MSG_APPEND(log_content, " %lf %lf,",
+                    EVSP_plan_list.touching_area[i].node[j].lon, EVSP_plan_list.touching_area[i].node[j].lat);
         }
         for (int j = 0; j < EVSP_plan_list.touching_area[i].terminate_area_count; j++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), " %d,",
-                     EVSP_plan_list.terminate_area[EVSP_plan_list.touching_area[i].terminate_area_Id[j]].terminate_area_id);
+            LOG_MSG_APPEND(log_content, " %d,",
+                    EVSP_plan_list.terminate_area[EVSP_plan_list.touching_area[i].terminate_area_Id[j]].terminate_area_id);
         }
     }
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "\nplan_table_count %d",
-             EVSP_plan_list.plan_table_count);
+    LOG_MSG_APPEND(log_content, "\nplan_table_count %d",
+            EVSP_plan_list.plan_table_count);
     for (int i = 0; i < EVSP_plan_list.plan_table_count; i++) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nplan_id");
+        LOG_MSG_APPEND(log_content, "\nplan_id");
         for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_id_count; j++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), " %d", EVSP_plan_list.plan_table[i].plan_id[j]);
+            LOG_MSG_APPEND(log_content, " %d", EVSP_plan_list.plan_table[i].plan_id[j]);
         }
         for (int j = 0; j < EVSP_plan_list.plan_table[i].plan_subPhase_count; j++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\n %d:",
-                     EVSP_plan_list.plan_table[i].plan_subPhase[j].SubPhaseID);
+            LOG_MSG_APPEND(log_content, "\n %d:", EVSP_plan_list.plan_table[i].plan_subPhase[j].SubPhaseID);
             for (int k = 0; k < EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_count; k++) {
-                snprintf(log_content + strlen(log_content),
-                         LOG_CONTENT_LEN - strlen(log_content), " %d",
-                         EVSP_plan_list.touching_area[EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k]].touching_area_id);
+                LOG_MSG_APPEND(log_content, " %d",
+                        EVSP_plan_list.touching_area[EVSP_plan_list.plan_table[i].plan_subPhase[j].touching_area_Id[k]].touching_area_id);
             }
         }
     }
 
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     return;
 }
 
@@ -805,13 +791,13 @@ EVSP_terminate_area_t *EVSP_terminate(float lon, float lat, EVSP_touching_area_t
                  lat <= EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node[0].lat) &&
                 (EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node[0].lon <= lon &&
                  lon <= EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node[1].lon)) {
-                printf("EVSP_terminate------------ %d\n", EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id);
+                LOG_MSG_TRACE("EVSP_terminate------------ %d", EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id);
                 return &EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]];
             }
         } else if (EVSP_config.touching_area_config_type == EVSP_touching_area_TABLE) {
             if (checkInside(EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node,
                             EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].node_count, &(EVSP_Node_t){lon, lat})) {
-                printf("EVSP_terminate------------ %d\n", EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id);
+                LOG_MSG_TRACE("EVSP_terminate------------ %d", EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]].terminate_area_id);
                 return &EVSP_plan_list.terminate_area[area_ptr->terminate_area_Id[i]];
             }
         }

@@ -11,12 +11,13 @@
 #include "log.h"
 #include "traffic_compensation.h"
 #include "traffic_signal_status_updating.h"
-//常用訊息傳送 (ACK訊息、補償策略)
 
+LOG_USE_MODULE(MIDDLEWARE);
+
+//常用訊息傳送 (ACK訊息、補償策略)
 void common_send_ack(uint8_t cmd, uint8_t status) //訊息接收正常，回傳ACK
 {
-    printf("common send ack, CMD is %d %d\r\n", cmd, status);
-    log_file_write("common send ack, CMD is %d %d\r\n", cmd, status);
+    LOG_MSG_INFO("common send ack, CMD is %d %d", cmd, status);
     msg_buf_t write_buf;
     write_buf.index = 0;
     Malloc(write_buf.content, R2C_SPECIFIC_FIELD_MAX_LEN, "common_send_ack");
@@ -32,7 +33,7 @@ void common_send_ack(uint8_t cmd, uint8_t status) //訊息接收正常，回傳A
 
 void report_compensation_time() //回報補償時間
 {
-    printf("report compensation time\r\n");
+    LOG_MSG_TRACE("report compensation time");
     msg_buf_t write_buf;
     write_buf.index = 0;
 

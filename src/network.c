@@ -1,6 +1,9 @@
 #include "network.h"
 
 #include <sys/epoll.h>
+
+LOG_USE_MODULE(MIDDLEWARE);
+
 static void net_set_error(char *err, const char *fmt, ...)
 {
     va_list ap;
@@ -140,7 +143,7 @@ int net_UDP_server(char *err, int port, char *bindaddr)
             continue;
         }
         goto end;
-    }   
+    }
     if (p == NULL) {
         net_set_error(err, "unable to bind socket, errno: %d", errno);
         goto error;
@@ -257,8 +260,8 @@ int net_UDP_accept(char *err,
     int recv_bytes = recvfrom(listen_fd, recv_buf, MAX_BUF_LEN, 0,
                               (struct sockaddr *) &client_addr, &client_len);
     char cipp[30] = {0}, sipp[30] = {0};
-    inet_ntop(AF_INET, &client_addr.sin_addr, cipp, sizeof(struct sockaddr_in)); 
-    printf("client addr = %s, port = %d\n", cipp, ntohs(client_addr.sin_port));
+    inet_ntop(AF_INET, &client_addr.sin_addr, cipp, sizeof(struct sockaddr_in));
+    LOG_MSG_TRACE("client addr = %s, port = %d", cipp, ntohs(client_addr.sin_port));
 
     if (recv_bytes > 0) {
         if (htons(client_addr.sin_port) == Heartbeat_PORT) {
@@ -294,7 +297,7 @@ int net_UDP_accept(char *err,
             return -1;
         }
     }
-    printf("recv_bytes = %d\n",recv_bytes);
+    LOG_MSG_TRACE("recv_bytes = %d",recv_bytes);
     return cfd;
 err:
     close(cfd);
@@ -329,7 +332,7 @@ int net_TCP_client(char *err, char *server_addr, int server_port)
             net_set_error(err, "Connect to server: %s", strerror(errno));
             goto err;
         } else if (errno == EINPROGRESS) {
-            printf("---nonblocking connection---\n");
+            LOG_MSG_TRACE("---nonblocking connection---");
             /*---create epoll event---*/
             int epfd, nfd;
             struct epoll_event ev, ev_ret[10];
@@ -369,7 +372,7 @@ int net_TCP_client(char *err, char *server_addr, int server_port)
                 net_set_error(err, "Connect to server: %s", strerror(result));
                 goto err2;
             }
-            printf("Connect to server:%s:%d success\n", server_addr,
+            LOG_MSG_TRACE("Connect to server:%s:%d success", server_addr,
                    server_port);
             int n = send(sockfd, "RSU:10001", 15, 0);
         }

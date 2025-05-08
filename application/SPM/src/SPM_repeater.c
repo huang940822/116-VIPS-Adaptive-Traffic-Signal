@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include "sys/time.h"
 
+LOG_USE_MODULE(SPM);
+
 pthread_t SPM_repeater_thread = 0;
 pthread_mutex_t SPM_repeater_run_mutex = PTHREAD_MUTEX_INITIALIZER;
 int SPM_repeater_fd = 0;
@@ -28,7 +30,7 @@ void SPM_repeater_start(bool send_flag)
     if (SPM_repeater_thread == 0) {
         int ret = pthread_create(&SPM_repeater_thread, NULL, SPM_repeater, NULL);
         if (ret != 0) {
-            log_file_write_fatal_error("error creating SPM_repeater_thread: %d", ret);
+            LOG_MSG_FATAL("error creating SPM_repeater_thread: %d", ret);
             perror("main: pthread_create");
             exit(errno);
         }
@@ -42,7 +44,7 @@ void SPM_repeater_start(bool send_flag)
         timerValue.it_interval.tv_nsec = (int) (1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
 
         if (timerfd_settime(SPM_repeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-            log_file_write_fatal_error("SPM_repeater timerfd_settime");
+            LOG_MSG_FATAL("SPM_repeater timerfd_settime");
         }
     }
     pthread_mutex_unlock(&SPM_repeater_run_mutex);
@@ -62,9 +64,9 @@ void *SPM_repeater()
     timerValue.it_interval.tv_sec = 1 / SPM_config.SPM_packet_transfer_speed;
     timerValue.it_interval.tv_nsec = (int) (1000000000 / SPM_config.SPM_packet_transfer_speed) % 1000000000;
 
-    printf("SPM_repeater timerfd_settime %ld %ld\n", timerValue.it_interval.tv_sec, timerValue.it_interval.tv_nsec);
+    LOG_MSG_TRACE("SPM_repeater timerfd_settime %ld %ld", timerValue.it_interval.tv_sec, timerValue.it_interval.tv_nsec);
     if (timerfd_settime(SPM_repeater_fd, TFD_TIMER_ABSTIME, &timerValue, NULL) == -1) {
-        log_file_write_fatal_error("SPM_repeater timerfd_settime");
+        LOG_MSG_FATAL("SPM_repeater timerfd_settime");
         goto SPM_repeater_end;
     }
 
@@ -230,6 +232,6 @@ SPM_repeater_end:
         j2735_msg_dealloc(SignalStatusMessage_Id, ssm);
     }
     vector_free(ssm_ptrv);
-    printf("SPM_repeater_thread end\n");
+    LOG_MSG_INFO("SPM_repeater_thread end");
     pthread_detach(pthread_self());
 }

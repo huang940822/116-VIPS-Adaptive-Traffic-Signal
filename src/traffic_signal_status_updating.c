@@ -18,6 +18,8 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(MIDDLEWARE_TC);
+
 traffic_signal_status_t signal_status;
 traffic_signal_status_t current_signal_status;
 pthread_mutex_t mutex_current_signal_status = PTHREAD_MUTEX_INITIALIZER;
@@ -37,16 +39,14 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     // here is to map 成龍 controlstrategy to be same as 山住;0/1 成龍/三住
     if (config.signal_controller_manufacturer == 0 &&
         signal_status.ControlStrategy == 21) {
-        log_file_write(
-            "map cheng_long dynamic controlstrategy from 21 to 16\n\r");
+        LOG_MSG_INFO("map cheng_long dynamic controlstrategy from 21 to 16");
         signal_status.ControlStrategy = 16;
     } else if (config.signal_controller_manufacturer == 0 &&
                signal_status.ControlStrategy == 5) {
-        log_file_write(
-            "map cheng_long pretime controlstrategy from 5 to 1\n\r");
+        LOG_MSG_INFO("map cheng_long pretime controlstrategy from 5 to 1");
         signal_status.ControlStrategy = 1;
     } else {
-        log_file_write("no control strategy map action should be taken\n\r");
+        LOG_MSG_INFO("no control strategy map action should be taken");
     }
 
 
@@ -69,7 +69,7 @@ void packet_5FCC(traffic_signal_packet_t *packet)
     }
 
     if (config.log_signal_packet_info) {
-        log_file_write("signal packet info: 5FCC\nControlStrategy: %d\nSubPhaseID: %d\nStepID: %d\nStepSec: %d",
+        LOG_MSG_INFO("signal packet info: 5FCC\nControlStrategy: %d\nSubPhaseID: %d\nStepID: %d\nStepSec: %d",
                        signal_status.ControlStrategy, signal_status.SubPhaseID, signal_status.StepID, signal_status.StepSec);
     }
     pthread_mutex_unlock(&mutex_signal_status);
@@ -101,7 +101,7 @@ void packet_5FC8(traffic_signal_packet_t *packet)
     }
     signal_status.PhaseOrder = packet->INFO[4];
     signal_status.SubPhaseCount = packet->INFO[5];
-    // printf("signal_status.SubPhaseCount:%d\r\n",signal_status.SubPhaseCount);
+    // LOG_MSG_TRACE("signal_status.SubPhaseCount:%d",signal_status.SubPhaseCount);
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
         signal_status.plan[i].Green =
             (packet->INFO[6 + i * 2] << 8 | packet->INFO[7 + i * 2]);
@@ -118,33 +118,17 @@ void packet_5FC8(traffic_signal_packet_t *packet)
         packet->INFO[8 + signal_status.SubPhaseCount * 2] << 8 |
         packet->INFO[9 + signal_status.SubPhaseCount * 2];
     if (config.log_signal_packet_info) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "signal packet info: 5FC8");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nPlanID: %d",
-                 signal_status.PlanID);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nPhaseOrder: %d",
-                 signal_status.PhaseOrder);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d",
-                 signal_status.SubPhaseCount);
+        LOG_MSG_APPEND(log_content, "signal packet info: 5FC8");
+        LOG_MSG_APPEND(log_content, "\nPlanID: %d", signal_status.PlanID);
+        LOG_MSG_APPEND(log_content, "\nPhaseOrder: %d", signal_status.PhaseOrder);
+        LOG_MSG_APPEND(log_content, "\nSubPhaseCount: %d", signal_status.SubPhaseCount);
         for (int i = 0; i < signal_status.SubPhaseCount; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d",
-                     signal_status.plan[i].Green);
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\nPreTimeCompensated: %d",
-                     signal_status.plan[i].PreTimeCompensated);
+            LOG_MSG_APPEND(log_content, "\nGreen: %d", signal_status.plan[i].Green);
+            LOG_MSG_APPEND(log_content, "\nPreTimeCompensated: %d", signal_status.plan[i].PreTimeCompensated);
         }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nCycleTime: %d",
-                 signal_status.CycleTime);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nOffset: %d",
-                 signal_status.Offset);
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\nCycleTime: %d", signal_status.CycleTime);
+        LOG_MSG_APPEND(log_content, "\nOffset: %d", signal_status.Offset);
+        LOG_MSG_INFO(log_content);
     }
 
     pthread_mutex_unlock(&mutex_signal_status);
@@ -180,30 +164,16 @@ void packet_5FC5(traffic_signal_packet_t *packet)
                            packet->INFO[9 + signal_status.SubPhaseCount * 2];
 
     if (config.log_signal_packet_info) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "signal packet info: 5FC5");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nPlanID: %d",
-                 signal_status.PlanID);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nPhaseOrder: %d",
-                 signal_status.PhaseOrder);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d",
-                 signal_status.SubPhaseCount);
+        LOG_MSG_APPEND(log_content, "signal packet info: 5FC5");
+        LOG_MSG_APPEND(log_content, "\nPlanID: %d", signal_status.PlanID);
+        LOG_MSG_APPEND(log_content, "\nPhaseOrder: %d", signal_status.PhaseOrder);
+        LOG_MSG_APPEND(log_content, "\nSubPhaseCount: %d", signal_status.SubPhaseCount);
         for (int i = 0; i < signal_status.SubPhaseCount; i++) {
-            snprintf(log_content + strlen(log_content),
-                     LOG_CONTENT_LEN - strlen(log_content), "\nGreen: %d",
-                     signal_status.plan[i].Green);
+            LOG_MSG_APPEND(log_content, "\nGreen: %d", signal_status.plan[i].Green);
         }
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nCycleTime: %d",
-                 signal_status.CycleTime);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nOffset: %d",
-                 signal_status.Offset);
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\nCycleTime: %d", signal_status.CycleTime);
+        LOG_MSG_APPEND(log_content, "\nOffset: %d", signal_status.Offset);
+        LOG_MSG_INFO(log_content);
     }
     pthread_mutex_unlock(&mutex_signal_status);
     return;
@@ -231,25 +201,18 @@ void packet_5FC4(traffic_signal_packet_t *packet)
     }
 
     if (config.log_signal_packet_info) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "signal packet info: 5FC4");
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nSubPhaseCount: %d",
+        LOG_MSG_APPEND(log_content, "signal packet info: 5FC4");
+        LOG_MSG_APPEND(log_content, "\nSubPhaseCount: %d",
                  signal_status.SubPhaseCount);
         for (int i = 0; i < signal_status.SubPhaseCount; i++) {
-            snprintf(
-                log_content + strlen(log_content),
-                LOG_CONTENT_LEN - strlen(log_content),
-                "\nstatus.plan[%d] G:%2d minG:%2d maxG:%3d Y:%1d AR:%1d PG:%1d "
-                "PR:%1d PreG:%2d",
+            LOG_MSG_APPEND(log_content, "\nstatus.plan[%d] G:%2d minG:%2d maxG:%3d Y:%1d AR:%1d PG:%1d PR:%1d PreG:%2d",
                 i, signal_status.plan[i].Green, signal_status.plan[i].MinGreen,
                 signal_status.plan[i].MaxGreen, signal_status.plan[i].Yellow,
                 signal_status.plan[i].AllRed,
                 signal_status.plan[i].PedGreenFlash,
                 signal_status.plan[i].PedRed, signal_status.plan[i].PreGreen);
         }
-        log_file_write(log_content);
+        LOG_MSG_INFO(log_content);
     }
     pthread_mutex_unlock(&mutex_signal_status);
     return;
@@ -265,19 +228,16 @@ void packet_5FC3(traffic_signal_packet_t *packet)
     signal_status.SignalMap = packet->INFO[3];
     signal_status.SignalCount = packet->INFO[4];
 
-    log_snprintf(log_content, "\nSignalMap:%x SignalCount:%x\r\n",
-                 signal_status.SignalMap, signal_status.SignalCount);
-    printf("SignalMap:%x SignalCount:%x\r\n", signal_status.SignalMap, signal_status.SignalCount);
+    LOG_MSG_APPEND(log_content, "SignalMap:%x SignalCount:%x",
+            signal_status.SignalMap, signal_status.SignalCount);
 
     for (int i = 0; i < signal_status.SubPhaseCount; i++) {
+        LOG_MSG_APPEND(log_content, "\n");
         for (int j = 0; j < signal_status.SignalCount; j++) {
             signal_status.phaseorder_plan[i][j].SignalStatus = packet->INFO[6 + i * signal_status.SignalCount + j];
-            log_snprintf(log_content, "SignalStatus:%x ",
-                         signal_status.phaseorder_plan[i][j].SignalStatus);
-            printf("SignalStatus:%x ", signal_status.phaseorder_plan[i][j].SignalStatus);
+            LOG_MSG_APPEND(log_content, "SignalStatus:%x ",
+                    signal_status.phaseorder_plan[i][j].SignalStatus);
         }
-        printf("\r\n");
-        log_snprintf(log_content, "\r\n");
     }
     // 確保查的是現在的 PhaseOrder
     if (packet->INFO[2] == signal_status.PhaseOrder) {
@@ -285,7 +245,7 @@ void packet_5FC3(traffic_signal_packet_t *packet)
     }
 
     pthread_mutex_unlock(&mutex_signal_status);
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     return;
 }
 
@@ -299,24 +259,20 @@ void packet_5FC6(traffic_signal_packet_t *packet)
     signal_status.SegmentType = packet->INFO[2];
     signal_status.SegmentCount = packet->INFO[3];
 
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content),
-             "\nSegmentType:%d SegmentCount:%d\r\n",
-             signal_status.SegmentType, signal_status.SegmentCount);
+    LOG_MSG_APPEND(log_content, "SegmentType:%d SegmentCount:%d",
+            signal_status.SegmentType, signal_status.SegmentCount);
 
     for (int i = 0; i < signal_status.SegmentCount; i++) {
         signal_status.allday_plan[i].Hour = packet->INFO[4 + 3 * i];
         signal_status.allday_plan[i].Min = packet->INFO[5 + 3 * i];
         signal_status.allday_plan[i].PlanID = packet->INFO[6 + 3 * i];
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content),
-                 "Hour:%d Min:%d PlanID:%d\r\n",
-                 signal_status.allday_plan[i].Hour,
-                 signal_status.allday_plan[i].Min,
-                 signal_status.allday_plan[i].PlanID);
+        LOG_MSG_APPEND(log_content, "\nHour:%d Min:%d PlanID:%d",
+                signal_status.allday_plan[i].Hour,
+                signal_status.allday_plan[i].Min,
+                signal_status.allday_plan[i].PlanID);
     }
 
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     pthread_mutex_unlock(&mutex_signal_status);
     if (guarenteed_cmd_set._5F46_count == 0)
         guarenteed_cmd_set._5F46_count++;
@@ -346,26 +302,25 @@ void packet_0FC2(traffic_signal_packet_t *packet)
     signal_status.tcTimeOffest = ((signal_status.Hour - timeinfo.tm_hour) * 60 + signal_status.Min - timeinfo.tm_min) * 60 +
                                  signal_status.Sec - timeinfo.tm_sec;
 
-    snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content),
-             "signal packet info: 0FC2\n %hhd-%02hhd-%02hhd_%02hhd:%02hhd:%02hhd week %hhd offset %d",
-             signal_status.Year, signal_status.Month, signal_status.Day,
-             signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week, signal_status.tcTimeOffest);
+    LOG_MSG_APPEND(log_content, "signal packet info: 0FC2\n %hhd-%02hhd-%02hhd_%02hhd:%02hhd:%02hhd week %hhd offset %d",
+            signal_status.Year, signal_status.Month, signal_status.Day,
+            signal_status.Hour, signal_status.Min, signal_status.Sec, signal_status.Week, signal_status.tcTimeOffest);
     pthread_mutex_unlock(&mutex_signal_status);
 
     if (guarenteed_cmd_set._0F42_count == 0)  // 保證有收到回覆
         guarenteed_cmd_set._0F42_count++;
-    log_file_write(log_content);
+    LOG_MSG_INFO(log_content);
     return;
 }
 
 void packet_0F04(traffic_signal_packet_t *packet)
 {
-    // printf("tc status info: ");
+    // LOG_MSG_TRACE("tc status info: ");
     pthread_mutex_lock(&mutex_signal_status);
 
     uint16_t original_tc_hstatus = packet->INFO[2] << 8 | packet->INFO[3];
     signal_status.original_tc_health_status = original_tc_hstatus;
-    log_file_write("original_tc_health_status is %04X\n\r", original_tc_hstatus);
+    LOG_MSG_INFO("original_tc_health_status is %04X", original_tc_hstatus);
     // dont show bit 14, 8, 9 for they seprately means controller ready,
     // cabinated opened, communication connect
     // original_tc_hstatus=original_tc_hstatus&0xbcff;
@@ -375,10 +330,10 @@ void packet_0F04(traffic_signal_packet_t *packet)
         0x9d13;  // 介庸學長建議如下
                  //  Bit0、1、4、8、10、11、12、15要通報處理，因為控制不是無法控制就是故障不亮或跳閃光模式
 
-    printf("tc status\n\r");
-    printf("%04X\n\r", original_tc_hstatus);
+    LOG_MSG_TRACE("tc status");
+    LOG_MSG_TRACE("%04X", original_tc_hstatus);
 
-    log_file_write("tc_health_status after mask is %04X\n\r", original_tc_hstatus);
+    LOG_MSG_INFO("tc_health_status after mask is %04X", original_tc_hstatus);
 
     pthread_mutex_unlock(&mutex_signal_status);
 }
@@ -570,7 +525,7 @@ void report_plan()
     write_buf.content = (unsigned char *) malloc(R2V_SPECIFIC_FIELD_MAX_LEN);
     if (write_buf.content == NULL) {
         set_memory_error();
-        log_file_write_fatal_error("report_plan: malloc");
+        LOG_MSG_FATAL("report_plan: malloc");
         perror("report_plan: malloc");
         exit(errno);
     } else {
@@ -637,7 +592,7 @@ void sem_timedwait_millsecs(sem_t *sem, long msecs)
     ts.tv_nsec = msecs % (1000 * 1000 * 1000);
 
     if (sem_timedwait(sem, &ts) == -1) {
-        log_file_write_fatal_error("sem_timedwait_millsecs: sem_timedwait (%d)",
+        LOG_MSG_FATAL("sem_timedwait_millsecs: sem_timedwait (%d)",
                                    errno);
         perror("sem_timedwait_millsecs: sem_timedwait");
     } else {

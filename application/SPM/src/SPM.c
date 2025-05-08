@@ -10,6 +10,9 @@
 
 #include <stdio.h>
 #include "sys/time.h"
+
+LOG_USE_MODULE(SPM);
+
 // SSM/SRM代傳
 app_obj_t SPM = {
     .name = "SPM",
@@ -63,7 +66,7 @@ int SPM_on_registration(void *arg)
 {
     int ret = SPM_config_init();
     if (ret != 0) {
-        log_file_write_fatal_error("error spm reading config file: %d", ret);
+        LOG_MSG_FATAL("error spm reading config file: %d", ret);
     }
     SPM.dontSend2TC = SPM_config.SPM_dontSend2TC;
     event_callback_msg_id_insert(EVENT_OBU_PACKET_RX, SPM.name, SPM.priority, SignalRequestMessage_Id, &SPM_on_OBU_packet_rx);

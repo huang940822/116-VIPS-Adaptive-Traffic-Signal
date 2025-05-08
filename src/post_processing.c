@@ -9,6 +9,8 @@
 
 #include "post_processing.h"
 
+LOG_USE_MODULE(CPS);
+
 void transfer_datatype(double *Lat,
                        double *Lon,
                        double *Elv,

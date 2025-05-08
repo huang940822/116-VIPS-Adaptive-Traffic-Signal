@@ -11,7 +11,9 @@
 #define CMS_scp_user "oslab@" // cms 的使用者帳號名稱
 #define CMS_scp_path "~/CMS/CMS_img/" // cms 的照片路徑
 #define CMS_update_fail_time 10
-#define CMS_request_timeout 10
+#define CMS_request_timeout 60 // CMS要求面板顯示逾時
+#define CMS_receive_timeout 1 // CMS接收面板回傳逾時
+#define TIMEOUT_SEC 1 // socket設定逾時
 #define CMS_NUM_MAX 16
 
 void CMS_handler_init();
