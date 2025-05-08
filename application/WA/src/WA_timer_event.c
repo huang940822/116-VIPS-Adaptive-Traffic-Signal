@@ -67,13 +67,11 @@ void WA_Agent_timer_handler(__sigval_t value)
             int dir2 = directionPairs[i][1];
             if(TTI[dir1]>0 && TTI[dir2]>0) {
                 PET[i] = fabs(TTI[dir1]-TTI[dir2]);
+                validPairs[validCount++] = i;
 
                 // check if less than or equal to 3
                 if(PET[i]<=3){
                     belowThreePairs[belowThreeCount++] = i;
-                }
-                else{
-                    validPairs[validCount++] = i;
                 }
             }  
         }
@@ -83,8 +81,8 @@ void WA_Agent_timer_handler(__sigval_t value)
             for(int i = 0; i < validCount; i++){
                 int dir1 = directionPairs[validPairs[i]][0];
                 int dir2 = directionPairs[validPairs[i]][1];
-                warningLevels[dir1] = 1;
-                warningLevels[dir2] = 1;
+                warningLevels[dir1] = max_int(warningLevels[dir1], 1);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 1);
             }
         }
         else if (belowThreeCount==1) {
@@ -98,61 +96,61 @@ void WA_Agent_timer_handler(__sigval_t value)
                 if(dist1 <= WA_config.branch2mainRange && dist2 <= WA_config.branch2mainRange){
                     if(WA_config.maindirection == 0){// N-S N:0, S:2 
                         if (dir1 == 0 || dir1 == 2){
-                            warningLevels[dir1] = 2;
-                            warningLevels[dir2] = 3;
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 3);
                         } else {
-                            warningLevels[dir1] = 3;
-                            warningLevels[dir2] = 2;
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 2);
                         }
                     }
                     else {
                         if (dir1 == 1 || dir1 == 3) {
-                            warningLevels[dir1] = 2;
-                            warningLevels[dir2] = 3;
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 3);
                         } else {
-                            warningLevels[dir1] = 3;
-                            warningLevels[dir2] = 2;
+                            warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                            warningLevels[dir2] = max_int(warningLevels[dir2], 2);
                         }
                     }
                     for (int i = 0; i < validCount; i++){
                         int vdir1 = directionPairs[validPairs[i]][0];
                         int vdir2 = directionPairs[validPairs[i]][1];
-                        warningLevels[vdir1] = 1;
-                        warningLevels[vdir2] = 1;
+                        warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
+                        warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
                     }
                 }
                 else{
                     if(TTI[dir1] <= TTI[dir2]){ 
-                        warningLevels[dir1] = 2;
-                        warningLevels[dir2] = 3;
+                        warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                        warningLevels[dir2] = max_int(warningLevels[dir2], 3);
                     }
                     else {
-                        warningLevels[dir1] = 3;
-                        warningLevels[dir2] = 2;
+                        warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                        warningLevels[dir2] = max_int(warningLevels[dir2], 2);
                     }
                     for (int i = 0; i < validCount; i++){
                         int vdir1 = directionPairs[validPairs[i]][0];
                         int vdir2 = directionPairs[validPairs[i]][1];
-                        warningLevels[vdir1] = 1;
-                        warningLevels[vdir2] = 1;
+                        warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
+                        warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
                     }
                 }
             }
             /* Branch2Branch: lv2 warning message to first apporach, lv3 warning message to last approach */
             else{
                 if(TTI[dir1] <= TTI[dir2]){ 
-                    warningLevels[dir1] = 2;
-                    warningLevels[dir2] = 3;
+                    warningLevels[dir1] = max_int(warningLevels[dir1], 2);
+                    warningLevels[dir2] = max_int(warningLevels[dir2], 3);
                 }
                 else {
-                    warningLevels[dir1] = 3;
-                    warningLevels[dir2] = 2;
+                    warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                    warningLevels[dir2] = max_int(warningLevels[dir2], 2);
                 }
                 for (int i = 0; i < validCount; i++){
                     int vdir1 = directionPairs[validPairs[i]][0];
                     int vdir2 = directionPairs[validPairs[i]][1];
-                    warningLevels[vdir1] = 1;
-                    warningLevels[vdir2] = 1;
+                    warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
+                    warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
                 }
             }
         }
@@ -161,14 +159,8 @@ void WA_Agent_timer_handler(__sigval_t value)
             for(int i = 0; i < validCount ; i++){
                 int dir1 = directionPairs[validPairs[i]][0];
                 int dir2 = directionPairs[validPairs[i]][1];
-                warningLevels[dir1] = 1;
-                warningLevels[dir2] = 1;
-            }
-            for(int i = 0; i < belowThreeCount; i++){
-                int dir1 = directionPairs[belowThreePairs[i]][0];
-                int dir2 = directionPairs[belowThreePairs[i]][1];
-                warningLevels[dir1] = 3;
-                warningLevels[dir2] = 3;
+                warningLevels[dir1] = max_int(warningLevels[dir1], 3);
+                warningLevels[dir2] = max_int(warningLevels[dir2], 3);
             }
         }
     }
