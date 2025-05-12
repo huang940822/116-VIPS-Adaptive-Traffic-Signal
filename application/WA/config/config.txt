@@ -1,16 +1,14 @@
-WA_WARNING_RANGE 150 # unit: m
+WA_WARNING_RANGE 150 # unit: m; 需要警示的範圍設定 e.g. 衝突組合兩輛車皆在距路口 150 m 範圍內則判斷有碰撞風險
 
-WA_WARNING_FREQ 0.5 # unit: s
+WA_WARNING_FREQ 0.5 # unit: s; 間隔多久做一次警示訊息等級之決策
 
+COLLECTOR_TO_ARTERIAL_WARNING_RANGE 50 # unit: m; 在支道對幹道版本下的警示範圍，若衝突組合車輛皆在 50 m 內，則支道禮讓幹道
 
-COLLECTOR_TO_ARTERIAL_WARNING_RANGE 50 # unit: m
+COLLECTOR_TO_ARTERIAL 1 # 0: Collector vs Collector, 1: Collector vs Arterial; 設定當前路口為支道對支道模式/支道對幹道模式
 
-COLLECTOR_TO_ARTERIAL 1 # 0: Collector vs Collector, 1: Collector vs Arterial
+MAIN_DIRECTION 0 # 0: N-S, 1: E-W; 設定幹道之方位
 
+INTERSECTION_CENTER_LAT 22.9956183 # 路口中心點經度
 
-MAIN_DIRECTION 0 # 0: N-S, 1: E-W
-
-INTERSECTION_CENTER_LAT 22.9956183 
-
-INTERSECTION_CENTER_LON 120.2369896
+INTERSECTION_CENTER_LON 120.2369896 # 路口中心點緯度
 
