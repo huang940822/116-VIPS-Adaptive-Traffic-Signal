@@ -30,11 +30,11 @@
 
 LOG_USE_MODULE(WA);
 
-CCI Leading_Vehicles[4]; // Leading Vehicles for four directions NSWE
+wa_vehicle_t Leading_Vehicles[4]; // Leading Vehicles for four directions NSWE
 timer_t WA_Agent_timer_id;
 pthread_mutex_t mutex_LV = PTHREAD_MUTEX_INITIALIZER;
 
-void initializationLeadingVehicles(CCI vehicles[], int size){
+void initializationLeadingVehicles(wa_vehicle_t vehicles[], int size){
     for (int i = 0; i < size; i++){
         vehicles[i].speed = NO_VEHICLE;
         vehicles[i].distance = NO_VEHICLE;
@@ -79,7 +79,7 @@ int WA_on_camera_packet_rx(void *arg){
     double intersection_center_lat = WA_config.intersection_center_lat;
     double intersection_center_lon = WA_config.intersection_center_lon;
 
-    CCI leading_vehicle;
+    wa_vehicle_t leading_vehicle;
     leading_vehicle.speed = NO_VEHICLE;
     leading_vehicle.distance = NO_VEHICLE;
 

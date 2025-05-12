@@ -30,7 +30,7 @@ void WA_Agent_timer_handler(__sigval_t value)
         {2, 3}
     };
 
-    CCI fusion_Leading_Vehicles[4];
+    wa_vehicle_t fusion_Leading_Vehicles[4];
     int warningLevels[4] = {0,0,0,0}; // 0: no show, 1: Lv1, 2: lv2, 3: lv3.
     double PET[4] = {DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX};
     /* initialize fusion leading vehicles */

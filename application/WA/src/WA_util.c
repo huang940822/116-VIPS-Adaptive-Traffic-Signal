@@ -10,13 +10,13 @@
 
 LOG_USE_MODULE(WA);
 
-extern CCI Leading_Vehicles[4];
+extern wa_vehicle_t Leading_Vehicles[4];
 extern pthread_mutex_t mutex_LV;
 
-void WA_get_leading_vehicles(CCI *CCI_INPUT){
+void WA_get_leading_vehicles(wa_vehicle_t *wa_vehicle_input){
     pthread_mutex_lock(&mutex_LV);
     for(int i = 0; i < 4; i++){
-        CCI_INPUT[i] = Leading_Vehicles[i];
+        wa_vehicle_input[i] = Leading_Vehicles[i];
     }
     pthread_mutex_unlock(&mutex_LV);
 }
