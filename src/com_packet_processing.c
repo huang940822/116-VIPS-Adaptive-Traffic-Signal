@@ -525,8 +525,7 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
     read_buf.index = 0;
     read_buf.content = (unsigned char *) malloc(msg->msg_len);
     if (read_buf.content == NULL) {
-        LOG_MSG_FATAL("OBU_packet_rx_event_handler: malloc");
-        perror("Smart_AVI_packet_rx_event_handler: malloc");
+        LOG_MSG_FATAL("Smart_AVI_packet_rx_event_handler: malloc");
         exit(errno);
     } else {
         memcpy(read_buf.content, msg->msg, msg->msg_len);
@@ -566,14 +565,24 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         read_buf.index += 16;
         read_uint32_t(&obstaclelist->tab[i].speed, &read_buf);
     }
-
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
+    * all might read/write callback_list, we add a mutex_lock */
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
+    // pthread_mutex_lock(&mutex_callback_list);
     while (current->next != NULL) {
         if (current->next->event_callback_id.choice == event_callback_id_app_id) {
+            /* thread pool feature reserved */
+            // if(threadpool_add(pool, current->next->callback, (void *) obstaclelist, 0) != 0){ 
+            //     LOG_MSG_TRACE("threadpool adding error!");//ERROR
+            // }
+            proxy_handling_app_p = current->next->app_obj_p;
             current->next->callback((void *) obstaclelist);
         }
         current = current->next;
     }
+    /* since now dispatcher, ea_app_proxy, command_buf_send(),
+     * all might read/write callback_list, we add a mutex_unlock */
+    // pthread_mutex_unlock(&mutex_callback_list);
 
     if (read_buf.content != NULL) {
         free(read_buf.content);
