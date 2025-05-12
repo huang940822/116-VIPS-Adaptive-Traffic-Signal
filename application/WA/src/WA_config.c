@@ -83,32 +83,34 @@ int WA_config_init(){
             }
         }
 
-        // BRANCH_TO_MAIN
-        if (strstr(read_buf, "BRANCH_TO_MAIN")) {
+        // COLLECTOR_TO_ARTERIAL_WARNING_RANGE
+        if (strstr(read_buf, "COLLECTOR_TO_ARTERIAL_WARNING_RANGE")) {
             if (read_int_from_config_line(read_buf, &val)) {
                 if (val >= 0) {
-                    WA_config.branch2main = val;
+                    WA_config.collector_to_arterial_warning_range = val;
                     continue;
                 } else {
-                    return CONFIG_INVALID_WA_BRANCH2MAIN;
+                    return CONFIG_INVALID_WA_COLLECTORTOARTERIALWARNINGRANGE;
                 }
             } else {
-                return CONFIG_INVALID_WA_BRANCH2MAIN;
+                return CONFIG_INVALID_WA_COLLECTORTOARTERIALWARNINGRANGE;
             }
         }
-        // BRANCH_TO_MAIN_WARNING_RANGE
-        if (strstr(read_buf, "BRANCH_2_MAIN_WARNING_RANGE")) {
+
+        // COLLECTOR TO ARTERIAL
+        if (strstr(read_buf, "COLLECTOR_TO_ARTERIAL")) {
             if (read_int_from_config_line(read_buf, &val)) {
                 if (val >= 0) {
-                    WA_config.branch2mainRange = val;
+                    WA_config.collector_to_arterial = val;
                     continue;
                 } else {
-                    return CONFIG_INVALID_WA_BRANCH2MAINWARNINGRANGE;
+                    return CONFIG_INVALID_WA_COLLECTORTOARTERIAL;
                 }
             } else {
-                return CONFIG_INVALID_WA_BRANCH2MAINWARNINGRANGE;
+                return CONFIG_INVALID_WA_COLLECTORTOARTERIAL;
             }
         }
+
         // MAIN_DIRECTION
         if (strstr(read_buf, "MAIN_DIRECTION")) {
             if (read_int_from_config_line(read_buf, &val)) {
@@ -119,7 +121,7 @@ int WA_config_init(){
                     return CONFIG_INVALID_WA_MAINDIRECTION;
                 }
             } else {
-                return CONFIG_INVALID_WA_BRANCH2MAINWARNINGRANGE;
+                return CONFIG_INVALID_WA_MAINDIRECTION;
             }
         }
 
@@ -151,61 +153,7 @@ int WA_config_init(){
                 return CONFIG_INVALID_WA_INTERSECTION_CENTER_LON;
             }
         }
-        
-        
-        // INTERSECTION_COUNT
-        if (strstr(read_buf, "INTERSECTION_COUNT")) {
-            if (read_int_from_config_line(read_buf, &val)){
-                if (val >= 0){
-                    WA_config.traffic_light.intersection_count = val;
-                    continue;
-                } else {
-                    return CONFIG_INVALID_WA_PACKET;
-                }
-            } else {
-                return CONFIG_INVALID_WA_PACKET;
-            }
-        }
-        // intersection table
-        if (strstr(read_buf, "intersection_table")) {
-            while (true) {
-                if (feof(fp))
-                    goto WA_intersection_table_error;
-                char *buf = read_line(read_buf, sizeof(read_buf), fp);
-                if (strstr(buf, "intersection_table_end"))
-                    break;
-                if (buf == NULL)
-                    continue;
-                
-                uint8_t direction = 0;
-                double lat;
-                double lon;
-                char *sepstr = buf;
-                char *substr = trim_comments(strsep(&sepstr, ","));
-                
-                /* direction */
-                if (substr == NULL || sepstr == NULL || sscanf(substr, "%hhd", &direction) != 1)
-                    goto WA_intersection_table_error;
-
-                /* lat and lon */
-                substr = trim_comments(strsep(&sepstr, ","));
-
-                if(substr == NULL || sscanf(substr, "%lf %lf", &lat, &lon) != 2)
-                    goto WA_intersection_table_error;
-                
-                WA_config.traffic_light.tab[direction].Traffic_light_lat = lat;
-                WA_config.traffic_light.tab[direction].Traffic_light_lon = lon;
-                
-            }
-            LOG_MSG_TRACE("Warning Frequecy: %f", WA_config.warning_freq);
-            for (int i = 0; i < WA_config.traffic_light.intersection_count; i++){
-                    LOG_MSG_TRACE("direction:%hhd, lat:%lf, lon:%lf\n", i, 
-                                                                        WA_config.traffic_light.tab[i].Traffic_light_lat, 
-                                                                        WA_config.traffic_light.tab[i].Traffic_light_lon);
-            }
-            LOG_MSG_TRACE("Branch2main: %d, Branch2mainRange: %d, maindirection: %d\n", WA_config.branch2main, WA_config.branch2mainRange, WA_config.maindirection);
-        }
-    }
+    } 
     fclose(fp);
     return WA_CONFIG_ACCEPT;
 WA_intersection_table_error:

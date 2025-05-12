@@ -124,6 +124,7 @@ int WA_on_registration(void *arg){
     if(ret != 0){
         LOG_MSG_ERROR("error WA reading config file: %d", ret);
     }
+    LOG_MSG_TRACE("Collector to Arterial: %d, Collector to Arterial Warning Range: %d", WA_config.collector_to_arterial, WA_config.collector_to_arterial_warning_range);
     LOG_MSG_INFO("Regist WA app with frequency: %f", WA_config.warning_freq);
     double freq = WA_config.warning_freq;
     int freq_sec = (int) freq;

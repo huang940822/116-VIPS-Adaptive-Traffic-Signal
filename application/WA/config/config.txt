@@ -2,9 +2,11 @@ WA_WARNING_RANGE 150 # unit: m
 
 WA_WARNING_FREQ 0.5 # unit: s
 
-BRANCH_TO_MAIN 1 # 0: branch vs branch, 1: branch vs main
 
-BRANCH_2_MAIN_WARNING_RANGE 50 # unit: main
+COLLECTOR_TO_ARTERIAL_WARNING_RANGE 50 # unit: m
+
+COLLECTOR_TO_ARTERIAL 1 # 0: Collector vs Collector, 1: Collector vs Arterial
+
 
 MAIN_DIRECTION 0 # 0: N-S, 1: E-W
 
@@ -12,10 +14,3 @@ INTERSECTION_CENTER_LAT 22.9956183
 
 INTERSECTION_CENTER_LON 120.2369896
 
-INTERSECTION_COUNT 3
-
-intersection_table
-0, 22.995765 120.237002 # North
-1, 22.995647 120.237125 # East
-2, 22.995476 120.237035 # South
-intersection_table_end

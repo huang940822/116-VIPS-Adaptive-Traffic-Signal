@@ -91,9 +91,9 @@ void WA_Agent_timer_handler(__sigval_t value)
             double dist1 = fusion_Leading_Vehicles[dir1].distance;
             double dist2 = fusion_Leading_Vehicles[dir2].distance;
 
-            if(WA_config.branch2main == 1){
-                /* if both car in WA_config.branch2mainrange */
-                if(dist1 <= WA_config.branch2mainRange && dist2 <= WA_config.branch2mainRange){
+            if(WA_config.collector_to_arterial == 1){
+                /* if both car in WA_config.collector_to_arterial_warning_range */
+                if(dist1 <= WA_config.collector_to_arterial_warning_range && dist2 <= WA_config.collector_to_arterial_warning_range){
                     if(WA_config.maindirection == 0){// N-S N:0, S:2 
                         if (dir1 == 0 || dir1 == 2){
                             warningLevels[dir1] = max_int(warningLevels[dir1], 2);
@@ -136,7 +136,7 @@ void WA_Agent_timer_handler(__sigval_t value)
                     }
                 }
             }
-            /* Branch2Branch: lv2 warning message to first apporach, lv3 warning message to last approach */
+            /* collector to arterial: lv2 warning message to first apporach, lv3 warning message to last approach */
             else{
                 if(TTI[dir1] <= TTI[dir2]){ 
                     warningLevels[dir1] = max_int(warningLevels[dir1], 2);
