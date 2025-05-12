@@ -181,11 +181,11 @@ int main()
     /* application service registration */ //目前先做交通號誌協定(TSP)和緊急交通工具號誌協定(EVSP)
     app_obj_t *app_arr[] = {
         // &MMP,
-        //&EVSP,
-        //&TSP,
+        &EVSP,
+        &TSP,
         // &CPS,
-        //&TIB,
-        //&SPM,
+        &TIB,
+        &SPM,
         &WA,
     };
 
