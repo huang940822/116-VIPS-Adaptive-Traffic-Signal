@@ -49,7 +49,7 @@ int WA_config_init(){
     float float_val;
     char string_val[MAX_CONFIG_VARIABLE_LEN];
 
-    WA_config.traffic_light.tab = malloc(MAX_SIGNAL_COUNT * sizeof(traffic_light_lat_lon_t));
+    
 
     while(!feof(fp)) {
         fgets(read_buf, CONFIG_LINE_BUFFER_SIZE, fp);
@@ -143,7 +143,7 @@ int WA_config_init(){
         // INTERSECTION_CENTER_LON
         if (strstr(read_buf, "INTERSECTION_CENTER_LON")) {
             if (read_float_from_config_line(read_buf, &float_val)) {
-                if (val >= 0) {
+                if (float_val >= 0) {
                     WA_config.intersection_center_lon = float_val;
                     continue;
                 } else {
@@ -155,9 +155,12 @@ int WA_config_init(){
         }
     } 
     fclose(fp);
+    LOG_MSG_TRACE("WARNING_RANGE: %d", WA_config.warning_range);
+    LOG_MSG_TRACE("WARNING_FREQ: %f", WA_config.warning_freq);
+    LOG_MSG_TRACE("COLLECTOR_TO_ARTERIAL: %d", WA_config.collector_to_arterial);    
+    LOG_MSG_TRACE("COLLECTOR_TO_ARTERIAL_WARNING_RANGE: %d", WA_config.collector_to_arterial_warning_range);
+    LOG_MSG_TRACE("MAIN_DIRECTION: %d", WA_config.maindirection);
+    LOG_MSG_TRACE("INTERSECTION_CENTER_LAT: %f", WA_config.intersection_center_lat);
+    LOG_MSG_TRACE("INTERSECTION_CENTER_LON: %f", WA_config.intersection_center_lon);
     return WA_CONFIG_ACCEPT;
-WA_intersection_table_error:
-    LOG_MSG_ERROR("WA intersection table config read fail.\n");
-    LOG_MSG_TRACE("WA intersection table config read fail.\n");
-    return -1;
 }

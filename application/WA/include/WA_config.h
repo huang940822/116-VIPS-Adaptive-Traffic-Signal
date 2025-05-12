@@ -21,16 +21,7 @@ typedef enum WA_config_err {
     CONFIG_INVALID_WA_COLLECTORTOARTERIALWARNINGRANGE = -8,
     CONFIG_INVALID_WA_MAINDIRECTION = -9
 } WA_config_err_t;
-typedef struct traffic_light_lat_lon {
-    double Traffic_light_lat;
-    double Traffic_light_lon;
-} traffic_light_lat_lon_t;
-typedef struct traffic_light_set{
-    traffic_light_lat_lon_t *tab;
-    int intersection_count;
-} traffic_light_set_t;
 typedef struct WA_config_object {
-    traffic_light_set_t traffic_light;
     int warning_range;
     double warning_freq;
     int collector_to_arterial;
