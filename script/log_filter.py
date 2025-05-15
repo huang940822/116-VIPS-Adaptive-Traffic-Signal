@@ -57,7 +57,8 @@ def _parse_args():
     parser.add_argument('--end', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='End time in the format YYYY-MM-DD HH:MM:SS')
     parser.add_argument('--log-level', type=str, help='Log levels to filter (comma-separated)')
     parser.add_argument('--module-name', type=str, help='Module names to filter (comma-separated)')
-    parser.add_argument('--content', type=str, help='Content to filter (regex pattern)')
+    parser.add_argument('--include-content', action="append", metavar="PATTERN", help='Content to include (regex pattern), match any of them')
+    parser.add_argument('--exclude-content', action="append", metavar="PATTERN", help='Content to exclude (regex pattern), match any of them')
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--log-folder', type=str, help='Path to the folder containing log files')
@@ -162,8 +163,8 @@ def _filter_logs(log: Dict[str, object],
         start:datetime.datetime=None, end:datetime.datetime=None,
         log_level:List[LogLevel]=None,
         module_name:str=None,
-        content_regex:str=None,
-        before_count:int=0, after_count:int=0) -> List[Dict[str, object]]:
+        include_content_regex_list:List[str]=None,
+        exclude_content_regex_list:List[str]=None) -> List[Dict[str, object]]:
     """
     Filter log entries based on various criteria.
 
@@ -173,9 +174,8 @@ def _filter_logs(log: Dict[str, object],
         end (datetime.datetime, optional): End time for filtering.
         log_level (LogLevel, optional): Log level for filtering.
         module_name (str, optional): Module name for filtering.
-        content_regex (str, optional): Regex pattern for filtering log messages.
-        before_count (int, optional): Number of log entries before the match to include.
-        after_count (int, optional): Number of log entries after the match to include.
+        include_content_regex_list (List[str], optional): List of regex patterns to include in the log message.
+        exclude_content_regex_list (List[str], optional): List of regex patterns to exclude from the log message.
     Returns:
         bool: True if the log entry matches the filter criteria, False otherwise.
     """
@@ -191,11 +191,22 @@ def _filter_logs(log: Dict[str, object],
     if module_name and log['module'] not in module_name:
         logger.debug(f"Skipping log entry with module {log['module']} not matching {module_name}")
         return False
-    if content_regex:
-        content_search = re.search(content_regex, log["message"])
-        if not content_search:
-            logger.debug(f"Skipping log entry with message not matching regex: {log['message']}")
-            return False
+    if include_content_regex_list:
+        for content_regex in include_content_regex_list:
+            logger.debug(f"Checking log entry with message: {log['message']}")
+            logger.debug(f"Checking against regex: {content_regex}")
+            content_search = re.search(content_regex, log["message"])
+            if not content_search:
+                logger.debug(f"Skipping log entry with message not matching regex: {log['message']}")
+                return False
+    if exclude_content_regex_list:
+        for content_regex in exclude_content_regex_list:
+            logger.debug(f"Checking log entry with message: {log['message']}")
+            logger.debug(f"Checking against regex: {content_regex}")
+            content_search = re.search(content_regex, log["message"])
+            if content_search:
+                logger.debug(f"Skipping log entry with message matching regex: {log['message']}")
+                return False
 
     return True
 
@@ -238,11 +249,22 @@ def main():
         logger.error("Start time must be before end time.")
         return
 
-    try:
-        re.compile(args.content)
-    except re.error:
-        logger.error(f"Invalid regex pattern: {args.content}")
-        return
+    if args.include_content:
+        logger.info(f"Include content regex patterns: {args.include_content}")
+        for content_regex in args.include_content:
+            try:
+                re.compile(content_regex)
+            except re.error:
+                logger.error(f"Invalid regex pattern: {content_regex}")
+                return
+    if args.exclude_content:
+        logger.info(f"Exclude content regex patterns: {args.exclude_content}")
+        for content_regex in args.exclude_content:
+            try:
+                re.compile(content_regex)
+            except re.error:
+                logger.error(f"Invalid regex pattern: {content_regex}")
+                return
 
     log_file_paths = []
     if args.log_folder:
@@ -270,7 +292,8 @@ def main():
                 end=args.end,
                 log_level=args.log_level,
                 module_name=args.module_name,
-                content_regex=args.content),
+                include_content_regex_list=args.include_content,
+                exclude_content_regex_list=args.exclude_content),
             n_before=args.before,
             m_after=args.after)
         _save_to_file(logs, args.output_file)
