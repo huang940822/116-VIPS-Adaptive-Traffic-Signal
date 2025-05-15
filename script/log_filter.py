@@ -198,7 +198,10 @@ def _filter_logs(log: Dict[str, object],
     if log_level and log["level"] not in log_level:
         logger.debug(f"Skipping log entry with level {log['level']} lower than {log_level}")
         return False
-    if module_name and log['module'] not in module_name:
+    logger.debug(f"module_name: {module_name}, log['module']: {log['module']}")
+    if module_name and \
+            not list(filter(lambda module: log['module'].startswith(module) if module == "MIDDLEWARE"
+            else log['module'] == module, module_name)):
         logger.debug(f"Skipping log entry with module {log['module']} not matching {module_name}")
         return False
     if include_content_regex_list:
