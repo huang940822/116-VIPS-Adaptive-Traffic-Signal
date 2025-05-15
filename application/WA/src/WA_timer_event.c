@@ -149,8 +149,8 @@ void WA_Agent_timer_handler(__sigval_t value)
                     }
                 }
             }
-            /* collector to arterial: lv2 warning message to first apporach, lv3 warning message to last approach */
-            else{
+            /* collector to collector: lv2 warning message to first apporach, lv3 warning message to last approach */
+            else if(WA_config.collector_to_arterial == 0){
                 if(TTI[dir1] <= TTI[dir2]){ 
                     warningLevels[dir1] = max_int(warningLevels[dir1], 2);
                     warningLevels[dir2] = max_int(warningLevels[dir2], 3);
@@ -167,6 +167,9 @@ void WA_Agent_timer_handler(__sigval_t value)
                     warningLevels[vdir1] = max_int(warningLevels[vdir1], 1);
                     warningLevels[vdir2] = max_int(warningLevels[vdir2], 1);
                 }
+            }
+            else {
+                LOG_MSG_ERROR("Invalid collector_to_arterial value: %d", WA_config.collector_to_arterial);
             }
         }
         else {
