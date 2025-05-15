@@ -135,26 +135,32 @@ def _parse_log_file(filepath):
                 current_log = {}
                 current_timestamp = datetime.datetime.strptime(match.group("timestamp"), "%Y-%m-%d %H:%M:%S")
                 current_log["timestamp"] = current_timestamp
+                logger.debug(f"Parsed log entry with timestamp: {current_timestamp}")
 
                 current_log_level = LogLevel.from_string(match.group("level"))
                 current_log["level"] = current_log_level
+                logger.debug(f"Parsed log entry with level: {current_log_level}")
 
                 current_log["module"] = match.group("module")
+                logger.debug(f"Parsed log entry with module: {current_log['module']}")
 
                 current_filename = match.group("file")
                 current_lineno = match.group("line")
                 if current_filename and current_lineno:
                     current_log["file"] = current_filename
                     current_log["line"] = int(current_lineno)
+                    logger.debug(f"Parsed log entry with file and line: {current_filename}:{current_lineno}")
 
                 current_message = match.group("message").rstrip()
                 if current_message:
                     current_log["message"] = current_message
+                    logger.debug(f"Parsed log entry with message: {current_log['message']}")
                 else:
                     current_log = None
                     continue
             else:
                 if current_log:
+                    logger.debug(f"Appending to log entry message: {current_log['message']}")
                     current_message = line.rstrip()
                     if current_message:
                         current_log["message"] += ("\n" + current_message)
