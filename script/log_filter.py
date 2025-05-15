@@ -238,7 +238,7 @@ def _save_to_file(logs: Dict[str, object], output_file):
             if 'file' in log and 'line' in log:
                 file.write(f"[{log['timestamp']}][{log['level']}][{log['module']}][{log['file']}:{log['line']}] - {log['message']}\n")
             else:
-                file.write(f"[{log['timestamp']}][{log['level']}][{log['module']}] - {log['message']}\n")
+                file.write(f"[{log['timestamp']}][{log['level']}][{log['module']}]{log['message']}\n")
 
 
 def main():
