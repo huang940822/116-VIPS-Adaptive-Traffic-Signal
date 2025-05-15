@@ -28,6 +28,8 @@ INTERSECTION_CENTER_LON 120.2369896 # 路口中心點緯度
 實現一個名為 `WA_on_camera_packet_rx` 的 callback function，並註冊於 `.on_camera_packet_rx` 類型的 callback，每當 middleware 接收到 camera 提供的資料，則會觸發這個 callback function。其處理流程如下圖所示：  
 <img src="https://github.com/user-attachments/assets/ef73147f-fe14-4d47-9927-b4da23765bb4" width="30%">
 
+> [!NOTE]
+> CCI 是舊稱，現為 wa_vehicle_t
 
 找出每個方向的第一輛車後，會將之存放在 `leading_vehicles` 中，用以做後續第二部分的邏輯判斷。
 
@@ -37,7 +39,7 @@ INTERSECTION_CENTER_LON 120.2369896 # 路口中心點緯度
 typedef struct {
     double speed;
     double distance;
-} wa_vehicle_t; 
+} wa_vehicle_t;
 ```
 
 ### 第二部分：判斷各方向警示等級
