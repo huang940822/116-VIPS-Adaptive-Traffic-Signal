@@ -52,28 +52,32 @@ def _parse_args():
     Returns:
         argparse.Namespace: Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(description='Filter log files based on various criteria.')
-    parser.add_argument('--start', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='Start time in the format YYYY-MM-DD HH:MM:SS')
-    parser.add_argument('--end', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='End time in the format YYYY-MM-DD HH:MM:SS')
-    parser.add_argument('--log-level', type=str, help='Log levels to filter (comma-separated)')
-    parser.add_argument('--module-name', type=str, help='Module names to filter (comma-separated)')
-    parser.add_argument('--include-content', action="append", metavar="PATTERN", help='Content to include (regex pattern), match any of them')
-    parser.add_argument('--exclude-content', action="append", metavar="PATTERN", help='Content to exclude (regex pattern), match any of them')
+    parser = argparse.ArgumentParser(description='根據條件過濾 log 檔案內容')
+    parser.add_argument('--start', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='開始時間，格式為 YYYY-MM-DD HH:MM:SS')
+    parser.add_argument('--end', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='結束時間，格式為 YYYY-MM-DD HH:MM:SS')
+    parser.add_argument('--log-level', type=str, choices=[lvl.name for lvl in LogLevel], help='要過濾的 log 等級（可用逗號分隔多個等級）')
+    parser.add_argument('--module-name', type=str, help='要過濾的模組名稱（可用逗號分隔多個模組）')
+
+    parser.add_argument('--include-content', action="append", metavar="PATTERN", help='要包含的訊息內容（可為正規表示式，符合任一條件）')
+    parser.add_argument('--before', type=int, default=0, help='符合條件時，輸出前 N 筆 log')
+    parser.add_argument('--after', type=int, default=0, help='符合條件時，輸出後 N 筆 log')
+
+    parser.add_argument('--exclude-content', action="append", metavar="PATTERN", help='要排除的訊息內容（可為正規表示式，符合任一條件）')
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--log-folder', type=str, help='Path to the folder containing log files')
-    group.add_argument('--log-file', type=str, help='Path to the log file')
-    parser.add_argument('--output-file', type=str, required=True, help='Path to the output file')
+    group.add_argument('--log-folder', type=str, help='log 檔案所在資料夾路徑')
+    group.add_argument('--log-file', type=str, help='單一 log 檔案路徑')
 
-    parser.add_argument('--debug', action='store_true', help='Enable debug output')
-    parser.add_argument('--before', type=int, default=0, help='Number of log entries before the match to include')
-    parser.add_argument('--after', type=int, default=0, help='Number of log entries after the match to include')
+    parser.add_argument('--debug', action='store_true', help='啟用除錯模式（顯示更多細節）')
+    parser.add_argument('--output-file', type=str, required=True, help='輸出結果儲存的檔案路徑')
 
     args = parser.parse_args()
     if args.log_level:
         args.log_level = [LogLevel.from_string(level.strip()) for level in args.log_level.split(',')]
     if args.module_name:
         args.module_name = [module.strip() for module in args.module_name.split(',')]
+    if not args.include_content and (args.before or args.after):
+        parser.error("使用 --before 或 --after 時，必須指定至少一個 --include-content。")
 
     return args
 
