@@ -146,12 +146,17 @@ def _parse_log_file(filepath):
                     current_log["file"] = current_filename
                     current_log["line"] = int(current_lineno)
 
-                current_message = match.group("message")
+                current_message = match.group("message").rstrip()
                 if current_message:
-                    current_log["message"] = current_message.rstrip()
+                    current_log["message"] = current_message
+                else:
+                    current_log = None
+                    continue
             else:
                 if current_log:
-                    current_log["message"] += ("\n" + line.rstrip())
+                    current_message = line.rstrip()
+                    if current_message:
+                        current_log["message"] += ("\n" + current_message)
 
 def _filter_logs(log: Dict[str, object],
         start:datetime.datetime=None, end:datetime.datetime=None,
