@@ -50,6 +50,7 @@ typedef enum application_id {
     SPAT_ID = 5,
     TIB_ID = 6,
     SPM_ID = 7,
+    WA_ID = 8,
     APPLICATION_ID_NUMBER
 } application_id_t;
 

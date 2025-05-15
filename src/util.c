@@ -7,9 +7,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#include "CPS.h"
-#include "ObstacleList.h"
-#include "post_processing.h"
+#include "util.h"
 
 LOG_USE_MODULE(CPS);
 
@@ -25,17 +23,15 @@ void transfer_datatype(double *Lat,
     //*height = (*height * 100.0);
     //*width = (*width * 100.0);
 }
-double distance(double lat1, double lon1, double lat2, double lon2)
-{
-    // LOG_MSG_TRACE("lat1: %.14lf lon1: %.14lf lat2 %.14lf lon2 %.14lf", lat1, lon1,
-    // lat2, lon2);
-    double dLat = deg2rad(fabs(lat2 - lat1));
-    double dLon = deg2rad(fabs(lon2 - lon1));
+double distance(double lat1, double lon1, double lat2, double lon2) {
+    double dLat = deg2rad(lat2 - lat1);
+    double dLon = deg2rad(lon2 - lon1);
+
     double a = pow(sin(dLat / 2), 2) +
                cos(deg2rad(lat1)) * cos(deg2rad(lat2)) * pow(sin(dLon / 2), 2);
     double c = 2 * asin(sqrt(a));
-    int r = 6371;  // 6371 Radius of earth in kilometers. Use 3956 for miles
-    return c * r * 1000;
+    double r = 6371.0;  // 6371 Radius of earth in kilometers. Use 3956 for miles
+    return c * r * 1000;  
 }
 double bearing(double lat, double lon, double lat2, double lon2)
 {

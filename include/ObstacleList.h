@@ -25,8 +25,9 @@ typedef struct Obstacle {
 
 typedef struct ObstacleList {
     Obstacle *tab;
-    int32_t dirct;
+    int32_t dirct; // camera_num, 以最靠近北端為 0 ，依序遞增。 e.g. 路口為北、東北、南、西南，編號仍為 0, 1, 2, 3
     int32_t count;
+    int32_t device_num;
 } ObstacleList;
 
 #endif

@@ -12,6 +12,7 @@
 #include "SPM.h"
 #include "TIB.h"
 #include "TSP.h"
+#include "WA.h"
 
 #include "OBU_record_processing.h"
 #include "application_registration.h"
@@ -185,6 +186,7 @@ int main()
         // &CPS,
         &TIB,
         &SPM,
+        &WA,
     };
 
     /* 注意有些 app 的 on_registration() 會 create timer */
