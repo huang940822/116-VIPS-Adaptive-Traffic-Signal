@@ -90,10 +90,10 @@ int WA_config_init(){
                     WA_config.collector_to_arterial_warning_range = val;
                     continue;
                 } else {
-                    return CONFIG_INVALID_WA_COLLECTORTOARTERIALWARNINGRANGE;
+                    return CONFIG_INVALID_WA_COLLECTOR_TO_ARTERIAL_WARNINGRANGE;
                 }
             } else {
-                return CONFIG_INVALID_WA_COLLECTORTOARTERIALWARNINGRANGE;
+                return CONFIG_INVALID_WA_COLLECTOR_TO_ARTERIAL_WARNINGRANGE;
             }
         }
 
@@ -104,10 +104,10 @@ int WA_config_init(){
                     WA_config.collector_to_arterial = val;
                     continue;
                 } else {
-                    return CONFIG_INVALID_WA_COLLECTORTOARTERIAL;
+                    return CONFIG_INVALID_WA_COLLECTOR_TO_ARTERIAL;
                 }
             } else {
-                return CONFIG_INVALID_WA_COLLECTORTOARTERIAL;
+                return CONFIG_INVALID_WA_COLLECTOR_TO_ARTERIAL;
             }
         }
 
