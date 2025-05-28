@@ -31,7 +31,7 @@ class LogLevel(enum.Enum):
     TRACE = 0
     DEBUG = 1
     INFO = 2
-    WARNING = 3
+    WARN = 3
     ERROR = 4
     FATAL = 5
 
@@ -55,7 +55,7 @@ def _parse_args():
     parser = argparse.ArgumentParser(description='根據條件過濾 log 檔案內容')
     parser.add_argument('--start', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='開始時間，格式為 YYYY-MM-DD HH:MM:SS')
     parser.add_argument('--end', type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S'), help='結束時間，格式為 YYYY-MM-DD HH:MM:SS')
-    parser.add_argument('--log-level', type=str, choices=[lvl.name for lvl in LogLevel], help='要過濾的 log 等級（可用逗號分隔多個等級）')
+    parser.add_argument('--log-level', type=str, help='要過濾的 log 等級（可用逗號分隔多個等級）')
     parser.add_argument('--module-name', type=str, help='要過濾的模組名稱（可用逗號分隔多個模組）')
 
     parser.add_argument('--include-content', action="append", metavar="PATTERN", help='要包含的訊息內容（可為正規表示式，符合任一條件）')
@@ -72,8 +72,14 @@ def _parse_args():
     parser.add_argument('--output-file', type=str, required=True, help='輸出結果儲存的檔案路徑')
 
     args = parser.parse_args()
+
     if args.log_level:
-        args.log_level = [LogLevel.from_string(level.strip()) for level in args.log_level.split(',')]
+        log_levels = []
+        for level in args.log_level.split(','):
+            try:
+                log_levels.append(LogLevel.from_string(level.strip()))
+            except ValueError:
+                parser.error(f"無效的 log 等級: {level.strip()}")
     if args.module_name:
         args.module_name = [module.strip() for module in args.module_name.split(',')]
     if not args.include_content and (args.before or args.after):
@@ -189,7 +195,7 @@ def _filter_logs(log: Dict[str, object],
     Returns:
         bool: True if the log entry matches the filter criteria, False otherwise.
     """
-    if log["timestamp"] < start:
+    if start and log["timestamp"] < start:
         logger.debug(f"Skipping log entry before start time: {log['timestamp']}")
         return False
     if end and log["timestamp"] > end:
