@@ -156,7 +156,7 @@ void log_set_level(log_level_t level)
 static void _log_appliction(char *time_str_ptr, log_level_t level, const char *file, int line, const char *log_module_name, char *log_content_ptr) {
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "[%s][%s][%s][%s:%d] - %s\n",
-            time_str_ptr, log_level_strs[current_log_level], log_module_name, file, line, log_content_ptr) < 0) {
+            time_str_ptr, log_level_strs[level], log_module_name, file, line, log_content_ptr) < 0) {
         set_disk_error();
         perror("_log_appliction: fprintf");
         exit(errno);
@@ -185,7 +185,7 @@ static void _log_appliction(char *time_str_ptr, log_level_t level, const char *f
 static void _log_core(char *time_str_ptr, log_level_t level, const char *log_module_name, char *log_content_ptr) {
     pthread_mutex_lock(&mutex_log_file_ptr);
     if (fprintf(log_file_ptr, "[%s][%s][%s] - %s\n",
-            time_str_ptr, log_level_strs[current_log_level], log_module_name, log_content_ptr) < 0) {
+            time_str_ptr, log_level_strs[level], log_module_name, log_content_ptr) < 0) {
         set_disk_error();
         perror("_log_core: fprintf");
         exit(errno);
