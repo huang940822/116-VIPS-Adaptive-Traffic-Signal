@@ -9,6 +9,8 @@
 #include "traffic_signal_status_updating.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(TIB);
+
 TIB_config_object_t TIB_config = {
     .MAP_packet_transfer_speed = 1,
     .SPaT_packet_transfer_speed = 10,
@@ -29,7 +31,7 @@ int TIB_config_init()
     trim_space(rsu_name);
 
     if (rsu_name == NULL) {
-        log_file_write_fatal_error("error name %s", config.RSU_name);
+        LOG_MSG_FATAL("error name %s", config.RSU_name);
     }
 
     memset(file_path, 0, sizeof(file_path));
@@ -39,10 +41,10 @@ int TIB_config_init()
 
     fp = fopen(file_path, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", file_path);
+        LOG_MSG_FATAL("error opening %s", file_path);
         return TIB_CONFIG_INVALID_OPEN_FILE;
     } else {
-        log_file_write("%s opened successfully", file_path);
+        LOG_MSG_INFO("%s opened successfully", file_path);
     }
 
     char read_buf[CONFIG_LINE_BUFFER_SIZE];
@@ -55,7 +57,7 @@ int TIB_config_init()
         vector_free(TIB_config.lane_list);                          \
         vector_free(TIB_config.connectsTo_list);                    \
         vector_free(v);                                             \
-        log_file_write_fatal_error("TIB config error: %s", errMsg); \
+        LOG_MSG_FATAL("TIB config error: %s", errMsg); \
         return TIB_CONFIG_##errorType##_INVALID;                    \
     } while (0);
 
@@ -69,7 +71,7 @@ int TIB_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     TIB_config.MAP_packet_transfer_speed = uint8_t_val;
-                    log_file_write("config: MAP_packet_transfer_speed = %d", TIB_config.MAP_packet_transfer_speed);
+                    LOG_MSG_INFO("config: MAP_packet_transfer_speed = %d", TIB_config.MAP_packet_transfer_speed);
                     continue;
                 } else {
                     return TIB_CONFIG_INVALID_MAP_PACKET_TRANSFER_SPEED;
@@ -84,7 +86,7 @@ int TIB_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     TIB_config.SPaT_packet_transfer_speed = uint8_t_val;
-                    log_file_write("config: SPaT_packet_transfer_speed = %d", TIB_config.SPaT_packet_transfer_speed);
+                    LOG_MSG_INFO("config: SPaT_packet_transfer_speed = %d", TIB_config.SPaT_packet_transfer_speed);
                     continue;
                 } else {
                     return TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
@@ -99,7 +101,7 @@ int TIB_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     TIB_config.TIB_dontSend2TC = uint8_t_val;
-                    log_file_write("config: TIB_dontSend2TC = %d",
+                    LOG_MSG_INFO("config: TIB_dontSend2TC = %d",
                                    TIB_config.TIB_dontSend2TC);
                     continue;
                 } else {
@@ -420,78 +422,78 @@ int TIB_config_init()
 void print_config_map(MapData *map, char *buf, int buf_len)
 {
     // if (map->intersections.count != 1) {
-    //     snprintf(buf, buf_len, "intersections.count only can be 1, but is %d", map->intersections.count);
+    //     LOG_MSG_APPEND(log_content, "intersections.count only can be 1, but is %d", map->intersections.count);
     //     return;
     // }
     LaneList *laneSet = &map->intersections.tab[0].laneSet;
-    snprintf(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
+    LOG_MSG_APPEND(buf, "lane_index, laneID, node_index, lat, lon\n");
 
     for (int i = 0; i < laneSet->count; i++) {
         for (int j = 0; j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", laneSet->tab[i].laneID);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", j);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
+            LOG_MSG_APPEND(buf, "%d, ", i);
+            LOG_MSG_APPEND(buf, "%d, ", laneSet->tab[i].laneID);
+            LOG_MSG_APPEND(buf, "%d, ", j);
+            LOG_MSG_APPEND(buf, "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
+            LOG_MSG_APPEND(buf, "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
         }
     }
     for (int i = 0; i < laneSet->count; i++) {
         if (laneSet->tab[i].connectsTo_option == FALSE)
             continue;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
+        LOG_MSG_APPEND(buf, "%d, ", i);
         ConnectsToList *connlist = &laneSet->tab[i].connectsTo;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->count);
+        LOG_MSG_APPEND(buf, "%d, ", connlist->count);
         for (int k = 0; k < connlist->count; k++) {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->tab[k].connectingLane.lane);
+            LOG_MSG_APPEND(buf, "%d, ", connlist->tab[k].connectingLane.lane);
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
     for (int i = 0; i < COMPASS_NUM; i++) {
         MAP_config_lane_t *lane, *safe;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "Road %d: ", i);
+        LOG_MSG_APPEND(buf, "Road %d: ", i);
         list_for_each_entry_safe(lane, safe, &TIB_config.MAP_lane_approach[i], approach_node)
         {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
+            LOG_MSG_APPEND(buf, "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
 
-    log_file_write("Map Config init %s", buf);
+    LOG_MSG_INFO("Map Config init %s", buf);
     memset(buf, 0, buf_len);
 
-    log_snprintf(buf, "connectsTo_list \n");
+    LOG_MSG_APPEND(buf, "connectsTo_list \n");
     for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {
         MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);
-        log_snprintf(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
+        LOG_MSG_APPEND(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
         for (int j = 0; j < connectsTo->left_laneId.size; j++) {
-            log_snprintf(buf, "%d ", vector_at(connectsTo->left_laneId, j));
+            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->left_laneId, j));
         }
-        log_snprintf(buf, "\n straight_laneId: ");
+        LOG_MSG_APPEND(buf, "\n straight_laneId: ");
         for (int j = 0; j < connectsTo->straight_laneId.size; j++) {
-            log_snprintf(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
+            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
         }
-        log_snprintf(buf, "\n right_laneId: ");
+        LOG_MSG_APPEND(buf, "\n right_laneId: ");
         for (int j = 0; j < connectsTo->right_laneId.size; j++) {
-            log_snprintf(buf, "%d ", vector_at(connectsTo->right_laneId, j));
+            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->right_laneId, j));
         }
-        log_snprintf(buf, "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
-    snprintf(buf + strlen(buf), buf_len - strlen(buf), "signalGroupId_table \n");
+    LOG_MSG_APPEND(buf, "signalGroupId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
-            log_snprintf(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
+            LOG_MSG_APPEND(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
         }
-        log_snprintf(buf, "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
-    log_snprintf(buf, "signalId_table \n");
+    LOG_MSG_APPEND(buf, "signalId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
             for (int k = 0; k < vector_size(TIB_config.signalId_table[i][j]); k++) {
                 signalID_obj_t *obj = &vector_at(TIB_config.signalId_table[i][j], k);
-                log_snprintf(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
+                LOG_MSG_APPEND(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
             }
         }
     }
-    log_snprintf(buf, "\n");
-    log_file_write("Map Config init %s", buf);
+    LOG_MSG_APPEND(buf, "\n");
+    LOG_MSG_INFO("Map Config init %s", buf);
 }

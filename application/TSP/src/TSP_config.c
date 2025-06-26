@@ -8,6 +8,8 @@
 #include "config.h"
 #include "log.h"
 
+LOG_USE_MODULE(TSP);
+
 TSP_config_object_t TSP_config = {
     .tsp_host_obu_list_timeout = 120,
     .tsp_remaining_distance_max = 500,
@@ -29,10 +31,10 @@ int TSP_config_init()
     FILE *fp;
     fp = fopen(TSP_CONFIG_FILE, "r");
     if (fp == NULL) {
-        log_file_write_fatal_error("error opening %s", TSP_CONFIG_FILE);
+        LOG_MSG_FATAL("error opening %s", TSP_CONFIG_FILE);
         return -1;
     } else {
-        log_file_write("%s opened successfully", TSP_CONFIG_FILE);
+        LOG_MSG_INFO("%s opened successfully", TSP_CONFIG_FILE);
     }
 
     char buf[CONFIG_LINE_BUFFER_SIZE];
@@ -59,7 +61,7 @@ int TSP_config_init()
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
                 if (uint8_t_val >= 0) {
                     TSP_config.tsp_host_obu_list_timeout = uint8_t_val;
-                    log_file_write("config: tsp_host_obu_list_timeout = %d",
+                    LOG_MSG_INFO("config: tsp_host_obu_list_timeout = %d",
                                    TSP_config.tsp_host_obu_list_timeout);
                     continue;
                 } else {
@@ -75,7 +77,7 @@ int TSP_config_init()
             if (read_uint16_t_from_config_line(buf, &uint16_t_val)) {
                 if (uint16_t_val >= 0) {
                     TSP_config.tsp_remaining_distance_max = uint16_t_val;
-                    log_file_write("config: tsp_remaining_distance_max = %d",
+                    LOG_MSG_INFO("config: tsp_remaining_distance_max = %d",
                                    TSP_config.tsp_remaining_distance_max);
                     continue;
                 } else {

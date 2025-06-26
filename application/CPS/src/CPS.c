@@ -16,9 +16,11 @@
 #include "config.h"
 #include "dispatcher.h"
 #include "log.h"
-#include "post_processing.h"
+#include "util.h"
 #include "timer_event.h"
 #include "typedefine.h"
+
+LOG_USE_MODULE(CPS);
 
 #define CPS_RX_MODE 1 /* should be 0 ~ 1: 0 -> Applicability-oriented BSM
                                        /* 1 -> Performance-oriented BSM  */
@@ -81,7 +83,7 @@ app_obj_t CPS = {
                 width[i], length[i], speed[i]);
                 fprintf(fp4, "%d %f \n", minute[i], second[i]);
             }    
-            // printf("%d\n", )       
+            // LOG_MSG_TRACE("%d", )       
         # endif
         exit(0);
     }
@@ -137,7 +139,7 @@ int CPS_on_camera_packet_rx(void *arg)
     # if CPS_DEBUG > 0 && CPS_DEBUG_APPLI
         obtsmp[cnt] = obstaclelist->tab[1].second;
     # endif
-    // printf("\n--------------next msg, count: %d\n", obstaclelist->count);
+    // LOG_MSG_TRACE("--------------next msg, count: %d", obstaclelist->count);
     for (int i = 0; i < obstaclelist->count; i++) {
         geoinfo_table *table = &g_table[obstaclelist->tab[i].ObstacleID];
 
@@ -165,11 +167,11 @@ int CPS_on_camera_packet_rx(void *arg)
             &(obstaclelist->tab[i].width));
         if (bsm_encode(&tx_buf, &len, &(obstaclelist->tab[i]))) {
             // if (buff_ring_push(bsm, DSRC_send_buffer)){
-            //     printf("push successed\n");
+            //     LOG_MSG_TRACE("push successed");
             //     usleep(50);
             // }
             // encode_cnt++;
-            // printf("encode %d times\n", encode_cnt);
+            // LOG_MSG_TRACE("encode %d times", encode_cnt);
             com_send(OBU_com_id, tx_buf, len);
             # if CPS_DEBUG_APPLI > 0 && !CPS_RX_MODE
                 double timestamp;
@@ -253,7 +255,7 @@ int CPS_on_camera_packet_rx_performance(void *arg)
         // bsm->buff = tx_buf;
         // bsm->size = len;
         // if (buff_ring_push(bsm, DSRC_send_buffer)) {
-        //     printf("push successed\n");
+        //     LOG_MSG_TRACE("push successed");
         // }
         # if CPS_DEBUG > 0
             double timestamp;

@@ -9,6 +9,8 @@
 #include "timer_event.h"
 #include "typedefine.h"
 
+LOG_USE_MODULE(MIDDLEWARE);
+
 /* error_status 說明:
 Bit 0: DSRC
 Bit 1: VMS異常
@@ -39,7 +41,7 @@ uint8_t get_error_status()
 void set_dsrc_error(__sigval_t value)
 {
     pthread_mutex_lock(&mutex_error_status);
-    // printf("don't get dsrc heartbeat packet and set dsrc err bit\r\n");
+    // LOG_MSG_TRACE("don't get dsrc heartbeat packet and set dsrc err bit");
     error_status |= DSRC_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     return;
@@ -48,7 +50,7 @@ void set_dsrc_error(__sigval_t value)
 void clear_dsrc_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    // log_file_write("get dsrc heartbeat packet and clear dsrc err bit\r\n");
+    // LOG_MSG_INFO("get dsrc heartbeat packet and clear dsrc err bit");
     error_status &= ~DSRC_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     return;
@@ -73,7 +75,7 @@ void clear_vms_error()
 void set_disk_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    // printf("disk error\n\r");
+    // LOG_MSG_TRACE("disk error\n");
     error_status |= DISK_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     return;
@@ -82,7 +84,7 @@ void set_disk_error()
 void clear_disk_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    // printf("disk normal\n\r");
+    // LOG_MSG_TRACE("disk normal\n");
     error_status &= ~DISK_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
     return;
@@ -109,7 +111,7 @@ void clear_memory_error()
 // init error detect
 void dsrc_error_detect_init(void)
 {
-    log_file_write("init dsrc error detect\r\n");
+    LOG_MSG_INFO("init dsrc error detect");
     create_timer(&dsrc_heartbeat_timer_id, NULL, set_dsrc_error);
     set_timer(dsrc_heartbeat_timer_id, 0, 0, 10, 0);
 }
@@ -128,11 +130,10 @@ void set_tsc_5fcc_error(__sigval_t value)
     pthread_mutex_lock(&mutex_error_status);
     error_status |= TCFAIL_BIT_POSITION;
     pthread_mutex_unlock(&mutex_error_status);
-    log_file_write(
-        "get 5fcc error and going to restart program after 5sec\r\n");
+    LOG_MSG_INFO(
+        "get 5fcc error and going to restart program after 5sec");
     sleep(5);
-    log_file_write("daemon get into kill self for not get 5fcc response\r\n");
-    printf("daemon get into kill self for not get 5fcc response\r\n");
+    LOG_MSG_INFO("daemon get into kill self for not get 5fcc response");
     kill(getpid(), SIGINT);
 
     return;
@@ -153,7 +154,7 @@ void clear_tsc_5fcc_error(void)
 void set_655xx_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    // printf("don't get dsrc heartbeat packet and set dsrc err bit\r\n");
+    // LOG_MSG_TRACE("don't get dsrc heartbeat packet and set dsrc err bit");
     error_status |= TC_655XX_ERR;
     pthread_mutex_unlock(&mutex_error_status);
     return;
@@ -162,7 +163,7 @@ void set_655xx_error()
 void clear_655xx_error()
 {
     pthread_mutex_lock(&mutex_error_status);
-    // log_file_write("get dsrc heartbeat packet and clear dsrc err bit\r\n");
+    // LOG_MSG_INFO("get dsrc heartbeat packet and clear dsrc err bit");
     error_status &= ~TC_655XX_ERR;
     pthread_mutex_unlock(&mutex_error_status);
     return;

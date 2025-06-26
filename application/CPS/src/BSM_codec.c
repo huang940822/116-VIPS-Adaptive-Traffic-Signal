@@ -13,22 +13,28 @@
 #include "ObstacleList.h"
 #include "asn1defs_if.h"
 #include "j2735_codec.h"
+
+LOG_USE_MODULE(CPS);
+
 extern pthread_mutex_t lock;
 void bsm_print(BasicSafetyMessage *bsm)
 {
     int i, fbs;
 
-    printf("Decoded BSM\n");
-    printf("  coreData.msgCnt: %u\n", bsm->coreData.msgCnt);
-    printf("  coreData.id: ");
+    LOG_MSG_TRACE("Decoded BSM");
+    LOG_MSG_TRACE("  coreData.msgCnt: %u", bsm->coreData.msgCnt);
+    char core_data_str[LOG_CONTENT_LEN];
+    memset(core_data_str, 0, sizeof(core_data_str));
+
+    LOG_MSG_APPEND(core_data_str, "  coreData.id: ");
     /* the array-like type, such as string or byte array is described by buf and
      * len */
     for (i = 0; i < bsm->coreData.id.len; i++) {
-        printf("%hhx", bsm->coreData.id.buf[i]);
+        LOG_MSG_APPEND(core_data_str, "%hhx", bsm->coreData.id.buf[i]);
     }
-    printf("\n");
-    printf("  secMark: %d\n", bsm->coreData.secMark);
-    printf("  transmission: %d\n", bsm->coreData.transmission);
+    LOG_MSG_TRACE(core_data_str);
+    LOG_MSG_TRACE("  secMark: %d", bsm->coreData.secMark);
+    LOG_MSG_TRACE("  transmission: %d", bsm->coreData.transmission);
 
     /* the data is included only when the optional field is TRUE */
     if (bsm->partII_option) {
@@ -36,25 +42,25 @@ void bsm_print(BasicSafetyMessage *bsm)
          * "count"  */
         for (i = 0; i < bsm->partII.count; i++) {
             PartIIcontent *part2 = &(bsm->partII.tab[i]);
-            printf("  partII[%d]:\n", i);
-            printf("    partII_Id: %d\n", part2->partII_Id);
+            LOG_MSG_TRACE("  partII[%d]:", i);
+            LOG_MSG_TRACE("    partII_Id: %d", part2->partII_Id);
             switch (part2->partII_Id) {
             case VehicleSafetyExt:
-                printf("     case VehicleSafetyExt: ");
+                LOG_MSG_TRACE("     case VehicleSafetyExt: ");
                 /* by the Find First Set bit function, you can get the flag */
                 fbs = asn1_bstr_ffs(&(part2->u.safetyExt->lights));
                 switch (fbs) {
                 case ExteriorLights_lowBeamHeadlightsOn:
-                    printf("ExteriorLights_lowBeamHeadlightsOn\n");
+                    LOG_MSG_TRACE("ExteriorLights_lowBeamHeadlightsOn");
                     break;
                 case ExteriorLights_highBeamHeadlightsOn:
-                    printf("ExteriorLights_highBeamHeadlightsOn\n");
+                    LOG_MSG_TRACE("ExteriorLights_highBeamHeadlightsOn");
                     break;
                 case ExteriorLights_leftTurnSignalOn:
-                    printf("ExteriorLights_leftTurnSignalOn\n");
+                    LOG_MSG_TRACE("ExteriorLights_leftTurnSignalOn");
                     break;
                 default:
-                    printf("%d\n", fbs);
+                    LOG_MSG_TRACE("%d", fbs);
                 }
                 break;
             case SpecialVehicleExt:
@@ -85,10 +91,10 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
      * recursively */
     bsm = (BasicSafetyMessage *) j2735_msg_prealloc(BasicSafetyMessage_Id);
     if (bsm == NULL) {
-        printf("bsm alloc failed!\n");
+        LOG_MSG_TRACE("bsm alloc failed!");
     }
     bsm->coreData.msgCnt = (msg_cnt++) % 127;
-    // printf("message count %d\n", bsm->coreData.msgCnt);
+    // LOG_MSG_TRACE("message count %d", bsm->coreData.msgCnt);
 
     /* Set fixed id */
     // asn1_ostr_clone_cstr(&(bsm->coreData.id), id, 4);
@@ -170,14 +176,14 @@ int bsm_encode(uint8_t **tx_buf, int *tx_buf_len, Obstacle *obstacle)
 
     if (*tx_buf_len <= 0) {
         ret = 0;
-        printf("failed to encode the msg\n");
-        printf("%s\n", err->msg);
-        printf("%d\n", err->msg_len);
-        printf("%d\n", err->bit_pos);
-        printf("%d\n", err->msg_len);
+        LOG_MSG_TRACE("failed to encode the msg");
+        LOG_MSG_TRACE("%s", err->msg);
+        LOG_MSG_TRACE("%d", err->msg_len);
+        LOG_MSG_TRACE("%d", err->bit_pos);
+        LOG_MSG_TRACE("%d", err->msg_len);
     } else {
-        // printf("encode successfully\n");
-        // printf("encoded %d byte\n", *tx_buf_len);
+        // LOG_MSG_TRACE("encode successfully");
+        // LOG_MSG_TRACE("encoded %d byte", *tx_buf_len);
         // dump_mem(*tx_buf, *tx_buf_len);
     }
     /* free the memory for encoding */
@@ -213,7 +219,7 @@ int bsm_encode_reg(uint8_t **tx_buf,
      * recursively */
     bsm = (BasicSafetyMessage *) j2735_msg_prealloc(BasicSafetyMessage_Id);
     if (bsm == NULL) {
-        printf("bsm alloc failed!\n");
+        LOG_MSG_TRACE("bsm alloc failed!");
     }
     bsm->coreData.msgCnt = (msg_cnt++) % 127;
 
@@ -255,14 +261,14 @@ int bsm_encode_reg(uint8_t **tx_buf,
 
     if (*tx_buf_len <= 0) {
         ret = 0;
-        printf("failed to encode the msg\n");
-        printf("%s\n", err->msg);
-        printf("%d\n", err->msg_len);
-        printf("%d\n", err->bit_pos);
-        printf("%d\n", err->msg_len);
+        LOG_MSG_TRACE("failed to encode the msg");
+        LOG_MSG_TRACE("%s", err->msg);
+        LOG_MSG_TRACE("%d", err->msg_len);
+        LOG_MSG_TRACE("%d", err->bit_pos);
+        LOG_MSG_TRACE("%d", err->msg_len);
     } else {
-        // printf("encode successfully\n");
-        // printf("encoded %d byte\n", *tx_buf_len);
+        // LOG_MSG_TRACE("encode successfully");
+        // LOG_MSG_TRACE("encoded %d byte", *tx_buf_len);
         // dump_mem(*tx_buf, *tx_buf_len);
     }
     /* free the memory for encoding */
@@ -282,14 +288,14 @@ void bsm_decode(uint8_t *rx_buf, int rx_buf_len)
     /* a pointer to containing decoded msg */
     MessageFrame *p_msgf;
 
-    printf("BSM decoding data:\n");
+    LOG_MSG_TRACE("BSM decoding data:");
     J2735CodecErr *err = (J2735CodecErr *) malloc(sizeof(J2735CodecErr));
     err->msg = (char *) malloc(sizeof(char) * 20);
     ret = j2735_msg_decode(&p_msgf, rx_buf, rx_buf_len, err);
     if (ret < 0) {
         /* handling the decoding error */
-        printf("decode msg error\n");
-        printf("%s\n", err->msg);
+        LOG_MSG_TRACE("decode msg error");
+        LOG_MSG_TRACE("%s", err->msg);
     } else if ((ret > 0) && (p_msgf->messageId == BasicSafetyMessage_Id)) {
         // bsm_print((BasicSafetyMessage *)(p_msgf->u.data));
         J2735_FREE_MSG_FRAME(p_msgf);

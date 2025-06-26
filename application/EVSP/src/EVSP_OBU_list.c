@@ -12,6 +12,8 @@
 #include "log.h"
 #include "timer_event.h"
 
+LOG_USE_MODULE(EVSP);
+
 EVSP_host_OBU_obj_t *EVSP_host_OBU_list_head = NULL;
 pthread_mutex_t EVSP_host_OBU_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -171,29 +173,25 @@ void EVSP_host_OBU_obj_print()
 {
     char log_content[LOG_CONTENT_LEN + 1];
     memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-             LOG_CONTENT_LEN - strlen(log_content), "EVSP host OBU list:");
+    LOG_MSG_APPEND(log_content, "EVSP host OBU list:");
 
     pthread_mutex_lock(&EVSP_host_OBU_list_mutex);
     EVSP_host_OBU_obj_t *current = EVSP_host_OBU_list_head;
     /* empty list */
     if (current == NULL) {
         pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\nempty list");
-        log_file_write(log_content);
+        LOG_MSG_APPEND(log_content, "\nempty list");
+        LOG_MSG_INFO(log_content);
         return;
     }
 
     /* traverse host OBU list */
     while (current != NULL) {
-        snprintf(log_content + strlen(log_content),
-                 LOG_CONTENT_LEN - strlen(log_content), "\n%s (%d)",
-                 current->OBU_name, current->target_phase);
+        LOG_MSG_APPEND(log_content, "\n%s (%d)", current->OBU_name, current->target_phase);
         /* last node */
         if (current->next == NULL) {
             pthread_mutex_unlock(&EVSP_host_OBU_list_mutex);
-            log_file_write(log_content);
+            LOG_MSG_INFO(log_content);
             return;
         }
         current = current->next;

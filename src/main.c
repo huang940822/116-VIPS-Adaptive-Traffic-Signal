@@ -12,6 +12,7 @@
 #include "SPM.h"
 #include "TIB.h"
 #include "TSP.h"
+#include "WA.h"
 
 #include "OBU_record_processing.h"
 #include "application_registration.h"
@@ -36,6 +37,8 @@
 #include "typedefine.h"
 #include "vms.h"
 
+LOG_USE_MODULE(MIDDLEWARE);
+
 extern uint8_t flag_pretime;
 extern uint8_t flag_countdown_on;
 extern uint8_t flag_countdown_off;
@@ -52,9 +55,9 @@ void signalUnExpectedHandler(int sig_num)
     // signal(SIGINT, sigintHandler);
     register_handler_for_unexpected_signal();
     // pthread_mutex_lock(&mutex_uart_comple_protect);
-    printf("get in mutex in signal handler for unexpected signal\r\n");
-    printf("the signal number is %d\r\n", sig_num);
-    printf("\nuart write actions has all be completed before exit from process\n");
+    LOG_MSG_TRACE("get in mutex in signal handler for unexpected signal");
+    LOG_MSG_TRACE("the signal number is %d", sig_num);
+    LOG_MSG_TRACE("uart write actions has all be completed before exit from process");
 
     event_middleware_restart_handler();
 
@@ -71,13 +74,13 @@ int register_handler_for_unexpected_signal()
     /* handling unexpected SIGINT signal */
     ret_p = signal(SIGINT, signalUnExpectedHandler);
     if (ret_p == SIG_ERR) {
-        printf("Err: signal(SIGINT, ...) failed\r\n");
+        LOG_MSG_TRACE("Err: signal(SIGINT, ...) failed");
         return -1;
     }
     /* handling unexpected SIGPIPE signal */
     ret_p = signal(SIGPIPE, signalUnExpectedHandler);
     if (ret_p == SIG_ERR) {
-        printf("Err: signal(SIGPIPE, ...) failed\r\n");
+        LOG_MSG_TRACE("Err: signal(SIGPIPE, ...) failed");
         return -2;
     }
     /* other signal if you want ... */
@@ -92,8 +95,8 @@ int main()
     // signal(SIGINT, sigintHandler); //old version
     ret = register_handler_for_unexpected_signal();
     if (ret) {
-        printf("%s, register_handler_for_unexpected_signal() failed\r\n", __func__);
-        printf("return value is %d\r\n", ret);
+        LOG_MSG_TRACE("%s, register_handler_for_unexpected_signal() failed", __func__);
+        LOG_MSG_TRACE("return value is %d", ret);
         fflush(stdout);
         exit(0);
     }
@@ -103,18 +106,18 @@ int main()
     /* log init */
     log_file_init();  // 一個timer被created
 
-    log_file_write("version : v2.6.0");
+    LOG_MSG_INFO("version : v2.6.0");
 
     /* read config file*/
     ret = config_init();
     if (ret != CONFIG_ACCEPT) {
-        log_file_write_fatal_error("error reading config file: %d", ret);
+        LOG_MSG_FATAL("error reading config file: %d", ret);
     }
 
     /*read vms config file*/
     ret = vms_config_init();
     if (ret != VMS_CONFIG_ACCEPT) {
-        log_file_write_fatal_error("error reading vms config file: %d", ret);
+        LOG_MSG_FATAL("error reading vms config file: %d", ret);
     }
 
     // init dsrc error detect
@@ -123,7 +126,7 @@ int main()
     // init tc fail detect
     tc_5fcc_error_detect_init();
 
-    printf("query tc firmware version\r\n");
+    LOG_MSG_TRACE("query tc firmware version");
     flag_query_firm_ver = true;
 
     // /* taffic signal packet serial port init */
@@ -135,7 +138,7 @@ int main()
     ret = pthread_create(&traffic_signal_packet_rx_thread, NULL,
                          traffic_signal_packet_rx_handler, NULL);
     if (ret != 0) {
-        log_file_write_fatal_error(
+        LOG_MSG_FATAL(
             "error creating traffic_signal_packet_rx_thread: %d", ret);
         perror("main: pthread_create");
         exit(errno);
@@ -144,7 +147,7 @@ int main()
     pthread_t vms_thread;  // vms thread
     ret = pthread_create(&vms_thread, NULL, vms_handler, NULL);
     if (ret != 0) {
-        log_file_write_fatal_error(
+        LOG_MSG_FATAL(
             "error creating vms_thread: %d", ret);
         perror("main: pthread_create");
         exit(errno);
@@ -171,7 +174,7 @@ int main()
     J2735Config cfg;
     ret = j2735_init(&cfg);
     if (!IS_SUCCESS(ret)) {
-        printf("Fail to init J2735\n");
+        LOG_MSG_TRACE("Fail to init J2735");
         return -1;
     }
 
@@ -183,21 +186,22 @@ int main()
         // &CPS,
         &TIB,
         &SPM,
+        &WA,
     };
 
     /* 注意有些 app 的 on_registration() 會 create timer */
     /* 已知的有 MAP, TSP(預計會改至 MMP), */
     int app_arr_len = sizeof(app_arr) / sizeof(app_obj_t *);
     for (int i = 0; i < app_arr_len; i++) {
-        printf("handling app_name: %s, id: %d, prio: %d\n",
-               app_arr[i]->name, app_arr[i]->id, app_arr[i]->priority);
+        LOG_MSG_TRACE("handling app_name: %s, id: %d, prio: %d",
+                app_arr[i]->name, app_arr[i]->id, app_arr[i]->priority);
         ret = app_register(app_arr[i]);
-        // printf("register = %s\n", app_arr[i]->name);
+        // LOG_MSG_TRACE("register = %s", app_arr[i]->name);
         if (ret != 0) {
-            log_file_write_fatal_error("error registering application: %d (%s)",
-                                       ret, app_arr[i]->name);
+            LOG_MSG_FATAL("error registering application: %d (%s)",
+                    ret, app_arr[i]->name);
         } else {
-            log_file_write("%s register successfully", app_arr[i]->name);
+            LOG_MSG_INFO("%s register successfully", app_arr[i]->name);
         }
     }
 
@@ -214,7 +218,7 @@ int main()
     pthread_t dispatcher_thread;
     ret = pthread_create(&dispatcher_thread, NULL, dispatcher_handler, NULL);
     if (ret != 0) {
-        log_file_write_fatal_error("error creating dispatcher_thread: %d", ret);
+        LOG_MSG_FATAL("error creating dispatcher_thread: %d", ret);
         perror("main: pthread_create");
         exit(errno);
     }
@@ -224,7 +228,7 @@ int main()
     // UNIX domain socket和 epoll 的綜合應用，適合用於需要高效管理多個客戶端連接和事件的應用場景
     ret = pthread_create(&external_app_proxy_thread, NULL, external_app_proxy_main_handler, NULL);
     if (ret != 0) {
-        log_file_write_fatal_error("error creating external_app_proxy_main_handler: %d", ret);
+        LOG_MSG_FATAL("error creating external_app_proxy_main_handler: %d", ret);
         perror("main: pthread_create");
         exit(errno);
     }
