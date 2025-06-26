@@ -545,8 +545,15 @@ double Pedestrian_packet_rx_event_handler(msg_obj_t *msg)
 
     // Create the StringObject and store the "HELLOWORLD" bytes
     PedestrianList *pedestrianlist = (PedestrianList *)malloc(sizeof(PedestrianList));
-    read_uint8_t(&pedestrianlist->camera_no,&read_buf);
-    read_uint8_t(&pedestrianlist->count,&read_buf);
+    int32_t hour, min;
+    float second;
+
+    read_uint32_t(&pedestrianlist->device_num, &read_buf);
+    read_uint32_t(&pedestrianlist->camera_no,&read_buf);
+    read_uint32_t(&hour, &read_buf);
+    read_uint32_t(&min, &read_buf);
+    read_float(&second, &read_buf);
+    read_uint32_t(&pedestrianlist->count,&read_buf);
     pedestrianlist->tab = 
         (Pedestrian* ) calloc(sizeof(Pedestrian), pedestrianlist->count);
 

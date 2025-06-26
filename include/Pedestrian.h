@@ -19,8 +19,9 @@ typedef struct Pedestrian {
 
 typedef struct PedestrianList {
     Pedestrian *tab;
-    uint8_t count;
-    uint8_t camera_no;
+    uint32_t count;
+    uint32_t camera_no;
+    uint32_t device_num;
 } PedestrianList;
 
 

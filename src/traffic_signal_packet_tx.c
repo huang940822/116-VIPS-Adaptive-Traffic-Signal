@@ -88,6 +88,29 @@ uint8_t tsc_pretime()
     }
     return ret;
 }
+uint8_t tsc_switch_strategy()//在tsc_switch前先下
+{
+    traffic_signal_packet_t *packet;
+    Malloc(packet, MAX_PACKET_LEN, "tsc_switch_strategy()");
+
+    signal_packet_init;
+
+    packet->SEQ = get_seq_num();
+    packet->LEN[0] = PRETIME_LEN0_VAL;
+    packet->LEN[1] = PRETIME_LEN1_VAL;
+    packet->INFO[0] = 0x5F;
+    packet->INFO[1] = 0x10;
+    packet->INFO[2] = 0x16;//原本是05
+    // packet->INFO[2] = 0x01; //照介庸建議
+    packet->INFO[3] = 0x00;//00
+
+    uint8_t ret = TC_packet_tx(packet, "signal packet tx: SWITCH_STRATEGY");
+    if (packet != NULL) {
+        free(packet);
+    }
+    return ret;
+}
+
 
 // 強制到下一個step?沒用到
 uint8_t tsc_switch()

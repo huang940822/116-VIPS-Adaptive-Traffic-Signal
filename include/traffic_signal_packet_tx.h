@@ -27,7 +27,7 @@ extern pthread_mutex_t mutex_rs232_write;
 
 uint8_t tsc_dynamic();
 uint8_t tsc_pretime();
-
+uint8_t tsc_switch_strategy();//在tsc_switch前先下
 uint8_t tsc_switch();
 uint8_t tsc_extend(uint8_t subphase, uint8_t step, uint8_t effect_time);
 

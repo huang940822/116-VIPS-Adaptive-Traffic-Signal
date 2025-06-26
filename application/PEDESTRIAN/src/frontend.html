@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pedestrian Traffic Light</title>
   <style>
     body {
@@ -33,11 +34,11 @@
       opacity: 0;
       transition: opacity 0.5s;
       position: absolute;
-      z-index: 2; /* 加這個就能跳到最上層 */
+      z-index: 2;
     }
 
     .active {
-      opacity: 1;/*顯示在網頁上*/
+      opacity: 1;
     }
 
     .blink {
@@ -45,40 +46,46 @@
     }
 
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 1.2em;
     }
   </style>
 </head>
+
 <body>
   <div id="light">
-    <!-- 小紅人 (SVG) -->
-    <img id="redIcon" class="icon" src="" style="display: none;" />
-      
-    </svg>
-
-    <!-- 小綠人 (SVG 預設靜止狀態，可加回來用 -->
+    <img id="redIcon" class="icon" src="sprite_red.png" style="display: none;" />
     <svg id="greenIcon" class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="60" height="60" fill="green" rx="10" ry="10"/>
-      <path d="M32 20 L28 30 L26 45 L36 45 L34 30 L32 20 Z" fill="white"/>
+      <rect x="2" y="2" width="60" height="60" fill="green" rx="10" ry="10" />
+      <path d="M32 20 L28 30 L26 45 L36 45 L34 30 L32 20 Z" fill="white" />
     </svg>
-
-    <!-- 綠人動畫 (圖片輪播) -->
-    <img id="greenAnimation" class="icon" src="" style="display: none;" />
-    
-</div>
+    <img id="greenAnimation" class="icon" src="sprite_0.png" style="display: none;" />
+    <div id="status">🚦 正在連線號誌控制器...</div>
+  </div>
 
   <script>
     window.onload = function () {
-      //const socket = new WebSocket("ws://localhost:8080");
       const socket = new WebSocket("ws://140.116.245.236:8080");
-      //const socket = new WebSocket("tcp://0.tcp.jp.ngrok.io:13223"); // 使用 ngrok 轉發的 TCP 地址
-      //const socket = new WebSocket("wss://d818-59-127-27-251.ngrok-free.app"); // 使用 ngrok 轉發的 TCP 地址
 
       const redIcon = document.getElementById("redIcon");
       const greenIcon = document.getElementById("greenIcon");
       const greenAnimation = document.getElementById("greenAnimation");
-      const greenFlashAnimation = document.getElementById("greenAnimation");
+      const statusText = document.getElementById("status");
 
       const frameCount = 5;
       let currentFrame = 0;
@@ -87,37 +94,30 @@
       function startGreenAnimation() {
         greenIcon.style.display = "none";
         greenAnimation.style.display = "block";
-        greenAnimation.classList.add("active"); 
+        greenAnimation.classList.add("active");
         currentFrame = 0;
-
         animationInterval = setInterval(() => {
-          greenAnimation.src = `sprite_${currentFrame}.png`; // 圖片檔命名要正確
-          currentFrame = (currentFrame+1) % frameCount ;
-          
-          
-        }, 300); // 每 0.3 秒切換
+          greenAnimation.src = `sprite_${currentFrame}.png`;
+          currentFrame = (currentFrame + 1) % frameCount;
+        }, 300);
       }
 
       function startGreenFlashAnimation() {
         greenIcon.style.display = "none";
         greenAnimation.style.display = "block";
         greenAnimation.classList.add("active");
-
-        // 預設從第 0 張圖開始
-        let sequence = [0, 5, 1, 5, 2, 5, 3, 5, 4, 5]; // 輪播順序
+        let sequence = [0, 5, 1, 5, 2, 5, 3, 5, 4, 5];
         let currentIndex = 0;
-        
         animationInterval = setInterval(() => {
-            const currentFrame = sequence[currentIndex];
-            greenAnimation.src = `sprite_${currentFrame}.png`; // 切換圖片
-            currentIndex = (currentIndex + 1) % sequence.length; // 更新索引（按序輪播）
-
-        }, 300); // 每 0.3 秒換一張圖片
+          const currentFrame = sequence[currentIndex];
+          greenAnimation.src = `sprite_${currentFrame}.png`;
+          currentIndex = (currentIndex + 1) % sequence.length;
+        }, 300);
       }
 
       function stopGreenAnimation() {
         clearInterval(animationInterval);
-        greenAnimation.classList.remove("active"); 
+        greenAnimation.classList.remove("active");
         greenAnimation.style.display = "none";
         greenIcon.style.display = "none";
       }
@@ -125,27 +125,51 @@
       socket.onmessage = function (event) {
         const signal = event.data;
         console.log("Received signal:", signal);
+        statusText.innerText = `🚦 目前號誌：${signal}`;
 
         redIcon.classList.remove("active");
-        //greenIcon.classList.remove("active", "blink");
         stopGreenAnimation();
 
-        if (signal === "Red") {
-            redIcon.src = "sprite_red.png"; // 設定紅燈圖片
-            redIcon.style.display = "block"; // 顯示紅燈
-            redIcon.classList.add("active");
-
-        } else if (signal === "Green") {
+        if (signal === "Red" || signal === "Red(CarPhase)" || signal === "Red(CarPhase), 行人即將放行") {
+          redIcon.style.display = "block";
+          redIcon.classList.add("active");
+        } 
+        // else if (signal === "Red(CarPhase)"){
+        //   redIcon.style.display = "block";
+        //   redIcon.classList.add("active");
+        // }
+        else if (signal === "Green") {
           startGreenAnimation();
         } else if (signal === "GreenFlash") {
-            startGreenFlashAnimation();
+          startGreenFlashAnimation();
+        } 
+        // else if (signal === "Ready") {
+        //   statusText.innerText = "🟢 行人即將放行，請準備！";
+        //   // 也可以顯示一個新圖示或動畫
+        //   greenIcon.style.display = "block";
+        //   greenIcon.classList.add("blink"); // 例如閃爍
+        // }
+        else if (signal === "car mode start") {
+          statusText.innerText = "車輛時相開始";
         }
       };
 
-      socket.onopen = () => console.log("Connected");
-      socket.onclose = () => console.log("Disconnected");
-      socket.onerror = (err) => console.log("Error:", err);
+      socket.onopen = () => {
+        console.log("Connected");
+        statusText.innerText = "✅ 已連線，等待號誌訊號...";
+      };
+
+      socket.onclose = () => {
+        console.log("Disconnected");
+        statusText.innerText = "❌ 已斷線，請重整頁面";
+      };
+
+      socket.onerror = (err) => {
+        console.log("Error:", err);
+        statusText.innerText = "⚠️ WebSocket 錯誤";
+      };
     };
   </script>
 </body>
+
 </html>
