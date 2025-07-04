@@ -335,7 +335,7 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
         time_t now = time(NULL);
         //長時間未收到封包
         for (int i = 3; i <= 8; i++) {
-            if (difftime(now, last_update_time[i]) >= 3) {
+            if (difftime(now, last_update_time[i]) >= 6) {
                 // 該攝影機超過3秒沒更新，將對應matrix歸零
                 row_to_zero = (i - 3) * 2;
                 for (int r = row_to_zero; r <= row_to_zero + 1; r++) {
