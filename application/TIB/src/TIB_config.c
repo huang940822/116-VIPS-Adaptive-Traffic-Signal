@@ -14,16 +14,45 @@ LOG_USE_MODULE(TIB);
 TIB_config_object_t TIB_config = {
     .MAP_packet_transfer_speed = 1,
     .SPaT_packet_transfer_speed = 10,
+    .general_packet_time_per_cycle = 0.5,
+    .MAP_packet_cycle_per_transfer = 1,
+    .SPaT_packet_cycle_per_transfer = 2,
+    .TIM_packet_cycle_per_transfer = 2,
+    .EVA_packet_cycle_per_transfer = 2,
+    .RSA_packet_cycle_per_transfer = 2,  
+    .PSM_packet_cycle_per_transfer = 2,  
     .TIB_dontSend2TC = 1,
     .lane_list = {0},
     .connectsTo_list = {0},
     .MAP_lane_approach = {0},
+    .TIM_table = {0},
+    
 };
 
+static bool read_float_from_config_line(char *config_line, float *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    *val = 0;
+    if (sscanf(config_line, "%s %f \n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool read_int_from_config_line(char *config_line, int *val)
+{
+    char prm_name[MAX_CONFIG_VARIABLE_LEN];
+    *val = 0;
+    if (sscanf(config_line, "%s %d \n", prm_name, val) == 2) {
+        return true;
+    } else {
+        return false;
+    }
+}
 int TIB_config_init()
 {
     FILE *fp;
-
     /* Get file path */
     char file_path[256] = {0};
     char rsu_name[RSU_NAME_MAX_LEN + 1] = {0};
@@ -51,6 +80,9 @@ int TIB_config_init()
     int int_val;
     uint8_t uint8_t_val;
     double double_val;
+    float float_val;
+    int TIM_view_angle_start;
+    int TIM_view_angle_end;
 
 #define FreeAndReturnInvalid(v, errorType, errMsg)                  \
     do {                                                            \
@@ -60,6 +92,24 @@ int TIB_config_init()
         LOG_MSG_FATAL("TIB config error: %s", errMsg); \
         return TIB_CONFIG_##errorType##_INVALID;                    \
     } while (0);
+
+#define TIM_FreeAndReturnInvalid(v, errorType, errMsg)                  \
+    do {                                                            \
+        vector_free(TIB_config.TIM_table);                          \
+        vector_free(v);                                             \
+        LOG_MSG_FATAL("TIB config error: %s", errMsg); \
+        return TIB_CONFIG_##errorType##_INVALID;                    \
+    } while (0);
+
+#define RSA_FreeAndReturnInvalid(v, errorType, errMsg)                  \
+    do {                                                            \
+        vector_free(TIB_config.RSA_table);                          \
+        vector_free(v);                                             \
+        LOG_MSG_FATAL("TIB config error: %s", errMsg); \
+        return TIB_CONFIG_##errorType##_INVALID;                    \
+    } while (0);
+
+
 
     while (!feof(fp)) {
         char *buf = read_line(read_buf, sizeof(read_buf), fp);
@@ -95,7 +145,79 @@ int TIB_config_init()
                 return TIB_CONFIG_INVALID_SPAT_PACKET_TRANSFER_SPEED;
             }
         }
+                
+        if (strstr(buf, "general_packet_time_per_cycle ")) {
+            if (read_float_from_config_line(buf, &float_val)) {
+                if (float_val >= 0) {
+                    TIB_config.general_packet_time_per_cycle = float_val;
+                    LOG_MSG_INFO("config: general_packet_time_per_cycle = %f",
+                                   TIB_config.general_packet_time_per_cycle);
+                    continue;
+                } else {
+                    return TIB_CONFIG_INVALID_GENERAL_PACKET_TIME_PER_CYCLE;
+                }
+            } else {
+                return TIB_CONFIG_INVALID_GENERAL_PACKET_TIME_PER_CYCLE;
+            }
+        }
 
+        if (strstr(buf, "MAP_packet_cycle_per_transfer ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    TIB_config.MAP_packet_cycle_per_transfer = uint8_t_val;
+                    LOG_MSG_INFO("config: MAP_packet_cycle_per_transfer = %d", TIB_config.MAP_packet_cycle_per_transfer);
+                    continue;
+                } else {
+                    return TIB_CONFIG_INVALID_MAP_PACKET_CYCLE_PER_TRANSFER;
+                }
+            } else {
+                return TIB_CONFIG_INVALID_MAP_PACKET_CYCLE_PER_TRANSFER;
+            }
+        }
+
+        if (strstr(buf, "SPaT_packet_cycle_per_transfer ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    TIB_config.SPaT_packet_cycle_per_transfer = uint8_t_val;
+                    LOG_MSG_INFO("config: SPaT_packet_cycle_per_transfer = %d", TIB_config.SPaT_packet_cycle_per_transfer);
+                    continue;
+                } else {
+                    return TIB_CONFIG_INVALID_SPAT_PACKET_CYCLE_PER_TRANSFER;
+                }
+            } else {
+                return TIB_CONFIG_INVALID_SPAT_PACKET_CYCLE_PER_TRANSFER;
+            }
+        }
+        
+        if (strstr(buf, "TIM_packet_cycle_per_transfer ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    TIB_config.TIM_packet_cycle_per_transfer = uint8_t_val;
+                    LOG_MSG_INFO("config: TIM_packet_cycle_per_transfer = %d", TIB_config.TIM_packet_cycle_per_transfer);
+                    continue;
+                } else {
+                    return TIB_CONFIG_INVALID_TIM_PACKET_CYCLE_PER_TRANSFER;
+                }
+            } else {
+                return TIB_CONFIG_INVALID_TIM_PACKET_CYCLE_PER_TRANSFER;
+            }
+        }
+
+        if (strstr(buf, "RSA_packet_cycle_per_transfer ")) {
+            if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
+                if (uint8_t_val >= 0) {
+                    TIB_config.RSA_packet_cycle_per_transfer = uint8_t_val;
+                    LOG_MSG_INFO("config: RSA_packet_cycle_per_transfer = %d", TIB_config.RSA_packet_cycle_per_transfer);
+                    continue;
+                } else {
+                    return TIB_CONFIG_INVALID_RSA_PACKET_CYCLE_PER_TRANSFER;
+                }
+            } else {
+                return TIB_CONFIG_INVALID_RSA_PACKET_CYCLE_PER_TRANSFER;
+            }
+        }
+
+        
         // TIB_dontSend2TC
         if (strstr(buf, "TIB_dontSend2TC ")) {
             if (read_uint8_t_from_config_line(buf, &uint8_t_val)) {
@@ -413,8 +535,252 @@ int TIB_config_init()
                 vector_free(str_arr);
             }
         }
+
+        if (strstr(buf, "TIM_table_start")) {
+            const char delim_TIM[] = ",";
+            vector_init(TIB_config.TIM_table);
+            while (!feof(fp)) {
+                buf = read_line(read_buf, sizeof(read_buf), fp);
+                if (buf == NULL)
+                    return TIB_CONFIG_TIM_table_INVALID;
+
+                if (strstr(buf, "TIM_table_end")) {
+                    break;
+                }
+                vector_t(char *) str_arr, str_arr_tmp;
+                vector_init(str_arr);
+                read_string_arr_from_config_line(buf, &str_arr, TIB_TABLE_DELIM);
+                TIM_config_sign_t TIM_signs = {0};
+
+                if (str_arr.size < 6)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table element err");
+                
+                //TimMsgID
+                int index = 0;
+                char *substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table TimMsgID err");
+                //printf("current TIM_table size: %ld\n",TIB_config.TIM_table.size);
+                if (int_val != TIB_config.TIM_table.size)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table TimMsgID size err");
+                TIM_signs.TimMsgID = int_val;
+                LOG_MSG_INFO("current TIM sign ID as %d\n",TIM_signs.TimMsgID);
+                
+                //FrameType
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table FrameType err");
+                TIM_signs.FrameType = int_val;
+                LOG_MSG_INFO("set frametype as %d\n",TIM_signs.FrameType);
+                
+                //EventLocation
+                substr = vector_at(str_arr, index++);
+                vector_init(TIM_signs.TimPosition);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                TIM_Position_Node_t node_pos;
+                if (str_arr_tmp.size != 2) {
+                    vector_free(str_arr_tmp);
+                    vector_free(TIM_signs.TimPosition);
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table PositionNode err");
+                }
+
+                substr = vector_at(str_arr_tmp, 0);
+                LOG_MSG_INFO("node pos lon: %s",substr);
+                if (substr == NULL || sscanf(substr, "%lf", &node_pos.lon) != 1) {
+                    vector_free(str_arr_tmp);
+                    vector_free(TIM_signs.TimPosition);
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table PositionNode lon err");
+                }
+                //LOG_MSG_INFO("set TIM sign %d node pos lon as %lf\n", TIM_signs.TimMsgID, node_pos.lon);
+                
+                substr = vector_at(str_arr_tmp, 1);
+                LOG_MSG_INFO("node pos lat: %s",substr);
+                if (substr == NULL || sscanf(substr, "%lf", &node_pos.lat) != 1) {
+                    vector_free(str_arr_tmp);
+                    vector_free(TIM_signs.TimPosition);
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table positionNode lat err");
+                }
+                //LOG_MSG_INFO("set TIM sign %d node pos lat as %lf\n", TIM_signs.TimMsgID, node_pos.lat);
+                
+                vector_push_back(TIM_signs.TimPosition, node_pos);
+                str_arr_tmp.size = 0;
+                vector_free(str_arr_tmp);
+
+                //ViewAngle
+                substr = vector_at(str_arr, index++);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                if (str_arr_tmp.size > 2) {
+                    vector_free(str_arr_tmp);
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table ViewAngle err");
+                }
+                for (int i = 0; i < str_arr_tmp.size; i++) {
+                    substr = vector_at(str_arr_tmp, i);
+                    //LOG_MSG_INFO("viewAngle %d as %s\n", i, substr);
+                    if (substr == NULL || sscanf(substr, "%d", &int_val) != 1) {
+                        vector_free(str_arr_tmp);
+                        TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table ViewAngle err");
+                    }
+                    if (i<2)
+                    {
+                        TIM_signs.viewAngle[i] = int_val;
+                        LOG_MSG_INFO("set TIM sign %d viewAngle %d as %d\n",TIM_signs.TimMsgID, i, TIM_signs.viewAngle[i]);
+                    }                    
+                }
+                str_arr_tmp.size = 0;
+                vector_free(str_arr_tmp);
+
+                // Anchor
+                substr = vector_at(str_arr, index++);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                TIM_Position_Node_t anchor_pos;
+                if (str_arr_tmp.size != 2) {
+                    vector_free(str_arr_tmp);
+                }
+
+                substr = vector_at(str_arr_tmp, 0);
+                LOG_MSG_INFO("anchor node pos lon: %s",substr);
+                if (substr == NULL || sscanf(substr, "%lf", &anchor_pos.lon) != 1) {
+                    vector_free(str_arr_tmp);
+                }
+                LOG_MSG_INFO("set TIM sign %d anchor node pos lon as %lf\n", TIM_signs.TimMsgID, anchor_pos.lon);
+                TIM_signs.anchor[0] = anchor_pos.lon;
+
+                substr = vector_at(str_arr_tmp, 1);
+                LOG_MSG_INFO("anchor node pos lat: %s",substr);
+                if (substr == NULL || sscanf(substr, "%lf", &anchor_pos.lat) != 1) {
+                    vector_free(str_arr_tmp);
+                    //vector_free(TIM_signs.TimPosition);
+                    //TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table AnchorNode lat err");
+                }
+                LOG_MSG_INFO("set TIM sign %d node pos lat as %lf\n", TIM_signs.TimMsgID, anchor_pos.lat);
+                TIM_signs.anchor[1] = anchor_pos.lat;
+
+                str_arr_tmp.size = 0;
+                vector_free(str_arr_tmp);
+
+                //ViewPath Broadcast Directionality
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table Directionality err");
+                //printf("current TIM_table size: %ld\n",TIB_config.TIM_table.size);
+                TIM_signs.directionality = int_val;
+                LOG_MSG_INFO("current TIM sign directionality as %d\n",TIM_signs.directionality);
+
+                //ViewPath Broadcast Direction
+                substr = vector_at(str_arr, index++);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                for (int i = 0; i < str_arr_tmp.size; i++) {
+                    substr = vector_at(str_arr_tmp, i);
+                    //LOG_MSG_INFO("BroadcastDirection %d as %s\n", i, substr);
+                    if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
+                        vector_free(str_arr_tmp);
+                        TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table BroadcastDirection err");
+                    }
+                    if (i<2)
+                    {
+                        TIM_signs.BroadcastDirection[i] = uint8_t_val;
+                        LOG_MSG_INFO("set TIM sign %d BroadcastDirection %d as %d\n", TIM_signs.TimMsgID, i, TIM_signs.BroadcastDirection[i]);
+                    }                    
+                }
+                vector_free(str_arr_tmp);
+
+                // ViewPath Node count
+                int node_count;
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%d", &node_count) != 1)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table node_count err");
+                LOG_MSG_INFO("set TIM sign %d viewpath node count as %d", TIM_signs.TimMsgID, node_count);
+                if (str_arr.size < index + node_count){
+                    for (int i = 0; i < str_arr.size; i++) {
+                        char *s = vector_at(str_arr, i);
+                        LOG_MSG_INFO("str_arr[%d] = '%s'", i, s);
+                    }
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table node_count size err");
+                }
+                // int node_count = atoi(vector_at(str_arr, 5));
+
+                // for (int i = 0; i < node_count; ++i) {
+                //     double lon = 0, lat = 0;
+                //     const char *node_str = vector_at(str_arr, 6 + i);
+                //     if (sscanf(node_str, "%lf %lf", &lon, &lat) != 2) {
+                //         TIM_FreeAndReturnInvalid(str_arr, TIM_table, "Invalid node lon/lat pair");
+                //     }
+                //     LOG_MSG_INFO("Parsed Node[%d] lon=%lf, lat=%lf", i, lon, lat);
+                //     // 存入你的 node 結構
+                // }
+                    
+                
+                //ViewPath Position lat lon
+                vector_init(TIM_signs.TimPath);
+                vector_init(str_arr_tmp);
+                for (int i = 0; i < node_count; i++) {
+                    TIM_Path_Node_t path_node;
+                    substr = vector_at(str_arr, index++);
+                    read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                    if (str_arr_tmp.size != 2) {
+                        vector_free(str_arr_tmp);
+                        vector_free(TIM_signs.TimPath);
+                        TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table ViewPath node err");
+                    }
+
+                    substr = vector_at(str_arr_tmp, 0);
+                    LOG_MSG_INFO ("ViewPath %d lon: %s", i, substr);
+                    if (substr == NULL || sscanf(substr, "%lf", &path_node.lon) != 1) {
+                        vector_free(str_arr_tmp);
+                        vector_free(TIM_signs.TimPath);
+                        TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table ViewPath node err");
+                    }
+                    
+                    substr = vector_at(str_arr_tmp, 1);
+                    LOG_MSG_INFO ("ViewPath %d lat: %s", i, substr);
+                    if (substr == NULL || sscanf(substr, "%lf", &path_node.lat) != 1) {
+                        vector_free(str_arr_tmp);
+                        vector_free(TIM_signs.TimPath);
+                        TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table ViewPath node err");
+                    }
+                    
+                    vector_push_back(TIM_signs.TimPath, path_node);
+                    str_arr_tmp.size = 0;
+                    LOG_MSG_INFO("set TIM sign %d ViewPath node %d lon as %lf\n",TIM_signs.TimMsgID, i, path_node.lon);
+                    LOG_MSG_INFO("set TIM sign %d ViewPath node %d lat as %lf\n",TIM_signs.TimMsgID, i, path_node.lat);
+                    LOG_MSG_INFO("ViewPath vector size: %d\n",TIM_signs.TimPath.size);
+                }
+                vector_free(str_arr_tmp);
+
+                //EventType
+                substr = vector_at(str_arr, index++);
+                if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
+                    TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table EventType err");
+                TIM_signs.eventType = int_val;
+
+                //EventDescription
+                substr = vector_at(str_arr, index++);
+                vector_init(str_arr_tmp);
+                read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
+                for (int i = 0; i < str_arr_tmp.size; i++) {
+                    substr = vector_at(str_arr_tmp, i);
+                    if (substr == NULL || sscanf(substr, "%d", &int_val) != 1) {
+                        vector_free(str_arr_tmp);
+                        TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table EventDescription err");
+                    }
+                    if (i<8)
+                    {
+                        TIM_signs.EventDescription[i] = int_val;
+                        LOG_MSG_INFO("set TIM sign %d EventDescription %d as %d\n", TIM_signs.TimMsgID, i, TIM_signs.EventDescription[i]);                
+                    }
+                }
+                vector_free(str_arr_tmp);
+                vector_free(str_arr);
+                vector_push_back(TIB_config.TIM_table, TIM_signs);
+            }
+        }             
     }
 #undef FreeAndReturnInvalid
+#undef TIM_FreeAndReturnInvalid
     fclose(fp);
     return TIB_CONFIG_ACCEPT;
 }
@@ -422,78 +788,153 @@ int TIB_config_init()
 void print_config_map(MapData *map, char *buf, int buf_len)
 {
     // if (map->intersections.count != 1) {
-    //     LOG_MSG_APPEND(log_content, "intersections.count only can be 1, but is %d", map->intersections.count);
+    //     snprintf(buf, buf_len, "intersections.count only can be 1, but is %d", map->intersections.count);
     //     return;
     // }
     LaneList *laneSet = &map->intersections.tab[0].laneSet;
-    LOG_MSG_APPEND(buf, "lane_index, laneID, node_index, lat, lon\n");
+    snprintf(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
 
     for (int i = 0; i < laneSet->count; i++) {
         for (int j = 0; j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
-            LOG_MSG_APPEND(buf, "%d, ", i);
-            LOG_MSG_APPEND(buf, "%d, ", laneSet->tab[i].laneID);
-            LOG_MSG_APPEND(buf, "%d, ", j);
-            LOG_MSG_APPEND(buf, "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
-            LOG_MSG_APPEND(buf, "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", laneSet->tab[i].laneID);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", j);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
         }
     }
     for (int i = 0; i < laneSet->count; i++) {
         if (laneSet->tab[i].connectsTo_option == FALSE)
             continue;
-        LOG_MSG_APPEND(buf, "%d, ", i);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
         ConnectsToList *connlist = &laneSet->tab[i].connectsTo;
-        LOG_MSG_APPEND(buf, "%d, ", connlist->count);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->count);
         for (int k = 0; k < connlist->count; k++) {
-            LOG_MSG_APPEND(buf, "%d, ", connlist->tab[k].connectingLane.lane);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->tab[k].connectingLane.lane);
         }
-        LOG_MSG_APPEND(buf, "\n");
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
     }
     for (int i = 0; i < COMPASS_NUM; i++) {
         MAP_config_lane_t *lane, *safe;
-        LOG_MSG_APPEND(buf, "Road %d: ", i);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "Road %d: ", i);
         list_for_each_entry_safe(lane, safe, &TIB_config.MAP_lane_approach[i], approach_node)
         {
-            LOG_MSG_APPEND(buf, "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
         }
-        LOG_MSG_APPEND(buf, "\n");
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
     }
 
     LOG_MSG_INFO("Map Config init %s", buf);
     memset(buf, 0, buf_len);
 
-    LOG_MSG_APPEND(buf, "connectsTo_list \n");
+    log_snprintf(buf, "connectsTo_list \n");
     for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {
         MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);
-        LOG_MSG_APPEND(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
+        log_snprintf(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
         for (int j = 0; j < connectsTo->left_laneId.size; j++) {
-            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->left_laneId, j));
+            log_snprintf(buf, "%d ", vector_at(connectsTo->left_laneId, j));
         }
-        LOG_MSG_APPEND(buf, "\n straight_laneId: ");
+        log_snprintf(buf, "\n straight_laneId: ");
         for (int j = 0; j < connectsTo->straight_laneId.size; j++) {
-            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
+            log_snprintf(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
         }
-        LOG_MSG_APPEND(buf, "\n right_laneId: ");
+        log_snprintf(buf, "\n right_laneId: ");
         for (int j = 0; j < connectsTo->right_laneId.size; j++) {
-            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->right_laneId, j));
+            log_snprintf(buf, "%d ", vector_at(connectsTo->right_laneId, j));
         }
-        LOG_MSG_APPEND(buf, "\n");
+        log_snprintf(buf, "\n");
     }
-    LOG_MSG_APPEND(buf, "signalGroupId_table \n");
+    snprintf(buf + strlen(buf), buf_len - strlen(buf), "signalGroupId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
-            LOG_MSG_APPEND(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
+            log_snprintf(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
         }
-        LOG_MSG_APPEND(buf, "\n");
+        log_snprintf(buf, "\n");
     }
-    LOG_MSG_APPEND(buf, "signalId_table \n");
+    log_snprintf(buf, "signalId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
             for (int k = 0; k < vector_size(TIB_config.signalId_table[i][j]); k++) {
                 signalID_obj_t *obj = &vector_at(TIB_config.signalId_table[i][j], k);
-                LOG_MSG_APPEND(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
+                log_snprintf(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
             }
         }
     }
-    LOG_MSG_APPEND(buf, "\n");
+    log_snprintf(buf, "\n");
     LOG_MSG_INFO("Map Config init %s", buf);
+}
+
+void print_config_tim(TravelerInformation *tim, char *buf, int buf_len) 
+{
+    printf("amount of TIM dataframes: %d\n",tim->dataFrames.count);
+    snprintf(buf, buf_len, "TimMsgID, FrameType, EventLocation, ViewAngle, Anchor, Directionality, BroadcastDirection, NodeCount, NodeLon NodeLat, ..., EventType, EventDescription\n");
+    for (int i = 0; i < tim->dataFrames.count; i++) 
+    {
+        TIM_config_sign_t *TIM_signs = &vector_at(TIB_config.TIM_table, i);
+        TravelerDataFrame *tdf = &tim->dataFrames.tab[i];
+        printf("nowtime : %d\n", tim->timeStamp);
+        printf("priority : %d\n", tdf->priority);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", tdf->frameType);
+        GeographicalPath *geo = tdf->regions.tab;
+        printf("geo anchor: %0.7f %0.7f", TIM_signs->anchor[0], TIM_signs->anchor[1]);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f ", tdf->msgId.u.roadSignID.position.Long/10000000.0);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f, ", tdf->msgId.u.roadSignID.position.lat/10000000.0);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d %d, ", TIM_signs->viewAngle[0], TIM_signs->viewAngle[1]);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f ", TIM_signs->anchor[0]);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f, ", TIM_signs->anchor[1]);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", TIM_signs->directionality);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d %d, ", TIM_signs->BroadcastDirection[0], TIM_signs->BroadcastDirection[1]);
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%ld, ", TIM_signs->TimPath.size);
+        NodeSetXY nodes = geo->description.u.path.offset.u.xy.u.nodes;
+        for (int a=0; a<TIM_signs->TimPath.size; a++) 
+        {
+            TIM_Path_Node_t node_pos = vector_at(TIM_signs->TimPath, a);
+            printf("TIM path %d node pos: %lf %lf \n", a, node_pos.lon, node_pos.lat);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf ", node_pos.lon);
+            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf, ", node_pos.lat);
+        }
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", tdf->content.choice);
+        if (tdf->content.choice==TDFcontent_genericSign) {
+            int count = tdf->content.u.genericSign.count;
+            for (int i=0;i<count;i++) {
+                if (tdf->content.u.genericSign.tab[i].u.itis!=0)
+                {
+                    printf("TIM Sign ITIS code %d: %d\n",i,tdf->content.u.genericSign.tab[i].u.itis);
+                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.genericSign.tab[i].u.itis);
+                }
+                
+            }
+        }
+        else if (tdf->content.choice==TDFcontent_workZone) {
+            int count = tdf->content.u.workZone.count;
+            for (int i=0;i<count;i++) {
+                if (tdf->content.u.genericSign.tab[i].u.itis!=0)
+                {
+                    printf("TIM workZone ITIS code %d: %d\n",i,tdf->content.u.workZone.tab[i].u.itis);
+                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.workZone.tab[i].u.itis);
+                }                
+            }
+        }
+        else if (tdf->content.choice==TDFcontent_speedLimit) {
+            int count = tdf->content.u.speedLimit.count;
+            for (int i=0;i<count;i++) {
+                if (tdf->content.u.speedLimit.tab[i].u.itis!=0)
+                {
+                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.speedLimit.tab[i].u.itis);
+                }                
+            }
+        }
+        else if (tdf->content.choice==TDFcontent_exitService) {
+            int count = tdf->content.u.exitService.count;
+            for (int i=0;i<count;i++) {
+                if (tdf->content.u.exitService.tab[i].u.itis!=0)
+                {
+                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.exitService.tab[i].u.itis);
+                }                
+            }
+        }
+        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");        
+    }
+    LOG_MSG_INFO("TIM Config init %s", buf);
 }
