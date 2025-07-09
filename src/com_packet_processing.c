@@ -71,11 +71,13 @@ void OBU_j2735_tx(DSRCmsgID magId, void *data)
         LOG_MSG_INFO("  [error msg] %s", err.msg);
     } else {
 
+
         int ret = com_send(OBU_com_id, buf, buf_len);
         if (ret == COM_IO_ERR) {
             LOG_MSG_FATAL("OBU_j2735_tx: com_send");
         }
     }
+
 
     j2735_buf_free(buf);
     return;
@@ -203,6 +205,7 @@ void cloud_packet_tx(uint16_t len,
         LOG_MSG_INFO(log_content);
     }
     LOG_MSG_INFO("in cloud packet tx cloud_com_id is %d", cloud_com_id);
+
 
     //send packet to TCP or UDP (todo: add http REST API version for transmit (Osborn 20240829) )
     int ret = com_send(cloud_com_id, write_buf.content, write_buf.index);
@@ -413,6 +416,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         LOG_MSG_INFO(log_content);
     }
 
+
     MessageFrame *msgf = NULL;
     int ret = j2735_msg_decode(&msgf, (uint8_t *) msg->msg, msg->msg_len, NULL);
     if (ret < 0) {
@@ -473,6 +477,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
         wrapper_arg_for_obu.app_section_p = &app_section;
         callback_parameter_pointer = &wrapper_arg_for_obu;
     #else
+
         /* * 依據老師的 idea，在未來，struct: V2R_app_section_t
         * 可能不會直接傳出去給外部 app
         * 因此多了定義了這個 struct: V2R_self_defined_section_t
@@ -511,6 +516,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
     // pthread_mutex_unlock(&mutex_callback_list);
 
     // free resource
+
     if (app_section.OBU_object != NULL)
         free(app_section.OBU_object);
     if (msgf != NULL)
@@ -518,6 +524,7 @@ int OBU_packet_rx_event_handler(msg_obj_t *msg)
 
     return PACKET_PROCESSING_ACCEPT;
 }
+
 // 接收 smart AVI 回傳的封包
 double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
 {
@@ -564,15 +571,20 @@ double Smart_AVI_packet_rx_event_handler(msg_obj_t *msg)
         obstaclelist->tab[i].second = second;
         read_buf.index += 16;
         read_uint32_t(&obstaclelist->tab[i].speed, &read_buf);
+        read_uint32_t(&obstaclelist->tab[i].speed, &read_buf);
     }
+
     /* since now dispatcher, ea_app_proxy, command_buf_send(),
     * all might read/write callback_list, we add a mutex_lock */
+    // pthread_mutex_lock(&mutex_callback_list);
+
     event_callback_t *current = &callback_list[EVENT_CAMERA_PACKET_RX];
     // pthread_mutex_lock(&mutex_callback_list);
     while (current->next != NULL) {
-        if (current->next->event_callback_id.choice == event_callback_id_app_id) {
-            /* thread pool feature reserved */
-            // if(threadpool_add(pool, current->next->callback, (void *) obstaclelist, 0) != 0){ 
+        if (current->next->event_callback_id.choice == event_callback_id_app_id &&
+            CPS_ID == current->next->event_callback_id.u.app_id) {
+            // if(threadpool_add(pool, current->next->callback, obstaclelist, 0)
+            // != 0){
             //     LOG_MSG_TRACE("threadpool adding error!");//ERROR
             // }
             proxy_handling_app_p = current->next->app_obj_p;

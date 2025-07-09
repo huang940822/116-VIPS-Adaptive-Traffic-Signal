@@ -25,6 +25,7 @@
 #include "external_app_proxy_callback_msg_forward.h"
 #include "external_app_proxy_server.h"
 #include "j2735_codec.h"
+
 #include "log.h"
 #include "msg_queue.h"
 #include "server.h"
@@ -105,7 +106,7 @@ int main()
 
     /* log init */
     log_file_init();  // 一個timer被created
-
+    J2735_BroadcastList_init();
     LOG_MSG_INFO("version : v2.6.0");
 
     /* read config file*/
@@ -131,12 +132,14 @@ int main()
 
     // /* taffic signal packet serial port init */
     traffic_signal_port_init();
+    
 
     /* Receive traffic signal packet */
     pthread_t traffic_signal_packet_rx_thread;
     // 從socket收取不同類型的packet並處理轉義字節
     ret = pthread_create(&traffic_signal_packet_rx_thread, NULL,
                          traffic_signal_packet_rx_handler, NULL);
+                         
     if (ret != 0) {
         LOG_MSG_FATAL(
             "error creating traffic_signal_packet_rx_thread: %d", ret);

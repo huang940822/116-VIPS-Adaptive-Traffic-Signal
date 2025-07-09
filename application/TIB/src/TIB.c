@@ -9,9 +9,12 @@
 #include "TIB.h"
 #include "TIB_MAP_utils.h"
 #include "TIB_SPaT_utils.h"
+#include "TIB_TIM_utils.h"
 #include "TIB_config.h"
 #include "TIB_packet_tx.h"
 #include "TIB_utils.h"
+#include "TIB_dispatcher.h"
+#include "application_registration.h"
 #include "byte_processing.h"
 #include "com_packet_processing.h"
 #include "config.h"
@@ -141,15 +144,26 @@ int TIB_on_registration(void *arg)
     /* SPaT / MAP msg init */
     map_msg_init(&map);
     spat_msg_init(&p_spat);
+    tim_msg_init(&p_tim);
+    
     char log_content[LOG_CONTENT_LEN + 1] = {0};
     print_config_map(map, log_content, LOG_CONTENT_LEN);
 
-    pthread_t MAP_packet_tx_thread;
-    ret = pthread_create(&MAP_packet_tx_thread, NULL, MAP_packet_tx_loop, NULL);
-    pthread_detach(MAP_packet_tx_thread);
-    pthread_t SPaT_packet_tx_thread;
-    ret = pthread_create(&SPaT_packet_tx_thread, NULL, SPaT_packet_tx_loop, NULL);
-    pthread_detach(SPaT_packet_tx_thread);
+    pthread_t tib_dispatcher_thread;
+    ret = pthread_create(&tib_dispatcher_thread, NULL, TIB_dispatcher_handler, NULL);
+    if (ret != 0) {
+        log_file_write_fatal_error("NULL", "error creating TIB dispatcher_thread: %d", ret);
+        perror("main: pthread_create");
+        exit(errno);
+    }
+    
+    
+    create_timer(&TIB_report_plan_timer_id, NULL,
+        TIB_dispatcher_handler);
+    set_timer(TIB_report_plan_timer_id, 0.5, 0, 0.5, 0);
+    pthread_t general_packet_tx_thread;
+    ret = pthread_create(&general_packet_tx_thread, NULL, general_packet_tx_loop, NULL);
+    pthread_detach(general_packet_tx_thread);
 
     return 0;
 }
