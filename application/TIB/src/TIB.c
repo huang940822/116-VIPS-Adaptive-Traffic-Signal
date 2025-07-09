@@ -145,7 +145,7 @@ int TIB_on_registration(void *arg)
     map_msg_init(&map);
     spat_msg_init(&p_spat);
     tim_msg_init(&p_tim);
-    // rsa_msg_init(&p_rsa);
+    
     char log_content[LOG_CONTENT_LEN + 1] = {0};
     print_config_map(map, log_content, LOG_CONTENT_LEN);
 
@@ -161,15 +161,6 @@ int TIB_on_registration(void *arg)
     create_timer(&TIB_report_plan_timer_id, NULL,
         TIB_dispatcher_handler);
     set_timer(TIB_report_plan_timer_id, 0.5, 0, 0.5, 0);
-
-
-    // 原架構: SPaT和MAP個用一條thread來處理 
-    // pthread_t MAP_packet_tx_thread;
-    // ret = pthread_create(&MAP_packet_tx_thread, NULL, MAP_packet_tx_loop, NULL);
-    // pthread_detach(MAP_packet_tx_thread);
-    // pthread_t SPaT_packet_tx_thread;
-    // ret = pthread_create(&SPaT_packet_tx_thread, NULL, SPaT_packet_tx_loop, NULL);
-    // pthread_detach(SPaT_packet_tx_thread);
     pthread_t general_packet_tx_thread;
     ret = pthread_create(&general_packet_tx_thread, NULL, general_packet_tx_loop, NULL);
     pthread_detach(general_packet_tx_thread);

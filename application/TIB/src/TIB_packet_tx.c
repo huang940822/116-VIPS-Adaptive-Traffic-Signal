@@ -59,7 +59,6 @@ void *MAP_packet_tx_loop()
         finish_time = clock();
         double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
         LOG_MSG_INFO("MAP_packet_tx cost time: %f\n",cost_time);
-        printf("MAP_packet_tx cost time: %f\n",cost_time);
     }
     close(fd);
 }
@@ -85,27 +84,24 @@ void *SPaT_packet_tx_loop()
         int stepID = get_current_step();
         int second = get_current_second();
         // 在 stepID 換的時候更新
-        printf("current step_ID: %d; prior step_ID: %d\n",stepID,pior_stepID);
-        printf("current second: %d; prior second: %d\n",second,pior_second);
+        LOG_MSG_INFO("current step_ID: %d; prior step_ID: %d\n",stepID,pior_stepID);
+        LOG_MSG_INFO("current second: %d; prior second: %d\n",second,pior_second);
         if (stepID != pior_stepID || pior_second != second) {
-            printf("attempt to update SPAT\n");
+            LOG_MSG_INFO("attempt to update SPAT\n");
             if (spat_msg_update(p_spat) < 0)
             {
-                printf("SPAT update is not working\n");
+                LOG_MSG_FATAL("SPAT update is not working\n");
                 //continue;
             }
                 
             pior_stepID = stepID;
             pior_second = second;
-            printf("moving on to OBU_Send\n");
+            LOG_MSG_INFO("moving on to OBU_Send\n");
         }
-        // LOG_MSG_TRACE("=========================");
-        // spat_printf(p_spat);
         OBU_j2735_tx(SPAT_Id, p_spat);
         finish_time = clock();
         double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
         LOG_MSG_INFO("SPAT_packet_tx cost time: %f\n",cost_time);
-        printf("SPAT_packet_tx cost time: %f\n",cost_time);
     }
     close(fd);
 }
@@ -137,7 +133,7 @@ void *general_packet_tx_loop() //各項封包傳播
     // int tim_cycles = TIB_config.TIM_packet_cycle_per_transfer;
     int fd = set_timer_fd(1/(TIB_config.general_packet_time_per_cycle), "general_packet_tx_loop");
     clock_t start_time, finish_time;
-    printf("start general packet tx loop\n");
+    LOG_MSG_INFO("start general packet tx loop\n");
     if (fd == -1) {
         return NULL;
     }
@@ -147,30 +143,27 @@ void *general_packet_tx_loop() //各項封包傳播
         int s = read(fd, &exp, sizeof(uint64_t));
         if (s != sizeof(uint64_t))
             LOG_MSG_FATAL("general_packet_tx_loop timer read error");
-        printf("general tx cycles: %d\n",cycles);
         
         if (cycles%map_cycles==0 && cycles!=0)
         {
-            
-            //tib_map = tib_queue_dequeue(map_queue);
             tib_map = map_queue_dequeue();
             if(tib_map != NULL){
                 TIB_com_id = tib_map->tib_id;
                 LOG_MSG_INFO("TIB_com_id in TIB dispatcher for MAP is %d", TIB_com_id);
-                printf("sending MAP packet\n");
+                LOG_MSG_DEBUG("sending MAP packet\n");
                 start_time = clock();
                 if (tib_map->data!=NULL){
-                    printf("send obu j2735 map\n");
+                    LOG_MSG_DEBUG("send obu j2735 map\n");
                     OBU_j2735_tx(MapData_Id,tib_map->data);
                 }
                     
                 free(tib_map);
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
-                printf("MAP_packet_tx cost time: %f\n",cost_time);
+                LOG_MSG_INFO("MAP_packet_tx cost time: %f\n",cost_time);
             }
             else
-                printf("no map msg to send\n");
+                LOG_MSG_FATAL("no map msg to send\n");
         }
             
         
@@ -178,24 +171,22 @@ void *general_packet_tx_loop() //各項封包傳播
         if (cycles%spat_cycles==0 && cycles!=0)
         {
             start_time = clock();
-            //tib_spat = tib_queue_dequeue(spat_queue);
             tib_spat = spat_queue_dequeue();
             if(tib_spat != NULL){
                 TIB_com_id = tib_spat->tib_id;
                 LOG_MSG_INFO("TIB_com_id in TIB dispatcher for SPAT is %d", TIB_com_id);
-                printf("sending SPAT packet\n");
+                LOG_MSG_DEBUG("sending SPAT packet\n");
                 if (tib_spat->data!=NULL){
-                    printf("send obu j2735 spat\n");
+                    LOG_MSG_DEBUG("send obu j2735 spat\n");
                     OBU_j2735_tx(SPAT_Id, tib_spat->data);
-                }
-                //OBU_j2735_tx(SPAT_Id,tib_spat->data);            
+                }        
                 free(tib_spat);
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
-                printf("SPAT_packet_tx cost time: %f\n",cost_time);
+                LOG_MSG_INFO("SPAT_packet_tx cost time: %f\n",cost_time);
                 }
             else
-                printf("no spat msg to send\n");
+                LOG_MSG_FATAL("no spat msg to send\n");
         }
 
         if (cycles%tim_cycles==0 && cycles!=0)
@@ -205,42 +196,40 @@ void *general_packet_tx_loop() //各項封包傳播
             if(tib_tim != NULL){
                 TIB_com_id = tib_tim->tib_id;
                 LOG_MSG_INFO("TIB_com_id in TIB dispatcher for TIM is %d", TIB_com_id);
-                printf("sending TIM packet\n");
+                LOG_MSG_DEBUG("sending TIM packet\n");
                 if (tib_tim->data!=NULL){
-                    printf("send obu j2735 tim\n");
+                    LOG_MSG_DEBUG("send obu j2735 tim\n");
                     OBU_j2735_tx(TravelerInformation_Id,tib_tim->data);
                 }
                 free(tib_tim);            
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
-                printf("TIM_packet_tx cost time: %f\n",cost_time);
+                LOG_MSG_INFO("TIM_packet_tx cost time: %f\n",cost_time);
             }
             else
-                printf("no tim msg to send\n");
+                LOG_MSG_FATAL("no tim msg to send\n");
             
         }
         
         if (cycles%eva_cycles==0 && cycles!=0)
         {
             start_time = clock();
-            //tib_spat = tib_queue_dequeue(spat_queue);
             tib_eva = eva_queue_dequeue();
             if(tib_eva != NULL){
                 TIB_com_id = tib_eva->tib_id;
                 LOG_MSG_INFO("TIB_com_id in TIB dispatcher for EVA is %d", TIB_com_id);
-                printf("sending EVA packet\n");
+                LOG_MSG_DEBUG("sending EVA packet\n");
                 if (tib_eva->data!=NULL){
-                    printf("send obu j2735 eva\n");
+                    LOG_MSG_DEBUG("send obu j2735 eva\n");
                     OBU_j2735_tx(EmergencyVehicleAlert_Id, tib_eva->data);
-                }
-                //OBU_j2735_tx(SPAT_Id,tib_spat->data);            
+                }     
                 free(tib_eva);
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
-                printf("EVA_packet_tx cost time: %f\n",cost_time);
+                LOG_MSG_INFO("EVA_packet_tx cost time: %f\n",cost_time);
             }
             else
-                printf("no eva msg to send\n");
+                LOG_MSG_FATAL("no eva msg to send\n");
         }
 
         if (cycles%rsa_cycles==0 && cycles!=0)
@@ -249,20 +238,20 @@ void *general_packet_tx_loop() //各項封包傳播
             if(tib_rsa != NULL){
                 TIB_com_id = tib_rsa->tib_id;
                 LOG_MSG_INFO("TIB_com_id in TIB dispatcher for RSA is %d", TIB_com_id);
-                printf("sending RSA packet\n");
+                LOG_MSG_DEBUG("sending RSA packet\n");
                 start_time = clock();
                 if(tib_rsa->data != NULL){
-                    printf("send obu j2735 rsa\n");
+                    LOG_MSG_DEBUG("send obu j2735 rsa\n");
                     OBU_j2735_tx(RoadSideAlert_Id,tib_rsa->data);
                 }
                 
                 free(tib_rsa);
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
-                printf("RSA_packet_tx cost time: %f\n",cost_time);
+                LOG_MSG_INFO("RSA_packet_tx cost time: %f\n",cost_time);
             }
             else
-                printf("no rsa msg to send\n");
+                LOG_MSG_FATAL("no rsa msg to send\n");
         }
 
         if (cycles%psm_cycles==0 && cycles!=0)
@@ -271,20 +260,20 @@ void *general_packet_tx_loop() //各項封包傳播
             if(tib_psm != NULL){
                 TIB_com_id = tib_psm->tib_id;
                 LOG_MSG_INFO("TIB_com_id in TIB dispatcher for PSM is %d", TIB_com_id);
-                printf("sending PSM packet\n");
+                LOG_MSG_DEBUG("sending PSM packet\n");
                 start_time = clock();
                 if(tib_psm->data != NULL){
-                    printf("send obu j2735 psm\n");
+                    LOG_MSG_DEBUG("send obu j2735 psm\n");
                     OBU_j2735_tx(PersonalSafetyMessage_Id, tib_psm->data);
                 }
                 
                 free(tib_psm);
                 finish_time = clock();
                 double cost_time = ( double ) ( finish_time - start_time ) / CLOCKS_PER_SEC ;
-                printf("PSM_packet_tx cost time: %f\n",cost_time);
+                LOG_MSG_INFO("PSM_packet_tx cost time: %f\n",cost_time);
             }
             else
-                printf("no psm msg to send\n");
+                LOG_MSG_FATAL("no psm msg to send\n");
         }
 
         cycles++;

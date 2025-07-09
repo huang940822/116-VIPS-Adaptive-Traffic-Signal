@@ -560,7 +560,6 @@ int TIB_config_init()
                 char *substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
                     TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table TimMsgID err");
-                //printf("current TIM_table size: %ld\n",TIB_config.TIM_table.size);
                 if (int_val != TIB_config.TIM_table.size)
                     TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table TimMsgID size err");
                 TIM_signs.TimMsgID = int_val;
@@ -592,7 +591,6 @@ int TIB_config_init()
                     vector_free(TIM_signs.TimPosition);
                     TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table PositionNode lon err");
                 }
-                //LOG_MSG_INFO("set TIM sign %d node pos lon as %lf\n", TIM_signs.TimMsgID, node_pos.lon);
                 
                 substr = vector_at(str_arr_tmp, 1);
                 LOG_MSG_INFO("node pos lat: %s",substr);
@@ -601,7 +599,6 @@ int TIB_config_init()
                     vector_free(TIM_signs.TimPosition);
                     TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table positionNode lat err");
                 }
-                //LOG_MSG_INFO("set TIM sign %d node pos lat as %lf\n", TIM_signs.TimMsgID, node_pos.lat);
                 
                 vector_push_back(TIM_signs.TimPosition, node_pos);
                 str_arr_tmp.size = 0;
@@ -617,7 +614,6 @@ int TIB_config_init()
                 }
                 for (int i = 0; i < str_arr_tmp.size; i++) {
                     substr = vector_at(str_arr_tmp, i);
-                    //LOG_MSG_INFO("viewAngle %d as %s\n", i, substr);
                     if (substr == NULL || sscanf(substr, "%d", &int_val) != 1) {
                         vector_free(str_arr_tmp);
                         TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table ViewAngle err");
@@ -652,8 +648,6 @@ int TIB_config_init()
                 LOG_MSG_INFO("anchor node pos lat: %s",substr);
                 if (substr == NULL || sscanf(substr, "%lf", &anchor_pos.lat) != 1) {
                     vector_free(str_arr_tmp);
-                    //vector_free(TIM_signs.TimPosition);
-                    //TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table AnchorNode lat err");
                 }
                 LOG_MSG_INFO("set TIM sign %d node pos lat as %lf\n", TIM_signs.TimMsgID, anchor_pos.lat);
                 TIM_signs.anchor[1] = anchor_pos.lat;
@@ -665,7 +659,6 @@ int TIB_config_init()
                 substr = vector_at(str_arr, index++);
                 if (substr == NULL || sscanf(substr, "%d", &int_val) != 1)
                     TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table Directionality err");
-                //printf("current TIM_table size: %ld\n",TIB_config.TIM_table.size);
                 TIM_signs.directionality = int_val;
                 LOG_MSG_INFO("current TIM sign directionality as %d\n",TIM_signs.directionality);
 
@@ -675,7 +668,6 @@ int TIB_config_init()
                 read_string_arr_from_config_line(substr, &str_arr_tmp, TIB_FIELD_DELIM);
                 for (int i = 0; i < str_arr_tmp.size; i++) {
                     substr = vector_at(str_arr_tmp, i);
-                    //LOG_MSG_INFO("BroadcastDirection %d as %s\n", i, substr);
                     if (substr == NULL || sscanf(substr, "%hhd", &uint8_t_val) != 1) {
                         vector_free(str_arr_tmp);
                         TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table BroadcastDirection err");
@@ -701,19 +693,7 @@ int TIB_config_init()
                     }
                     TIM_FreeAndReturnInvalid(str_arr, TIM_table, "TIM_table node_count size err");
                 }
-                // int node_count = atoi(vector_at(str_arr, 5));
-
-                // for (int i = 0; i < node_count; ++i) {
-                //     double lon = 0, lat = 0;
-                //     const char *node_str = vector_at(str_arr, 6 + i);
-                //     if (sscanf(node_str, "%lf %lf", &lon, &lat) != 2) {
-                //         TIM_FreeAndReturnInvalid(str_arr, TIM_table, "Invalid node lon/lat pair");
-                //     }
-                //     LOG_MSG_INFO("Parsed Node[%d] lon=%lf, lat=%lf", i, lon, lat);
-                //     // 存入你的 node 結構
-                // }
-                    
-                
+       
                 //ViewPath Position lat lon
                 vector_init(TIM_signs.TimPath);
                 vector_init(str_arr_tmp);
@@ -787,71 +767,67 @@ int TIB_config_init()
 
 void print_config_map(MapData *map, char *buf, int buf_len)
 {
-    // if (map->intersections.count != 1) {
-    //     snprintf(buf, buf_len, "intersections.count only can be 1, but is %d", map->intersections.count);
-    //     return;
-    // }
     LaneList *laneSet = &map->intersections.tab[0].laneSet;
-    snprintf(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
+    LOG_MSG_APPEND(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
 
     for (int i = 0; i < laneSet->count; i++) {
         for (int j = 0; j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", laneSet->tab[i].laneID);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", j);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
+            LOG_MSG_APPEND(buf, "%d, ", i);
+            LOG_MSG_APPEND(buf, "%d, ", laneSet->tab[i].laneID);
+            LOG_MSG_APPEND(buf, "%d, ", j);
+            LOG_MSG_APPEND(buf, "%lf, ", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lat / 10000000.0);
+            LOG_MSG_APPEND(buf, "%lf\n", laneSet->tab[i].nodeList.u.nodes.tab[j].delta.u.node_LatLon.lon / 10000000.0);
         }
     }
     for (int i = 0; i < laneSet->count; i++) {
         if (laneSet->tab[i].connectsTo_option == FALSE)
             continue;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
+        LOG_MSG_APPEND(buf, "%d, ", i);
         ConnectsToList *connlist = &laneSet->tab[i].connectsTo;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->count);
+        LOG_MSG_APPEND(buf, "%d, ", connlist->count);
         for (int k = 0; k < connlist->count; k++) {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", connlist->tab[k].connectingLane.lane);
+            LOG_MSG_APPEND(buf, "%d, ", connlist->tab[k].connectingLane.lane);
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
     for (int i = 0; i < COMPASS_NUM; i++) {
         MAP_config_lane_t *lane, *safe;
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "Road %d: ", i);
+        LOG_MSG_APPEND(buf, "Road %d: ", i);
         list_for_each_entry_safe(lane, safe, &TIB_config.MAP_lane_approach[i], approach_node)
         {
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
+            LOG_MSG_APPEND(buf, "%d ", map->intersections.tab[0].laneSet.tab[lane->config_laneID].laneID);
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
 
     LOG_MSG_INFO("Map Config init %s", buf);
     memset(buf, 0, buf_len);
 
-    log_snprintf(buf, "connectsTo_list \n");
+    LOG_MSG_APPEND(buf, "connectsTo_list \n");
     for (int i = 0; i < TIB_config.connectsTo_list.size; i++) {
         MAP_config_connectsTo_t *connectsTo = &vector_at(TIB_config.connectsTo_list, i);
-        log_snprintf(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
+        LOG_MSG_APPEND(buf, "config_laneID: %d\n left_laneId: ", connectsTo->config_laneID);
         for (int j = 0; j < connectsTo->left_laneId.size; j++) {
-            log_snprintf(buf, "%d ", vector_at(connectsTo->left_laneId, j));
+            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->left_laneId, j));
         }
-        log_snprintf(buf, "\n straight_laneId: ");
+        LOG_MSG_APPEND(buf, "\n straight_laneId: ");
         for (int j = 0; j < connectsTo->straight_laneId.size; j++) {
-            log_snprintf(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
+            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->straight_laneId, j));
         }
-        log_snprintf(buf, "\n right_laneId: ");
+        LOG_MSG_APPEND(buf, "\n right_laneId: ");
         for (int j = 0; j < connectsTo->right_laneId.size; j++) {
-            log_snprintf(buf, "%d ", vector_at(connectsTo->right_laneId, j));
+            LOG_MSG_APPEND(buf, "%d ", vector_at(connectsTo->right_laneId, j));
         }
-        log_snprintf(buf, "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
-    snprintf(buf + strlen(buf), buf_len - strlen(buf), "signalGroupId_table \n");
+    LOG_MSG_APPEND(buf, "signalGroupId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
-            log_snprintf(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
+            LOG_MSG_APPEND(buf, "%d ", TIB_config.signalGroupId_table[i][j]);
         }
-        log_snprintf(buf, "\n");
+        LOG_MSG_APPEND(buf, "\n");
     }
-    log_snprintf(buf, "signalId_table \n");
+    LOG_MSG_APPEND(buf, "signalId_table \n");
     for (int i = 0; i < COMPASS_NUM; i++) {
         for (int j = 0; j < NumOfGreen; j++) {
             for (int k = 0; k < vector_size(TIB_config.signalId_table[i][j]); k++) {
@@ -860,48 +836,48 @@ void print_config_map(MapData *map, char *buf, int buf_len)
             }
         }
     }
-    log_snprintf(buf, "\n");
+    LOG_MSG_APPEND(buf, "\n");
     LOG_MSG_INFO("Map Config init %s", buf);
 }
 
 void print_config_tim(TravelerInformation *tim, char *buf, int buf_len) 
 {
-    printf("amount of TIM dataframes: %d\n",tim->dataFrames.count);
-    snprintf(buf, buf_len, "TimMsgID, FrameType, EventLocation, ViewAngle, Anchor, Directionality, BroadcastDirection, NodeCount, NodeLon NodeLat, ..., EventType, EventDescription\n");
+    LOG_MSG_INFO("amount of TIM dataframes: %d\n",tim->dataFrames.count);
+    LOG_MSG_APPEND(buf, buf_len, "TimMsgID, FrameType, EventLocation, ViewAngle, Anchor, Directionality, BroadcastDirection, NodeCount, NodeLon NodeLat, ..., EventType, EventDescription\n");
     for (int i = 0; i < tim->dataFrames.count; i++) 
     {
         TIM_config_sign_t *TIM_signs = &vector_at(TIB_config.TIM_table, i);
         TravelerDataFrame *tdf = &tim->dataFrames.tab[i];
-        printf("nowtime : %d\n", tim->timeStamp);
-        printf("priority : %d\n", tdf->priority);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", i);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", tdf->frameType);
+        LOG_MSG_DEBUG("nowtime : %d\n", tim->timeStamp);
+        LOG_MSG_DEBUG("priority : %d\n", tdf->priority);
+        LOG_MSG_APPEND(buf, "%d, ", i);
+        LOG_MSG_APPEND(buf, "%d, ", tdf->frameType);
         GeographicalPath *geo = tdf->regions.tab;
-        printf("geo anchor: %0.7f %0.7f", TIM_signs->anchor[0], TIM_signs->anchor[1]);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f ", tdf->msgId.u.roadSignID.position.Long/10000000.0);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f, ", tdf->msgId.u.roadSignID.position.lat/10000000.0);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d %d, ", TIM_signs->viewAngle[0], TIM_signs->viewAngle[1]);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f ", TIM_signs->anchor[0]);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%0.7f, ", TIM_signs->anchor[1]);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", TIM_signs->directionality);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d %d, ", TIM_signs->BroadcastDirection[0], TIM_signs->BroadcastDirection[1]);
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%ld, ", TIM_signs->TimPath.size);
+        LOG_MSG_DEBUG("geo anchor: %0.7f %0.7f", TIM_signs->anchor[0], TIM_signs->anchor[1]);
+        LOG_MSG_APPEND(buf, "%0.7f ", tdf->msgId.u.roadSignID.position.Long/10000000.0);
+        LOG_MSG_APPEND(buf, "%0.7f, ", tdf->msgId.u.roadSignID.position.lat/10000000.0);
+        LOG_MSG_APPEND(buf, "%d %d, ", TIM_signs->viewAngle[0], TIM_signs->viewAngle[1]);
+        LOG_MSG_APPEND(buf, "%0.7f ", TIM_signs->anchor[0]);
+        LOG_MSG_APPEND(buf, "%0.7f, ", TIM_signs->anchor[1]);
+        LOG_MSG_APPEND(buf, "%d, ", TIM_signs->directionality);
+        LOG_MSG_APPEND(buf, "%d %d, ", TIM_signs->BroadcastDirection[0], TIM_signs->BroadcastDirection[1]);
+        LOG_MSG_APPEND(buf, "%ld, ", TIM_signs->TimPath.size);
         NodeSetXY nodes = geo->description.u.path.offset.u.xy.u.nodes;
         for (int a=0; a<TIM_signs->TimPath.size; a++) 
         {
             TIM_Path_Node_t node_pos = vector_at(TIM_signs->TimPath, a);
-            printf("TIM path %d node pos: %lf %lf \n", a, node_pos.lon, node_pos.lat);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf ", node_pos.lon);
-            snprintf(buf + strlen(buf), buf_len - strlen(buf), "%lf, ", node_pos.lat);
+            LOG_MSG_DEBUG("TIM path %d node pos: %lf %lf \n", a, node_pos.lon, node_pos.lat);
+            LOG_MSG_APPEND(buf, "%lf ", node_pos.lon);
+            LOG_MSG_APPEND(buf, "%lf, ", node_pos.lat);
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d, ", tdf->content.choice);
+        LOG_MSG_APPEND(buf, "%d, ", tdf->content.choice);
         if (tdf->content.choice==TDFcontent_genericSign) {
             int count = tdf->content.u.genericSign.count;
             for (int i=0;i<count;i++) {
                 if (tdf->content.u.genericSign.tab[i].u.itis!=0)
                 {
-                    printf("TIM Sign ITIS code %d: %d\n",i,tdf->content.u.genericSign.tab[i].u.itis);
-                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.genericSign.tab[i].u.itis);
+                    LOG_MSG_DEBUG("TIM Sign ITIS code %d: %d\n",i,tdf->content.u.genericSign.tab[i].u.itis);
+                    LOG_MSG_APPEND(buf, "%d ", tdf->content.u.genericSign.tab[i].u.itis);
                 }
                 
             }
@@ -911,8 +887,8 @@ void print_config_tim(TravelerInformation *tim, char *buf, int buf_len)
             for (int i=0;i<count;i++) {
                 if (tdf->content.u.genericSign.tab[i].u.itis!=0)
                 {
-                    printf("TIM workZone ITIS code %d: %d\n",i,tdf->content.u.workZone.tab[i].u.itis);
-                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.workZone.tab[i].u.itis);
+                    LOG_MSG_DEBUG("TIM workZone ITIS code %d: %d\n",i,tdf->content.u.workZone.tab[i].u.itis);
+                    LOG_MSG_APPEND(buf, "%d ", tdf->content.u.workZone.tab[i].u.itis);
                 }                
             }
         }
@@ -921,7 +897,7 @@ void print_config_tim(TravelerInformation *tim, char *buf, int buf_len)
             for (int i=0;i<count;i++) {
                 if (tdf->content.u.speedLimit.tab[i].u.itis!=0)
                 {
-                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.speedLimit.tab[i].u.itis);
+                    LOG_MSG_APPEND(buf, "%d ", tdf->content.u.speedLimit.tab[i].u.itis);
                 }                
             }
         }
@@ -930,11 +906,11 @@ void print_config_tim(TravelerInformation *tim, char *buf, int buf_len)
             for (int i=0;i<count;i++) {
                 if (tdf->content.u.exitService.tab[i].u.itis!=0)
                 {
-                    snprintf(buf + strlen(buf), buf_len - strlen(buf), "%d ", tdf->content.u.exitService.tab[i].u.itis);
+                    LOG_MSG_APPEND(buf, "%d ", tdf->content.u.exitService.tab[i].u.itis);
                 }                
             }
         }
-        snprintf(buf + strlen(buf), buf_len - strlen(buf), "\n");        
+        LOG_MSG_APPEND(buf, "\n");        
     }
     LOG_MSG_INFO("TIM Config init %s", buf);
 }

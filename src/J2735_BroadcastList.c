@@ -24,7 +24,7 @@ void J2735_BroadcastList_register_callback(BroadcastCallback cb) {
 J2735_msg_obj_t *J2735_BroadcastList_dequeue()
 {
     if (sem_trywait(&(J2735_BroadcastList.empty)) != 0) {
-        printf("J2735_BroadcastList dequeue empty\n");
+        LOG_MSG_FATAL("J2735_BroadcastList dequeue empty\n");
         // queue 是空的，不阻塞，直接返回 NULL
         return NULL;
     }
@@ -44,9 +44,9 @@ J2735_msg_obj_t *J2735_BroadcastList_dequeue()
  */ 
 void J2735_BroadcastList_enqueue(J2735_msg_obj_t *new_J2735_msg_obj)
 {
-    printf("J2735_BroadcastList_enqueue\n");
+    LOG_MSG_DEBUG("J2735_BroadcastList_enqueue\n");
     if (!is_initialized) {
-        printf("ERROR: J2735_BroadcastList not initialized!\n");
+        LOG_MSG_FATAL("ERROR: J2735_BroadcastList not initialized!\n");
         return;
     }
     // Wait until there's at least one space
@@ -73,16 +73,16 @@ int8_t J2735_BroadcastList_init() {
  */
 J2735_msg_obj_t *J2735_msg_obj_create(MessageFrame msgf)
 {
-    printf("J2735_msg_obj_create--------");
+    LOG_MSG_DEBUG("J2735_msg_obj_create--------");
     J2735_msg_obj_t *_J2735_msg_obj = malloc(sizeof(J2735_msg_obj_t));
     if (_J2735_msg_obj != NULL) {
         _J2735_msg_obj->magId = msgf.messageId;
         _J2735_msg_obj->data = msgf.u.data;
         _J2735_msg_obj->msg_len = sizeof(msgf.u.data);
-        printf("successful\n");
+        LOG_MSG_DEBUG("successful\n");
         return _J2735_msg_obj;
     }
-    printf("unsuccessful\n");
+    LOG_MSG_FATAL("J2735_msg_obj_create unsuccessful\n");
     return NULL;
 }
 
@@ -94,7 +94,7 @@ J2735_msg_obj_t *J2735_msg_obj_create(MessageFrame msgf)
  */
 void J2735_BroadcastList_insert(DSRCmsgID magID, void* data)
 {
-    printf("J2735_BroadcastList_insert\n");
+    LOG_MSG_INFO("J2735_BroadcastList_insert\n");
     int buf_len;
     uint8_t *buf;
     J2735CodecErr err;
@@ -124,7 +124,7 @@ void J2735_BroadcastList_insert(DSRCmsgID magID, void* data)
 // 提供 TIB 獲取其他 APP 封裝完暫存於 J2735_BroadcastList 的封包 API
 J2735_msg_obj_t *J2735_BroadcastList_fetch()
 {
-    printf("J2735_BroadcastList_fetch\n");
+    LOG_MSG_INFO("J2735_BroadcastList_fetch\n");
     struct J2735_msg_obj *j2735_TIB_msg;
     j2735_TIB_msg = J2735_BroadcastList_dequeue();
     return j2735_TIB_msg;

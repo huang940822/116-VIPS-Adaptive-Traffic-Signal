@@ -16,7 +16,6 @@
 
 typedef struct J2735_msg_obj J2735_msg_obj_t;
 J2735_msg_obj_t *latest_J2735_msg = NULL;   // 從J2735_broadcastlist 收到的最新封包
-// pthread_mutex_t latest_J2735_msg_lock = PTHREAD_MUTEX_INITIALIZER; //互斥保護
 volatile bool fetch_flag = false;
 
 static atomic_int pending_msg_count = 0;  // 使用原子操作的計數器
@@ -24,6 +23,7 @@ static pthread_mutex_t latest_J2735_msg_lock;
 
 LOG_USE_MODULE(TIB);
 
+// 計算發送頻率的 cycle 使用
 //最大公因數
 int gcd(int m, int n){
     if (n == 0){
@@ -47,7 +47,7 @@ int lcm(int m, int n) {
  */
 void TIB_dispatcher_handler()
 {
-    printf("Enter TIB dispatcher handler\n");
+    LOG_MSG_INFO("Enter TIB dispatcher handler\n");
     
     map_queue_init();
     spat_queue_init();
@@ -74,12 +74,12 @@ void TIB_dispatcher_handler()
     // 取各個傳送週期數的最小公倍數為一輪
     int max_cycles = map_cycles * spat_cycles / gcd(map_cycles, spat_cycles);
     for (;;) {
-        printf("current cycle = %d\n", cycles);
+        LOG_MSG_DEBUG("current cycle = %d\n", cycles);
     
         // 批量處理所有待處理的消息
         int msgs_to_process = atomic_load(&pending_msg_count);
         if (msgs_to_process > 0) {
-            printf("Processing %d pending messages\n", msgs_to_process);
+            LOG_MSG_INFO("Processing %d pending messages\n", msgs_to_process);
             
             for (int i = 0; i < msgs_to_process; i++) {
                 pthread_mutex_lock(&latest_J2735_msg_lock);
@@ -91,7 +91,7 @@ void TIB_dispatcher_handler()
                     atomic_fetch_sub(&pending_msg_count, 1);
                     
                     if(external_J2735_msg->data == NULL) {
-                        printf("External data is null\n");
+                        LOG_MSG_FATAL("External data is null\n");
                         continue;
                     }
                     
@@ -115,15 +115,13 @@ void TIB_dispatcher_handler()
                     goto map_dispatch_end;
                 if (map_msg_update(map) < 0)
                     goto map_dispatch_end;
-                // printf("=========================\n");
-                // map_print(map);
                 prior_planID = planID;
             }
             struct tib_obj *_map_obj = tib_obj_create(map,MapData_Id);
             if (_map_obj != NULL) {
-                printf("created MAP object\n");
+                LOG_MSG_INFO("created MAP object\n");
                 map_queue_enqueue(_map_obj);
-                printf("map enqueue complete\n");
+                LOG_MSG_DEBUG("map enqueue complete\n");
             }
             map_dispatch_end:{}
         }
@@ -137,8 +135,8 @@ void TIB_dispatcher_handler()
             if (stepID != prior_stepID || prior_second != second) {
                 if (spat_msg_update(p_spat) < 0)
                 {
-                    printf("SPAT update is not working\n");
-                    printf("cycles new:%d\n",cycles); 
+                    LOG_MSG_FATAL("SPAT update is not working\n");
+                    LOG_MSG_DEBUG("cycles new:%d\n",cycles); 
                     goto spat_dispatch_end;
                 }
                 prior_stepID = stepID;
@@ -146,7 +144,7 @@ void TIB_dispatcher_handler()
             }
             struct tib_obj *_spat_obj = tib_obj_create(p_spat,SPAT_Id);
             if (_spat_obj != NULL) {
-                printf("created SPAT object\n");
+                LOG_MSG_INFO("created SPAT object\n");
                 spat_queue_enqueue(_spat_obj);                
             }
             spat_dispatch_end:{}            
@@ -156,7 +154,7 @@ void TIB_dispatcher_handler()
         {
             struct tib_obj *_tim_obj = tib_obj_create(p_tim,TravelerInformation_Id);
             if (_tim_obj != NULL) {
-                printf("created TIM object\n");
+                LOG_MSG_INFO("created TIM object\n");
                 tim_queue_enqueue(_tim_obj);
             }
         }
@@ -165,11 +163,8 @@ void TIB_dispatcher_handler()
         if (cycles==(max_cycles*50)+1)
         {
             cycles=1;
-            printf("cycles reset\n");
+            LOG_MSG_DEBUG("cycles reset\n");
         }
-        // sleep(0.5);
-        
-        //free(tib);
     }
     LOG_MSG_FATAL("dispatcher thread exit");
 }
@@ -184,10 +179,10 @@ void process_external_message(J2735_msg_obj_t *external_J2735_msg, int cycles) {
         if (external_J2735_msg->magId == EmergencyVehicleAlert_Id) {
             struct tib_obj *_eva_obj = tib_obj_create(external_J2735_msg->data, EmergencyVehicleAlert_Id);
             if (_eva_obj != NULL) {
-                printf("created EVA object\n");
+                LOG_MSG_INFO("created EVA object\n");
                 eva_queue_enqueue(_eva_obj);
             } else {
-                printf("eva obj is NULL\n");
+                LOG_MSG_FATAL("eva obj is NULL\n");
             }
         }
     }
@@ -197,10 +192,10 @@ void process_external_message(J2735_msg_obj_t *external_J2735_msg, int cycles) {
         if (external_J2735_msg->magId == RoadSideAlert_Id) {
             struct tib_obj *_rsa_obj = tib_obj_create(external_J2735_msg->data, RoadSideAlert_Id);
             if (_rsa_obj != NULL) {
-                printf("created RSA object\n");
+                LOG_MSG_INFO("created RSA object\n");
                 rsa_queue_enqueue(_rsa_obj);
             } else {
-                printf("rsa obj is NULL\n");
+                LOG_MSG_FATAL("rsa obj is NULL\n");
             }
         }
     }
@@ -210,10 +205,10 @@ void process_external_message(J2735_msg_obj_t *external_J2735_msg, int cycles) {
         if (external_J2735_msg->magId == PersonalSafetyMessage_Id) {
             struct tib_obj *_psm_obj = tib_obj_create(external_J2735_msg->data, PersonalSafetyMessage_Id);
             if (_psm_obj != NULL) {
-                printf("created PSM object\n");
+                LOG_MSG_INFO("created PSM object\n");
                 psm_queue_enqueue(_psm_obj);
             } else {
-                printf("psm obj is NULL\n");
+                LOG_MSG_FATAL("psm obj is NULL\n");
             }
         }
     }
@@ -226,6 +221,6 @@ void on_j2735_msg_ready() {
     // 可選：如果積累太多消息，可以記錄警告
     int current_count = atomic_load(&pending_msg_count);
     if (current_count > 10) {  // 閾值可調整
-        printf("Warning: %d pending messages, producer may be too fast\n", current_count);
+        LOG_MSG_FATAL("Warning: %d pending messages, producer may be too fast\n", current_count);
     }
 }
