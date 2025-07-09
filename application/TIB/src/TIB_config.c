@@ -768,7 +768,7 @@ int TIB_config_init()
 void print_config_map(MapData *map, char *buf, int buf_len)
 {
     LaneList *laneSet = &map->intersections.tab[0].laneSet;
-    LOG_MSG_APPEND(buf, buf_len, "lane_index, laneID, node_index, lat, lon\n");
+    LOG_MSG_APPEND(buf, "lane_index, laneID, node_index, lat, lon\n");
 
     for (int i = 0; i < laneSet->count; i++) {
         for (int j = 0; j < laneSet->tab[i].nodeList.u.nodes.count; j++) {
@@ -832,7 +832,7 @@ void print_config_map(MapData *map, char *buf, int buf_len)
         for (int j = 0; j < NumOfGreen; j++) {
             for (int k = 0; k < vector_size(TIB_config.signalId_table[i][j]); k++) {
                 signalID_obj_t *obj = &vector_at(TIB_config.signalId_table[i][j], k);
-                log_snprintf(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
+                LOG_MSG_APPEND(buf, "%d %d %d %d %d\n", i, j, obj->signalGroupID, obj->approachId, obj->signalGreenType);
             }
         }
     }

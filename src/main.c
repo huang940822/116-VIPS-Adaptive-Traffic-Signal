@@ -13,7 +13,6 @@
 #include "TIB.h"
 #include "TSP.h"
 #include "WA.h"
-#include "EVA.h"
 
 #include "OBU_record_processing.h"
 #include "application_registration.h"

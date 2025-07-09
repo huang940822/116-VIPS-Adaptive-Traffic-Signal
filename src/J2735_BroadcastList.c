@@ -51,7 +51,6 @@ void J2735_BroadcastList_enqueue(J2735_msg_obj_t *new_J2735_msg_obj)
     }
     // Wait until there's at least one space
     sem_wait(&(J2735_BroadcastList.full));
-    // LOG_MSG_INFO("msg queue is not full and then put msg into it");
     pthread_mutex_lock(&J2735_BroadcastList.mutex);  // CRITICAL SECTION
     queue_insert_tail(&J2735_BroadcastList.J2735_BroadcastList_head, &new_J2735_msg_obj->queue);
     pthread_mutex_unlock(&J2735_BroadcastList.mutex);
