@@ -295,6 +295,26 @@ def main():
 
     logs = []
     for log_file_path in log_file_paths:
+
+        # File name format YYYY-MM-DD HH.log, if not match then skip
+        if not re.match(r'^\d{4}-\d{2}-\d{2} \d{2}\.log$', os.path.basename(log_file_path)):
+            logger.warning(f"Skipping log file {log_file_path} with invalid name format.")
+            continue
+
+        # Extract date from file name and check against start and end time
+        file_date_str = os.path.basename(log_file_path).split('.')[0]
+        file_date = datetime.datetime.strptime(file_date_str, '%Y-%m-%d %H')
+
+        # Check if file date is within the start and end time range
+        if args.start:
+            if file_date < args.start:
+                logger.warning(f"Skipping log file {log_file_path} before start time {args.start}")
+                continue
+        if args.end:
+            if file_date > args.end:
+                logger.warning(f"Skipping log file {log_file_path} after end time {args.end}")
+                continue
+
         logger.info(f"Processing log file: {log_file_path}")
         buffer = [log for log in _parse_log_file(log_file_path)]
         if buffer:
