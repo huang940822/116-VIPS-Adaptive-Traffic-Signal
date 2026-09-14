@@ -22,7 +22,7 @@
 #include "config.h"
 #include "dispatcher.h"
 #include "log.h"
-#include "post_processing.h"
+// #include "post_processing.h"
 #include "timer_event.h"
 #include "traffic_signal_status_updating.h"
 #include "traffic_signal_packet_tx.h"
@@ -159,9 +159,9 @@ static int callback_websocket(struct lws* wsi, enum lws_callback_reasons reason,
         memset(&buf[LWS_PRE], 0, MESSAGE_SIZE);
         memcpy(&buf[LWS_PRE], message_buffer, strlen(message_buffer));
 
-        snprintf(log_content, sizeof(log_content),
-            "[WS] Sent \"%s\"", message_buffer);
-        log_file_write(log_content);
+        // snprintf(log_content, sizeof(log_content),
+        //     "[WS] Sent \"%s\"", message_buffer);
+        // log_file_write(log_content);
 
         int write_result = lws_write(wsi, (unsigned char*)&buf[LWS_PRE], strlen(message_buffer), LWS_WRITE_TEXT);
         if (write_result < 0) {
@@ -227,27 +227,27 @@ void start_websocket_server() {
 int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
 {
 
-    memset(log_content, 0, sizeof(log_content));
-    // Add a log message indicating the function was called
-    snprintf(log_content + strlen(log_content),
-        LOG_CONTENT_LEN - strlen(log_content),
-        "\n PEDESTRIAN_on_pedestrian_packet_rx called.");
-    log_file_write(log_content);
-    // Cast the argument to PedestrianList
+    // memset(log_content, 0, sizeof(log_content));
+    // // Add a log message indicating the function was called
+    // snprintf(log_content + strlen(log_content),
+    //     LOG_CONTENT_LEN - strlen(log_content),
+    //     "\n PEDESTRIAN_on_pedestrian_packet_rx called.");
+    // log_file_write(log_content);
+    // // Cast the argument to PedestrianList
     PedestrianList* pedestrianlist = (PedestrianList*)arg;
 
-    for (int i = 0; i < pedestrianlist->count; i++) {
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\n Pedestrian %d: ID = %d, cx = %d, cy = %d, direction = %d",
-            i,
-            pedestrianlist->tab[i].PERSON_ID,
-            pedestrianlist->tab[i].cx,
-            pedestrianlist->tab[i].cy,
-            pedestrianlist->tab[i].direction);
-        log_file_write(log_content);
-    }
+    // for (int i = 0; i < pedestrianlist->count; i++) {
+    //     memset(log_content, 0, sizeof(log_content));
+    //     snprintf(log_content + strlen(log_content),
+    //         LOG_CONTENT_LEN - strlen(log_content),
+    //         "\n Pedestrian %d: ID = %d, cx = %d, cy = %d, direction = %d",
+    //         i,
+    //         pedestrianlist->tab[i].PERSON_ID,
+    //         pedestrianlist->tab[i].cx,
+    //         pedestrianlist->tab[i].cy,
+    //         pedestrianlist->tab[i].direction);
+    //     log_file_write(log_content);
+    // }
 
     Point P_start;
     Point P_end;
@@ -271,11 +271,11 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
             }
 
             for(int i=3;i<=8;i++)last_update_time[i] = time(NULL);
-            memset(log_content, 0, sizeof(log_content));
-            snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\nenter subphase3");
-            log_file_write(log_content);
+            // memset(log_content, 0, sizeof(log_content));
+            // snprintf(log_content + strlen(log_content),
+            // LOG_CONTENT_LEN - strlen(log_content),
+            // "\nenter subphase3");
+            // log_file_write(log_content);
             //wait_start_time = time(NULL);
         }
         // time_t now = time(NULL);
@@ -314,11 +314,11 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
         //     log_file_write(log_content);
         // }
         // Log the number of pedestrians
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\n Number of pedestrians: %d \n Camera_No: %d", pedestrianlist->count, pedestrianlist->camera_no);
-        log_file_write(log_content);
+        // memset(log_content, 0, sizeof(log_content));
+        // snprintf(log_content + strlen(log_content),
+        //     LOG_CONTENT_LEN - strlen(log_content),
+        //     "\n Number of pedestrians: %d \n Camera_No: %d", pedestrianlist->count, pedestrianlist->camera_no);
+        // log_file_write(log_content);
 
 
         //  if(fusion[pedestrianlist->camera_no]>=1){
@@ -345,11 +345,11 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
                    
                 }
                  last_update_time[i] = time(NULL);
-                 memset(log_content, 0, sizeof(log_content));
-                snprintf(log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "\n Camera_No: %d is broken", i);
-                log_file_write(log_content);
+                //  memset(log_content, 0, sizeof(log_content));
+                // snprintf(log_content + strlen(log_content),
+                //     LOG_CONTENT_LEN - strlen(log_content),
+                //     "\n Camera_No: %d is broken", i);
+                // log_file_write(log_content);
             }
         }
 
@@ -378,18 +378,18 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
                     pedestrianlist->tab[i].location = cols - pedestrianlist->tab[i].location - 1;
                 }
 
-                memset(log_content, 0, sizeof(log_content));
-                snprintf(log_content + strlen(log_content),
-                    LOG_CONTENT_LEN - strlen(log_content),
-                    "\n Pedestrian %d: ID = %d, cx = %d, cy = %d, direction= %d,location= %d",
-                    i,
-                    pedestrianlist->tab[i].PERSON_ID,
-                    pedestrianlist->tab[i].cx,
-                    pedestrianlist->tab[i].cy,
-                    pedestrianlist->tab[i].direction,
-                    pedestrianlist->tab[i].location
-                );
-                log_file_write(log_content);
+                // memset(log_content, 0, sizeof(log_content));
+                // snprintf(log_content + strlen(log_content),
+                //     LOG_CONTENT_LEN - strlen(log_content),
+                //     "\n Pedestrian %d: ID = %d, cx = %d, cy = %d, direction= %d,location= %d",
+                //     i,
+                //     pedestrianlist->tab[i].PERSON_ID,
+                //     pedestrianlist->tab[i].cx,
+                //     pedestrianlist->tab[i].cy,
+                //     pedestrianlist->tab[i].direction,
+                //     pedestrianlist->tab[i].location
+                // );
+                // log_file_write(log_content);
 
                 //計算行人所在馬路
                 int row_no;
@@ -461,10 +461,10 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
     }
     else {
         // Log an error message if pedestrianlist is NULL
-        snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\n Error: PedestrianList is NULL.");
-        log_file_write(log_content);
+        // snprintf(log_content + strlen(log_content),
+        //     LOG_CONTENT_LEN - strlen(log_content),
+        //     "\n Error: PedestrianList is NULL.");
+        // log_file_write(log_content);
     }
 
 }
@@ -499,12 +499,12 @@ int PEDESTRIAN_on_pedestrian_packet_rx(void* arg)
 
 int PEDESTRIAN_on_registration(void* arg)
 {
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content), \
-        LOG_CONTENT_LEN - strlen(log_content), \
-        "\n Pedestrian_on_Registration ");
-    log_file_write(log_content);
+    // char log_content[LOG_CONTENT_LEN + 1];
+    // memset(log_content, 0, sizeof(log_content));
+    // snprintf(log_content + strlen(log_content), \
+    //     LOG_CONTENT_LEN - strlen(log_content), \
+    //     "\n Pedestrian_on_Registration ");
+    // log_file_write(log_content);
 
     for (int i = 0;i < rows;i++) {
         for (int j = 0;j < cols;j++) {
@@ -577,11 +577,11 @@ void pedestrian_timer_handler(union sigval sv) {
         time_flag=false;
         handler_running = 0;
         if(get_current_phase()==1){//把subphase==1的狀態切掉以減少demo等待時間
-            memset(log_content, 0, sizeof(log_content));
-            snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\n cut1 current SubPhaseID=%u ,current StepID=%u", get_current_phase(), get_current_step());
-            log_file_write(log_content);
+            // memset(log_content, 0, sizeof(log_content));
+            // snprintf(log_content + strlen(log_content),
+            // LOG_CONTENT_LEN - strlen(log_content),
+            // "\n cut1 current SubPhaseID=%u ,current StepID=%u", get_current_phase(), get_current_step());
+            // log_file_write(log_content);
 
 
             tsc_switch_strategy();// 策略模式
@@ -611,22 +611,22 @@ void pedestrian_timer_handler(union sigval sv) {
     int post_subphase = CS;
     pthread_mutex_unlock(&matrix_mutex);
 
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-        LOG_CONTENT_LEN - strlen(log_content),
-        "\nped timer success");
-    log_file_write(log_content);
+    // memset(log_content, 0, sizeof(log_content));
+    // snprintf(log_content + strlen(log_content),
+    //     LOG_CONTENT_LEN - strlen(log_content),
+    //     "\nped timer success");
+    // log_file_write(log_content);
 
     if (pre_subphase != post_subphase) {
         // //call API
         uint8_t current_SubPhaseID = get_current_phase();
         uint8_t current_stepID = get_current_step();
 
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\n current SubPhaseID=%u ,current StepID=%u ,prephase=%u , postphase=%u", current_SubPhaseID, current_stepID, pre_subphase, post_subphase);
-        log_file_write(log_content);
+        // memset(log_content, 0, sizeof(log_content));
+        // snprintf(log_content + strlen(log_content),
+        //     LOG_CONTENT_LEN - strlen(log_content),
+        //     "\n current SubPhaseID=%u ,current StepID=%u ,prephase=%u , postphase=%u", current_SubPhaseID, current_stepID, pre_subphase, post_subphase);
+        // log_file_write(log_content);
 
 
         tsc_switch_strategy();// 策略模式
@@ -643,11 +643,11 @@ void pedestrian_timer_handler(union sigval sv) {
         tsc_switch_strategy();// 策略模式
         tsc_switch();
         tsc_5F4C();
-        memset(log_content, 0, sizeof(log_content));
-        snprintf(log_content + strlen(log_content),
-            LOG_CONTENT_LEN - strlen(log_content),
-            "\n change to ATSC");
-        log_file_write(log_content);
+        // memset(log_content, 0, sizeof(log_content));
+        // snprintf(log_content + strlen(log_content),
+        //     LOG_CONTENT_LEN - strlen(log_content),
+        //     "\n change to ATSC");
+        // log_file_write(log_content);
 
 
     }
@@ -661,10 +661,10 @@ void pedestrian_timer_handler(union sigval sv) {
             snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "\n");
         }
 
-        snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "Pedestrian matrix end\n");
+        // snprintf(log_content + strlen(log_content), LOG_CONTENT_LEN - strlen(log_content), "Pedestrian matrix end\n");
 
        
-        log_file_write(log_content);
+        // log_file_write(log_content);
     handler_running = 0;
 }
 int create_pedestrian_timer() {
@@ -693,11 +693,11 @@ int start_pedestrian_timer() {
         perror("timer_settime");
         return -1;
     }
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-        LOG_CONTENT_LEN - strlen(log_content),
-        "\nstart timer success");
-    log_file_write(log_content);
+    // memset(log_content, 0, sizeof(log_content));
+    // snprintf(log_content + strlen(log_content),
+    //     LOG_CONTENT_LEN - strlen(log_content),
+    //     "\nstart timer success");
+    // log_file_write(log_content);
     return 0;
 }
 
@@ -745,11 +745,11 @@ void alg1() {
     AccPedG = difftime(time(NULL), gStart_time);
 
     char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-        LOG_CONTENT_LEN - strlen(log_content),
-        "\nGreen Elasped Time: %.0f", AccPedG);
-    log_file_write(log_content);
+    // memset(log_content, 0, sizeof(log_content));
+    // snprintf(log_content + strlen(log_content),
+    //     LOG_CONTENT_LEN - strlen(log_content),
+    //     "\nGreen Elasped Time: %.0f", AccPedG);
+    // log_file_write(log_content);
 
     bool changeState = false;
     if (AccPedG >= LG) {
@@ -792,12 +792,12 @@ void alg1() {
 void alg2() {
     AccPedGF = difftime(time(NULL), gfStart_time);
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-        LOG_CONTENT_LEN - strlen(log_content),
-        "\nGreenFlash Elasped Time: %.0f", AccPedGF);
-    log_file_write(log_content);
+    // char log_content[LOG_CONTENT_LEN + 1];
+    // memset(log_content, 0, sizeof(log_content));
+    // snprintf(log_content + strlen(log_content),
+    //     LOG_CONTENT_LEN - strlen(log_content),
+    //     "\nGreenFlash Elasped Time: %.0f", AccPedGF);
+    // log_file_write(log_content);
 
     if (AccPedGF >= LGF) {
         if (PassPed >= (PedCount * 0.8) || AccPedGF >= UGF) {
@@ -809,12 +809,12 @@ void alg2() {
 void alg3() {
     AccPedR = difftime(time(NULL), rStart_time);
 
-    char log_content[LOG_CONTENT_LEN + 1];
-    memset(log_content, 0, sizeof(log_content));
-    snprintf(log_content + strlen(log_content),
-        LOG_CONTENT_LEN - strlen(log_content),
-        "\nRed Elasped Time: %.0f", AccPedR);
-    log_file_write(log_content);
+    // char log_content[LOG_CONTENT_LEN + 1];
+    // memset(log_content, 0, sizeof(log_content));
+    // snprintf(log_content + strlen(log_content),
+    //     LOG_CONTENT_LEN - strlen(log_content),
+    //     "\nRed Elasped Time: %.0f", AccPedR);
+    // log_file_write(log_content);
 
     if (AccPedR >= LR) {
         if (PIC == 0 || AccPedR >= UR) {

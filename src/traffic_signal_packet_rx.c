@@ -9,6 +9,10 @@
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
+// #include <arpa/inet.h>   // for sockaddr_in, inet_pton
+// #include <sys/socket.h>  // for socket()
+// #include <netinet/in.h>  // for sockaddr_in
+
 
 #include "config.h"
 #include "error_status.h"
@@ -446,20 +450,39 @@ void set_serial_attribs(int fd, int speed, char serial_port[])
 
 void traffic_signal_port_init()
 {
+    // struct sockaddr_in server_addr;
     serial_port_fd = open(TC_SERIAL_PORT, O_RDWR | O_NOCTTY);
-    /* ttyUSB0 is the FT232 based USB2SERIAL Converter   */
-    /* O_RDWR   - Read/Write access to serial port       */
-    /* O_NOCTTY - No terminal will control the process   */
-    /* Open in blocking mode,read will wait              */
-
-    /* Error Checking */
-    if (serial_port_fd == -1) {
+    
+    if (serial_port_fd == -1){
         LOG_MSG_FATAL("error opening %s", TC_SERIAL_PORT);
     } else {
-        LOG_MSG_INFO("%s opened successfully", TC_SERIAL_PORT);
+        LOG_MSG_INFO("%s open successfully", TC_SERIAL_PORT);
     }
     set_serial_attribs(serial_port_fd, TC_BAUDRATE, TC_SERIAL_PORT);
+    // /* Error Checking */
+    // if (serial_port_fd == -1) {
+    //     LOG_MSG_FATAL("error creating socket");
+    // } else {
+    //     LOG_MSG_INFO("proxy msg port create successfully");
+    // }
+
+    // // 設定 server 的 IP 和 Port 
+    // memset(&server_addr, 0, sizeof(server_addr)); 
+    // server_addr.sin_family = AF_INET; // IPv4 
+    // server_addr.sin_port = htons(30001); // Port 
+    // if (inet_pton(AF_INET, "116.59.9.76", &server_addr.sin_addr) <= 0) { 
+    //     LOG_MSG_FATAL("invalid address or address not supported"); 
+    //     return; 
+    // } 
+
+    // // 嘗試連線 
+    // if (connect(serial_port_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) { 
+    //     LOG_MSG_FATAL("connection to proxy server failed"); 
+    //     return; 
+    // } 
+    // LOG_MSG_INFO("Connected to proxy server %s:%d", "116.59.9.76", 30001);
 }
+
 
 /* traffic_signal_packet_thread
 從socket收取不同類型的packet並處理轉義字節 */

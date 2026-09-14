@@ -20,41 +20,56 @@
       width: 100vw;
       height: 100vh;
       background-color: #333;
+      box-sizing: border-box; 
+      display: flex;
+      flex-direction: column; 
+      justify-content: center;
+      align-items: center;  
+      gap: 15px;              
+      position: relative;
+      padding: 20px;          
+    }
+
+    .direction-title {
+      width: 100%;            
+      text-align: center;
+      color: white;
+      font-size: 1.5em;
+      margin-bottom: 5px;  
+      font-weight: bold;
+    }
+
+    .signal-group {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 40px;              
+      margin-bottom: 10px;    
+    }
+
+    .signal-box {
+      position: relative; 
+      width: 30vmin;          
+      height: 30vmin;         
+      background-color: #333;
+      border: 5px solid #444;
       border-radius: 20px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
       display: flex;
       justify-content: center;
       align-items: center;
-      position: relative;
     }
 
     .icon {
-      width: 80vmin;
-      height: 80vmin;
+      width: 90%; 
+      height: 90%;
       opacity: 0;
-      transition: opacity 0.5s;
-      position: absolute;
+      transition: opacity 0.3s;
+      position: absolute; 
       z-index: 2;
     }
 
     .active {
       opacity: 1;
-    }
-
-    .blink {
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0;
-      }
     }
 
     #status {
@@ -69,107 +84,205 @@
 
 <body>
   <div id="light">
-    <img id="redIcon" class="icon" src="sprite_red.png" style="display: none;" />
-    <svg id="greenIcon" class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="60" height="60" fill="green" rx="10" ry="10" />
-      <path d="M32 20 L28 30 L26 45 L36 45 L34 30 L32 20 Z" fill="white" />
-    </svg>
-    <img id="greenAnimation" class="icon" src="sprite_0.png" style="display: none;" />
     <div id="status">🚦 正在連線號誌控制器...</div>
-  </div>
 
-  <script>
+    <div class="direction-title">⬆️ 南北向 N/S ⬇️</div>
+    <div class="signal-group">
+      <div class="signal-box">
+        <img id="ns_redIcon" class="icon" src="sprite_red.png" style="display: none;" />
+        <svg id="ns_greenIcon" class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="60" height="60" fill="green" rx="10" ry="10" />
+          <path d="M32 20 L28 30 L26 45 L36 45 L34 30 L32 20 Z" fill="white" />
+        </svg>
+        <img id="ns_greenAnimation" class="icon" src="sprite_0.png" style="display: none;" />
+      </div>
+
+      <div class="signal-box">
+        <img id="ns_carRed" class="icon" src="car_red.png" style="display: none;" />
+        <img id="ns_carYellow" class="icon" src="car_yellow.png" style="display: none;" />
+        <img id="ns_carGreen" class="icon" src="car_green.png" style="display: none;" />
+      </div>
+    </div>
+
+    <div class="direction-title" style="margin-top: 20px;">⬅️ 東西向 E/W ➡️</div>
+    <div class="signal-group">
+      <div class="signal-box">
+        <img id="ew_redIcon" class="icon" src="sprite_red.png" style="display: none;" />
+        <svg id="ew_greenIcon" class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="2" width="60" height="60" fill="green" rx="10" ry="10" />
+          <path d="M32 20 L28 30 L26 45 L36 45 L34 30 L32 20 Z" fill="white" />
+        </svg>
+        <img id="ew_greenAnimation" class="icon" src="sprite_0.png" style="display: none;" />
+      </div>
+
+      <div class="signal-box">
+        <img id="ew_carRed" class="icon" src="car_red.png" style="display: none;" />
+        <img id="ew_carYellow" class="icon" src="car_yellow.png" style="display: none;" />
+        <img id="ew_carGreen" class="icon" src="car_green.png" style="display: none;" />
+      </div>
+    </div>
+  </div>
+    <script>
     window.onload = function () {
       const socket = new WebSocket("ws://140.116.245.236:8080");
-
-      const redIcon = document.getElementById("redIcon");
-      const greenIcon = document.getElementById("greenIcon");
-      const greenAnimation = document.getElementById("greenAnimation");
       const statusText = document.getElementById("status");
 
-      const frameCount = 5;
-      let currentFrame = 0;
       let animationInterval = null;
+      let currentFrame = 0;
+      
+      let lastState = {
+        direction: "",
+        pedSignal: "",
+        vehSignal: ""
+      };
 
-      function startGreenAnimation() {
-        greenIcon.style.display = "none";
-        greenAnimation.style.display = "block";
-        greenAnimation.classList.add("active");
-        currentFrame = 0;
-        animationInterval = setInterval(() => {
-          greenAnimation.src = `sprite_${currentFrame}.png`;
-          currentFrame = (currentFrame + 1) % frameCount;
-        }, 300);
+      // 處理小綠人動畫
+      function handlePedestrianAnimation(animEl, greenEl, pedSignal) {
+        if (animationInterval && lastState.pedSignal === pedSignal) {
+          return;
+        }
+        if (animationInterval) {
+          clearInterval(animationInterval);
+          animationInterval = null;
+        }
+
+        greenEl.style.display = "none";
+        animEl.style.display = "block";
+        animEl.classList.add("active");
+
+        if (pedSignal === "Green") {
+          currentFrame = 0;
+          animationInterval = setInterval(() => {
+            animEl.src = `sprite_${currentFrame}.png`;
+            currentFrame = (currentFrame + 1) % 5;
+          }, 300);
+        } else if (pedSignal === "GreenFlash") {
+          let sequence = [0, 5, 1, 5, 2, 5, 3, 5, 4, 5];
+          let currentIndex = 0;
+          animationInterval = setInterval(() => {
+            animEl.src = `sprite_${sequence[currentIndex]}.png`;
+            currentIndex = (currentIndex + 1) % sequence.length;
+          }, 300);
+        }
       }
 
-      function startGreenFlashAnimation() {
-        greenIcon.style.display = "none";
-        greenAnimation.style.display = "block";
-        greenAnimation.classList.add("active");
-        let sequence = [0, 5, 1, 5, 2, 5, 3, 5, 4, 5];
-        let currentIndex = 0;
-        animationInterval = setInterval(() => {
-          const currentFrame = sequence[currentIndex];
-          greenAnimation.src = `sprite_${currentFrame}.png`;
-          currentIndex = (currentIndex + 1) % sequence.length;
-        }, 300);
+      // 🌟 獨立且直覺的車燈控制函式：再也不會錯位
+      function updateCarLights(carRed, carYellow, carGreen, signal) {
+        // 先全部隱藏
+        carRed.style.display = "none"; carRed.classList.remove("active");
+        carYellow.style.display = "none"; carYellow.classList.remove("active");
+        carGreen.style.display = "none"; carGreen.classList.remove("active");
+
+        // 依據訊號精準亮燈
+        if (signal === "Green") {
+          carGreen.style.display = "block";
+          carGreen.classList.add("active");
+        } else if (signal === "Yellow") {
+          carYellow.style.display = "block";
+          carYellow.classList.add("active");
+        } else {
+          carRed.style.display = "block";
+          carRed.classList.add("active");
+        }
       }
 
-      function stopGreenAnimation() {
-        clearInterval(animationInterval);
-        greenAnimation.classList.remove("active");
-        greenAnimation.style.display = "none";
-        greenIcon.style.display = "none";
+      // 🌟 獨立的行人靜態燈（紅燈/靜態綠燈）控制函式
+      function updatePedestrianStatic(pedRed, pedGreen, pedAnim, signal) {
+        pedRed.style.display = "none"; pedRed.classList.remove("active");
+        pedGreen.style.display = "none"; pedGreen.classList.remove("active");
+        pedAnim.style.display = "none"; pedAnim.classList.remove("active");
+
+        if (signal === "Red") {
+          pedRed.style.display = "block";
+          pedRed.classList.add("active");
+        } else if (signal === "StaticGreen") { 
+          pedGreen.style.display = "block";
+          pedGreen.classList.add("active");
+        }
       }
 
       socket.onmessage = function (event) {
-        const signal = event.data;
+        const signal = event.data.trim();
         console.log("Received signal:", signal);
-        statusText.innerText = `🚦 目前號誌：${signal}`;
 
-        redIcon.classList.remove("active");
-        stopGreenAnimation();
+        const parts = signal.split('|').map(p => p.trim());
+        if (parts.length < 4) return;
 
-        if (signal === "Red" || signal === "Red(CarPhase)" || signal === "Red(CarPhase), 行人即將放行") {
-          redIcon.style.display = "block";
-          redIcon.classList.add("active");
-        } 
-        // else if (signal === "Red(CarPhase)"){
-        //   redIcon.style.display = "block";
-        //   redIcon.classList.add("active");
-        // }
-        else if (signal === "Green") {
-          startGreenAnimation();
-        } else if (signal === "GreenFlash") {
-          startGreenFlashAnimation();
-        } 
-        // else if (signal === "Ready") {
-        //   statusText.innerText = "🟢 行人即將放行，請準備！";
-        //   // 也可以顯示一個新圖示或動畫
-        //   greenIcon.style.display = "block";
-        //   greenIcon.classList.add("blink"); // 例如閃爍
-        // }
-        else if (signal === "car mode start") {
-          statusText.innerText = "車輛時相開始";
+        const pedSignal = parts[0]; 
+        const vehSignal = parts[1]; 
+        const direction = parts[2]; 
+        const debugInfo = parts[3];
+
+        statusText.innerText = `🚦 目前路權：${direction} (${debugInfo}) - 行人:${pedSignal} | 車行:${vehSignal}`;
+
+        // 抓取南北向所有 DOM
+        const nsPedRed = document.getElementById("ns_redIcon");
+        const nsPedGreen = document.getElementById("ns_greenIcon");
+        const nsPedAnim = document.getElementById("ns_greenAnimation");
+        const nsCarRed = document.getElementById("ns_carRed");
+        const nsCarYellow = document.getElementById("ns_carYellow");
+        const nsCarGreen = document.getElementById("ns_carGreen");
+
+        // 抓取東西向所有 DOM
+        const ewPedRed = document.getElementById("ew_redIcon");
+        const ewPedGreen = document.getElementById("ew_greenIcon");
+        const ewPedAnim = document.getElementById("ew_greenAnimation");
+        const ewCarRed = document.getElementById("ew_carRed");
+        const ewCarYellow = document.getElementById("ew_carYellow");
+        const ewCarGreen = document.getElementById("ew_carGreen");
+
+        if (direction === "North/South") {
+          // --- 1. 東西向（沒路權）：強制全紅燈 ---
+          if (animationInterval && lastState.direction !== "North/South") {
+            clearInterval(animationInterval);
+            animationInterval = null;
+          }
+          updatePedestrianStatic(ewPedRed, ewPedGreen, ewPedAnim, "Red");
+          updateCarLights(ewCarRed, ewCarYellow, ewCarGreen, "Red");
+
+          // --- 2. 南北向（有路權）：依訊號顯示 ---
+          // 車行燈精準控制
+          updateCarLights(nsCarRed, nsCarYellow, nsCarGreen, vehSignal);
+          
+          // 行人燈控制
+          if (pedSignal === "Green" || pedSignal === "GreenFlash") {
+            handlePedestrianAnimation(nsPedAnim, nsPedGreen, pedSignal);
+          } else {
+            if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+            updatePedestrianStatic(nsPedRed, nsPedGreen, nsPedAnim, "Red");
+          }
+
+        } else {
+          // --- 1. 南北向（沒路權）：強制全紅燈 ---
+          if (animationInterval && lastState.direction !== "East/West") {
+            clearInterval(animationInterval);
+            animationInterval = null;
+          }
+          updatePedestrianStatic(nsPedRed, nsPedGreen, nsPedAnim, "Red");
+          updateCarLights(nsCarRed, nsCarYellow, nsCarGreen, "Red");
+
+          // --- 2. 東西向（有路權）：依訊號顯示 ---
+          // 車行燈精準控制
+          updateCarLights(ewCarRed, ewCarYellow, ewCarGreen, vehSignal);
+          
+          // 行人燈控制
+          if (pedSignal === "Green" || pedSignal === "GreenFlash") {
+            handlePedestrianAnimation(ewPedAnim, ewPedGreen, pedSignal);
+          } else {
+            if (animationInterval) { clearInterval(animationInterval); animationInterval = null; }
+            updatePedestrianStatic(ewPedRed, ewPedGreen, ewPedAnim, "Red");
+          }
         }
+
+        lastState.direction = direction;
+        lastState.pedSignal = pedSignal;
+        lastState.vehSignal = vehSignal;
       };
 
-      socket.onopen = () => {
-        console.log("Connected");
-        statusText.innerText = "✅ 已連線，等待號誌訊號...";
-      };
-
-      socket.onclose = () => {
-        console.log("Disconnected");
-        statusText.innerText = "❌ 已斷線，請重整頁面";
-      };
-
-      socket.onerror = (err) => {
-        console.log("Error:", err);
-        statusText.innerText = "⚠️ WebSocket 錯誤";
-      };
+      socket.onopen = () => { statusText.innerText = "✅ 已連線，等待號誌訊號..."; };
+      socket.onclose = () => { statusText.innerText = "❌ 已斷線，請重整頁面"; };
+      socket.onerror = (err) => { statusText.innerText = "⚠️ WebSocket 錯誤"; };
     };
   </script>
 </body>
-
 </html>

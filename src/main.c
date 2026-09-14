@@ -14,6 +14,7 @@
 #include "TSP.h"
 #include "WA.h"
 #include "PEDESTRIAN.h"
+#include "PEDESTRIAN_plus.h"
 
 
 #include "OBU_record_processing.h"
@@ -193,6 +194,7 @@ int main()
         // &SPM,
         // &WA,
         // &PEDESTRIAN,
+        &PEDESTRIAN_PLUS,
     };
 
     /* 注意有些 app 的 on_registration() 會 create timer */

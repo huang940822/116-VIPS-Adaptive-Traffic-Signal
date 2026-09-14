@@ -287,13 +287,13 @@ void packet_5F0C(traffic_signal_packet_t *packet) {
     char log_content[LOG_CONTENT_LEN + 1];
     
     
-    memset(log_content, 0, sizeof(log_content));
-            snprintf(log_content + strlen(log_content), 
-                    LOG_CONTENT_LEN - strlen(log_content), 
-                   "5F 0C → Confirmed to SubPhaseID = %d, StepID = %d",
-                   signal_status.SubPhaseID, signal_status.StepID
-                    );
-            log_file_write(log_content);
+    // memset(log_content, 0, sizeof(log_content));
+    //         snprintf(log_content + strlen(log_content), 
+    //                 LOG_CONTENT_LEN - strlen(log_content), 
+    //                "5F 0C → Confirmed to SubPhaseID = %d, StepID = %d",
+    //                signal_status.SubPhaseID, signal_status.StepID
+    //                 );
+    //         log_file_write(log_content);
 
     clear_tsc_5fcc_error();  // <- 關閉 timeout timer，因為已確認控制器執行
     pthread_mutex_unlock(&mutex_signal_status);

@@ -8,6 +8,7 @@
 
 typedef struct Pedestrian {
     uint8_t PERSON_ID;
+    uint8_t waiting;
     uint16_t cx;
     uint16_t cy;
     uint16_t location;

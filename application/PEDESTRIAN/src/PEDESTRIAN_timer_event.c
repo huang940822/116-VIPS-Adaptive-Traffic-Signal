@@ -16,6 +16,6 @@ void PEDESTRIAN_Agent_timer_handler(__sigval_t value) {
     if(context) {
         lws_service(context, 0);
     }
-    log_file_write("[PEDESTRIAN] LWS SERVICE triggered");
+    // log_file_write("[PEDESTRIAN] LWS SERVICE triggered");
     
 }
